@@ -1,0 +1,41 @@
+import Link from 'next/link';
+import React from 'react';
+
+const AdminSidebar = () => {
+  return (
+    <aside className='w-64 flex-shrink-0 bg-gray-800 text-white p-5'>
+      <div className='text-2xl font-semibold mb-8'>Homemade Cakes</div>
+      <nav>
+        <ul>
+          <li className='mb-2'>
+            <Link
+              href='/admin/dashboard'
+              className='block py-2 px-4 rounded hover:bg-gray-700 transition-colors duration-200'
+            >
+              General
+            </Link>
+          </li>
+          <li className='mb-2'>
+            <Link
+              href='/admin/products'
+              className='block py-2 px-4 rounded hover:bg-gray-700 transition-colors duration-200'
+            >
+              Cakes
+            </Link>
+          </li>
+          <li className='mb-2'>
+            <Link
+              href='/admin/orders'
+              className='block py-2 px-4 rounded hover:bg-gray-700 transition-colors duration-200'
+            >
+              Orders
+            </Link>
+          </li>
+          {/* links */}
+        </ul>
+      </nav>
+    </aside>
+  );
+};
+
+export default AdminSidebar;
