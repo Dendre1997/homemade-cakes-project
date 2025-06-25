@@ -1,6 +1,6 @@
 import { ObjectId } from "mongodb";
 
-export interface Flavors {
+export interface Flavor {
     _id: ObjectId;
     name: string;
     price: number;
