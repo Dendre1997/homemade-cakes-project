@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     }
 
     const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_URI);
+    const db = client.db(process.env.MONGODB_DB_NAME);
 
     const newFlavorData = {
       name,

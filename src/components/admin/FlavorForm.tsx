@@ -2,14 +2,51 @@
 import React, { useState } from 'react';
 
 const FlavorForm = () => {
-  const [name, setName] = useState('');
-  const [price, setPrice] = useState('');
-  const [description, setDescription] = useState('');
-
+    const [name, setName] = useState('');
+    const [price, setPrice] = useState('');
+    const [description, setDescription] = useState('');
+    const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [error, setError] = useState<string | null>(null);
+    
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    console.log({ name, price, description });
-    alert('Data for console');
+      e.preventDefault();
+      setIsLoading(true)
+      setError(null)
+
+      try {
+        const body = {
+          name,
+          price: parseFloat(price),
+          description,
+        };
+
+        const response = await fetch('/api/flavors', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(body),
+        });
+        if (!response.ok) {
+          throw new Error(
+            'Failed to create flavor. Server responded with ' + response.status
+          );
+        }
+        alert('Flavor successfully added');
+        setName('');
+        setPrice('');
+        setDescription('');
+      } catch (err: unknown) {
+        console.error('An error occurred:', err);
+        let errorMessage = 'An unknown error occurred.';
+        if (err instanceof Error) {
+          errorMessage = err.message;
+        }
+
+        setError(errorMessage);
+      } finally {
+        setIsLoading(false);
+      }
   };
 
   return (
@@ -56,7 +93,7 @@ const FlavorForm = () => {
             htmlFor='description'
             className='block text-sm font-medium text-gray-700'
           >
-           Description (optional)
+            Description (optional)
           </label>
           <textarea
             id='description'
@@ -66,12 +103,18 @@ const FlavorForm = () => {
             className='mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500'
           />
         </div>
+        {error && (
+          <div className='text-red-500 text-sm'>
+            <p>Error: {error}</p>
+          </div>
+        )}
         <div>
           <button
             type='submit'
-            className='w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500'
+            disabled={isLoading}
+            className='w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-300'
           >
-            Add Flavor
+            {isLoading ? 'Adding...' : 'Add Flavor'}
           </button>
         </div>
       </div>
