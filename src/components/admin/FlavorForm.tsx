@@ -1,52 +1,56 @@
-'use client'; // Дуже важливо! Цей компонент - інтерактивний
+'use client';
 import React, { useState } from 'react';
 
-const FlavorForm = () => {
-    const [name, setName] = useState('');
-    const [price, setPrice] = useState('');
-    const [description, setDescription] = useState('');
-    const [isLoading, setIsLoading] = useState<boolean>(false);
-    const [error, setError] = useState<string | null>(null);
-    
+interface FlavorFormProps {
+  onFlavorAdded: () => void;
+}
+const FlavorForm = ({ onFlavorAdded }: FlavorFormProps) => {
+  const [name, setName] = useState('');
+  const [price, setPrice] = useState('');
+  const [description, setDescription] = useState('');
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-      e.preventDefault();
-      setIsLoading(true)
-      setError(null)
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
 
-      try {
-        const body = {
-          name,
-          price: parseFloat(price),
-          description,
-        };
+    try {
+      const body = {
+        name,
+        price: parseFloat(price),
+        description,
+      };
 
-        const response = await fetch('/api/flavors', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(body),
-        });
-        if (!response.ok) {
-          throw new Error(
-            'Failed to create flavor. Server responded with ' + response.status
-          );
-        }
-        alert('Flavor successfully added');
-        setName('');
-        setPrice('');
-        setDescription('');
-      } catch (err: unknown) {
-        console.error('An error occurred:', err);
-        let errorMessage = 'An unknown error occurred.';
-        if (err instanceof Error) {
-          errorMessage = err.message;
-        }
-
-        setError(errorMessage);
-      } finally {
-        setIsLoading(false);
+      const response = await fetch('/api/flavors', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+      if (!response.ok) {
+        throw new Error(
+          'Failed to create flavor. Server responded with ' + response.status
+        );
       }
+      setName('');
+      setPrice('');
+      setDescription('');
+      onFlavorAdded();
+      alert('Flavor successfully added');
+    } catch (err: unknown) {
+      console.error('An error occurred:', err);
+      let errorMessage = 'An unknown error occurred.';
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

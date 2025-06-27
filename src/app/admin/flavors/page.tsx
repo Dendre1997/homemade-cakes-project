@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import FlavorForm from '@/components/admin/FlavorForm';
 // import  from 'react';
 import { Flavor } from '@/types';
@@ -7,9 +7,8 @@ const ManageFlavorsPage = () => {
   const [flavors, setFlavors] = useState<Flavor[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  // Використовуємо useEffect для завантаження даних при першому рендері
-  useEffect(() => {
-    const fetchFlavors = async () => {
+  
+      const fetchFlavors = useCallback(async () => {
       try {
         setError(null);
         setIsLoading(true); 
@@ -31,16 +30,17 @@ const ManageFlavorsPage = () => {
       } finally {
         setIsLoading(false);
       }
-    };
-
-    fetchFlavors();
-  }, []);
+      }, []);
+  
+    useEffect(() => {
+      fetchFlavors();
+    }, [fetchFlavors]);
 
   return (
     <section>
       <h1 className='text-3xl font-bold mb-6'>Flavors Managment</h1>
 
-      <FlavorForm />
+      <FlavorForm onFlavorAdded={fetchFlavors} />
 
       <div className='mt-10'>
         <h2 className='text-2xl font-bold mb-4'>Existing Flavors</h2>
