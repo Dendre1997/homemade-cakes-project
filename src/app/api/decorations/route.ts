@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import clientPromise from '@/lib/db';
-import { Flavor } from '@/types';
+import { Decoration } from '@/types';
 
 // POST
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    const { name, price, description }: Partial<Flavor> = body;
+    const { name, price, imageUrl }: Partial<Decoration> = body;
 
     if (!name || typeof price !== 'number') {
       return NextResponse.json(
@@ -19,22 +19,22 @@ export async function POST(request: NextRequest) {
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
 
-    const newFlavorData = {
+    const newDecorationData = {
       name,
       price,
-      description: description || '',
+      imageUrl: imageUrl || '',
     };
 
-    const result = await db.collection('flavors').insertOne(newFlavorData);
-      
-      return NextResponse.json(
-      { message: 'Flavor created successfully', flavorId: result.insertedId },
+    const result = await db.collection('decorations').insertOne(newDecorationData);
+
+    return NextResponse.json(
+      { message: 'Decoration created successfully', decorationId: result.insertedId },
       { status: 201 } // 201 - Created
     );
   } catch (error) {
-    console.error('Error creating flavor:', error);
+    console.error('Error creating decoration:', error);
     return NextResponse.json(
-      { error: 'An error occurred while creating the flavor.' },
+      { error: 'An error occurred while creating the decoration.' },
       { status: 500 } // 500 - Internal Server Error
     );
   }
@@ -46,16 +46,14 @@ export async function GET() {
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
 
-    const flavors = await db.collection('flavors').find({}).toArray();
-    
-    return NextResponse.json(flavors, { status: 200 }); // 200 - OK
+    const decorations = await db.collection('decorations').find({}).toArray();
+
+    return NextResponse.json(decorations, { status: 200 }); // 200 - OK
   } catch (error) {
-    console.error('Error fetching flavors:', error);
+    console.error('Error fetching decorations:', error);
     return NextResponse.json(
-      { error: 'An error occurred while fetching flavors.' },
+      { error: 'An error occurred while fetching decorations.' },
       { status: 500 }
     );
   }
 }
-
-// DELETE

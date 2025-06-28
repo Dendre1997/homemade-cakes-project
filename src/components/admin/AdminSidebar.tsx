@@ -31,7 +31,22 @@ const AdminSidebar = () => {
               Orders
             </Link>
           </li>
-          {/* links */}
+          <li className='mb-2'>
+            <Link
+              href='/admin/decorations'
+              className='block py-2 px-4 rounded hover:bg-gray-700 transition-colors duration-200'
+            >
+              Decoration
+            </Link>
+          </li>
+          <li className='mb-2'>
+            <Link
+              href='/admin/flavors'
+              className='block py-2 px-4 rounded hover:bg-gray-700 transition-colors duration-200'
+            >
+              Flavors
+            </Link>
+          </li>
         </ul>
       </nav>
     </aside>

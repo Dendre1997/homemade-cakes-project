@@ -7,7 +7,7 @@ export interface Flavor {
     description?: string;
 }
 
-export interface Decorations {
+export interface Decoration {
     _id: ObjectId;
     name: string;
     price: number;
