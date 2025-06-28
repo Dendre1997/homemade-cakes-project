@@ -32,6 +32,38 @@ const ManageFlavorsPage = () => {
       }
       }, []);
   
+      const handleDelete = async (id: string) => {
+        if (
+          !window.confirm(
+            "Are you sure, you want to delete this flavor? This action can't be undone."
+          )
+        ) {
+          return;
+        }
+
+        try {
+          const response = await fetch(`/api/flavors/${id}`, {
+            method: 'DELETE',
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to delete flavor');
+          }
+          setFlavors((prevFlavors) =>
+            prevFlavors.filter((flavor) => flavor._id.toString() !== id)
+          );
+
+          alert('Flavor was successfully deleted');
+        } catch (err: unknown) {
+          if (err instanceof Error) {
+            alert(`Error: ${err.message}`);
+          } else {
+            alert('Unknown error occurred.');
+          }
+        }
+      };
+  
     useEffect(() => {
       fetchFlavors();
     }, [fetchFlavors]);
@@ -59,8 +91,16 @@ const ManageFlavorsPage = () => {
                 key={flavor._id.toString()}
                 className='p-4 bg-white rounded-md shadow flex justify-between items-center'
               >
-                <span>{flavor.name}</span>
-                <span className='font-semibold'>${flavor.price}</span>
+                <div>
+                  <span className='font-medium'>{flavor.name}</span>
+                  <span className='text-gray-500 ml-4'>${flavor.price}</span>
+                </div>
+                <button
+                  onClick={() => handleDelete(flavor._id.toString())} // Додаємо обробник кліку
+                  className='bg-red-100 text-red-700 hover:bg-red-200 font-semibold py-1 px-3 rounded-md text-sm transition-colors'
+                >
+                  Delete
+                </button>
               </li>
             ))}
           </ul>
