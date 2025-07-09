@@ -52,8 +52,8 @@ export async function PUT(
 
     // Операція оновлення
     const result = await db.collection('flavors').updateOne(
-      { _id: new ObjectId(id) }, // Фільтр: знаходимо документ за ID
-      { $set: { name, price, description } } // Оператор $set: оновлюємо вказані поля
+      { _id: new ObjectId(id) },
+      { $set: { name, price, description } }
     );
 
     if (result.matchedCount === 0) {
