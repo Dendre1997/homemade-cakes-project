@@ -1,13 +1,17 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState } from 'react'
+import { Flavor }  from '@/types';
 
 interface FlavorFormProps {
-  onFlavorAdded: () => void;
+  existingFlavor?: Flavor | null; 
+  onFormSubmit: () => void;
 }
-const FlavorForm = ({ onFlavorAdded }: FlavorFormProps) => {
-  const [name, setName] = useState('');
-  const [price, setPrice] = useState('');
-  const [description, setDescription] = useState('');
+const FlavorForm = ({ existingFlavor, onFormSubmit }: FlavorFormProps) => {
+  const isEditMode = !!existingFlavor;
+  const [name, setName] = useState(existingFlavor?.name || '');
+  const [price, setPrice] = useState(existingFlavor?.price.toString() || '');
+  const [description, setDescription] = useState(existingFlavor?.description || '');
+
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -16,30 +20,36 @@ const FlavorForm = ({ onFlavorAdded }: FlavorFormProps) => {
     setIsLoading(true);
     setError(null);
 
-    try {
-      const body = {
-        name,
-        price: parseFloat(price),
-        description,
-      };
+    const body = {
+      name,
+      price: parseFloat(price),
+      description,
+    };
 
-      const response = await fetch('/api/flavors', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
-      });
-      if (!response.ok) {
-        throw new Error(
-          'Failed to create flavor. Server responded with ' + response.status
-        );
+    try {
+     let response;
+      if (isEditMode) {
+        response = await fetch(`/api/flavors/${existingFlavor?._id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+      } else {
+        response = await fetch('/api/flavors', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
       }
-      setName('');
-      setPrice('');
-      setDescription('');
-      onFlavorAdded();
-      alert('Flavor successfully added');
+      if (!response.ok) {
+        throw new Error(`Failed to ${isEditMode ? 'update' : 'create'} flavor`);
+      }
+      alert(`Начинку успішно ${isEditMode ? 'Updated' : 'Added'}!`);
+      if (!isEditMode) {
+        setName(''); setPrice(''); setDescription('');
+      }
+      onFormSubmit();
+
     } catch (err: unknown) {
       console.error('An error occurred:', err);
       let errorMessage = 'An unknown error occurred.';
@@ -58,7 +68,9 @@ const FlavorForm = ({ onFlavorAdded }: FlavorFormProps) => {
       onSubmit={handleSubmit}
       className='p-6 bg-white rounded-lg shadow-md max-w-lg'
     >
-      <h2 className='text-2xl font-semibold mb-4'>Add New Flavor</h2>
+      <h2 className='text-2xl font-semibold mb-4'>
+        {isEditMode ? 'Update Flavor' : 'Add New Flavor'}
+      </h2>
       <div className='space-y-4'>
         <div>
           <label
@@ -118,7 +130,11 @@ const FlavorForm = ({ onFlavorAdded }: FlavorFormProps) => {
             disabled={isLoading}
             className='w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-300'
           >
-            {isLoading ? 'Adding...' : 'Add Flavor'}
+            {isLoading
+              ? 'Saving...'
+              : isEditMode
+              ? 'Update Flavor'
+              : 'Add Flavor'}
           </button>
         </div>
       </div>

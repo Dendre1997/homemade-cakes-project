@@ -1,7 +1,7 @@
 'use client'
 import React, { useState, useEffect, useCallback } from 'react';
 import FlavorForm from '@/components/admin/FlavorForm';
-// import  from 'react';
+import Link from 'next/link';
 import { Flavor } from '@/types';
 const ManageFlavorsPage = () => {
   const [flavors, setFlavors] = useState<Flavor[]>([]);
@@ -95,12 +95,19 @@ const ManageFlavorsPage = () => {
                   <span className='font-medium'>{flavor.name}</span>
                   <span className='text-gray-500 ml-4'>${flavor.price}</span>
                 </div>
+                <div className="flex items-center gap-2">
+                <Link 
+                   href={`/admin/flavors/${flavor._id.toString()}/edit`}
+                    className="bg-blue-100 text-blue-700 hover:bg-blue-200 font-semibold py-1 px-3 rounded-md text-sm transition-colors">
+                    Update
+                  </Link>
                 <button
                   onClick={() => handleDelete(flavor._id.toString())} // Додаємо обробник кліку
                   className='bg-red-100 text-red-700 hover:bg-red-200 font-semibold py-1 px-3 rounded-md text-sm transition-colors'
                 >
                   Delete
-                </button>
+                  </button>
+                  </div>
               </li>
             ))}
           </ul>
