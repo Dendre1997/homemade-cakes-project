@@ -18,3 +18,9 @@ export interface Allergen {
     _id: ObjectId;
     name: string;
 }
+
+export interface Diameter {
+    _id: ObjectId;
+    sizeValue: number;
+    unit: string;
+}

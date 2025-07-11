@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
 import AllergenForm from '@/components/admin/AllergenForm';
-// import  from 'react';
+import Link from 'next/link';
 import { Allergen } from '@/types';
 const ManageAllergensPage = () => {
   const [allergens, setAllergens] = useState<Allergen[]>([]);
@@ -72,7 +72,7 @@ const ManageAllergensPage = () => {
     <section>
       <h1 className='text-3xl font-bold mb-6'>Flavors Managment</h1>
 
-      <AllergenForm onAllergenAdded={fetchAllergens} />
+      <AllergenForm onAllergenSubmit={fetchAllergens} />
 
       <div className='mt-10'>
         <h2 className='text-2xl font-bold mb-4'>Existing Allergens</h2>
@@ -94,17 +94,25 @@ const ManageAllergensPage = () => {
                 <div>
                   <span className='font-medium'>{allergen.name}</span>
                 </div>
-                <button
-                  onClick={() => handleDelete(allergen._id.toString())}
-                  className='bg-red-100 text-red-700 hover:bg-red-200 font-semibold py-1 px-3 rounded-md text-sm transition-colors'
-                >
-                  Delete
-                </button>
+                <div className='flex items-center gap-2'>
+                  <Link
+                    href={`/admin/allergens/${allergen._id.toString()}/edit`}
+                    className='bg-blue-100 text-blue-700 hover:bg-blue-200 font-semibold py-1 px-3 rounded-md text-sm transition-colors'
+                  >
+                    Update
+                  </Link>
+                  <button
+                    onClick={() => handleDelete(allergen._id.toString())}
+                    className='bg-red-100 text-red-700 hover:bg-red-200 font-semibold py-1 px-3 rounded-md text-sm transition-colors'
+                  >
+                    Delete
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
-              )}
-              
+        )}
+
         {/* If Loading is over and array is empty */}
         {!isLoading && !error && allergens.length === 0 && (
           <p>No allergens have been added yet</p>

@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
 import DecorationsForm from '@/components/admin/DecorationsForm';
+import Link from 'next/link';
 // import  from 'react';
 import { Decoration } from '@/types';
 const ManageDecorationsPage = () => {
@@ -72,7 +73,7 @@ const ManageDecorationsPage = () => {
     <section>
       <h1 className='text-3xl font-bold mb-6'>Flavors Managment</h1>
 
-      <DecorationsForm onDecorationAdded={fetchDecorations} />
+      <DecorationsForm onFormSubmit={fetchDecorations} />
 
       <div className='mt-10'>
         <h2 className='text-2xl font-bold mb-4'>Existing Decorations</h2>
@@ -93,14 +94,24 @@ const ManageDecorationsPage = () => {
               >
                 <div>
                   <span className='font-medium'>{decoration.name}</span>
-                  <span className='text-gray-500 ml-4'>${decoration.price}</span>
+                  <span className='text-gray-500 ml-4'>
+                    ${decoration.price}
+                  </span>
                 </div>
-                <button
-                  onClick={() => handleDelete(decoration._id.toString())}
-                  className='bg-red-100 text-red-700 hover:bg-red-200 font-semibold py-1 px-3 rounded-md text-sm transition-colors'
-                >
-                  Delete
-                </button>
+                <div className='flex items-center gap-2'>
+                  <Link
+                    href={`/admin/decorations/${decoration._id.toString()}/edit`}
+                    className='bg-blue-100 text-blue-700 hover:bg-blue-200 font-semibold py-1 px-3 rounded-md text-sm transition-colors'
+                  >
+                    Update
+                  </Link>
+                  <button
+                    onClick={() => handleDelete(decoration._id.toString())}
+                    className='bg-red-100 text-red-700 hover:bg-red-200 font-semibold py-1 px-3 rounded-md text-sm transition-colors'
+                  >
+                    Delete
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
