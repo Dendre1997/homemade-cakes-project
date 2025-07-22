@@ -21,12 +21,12 @@ export interface Allergen {
 
 export interface Diameter {
   _id: ObjectId;
+  name: string;
   sizeValue: number;
-  unit: string;
 }
 
 export interface AvailableDiameterConfig {
-  diameterId: ObjectId;
+  diameterId: string;
   multiplier: number;
 }
 
@@ -42,4 +42,9 @@ export interface Product {
   allergenIds: ObjectId[];
 
   isActive: boolean;
+}
+
+export interface ProductCategory {
+  _id: ObjectId;
+  name: string;
 }

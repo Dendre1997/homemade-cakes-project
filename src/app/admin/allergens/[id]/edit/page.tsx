@@ -18,7 +18,7 @@ const EditAllergenPage = () => {
     }
   }, [id]);
 
-  if (!allergen) return <p>Завантаження...</p>;
+  if (!allergen) return <p>Loading...</p>;
 
   return (
     <section>

@@ -33,6 +33,14 @@ const AdminSidebar = () => {
           </li>
           <li className='mb-2'>
             <Link
+              href='/admin/products/create'
+              className='block py-2 px-4 rounded hover:bg-gray-700 transition-colors duration-200'
+            >
+              Create Product
+            </Link>
+          </li>
+          <li className='mb-2'>
+            <Link
               href='/admin/decorations'
               className='block py-2 px-4 rounded hover:bg-gray-700 transition-colors duration-200'
             >
@@ -49,10 +57,18 @@ const AdminSidebar = () => {
           </li>
           <li className='mb-2'>
             <Link
-              href='/admin/allergens'
+              href='/admin/flavors'
               className='block py-2 px-4 rounded hover:bg-gray-700 transition-colors duration-200'
             >
-              Allergens
+              Flavors
+            </Link>
+          </li>
+          <li className='mb-2'>
+            <Link
+              href='/admin/categories'
+              className='block py-2 px-4 rounded hover:bg-gray-700 transition-colors duration-200'
+            >
+              Categories
             </Link>
           </li>
           <li className='mb-2'>
