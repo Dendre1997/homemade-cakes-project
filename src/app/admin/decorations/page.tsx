@@ -3,25 +3,29 @@ import React, { useState, useEffect, useCallback } from 'react';
 import DecorationsForm from '@/components/admin/DecorationsForm';
 import Link from 'next/link';
 // import  from 'react';
-import { Decoration } from '@/types';
+import { Decoration, ProductCategory } from '@/types';
 const ManageDecorationsPage = () => {
   const [decorations, setDecorations] = useState<Decoration[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [categories, setCategories] = useState<ProductCategory[]>([]);
 
   const fetchDecorations = useCallback(async () => {
     try {
       setError(null);
       setIsLoading(true);
+      const [decorationsRes, categoriesRes] = await Promise.all([
+  fetch('/api/decorations'),
+  fetch('/api/categories'),
+]);
+if (!decorationsRes.ok || !categoriesRes.ok)
+  throw new Error('Failed to fetch data');
 
-      const response = await fetch('/api/decorations');
+const decorationsData = await decorationsRes.json();
+const categoriesData = await categoriesRes.json();
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch decorations');
-      }
-
-      const data = await response.json();
-      setDecorations(data);
+setDecorations(decorationsData);
+setCategories(categoriesData);;
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
@@ -73,7 +77,10 @@ const ManageDecorationsPage = () => {
     <section>
       <h1 className='text-3xl font-bold mb-6'>Flavors Managment</h1>
 
-      <DecorationsForm onFormSubmit={fetchDecorations} />
+      <DecorationsForm
+        onFormSubmit={fetchDecorations}
+        categories={categories}
+      />
 
       <div className='mt-10'>
         <h2 className='text-2xl font-bold mb-4'>Existing Decorations</h2>

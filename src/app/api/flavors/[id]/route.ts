@@ -1,4 +1,3 @@
-// src/app/api/flavors/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import clientPromise from '@/lib/db';
 import { ObjectId } from 'mongodb';

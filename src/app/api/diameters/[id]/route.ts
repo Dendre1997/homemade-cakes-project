@@ -40,9 +40,9 @@ export async function PUT(
 ) {
   try {
     const id = params.id;
-    const { sizeValue, unit } = await request.json();
+    const { sizeValue, categoryIds } = await request.json();
 
-    if (typeof sizeValue !== 'number' || !unit) {
+    if (typeof sizeValue !== 'number') {
       return NextResponse.json(
         { error: 'Valid sizeValue (number) and unit (string) are required' },
         { status: 400 }
@@ -54,7 +54,7 @@ export async function PUT(
 
     const result = await db
       .collection('diameters')
-      .updateOne({ _id: new ObjectId(id) }, { $set: { sizeValue, unit } });
+      .updateOne({ _id: new ObjectId(id) }, { $set: { sizeValue, categoryIds: categoryIds || [] } });
 
     if (result.matchedCount === 0) {
       return NextResponse.json(

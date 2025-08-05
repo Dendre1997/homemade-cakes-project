@@ -1,27 +1,45 @@
 'use client';
-
-import React, { useState } from 'react';
-import { Diameter } from '@/types';
+import { useState, useEffect } from 'react';
+import { Diameter, ProductCategory } from '@/types';
 
 interface DiameterFormProps {
   existingDiameter?: Diameter | null;
   onFormSubmit: () => void;
+  categories: ProductCategory[];
 }
 
 const DiameterForm = ({
   existingDiameter,
   onFormSubmit,
+  categories,
 }: DiameterFormProps) => {
   const isEditMode = !!existingDiameter;
 
-//   const [name, setName] = useState(existingDiameter?.name || '');
-  const [sizeValue, setSizeValue] = useState(
-    existingDiameter?.sizeValue?.toString() || ''
-  );
-  const [unit, setUnit] = useState(existingDiameter?.unit || '');
+  // State based on our final Diameter type
+  const [name, setName] = useState('');
+  const [sizeValue, setSizeValue] = useState('');
+  const [categoryIds, setCategoryIds] = useState<string[]>([]);
 
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // useEffect to populate the form when in edit mode
+  useEffect(() => {
+    if (existingDiameter) {
+      setName(existingDiameter.name || '');
+      setSizeValue(existingDiameter.sizeValue.toString() || '');
+      setCategoryIds(existingDiameter.categoryIds || []);
+    }
+  }, [existingDiameter]);
+
+  // Handler for category checkboxes
+  const handleCategoryChange = (categoryId: string) => {
+    setCategoryIds((prev) =>
+      prev.includes(categoryId)
+        ? prev.filter((id) => id !== categoryId)
+        : [...prev, categoryId]
+    );
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -31,7 +49,7 @@ const DiameterForm = ({
     const body = {
       name,
       sizeValue: parseFloat(sizeValue),
-      unit,
+      categoryIds,
     };
 
     try {
@@ -52,22 +70,14 @@ const DiameterForm = ({
         );
       }
 
-      alert(`Diameter ${isEditMode ? 'updated' : 'added'}!`);
-
-      if (!isEditMode) {
-        // setName('');
-        setSizeValue('');
-        setUnit('');
-      }
-
+      alert(`Diameter successfully ${isEditMode ? 'updated' : 'created'}!`);
       onFormSubmit();
     } catch (err: unknown) {
-      console.error('An error occurred:', err);
-      let errorMessage = 'An unknown error occurred.';
       if (err instanceof Error) {
-        errorMessage = err.message;
+        setError(err.message);
+      } else {
+        setError('An unknown error occurred.');
       }
-      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -81,9 +91,8 @@ const DiameterForm = ({
       <h2 className='text-2xl font-semibold mb-4'>
         {isEditMode ? 'Update Diameter' : 'Add New Diameter'}
       </h2>
-
-      <div className='space-y-4'>
-        {/* <div>
+      <div className='space-y-6'>
+        <div>
           <label
             htmlFor='name'
             className='block text-sm font-medium text-gray-700'
@@ -95,43 +104,49 @@ const DiameterForm = ({
             id='name'
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className='mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500'
+            className='mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm'
             required
           />
-        </div> */}
-
+        </div>
         <div>
           <label
             htmlFor='sizeValue'
             className='block text-sm font-medium text-gray-700'
           >
-            Size Value
+            Size Value (in inches)
           </label>
           <input
             type='number'
             id='sizeValue'
             value={sizeValue}
             onChange={(e) => setSizeValue(e.target.value)}
-            className='mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500'
+            className='mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm'
             required
+            step='0.5'
           />
         </div>
 
-        <div>
-          <label
-            htmlFor='unit'
-            className='block text-sm font-medium text-gray-700'
-          >
-            Unit
-          </label>
-          <input
-            type='text'
-            id='unit'
-            value={unit}
-            onChange={(e) => setUnit(e.target.value)}
-            className='mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500'
-            required
-          />
+        <div className='space-y-2'>
+          <h3 className='text-lg font-medium'>Categories</h3>
+          <div className='p-4 border border-gray-200 rounded-md grid grid-cols-2 md:grid-cols-3 gap-4'>
+            {categories.map((cat) => (
+              <div key={cat._id.toString()} className='flex items-center'>
+                <input
+                  type='checkbox'
+                  id={`cat-dia-${cat._id.toString()}`}
+                  checked={categoryIds.includes(cat._id.toString())}
+                  onChange={() => handleCategoryChange(cat._id.toString())}
+                  className='h-4 w-4 rounded border-gray-300 text-indigo-600'
+                />
+                <label
+                  htmlFor={`cat-dia-${cat._id.toString()}`}
+                  className='ml-3 text-sm text-gray-700'
+                >
+                  {cat.name}
+                </label>
+              </div>
+            ))}
+          </div>
         </div>
 
         {error && (
@@ -139,17 +154,14 @@ const DiameterForm = ({
             <p>Error: {error}</p>
           </div>
         )}
-
         <div>
           <button
             type='submit'
             disabled={isLoading}
-            className='w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-300'
+            className='w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300'
           >
             {isLoading
-              ? isEditMode
-                ? 'Updating...'
-                : 'Adding...'
+              ? 'Saving...'
               : isEditMode
               ? 'Update Diameter'
               : 'Add Diameter'}

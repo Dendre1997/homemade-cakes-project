@@ -3,11 +3,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import DiameterForm from '@/components/admin/DiameterForm';
 import Link from 'next/link';
-import { Diameter } from '@/types';
+import { Diameter, ProductCategory } from '@/types';
 
 const ManageDiametersPage = () => {
   const [diameters, setDiameters] = useState<Diameter[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const fetchDiameters = useCallback(async () => {
@@ -15,14 +16,18 @@ const ManageDiametersPage = () => {
       setError(null);
       setIsLoading(true);
 
-      const response = await fetch('/api/diameters');
+      const [diametersRes, categoriesRes] = await Promise.all([
+        fetch('/api/diameters'),
+        fetch('/api/categories'),
+      ]);
+      if (!diametersRes.ok || !categoriesRes.ok)
+        throw new Error('Failed to fetch data');
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch diameters');
-      }
+      const diametersData = await diametersRes.json();
+      const categoriesData = await categoriesRes.json();
 
-      const data = await response.json();
-      setDiameters(data);
+      setDiameters(diametersData);
+      setCategories(categoriesData);
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
@@ -75,7 +80,7 @@ const ManageDiametersPage = () => {
     <section>
       <h1 className='text-3xl font-bold mb-6'>Diameter Management</h1>
 
-      <DiameterForm onFormSubmit={fetchDiameters} />
+      <DiameterForm onFormSubmit={fetchDiameters} categories={categories} />
 
       <div className='mt-10'>
         <h2 className='text-2xl font-bold mb-4'>Existing Diameters</h2>
@@ -92,7 +97,7 @@ const ManageDiametersPage = () => {
               >
                 <div>
                   <span className='text-gray-500 ml-4'>
-                    SizeValue: {diameter.sizeValue} Unit:{diameter.unit}
+                    SizeValue: {diameter.sizeValue}
                   </span>
                 </div>
                 <div className='flex items-center gap-2'>

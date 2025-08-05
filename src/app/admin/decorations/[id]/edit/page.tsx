@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Decoration } from '@/types';
+import { Decoration, ProductCategory } from '@/types';
 import DecorationsForm from '@/components/admin/DecorationsForm';
 
 const EditDecorationPage = () => {
@@ -12,16 +12,27 @@ const EditDecorationPage = () => {
 
   const [decoration, setDecoration] = useState<Decoration | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (id) {
       const fetchDecorationData = async () => {
         try {
-          const response = await fetch(`/api/decorations/${id}`);
-          if (!response.ok) throw new Error('Failed to fetch decoration data');
-          const data = await response.json();
-          setDecoration(data);
+          const [DecorationRes, categoriesRes] = await Promise.all([
+            fetch(`/api/decorations/${id}`),
+            fetch('/api/categories'),
+          ]);
+
+          if (!DecorationRes.ok || !categoriesRes.ok) {
+            throw new Error('Failed to fetch initial data');
+          }
+
+          const decorationData = await DecorationRes.json();
+          const categoriesData = await categoriesRes.json();
+
+          setDecoration(decorationData);
+          setCategories(categoriesData);
         } catch (err: unknown) {
           if (err instanceof Error) setError(err.message);
         } finally {
@@ -43,6 +54,7 @@ const EditDecorationPage = () => {
     <section>
       <DecorationsForm
         existingDecoration={decoration}
+        categories={categories}
         onFormSubmit={handleUpdateSuccess}
       />
     </section>

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Diameter } from '@/types';
+import { Diameter, ProductCategory } from '@/types';
 import DiameterForm from '@/components/admin/DiameterForm';
 
 const EditDiameterPage = () => {
@@ -13,15 +13,26 @@ const EditDiameterPage = () => {
   const [diameter, setDiameter] = useState<Diameter | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [categories, setCategories] = useState<ProductCategory[]>([]);;
 
   useEffect(() => {
     if (id) {
       const fetchDiameterData = async () => {
         try {
-          const response = await fetch(`/api/diameters/${id}`);
-          if (!response.ok) throw new Error('Failed to fetch diameter data');
-          const data = await response.json();
-          setDiameter(data);
+          const [diameterRes, categoriesRes] = await Promise.all([
+            fetch(`/api/diameters/${id}`),
+            fetch('/api/categories'),
+          ]);
+
+          if (!diameterRes.ok || !categoriesRes.ok) {
+            throw new Error('Failed to fetch initial data');
+          }
+
+          const diameterData = await diameterRes.json();
+          const categoriesData = await categoriesRes.json();
+
+          setDiameter(diameterData);
+          setCategories(categoriesData);
         } catch (err: unknown) {
           if (err instanceof Error) setError(err.message);
         } finally {
@@ -44,6 +55,7 @@ const EditDiameterPage = () => {
       <DiameterForm
         existingDiameter={diameter}
         onFormSubmit={handleUpdateSuccess}
+        categories={categories}
       />
     </section>
   );

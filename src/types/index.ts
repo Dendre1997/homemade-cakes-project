@@ -13,6 +13,7 @@ export interface Decoration {
   name: string;
   price: number;
   imageUrl?: string;
+  categoryIds?: string[];
 }
 
 export interface Allergen {
@@ -24,6 +25,7 @@ export interface Diameter {
   _id: ObjectId;
   name: string;
   sizeValue: number;
+  categoryIds?: string[];
 }
 
 export interface AvailableDiameterConfig {

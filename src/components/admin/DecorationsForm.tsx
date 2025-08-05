@@ -1,18 +1,28 @@
 'use client'
 import React, { useState } from "react"
-import { Decoration } from "@/types";
+import { Decoration, ProductCategory } from "@/types";
 interface DecorationsFormProps {
   existingDecoration?: Decoration | null;
   onFormSubmit: () => void;
+  categories: ProductCategory[];
 }
-const DecorationsForm = ({ existingDecoration, onFormSubmit,}: DecorationsFormProps) => {
+const DecorationsForm = ({ existingDecoration, onFormSubmit, categories}: DecorationsFormProps) => {
   const isEditMode = !!existingDecoration;
   const [name, setName] = useState(existingDecoration?.name || '');
   const [price, setPrice] = useState( existingDecoration?.price.toString() || '');
   const [imageUrl, setImageUrl] = useState(existingDecoration?.imageUrl || '');
+  const [categoryIds, setCategoryIds] = useState<string[]>([]);
   
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+
+  const handleCategoryChange = (categoryId: string) => {
+    setCategoryIds((prev) =>
+      prev.includes(categoryId)
+        ? prev.filter((id) => id !== categoryId)
+        : [...prev, categoryId]
+    );
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -23,6 +33,7 @@ const DecorationsForm = ({ existingDecoration, onFormSubmit,}: DecorationsFormPr
       name,
       price: parseFloat(price),
       imageUrl,
+      categoryIds,
     };
 
     try {
@@ -114,6 +125,28 @@ const DecorationsForm = ({ existingDecoration, onFormSubmit,}: DecorationsFormPr
             className='mt-1 block w-full input-class'
           />
         </div>
+        <div className='space-y-2'>
+          <h3 className='text-lg font-medium'>Categories</h3>
+          <div className='p-4 border border-gray-200 rounded-md grid grid-cols-2 md:grid-cols-3 gap-4'>
+            {categories.map((cat) => (
+              <div key={cat._id.toString()} className='flex items-center'>
+                <input
+                  type='checkbox'
+                  id={`cat-deco-${cat._id.toString()}`}
+                  checked={categoryIds.includes(cat._id.toString())}
+                  onChange={() => handleCategoryChange(cat._id.toString())}
+                  className='h-4 w-4 rounded border-gray-300 text-indigo-600'
+                />
+                <label
+                  htmlFor={`cat-deco-${cat._id.toString()}`}
+                  className='ml-3 text-sm'
+                >
+                  {cat.name}
+                </label>
+              </div>
+            ))}
+          </div>
+        </div>
         {error && (
           <div className='text-red-500 text-sm'>
             <p>Error: {error}</p>
@@ -125,7 +158,11 @@ const DecorationsForm = ({ existingDecoration, onFormSubmit,}: DecorationsFormPr
             disabled={isLoading}
             className='w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-300'
           >
-            {isLoading ? 'Adding...' : (isEditMode ? 'Update Decoration' : 'Add Decoration')}
+            {isLoading
+              ? 'Adding...'
+              : isEditMode
+              ? 'Update Decoration'
+              : 'Add Decoration'}
           </button>
         </div>
       </div>

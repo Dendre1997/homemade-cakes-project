@@ -57,14 +57,6 @@ const AdminSidebar = () => {
           </li>
           <li className='mb-2'>
             <Link
-              href='/admin/flavors'
-              className='block py-2 px-4 rounded hover:bg-gray-700 transition-colors duration-200'
-            >
-              Flavors
-            </Link>
-          </li>
-          <li className='mb-2'>
-            <Link
               href='/admin/categories'
               className='block py-2 px-4 rounded hover:bg-gray-700 transition-colors duration-200'
             >

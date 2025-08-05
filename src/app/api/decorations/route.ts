@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    const { name, price, imageUrl }: Partial<Decoration> = body;
+    const { name, price, imageUrl, categoryIds }: Partial<Decoration> = body;
 
     if (!name || typeof price !== 'number') {
       return NextResponse.json(
@@ -23,6 +23,7 @@ export async function POST(request: NextRequest) {
       name,
       price,
       imageUrl: imageUrl || '',
+      categoryIds: categoryIds || [],
     };
 
     const result = await db.collection('decorations').insertOne(newDecorationData);

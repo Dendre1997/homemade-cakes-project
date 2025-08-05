@@ -37,7 +37,7 @@ export async function PUT(
 ) {
   try {
     const id = params.id;
-    const { name, price, imageUrl } = await request.json();
+    const { name, price, imageUrl, categoryIds } = await request.json();
 
     if (!name || typeof price !== 'number') {
       return NextResponse.json(
@@ -53,7 +53,7 @@ export async function PUT(
       .collection('decorations')
       .updateOne(
         { _id: new ObjectId(id) },
-        { $set: { name, price, imageUrl: imageUrl || '' } }
+        { $set: { name, price, imageUrl: imageUrl || '', categoryIds: categoryIds || [] } }
       );
 
     if (result.matchedCount === 0) {

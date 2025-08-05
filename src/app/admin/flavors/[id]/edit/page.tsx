@@ -55,7 +55,7 @@ const EditFlavorPage = () => {
       <FlavorForm
         existingFlavor={flavor}
         onFormSubmit={handleUpdateSuccess}
-        categories={categories} // <-- Тепер передаємо категорії у форму
+        categories={categories}
       />
     </section>
   );

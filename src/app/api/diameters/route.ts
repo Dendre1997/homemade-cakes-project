@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import clientPromise from '@/lib/db';
-import { Diameter } from '@/types';
+import { Diameter} from '@/types';
 
 // POST
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    const { sizeValue, unit }: Partial<Diameter> = body;
+    const { sizeValue, categoryIds }: Partial<Diameter> = body;
 
-    if (typeof sizeValue !== 'number' || !unit) {
+    if (typeof sizeValue !== 'number' || '') {
       return NextResponse.json(
         { error: 'Valid sizeValue (number) and unit (string) are required' },
         { status: 400 }
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
 
     const newDiameterData = {
       sizeValue,
-      unit,
+      categoryIds: categoryIds || [],
     };
 
     const result = await db.collection('diameters').insertOne(newDiameterData);
