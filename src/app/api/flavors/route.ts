@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    const { name, price, description }: Partial<Flavor> = body;
+    const { name, price, description, categoryIds}: Partial<Flavor> = body;
 
     if (!name || typeof price !== 'number') {
       return NextResponse.json(
@@ -23,6 +23,7 @@ export async function POST(request: NextRequest) {
       name,
       price,
       description: description || '',
+      categoryIds: categoryIds || [],
     };
 
     const result = await db.collection('flavors').insertOne(newFlavorData);

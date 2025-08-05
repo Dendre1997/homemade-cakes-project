@@ -1,38 +1,44 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useParams,useRouter } from 'next/navigation';
-import { Flavor } from '@/types';
+import { useParams, useRouter } from 'next/navigation';
+import { Flavor, ProductCategory } from '@/types';
 import FlavorForm from '@/components/admin/FlavorForm';
 
 const EditFlavorPage = () => {
   const params = useParams();
-  const router = useRouter()
-  const id = params.id;
+  const router = useRouter();
+  const id = params.id as string;
 
   const [flavor, setFlavor] = useState<Flavor | null>(null);
+  const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (id) {
-      const fetchFlavorData = async () => {
+      const fetchInitialData = async () => {
         try {
-          setIsLoading(true);
-          const response = await fetch(`/api/flavors/${id}`);
-          if (!response.ok) {
-            throw new Error('Failed to fetch flavor data');
+          const [flavorRes, categoriesRes] = await Promise.all([
+            fetch(`/api/flavors/${id}`),
+            fetch('/api/categories'),
+          ]);
+
+          if (!flavorRes.ok || !categoriesRes.ok) {
+            throw new Error('Failed to fetch initial data');
           }
-          const data = await response.json();
-          setFlavor(data);
+
+          const flavorData = await flavorRes.json();
+          const categoriesData = await categoriesRes.json();
+
+          setFlavor(flavorData);
+          setCategories(categoriesData);
         } catch (err: unknown) {
           if (err instanceof Error) setError(err.message);
-          else setError('An unknown error occurred');
         } finally {
           setIsLoading(false);
         }
       };
-
-      fetchFlavorData();
+      fetchInitialData();
     }
   }, [id]);
 
@@ -40,23 +46,18 @@ const EditFlavorPage = () => {
     router.push('/admin/flavors');
   };
 
-  if (isLoading) {
-    return <p>Loading data of flavor...</p>;
-  }
-
-  if (error) {
-    return <p className='text-red-500'>Error: {error}</p>;
-  }
-
-  if (!flavor) {
-    return <p>Flavor not found.</p>;
-  }
+  if (isLoading) return <p>Loading data...</p>;
+  if (error) return <p className='text-red-500'>Error: {error}</p>;
 
   return (
     <section>
-      <FlavorForm existingFlavor={flavor} onFormSubmit={handleUpdateSuccess} />
+      <h1 className='text-3xl font-bold mb-6'>Edit Flavor: {flavor?.name}</h1>
+      <FlavorForm
+        existingFlavor={flavor}
+        onFormSubmit={handleUpdateSuccess}
+        categories={categories} // <-- Тепер передаємо категорії у форму
+      />
     </section>
   );
 };
-
 export default EditFlavorPage;

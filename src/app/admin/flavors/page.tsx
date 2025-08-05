@@ -1,10 +1,11 @@
 'use client'
 import React, { useState, useEffect, useCallback } from 'react';
 import FlavorForm from '@/components/admin/FlavorForm';
+import { Flavor, ProductCategory } from '@/types';
 import Link from 'next/link';
-import { Flavor } from '@/types';
 const ManageFlavorsPage = () => {
   const [flavors, setFlavors] = useState<Flavor[]>([]);
+  const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -12,15 +13,18 @@ const ManageFlavorsPage = () => {
       try {
         setError(null);
         setIsLoading(true); 
-
-        const response = await fetch('/api/flavors');
-
-        if (!response.ok) {
+        const [flavorsRes, categoriesRes] = await Promise.all([
+          fetch('/api/flavors'),
+          fetch('/api/categories'),
+        ]);
+        if (!flavorsRes.ok || !categoriesRes.ok) {
           throw new Error('Failed to fetch flavors');
         }
+        const flavorsData = await flavorsRes.json();
+        const categoriesData = await categoriesRes.json();
 
-        const data = await response.json();
-        setFlavors(data);
+        setFlavors(flavorsData);
+        setCategories(categoriesData)
       } catch (err: unknown) {
         if (err instanceof Error) {
           setError(err.message);
@@ -72,7 +76,7 @@ const ManageFlavorsPage = () => {
     <section>
       <h1 className='text-3xl font-bold mb-6'>Flavors Managment</h1>
 
-      <FlavorForm onFlavorAdded={fetchFlavors} />
+      <FlavorForm onFormSubmit={fetchFlavors} categories={categories} />
 
       <div className='mt-10'>
         <h2 className='text-2xl font-bold mb-4'>Existing Flavors</h2>
@@ -95,19 +99,20 @@ const ManageFlavorsPage = () => {
                   <span className='font-medium'>{flavor.name}</span>
                   <span className='text-gray-500 ml-4'>${flavor.price}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                <Link 
-                   href={`/admin/flavors/${flavor._id.toString()}/edit`}
-                    className="bg-blue-100 text-blue-700 hover:bg-blue-200 font-semibold py-1 px-3 rounded-md text-sm transition-colors">
+                <div className='flex items-center gap-2'>
+                  <Link
+                    href={`/admin/flavors/${flavor._id.toString()}/edit`}
+                    className='bg-blue-100 text-blue-700 hover:bg-blue-200 font-semibold py-1 px-3 rounded-md text-sm transition-colors'
+                  >
                     Update
                   </Link>
-                <button
-                  onClick={() => handleDelete(flavor._id.toString())} // Додаємо обробник кліку
-                  className='bg-red-100 text-red-700 hover:bg-red-200 font-semibold py-1 px-3 rounded-md text-sm transition-colors'
-                >
-                  Delete
+                  <button
+                    onClick={() => handleDelete(flavor._id.toString())} // Додаємо обробник кліку
+                    className='bg-red-100 text-red-700 hover:bg-red-200 font-semibold py-1 px-3 rounded-md text-sm transition-colors'
+                  >
+                    Delete
                   </button>
-                  </div>
+                </div>
               </li>
             ))}
           </ul>

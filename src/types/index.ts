@@ -5,6 +5,7 @@ export interface Flavor {
   name: string;
   price: number;
   description?: string;
+  categoryIds?: string[];
 }
 
 export interface Decoration {

@@ -1,20 +1,37 @@
 'use client';
-import React, { useState } from 'react'
-import { Flavor }  from '@/types';
+import React, { useState, useEffect } from 'react'
+import { Flavor, ProductCategory }  from '@/types';
 
 interface FlavorFormProps {
-  existingFlavor?: Flavor | null; 
+  existingFlavor?: Flavor | null;
   onFormSubmit: () => void;
+  categories: ProductCategory[];
 }
-const FlavorForm = ({ existingFlavor, onFormSubmit }: FlavorFormProps) => {
+const FlavorForm = ({ existingFlavor, onFormSubmit, categories }: FlavorFormProps) => {
   const isEditMode = !!existingFlavor;
   const [name, setName] = useState(existingFlavor?.name || '');
   const [price, setPrice] = useState(existingFlavor?.price.toString() || '');
   const [description, setDescription] = useState(existingFlavor?.description || '');
-
+  const [categoryIds, setCategoryIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (existingFlavor) {
+      setName(existingFlavor.name);
+      setPrice(existingFlavor.price.toString());
+      setDescription(existingFlavor.description || '');
+      setCategoryIds(existingFlavor.categoryIds || []);
+    }
+  }, [existingFlavor]);
+
+  const handleCategoryChange = (categoryId: string) => {
+    setCategoryIds((prev) =>
+      prev.includes(categoryId)
+        ? prev.filter((id) => id !== categoryId)
+        : [...prev, categoryId]
+    );
+  };
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
@@ -24,6 +41,7 @@ const FlavorForm = ({ existingFlavor, onFormSubmit }: FlavorFormProps) => {
       name,
       price: parseFloat(price),
       description,
+      categoryIds,
     };
 
     try {
@@ -44,7 +62,7 @@ const FlavorForm = ({ existingFlavor, onFormSubmit }: FlavorFormProps) => {
       if (!response.ok) {
         throw new Error(`Failed to ${isEditMode ? 'update' : 'create'} flavor`);
       }
-      alert(`Начинку успішно ${isEditMode ? 'Updated' : 'Added'}!`);
+      alert(`Flavor Successfully ${isEditMode ? 'Updated' : 'Added'}!`);
       if (!isEditMode) {
         setName(''); setPrice(''); setDescription('');
       }
@@ -118,6 +136,28 @@ const FlavorForm = ({ existingFlavor, onFormSubmit }: FlavorFormProps) => {
             rows={3}
             className='mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500'
           />
+        </div>
+        <div className='space-y-2'>
+          <h3 className='text-lg font-medium text-gray-900'>Categories</h3>
+          <div className='p-4 border border-gray-200 rounded-md grid grid-cols-2 md:grid-cols-3 gap-4'>
+            {categories.map((cat) => (
+              <div key={cat._id.toString()} className='flex items-center'>
+                <input
+                  type='checkbox'
+                  id={`cat-${cat._id.toString()}`}
+                  checked={categoryIds.includes(cat._id.toString())}
+                  onChange={() => handleCategoryChange(cat._id.toString())}
+                  className='h-4 w-4 rounded border-gray-300 text-indigo-600'
+                />
+                <label
+                  htmlFor={`cat-${cat._id.toString()}`}
+                  className='ml-3 text-sm text-gray-700'
+                >
+                  {cat.name}
+                </label>
+              </div>
+            ))}
+          </div>
         </div>
         {error && (
           <div className='text-red-500 text-sm'>
