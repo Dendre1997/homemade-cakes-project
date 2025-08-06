@@ -38,7 +38,7 @@ export interface Product {
   name: string;
   description: string;
   imageUrls: string[];
-
+  categoryId: ObjectId;
   structureBasePrice: number;
   availableFlavorIds: ObjectId[];
   availableDiameterConfigs: AvailableDiameterConfig[];

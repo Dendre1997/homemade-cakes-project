@@ -12,6 +12,7 @@ export async function POST(request: NextRequest) {
       name,
       description,
       imageUrls,
+      categoryId,
       structureBasePrice,
       availableFlavorIds,
       availableDiameterConfigs,
@@ -19,7 +20,7 @@ export async function POST(request: NextRequest) {
       isActive,
     } = body;
 
-    if (!name || typeof structureBasePrice !== 'number') {
+    if (!name || typeof structureBasePrice !== 'number' ||  !categoryId) {
       return NextResponse.json(
         { error: 'Name and a valid base price are required' },
         { status: 400 }
@@ -33,6 +34,7 @@ export async function POST(request: NextRequest) {
     const newProduct = {
       name,
       description: description || '',
+      categoryId,
       imageUrls: imageUrls || [],
       structureBasePrice,
       availableFlavorIds: availableFlavorIds || [],

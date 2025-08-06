@@ -2,37 +2,34 @@
 
 import { useState, useEffect } from 'react';
 import ProductForm from '@/components/admin/ProductForm';
-import { Flavor, Diameter, Allergen } from '@/types'; // Імпортуємо всі потрібні типи
+import { Flavor, Diameter, Allergen, ProductCategory } from '@/types';
 
 const CreateProductPage = () => {
-  const [flavors, setFlavors] = useState<Flavor[]>([]);
-  const [diameters, setDiameters] = useState<Diameter[]>([]);
-  const [allergens, setAllergens] = useState<Allergen[]>([]);
+  const [categories, setCategories] = useState<ProductCategory[]>([]);
+  const [allAllergens, setAllergens] = useState<Allergen[]>([]);
+
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
+  const [filteredFlavors, setFilteredFlavors] = useState<Flavor[]>([]);
+  const [filteredDiameters, setFilteredDiameters] = useState<Diameter[]>([]);
 
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isDependentsLoading, setIsDependentsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchFormData = async () => {
+    const fetchInitialData = async () => {
       setIsLoading(true);
       try {
-        const [flavorsRes, diametersRes, allergensRes] = await Promise.all([
-          fetch('/api/flavors'),
-          fetch('/api/diameters'),
+        const [categoriesRes, allergensRes] = await Promise.all([
+          fetch('/api/categories'),
           fetch('/api/allergens'),
         ]);
 
-        if (!flavorsRes.ok || !diametersRes.ok || !allergensRes.ok) {
+        if (!categoriesRes.ok || !allergensRes || !allergensRes.ok) {
           throw new Error('Failed to fetch initial data for the form');
         }
-
-        const flavorsData = await flavorsRes.json();
-        const diametersData = await diametersRes.json();
-        const allergensData = await allergensRes.json();
-
-        setFlavors(flavorsData);
-        setDiameters(diametersData);
-        setAllergens(allergensData);
+        setCategories(await categoriesRes.json());
+        setAllergens(await allergensRes.json());
       } catch (err) {
         if (err instanceof Error) setError(err.message);
         else setError('An unknown error occurred');
@@ -40,21 +37,78 @@ const CreateProductPage = () => {
         setIsLoading(false);
       }
     };
-
-    fetchFormData();
+    fetchInitialData();
   }, []);
+  useEffect(() => {
+    if (!selectedCategoryId) {
+      setFilteredFlavors([]);
+      setFilteredDiameters([]);
+      return;
+    }
+    const fetchDependentData = async () => {
+      setIsDependentsLoading(true);
+      try {
+        // Will create api which can fillter by category
+        // For now load all
+        const [flavorsRes, diametersRes] = await Promise.all([
+          fetch('/api/flavors'), //todo change on /api/flavors?categoryId=...
+          fetch('/api/diameters'), //todo change on /api/diameters?categoryId=...
+        ]);
+        if (!flavorsRes.ok || !diametersRes.ok) throw new Error('Failed to fetch dependent data');
+        setFilteredFlavors(await flavorsRes.json());
+        setFilteredDiameters(await diametersRes.json());
+      } catch (error) {
+        console.error(error)
+      } finally {
+        setIsDependentsLoading(false)
+      }
+    };
+    fetchDependentData();
+  }, [selectedCategoryId])
 
-  if (isLoading) return <p>Loading data for form...</p>;
+  if (isLoading) return <p>Loading categories...</p>;
   if (error) return <p className='text-red-500'>Error: {error}</p>;
 
   return (
     <section>
       <h1 className='text-3xl font-bold mb-6'>Create New Product</h1>
-      <ProductForm
-        flavors={flavors}
-        diameters={diameters}
-        allergens={allergens}
-      />
+
+      {/* chose category */}
+      <div className='mb-8 p-4 border rounded-md'>
+        <label
+          htmlFor='category-select'
+          className='block text-lg font-medium mb-2'
+        >
+          Step 1: Choose a Product Category
+        </label>
+        <select
+          id='category-select'
+          value={selectedCategoryId}
+          onChange={(e) => setSelectedCategoryId(e.target.value)}
+          className='w-full p-2 border rounded'
+        >
+          <option value=''>-- Select Category --</option>
+          {categories.map((cat) => (
+            <option key={cat._id.toString()} value={cat._id.toString()}>
+              {cat.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* show form if category was choosen */}
+      {selectedCategoryId &&
+        (isDependentsLoading ? (
+          <p>Loading options for this category...</p>
+        ) : (
+          <ProductForm
+            // send filtered data into form
+            flavors={filteredFlavors}
+            diameters={filteredDiameters}
+            allergens={allAllergens}
+            categoryId={selectedCategoryId}
+          />
+        ))}
     </section>
   );
 };
