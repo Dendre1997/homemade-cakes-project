@@ -20,7 +20,7 @@ const AdminSidebar = () => {
               href='/admin/products'
               className='block py-2 px-4 rounded hover:bg-gray-700 transition-colors duration-200'
             >
-              Cakes
+              Products
             </Link>
           </li>
           <li className='mb-2'>
