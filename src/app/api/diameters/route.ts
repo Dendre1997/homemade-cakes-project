@@ -7,9 +7,9 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    const { sizeValue, categoryIds }: Partial<Diameter> = body;
+    const { sizeValue, categoryIds, name }: Partial<Diameter> = body;
 
-    if (typeof sizeValue !== 'number' || '') {
+    if (!name || typeof sizeValue !== 'number' || '') {
       return NextResponse.json(
         { error: 'Valid sizeValue (number) and unit (string) are required' },
         { status: 400 }
@@ -20,6 +20,7 @@ export async function POST(request: NextRequest) {
     const db = client.db(process.env.MONGODB_DB_NAME);
 
     const newDiameterData = {
+      name,
       sizeValue,
       categoryIds: categoryIds || [],
     };

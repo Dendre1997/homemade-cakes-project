@@ -97,6 +97,9 @@ const ManageDiametersPage = () => {
               >
                 <div>
                   <span className='text-gray-500 ml-4'>
+                    Name: {diameter.name}
+                  </span>
+                  <span className='text-gray-500 ml-4'>
                     SizeValue: {diameter.sizeValue}
                   </span>
                 </div>

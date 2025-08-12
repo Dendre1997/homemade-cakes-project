@@ -64,8 +64,7 @@ export interface ProductCategory {
 }
 
 export interface ProductWithCategory extends Product {
-  category: {
-    _id: string;
-    name: string;
-  };
+  category: ProductCategory;
+  availableFlavors: Flavor[];
+  availableDiameters: Diameter[];
 }
