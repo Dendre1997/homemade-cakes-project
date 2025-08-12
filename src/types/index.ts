@@ -62,3 +62,10 @@ export interface ProductCategory {
   _id: ObjectId;
   name: string;
 }
+
+export interface ProductWithCategory extends Product {
+  category: {
+    _id: string;
+    name: string;
+  };
+}

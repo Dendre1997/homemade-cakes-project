@@ -9,14 +9,13 @@ const EditProductPage = () => {
   const router = useRouter();
   const id = params.id as string;
 
-  // Стан для ВСІХ даних, необхідних для роботи сторінки та форми
+  
   const [product, setProduct] = useState<Product | null>(null);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [flavors, setFlavors] = useState<Flavor[]>([]);
   const [diameters, setDiameters] = useState<Diameter[]>([]);
   const [allergens, setAllergens] = useState<Allergen[]>([]);
 
-  // Цей стан буде жити на сторінці і керувати вибором в <select>
   const [productCategoryId, setProductCategoryId] = useState<string>('');
 
   const [isLoading, setIsLoading] = useState(true);
@@ -60,7 +59,6 @@ const EditProductPage = () => {
     }
   }, [id]);
 
-  // Ця функція буде обробляти сабміт форми
   const handleUpdateProduct = async (productData: ProductFormData) => {
     try {
       const response = await fetch(`/api/products/${id}`, {

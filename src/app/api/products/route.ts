@@ -4,24 +4,36 @@ import { Product } from '@/types';
 import { ObjectId } from 'mongodb';
 
 // GET
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const searchParams = request.nextUrl.searchParams;
+    const context = searchParams.get('context')
+
+    const matchFilter: { isActive?: boolean } = {}
+
+    if (context !== 'admin') {
+      matchFilter.isActive = true
+    }
+    
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
 
     const products = await db
-      .collection('products')
+      .collection("products")
       .aggregate([
         {
+          $match:  matchFilter ,
+        },
+        {
           $lookup: {
-            from: 'categories',
-            localField: 'categoryId',
-            foreignField: '_id',
-            as: 'category',
+            from: "categories",
+            localField: "categoryId",
+            foreignField: "_id",
+            as: "category",
           },
         },
         {
-          $unwind: '$category',
+          $unwind: "$category",
         },
       ])
       .toArray();
@@ -67,13 +79,18 @@ export async function POST(request: NextRequest) {
     // Form object for saving to the database
     const newProduct = {
       name,
-      description: description || '',
+      description: description || "",
       categoryId: new ObjectId(categoryId),
       imageUrls: imageUrls || [],
       structureBasePrice,
-      availableFlavorIds: availableFlavorIds || [],
-      availableDiameterConfigs: availableDiameterConfigs || [],
-      allergenIds: allergenIds || [],
+      availableFlavorIds:
+      availableFlavorIds?.map((id) => new ObjectId(id)) || [],
+      allergenIds: allergenIds?.map((id) => new ObjectId(id)) || [],
+      availableDiameterConfigs:
+      availableDiameterConfigs?.map((config) => ({
+          ...config,
+          diameterId: new ObjectId(config.diameterId),
+        })) || [],
       isActive: isActive === true,
     };
 

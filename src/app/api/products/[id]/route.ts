@@ -14,18 +14,34 @@ export async function GET(_request: Request, { params }: Context) {
     const db = client.db(process.env.MONGODB_DB_NAME);
 
     const products = await db
-      .collection('products')
+      .collection("products")
       .aggregate([
         { $match: { _id: new ObjectId(id) } },
         {
           $lookup: {
-            from: 'categories',
-            localField: 'categoryId',
-            foreignField: '_id',
-            as: 'category',
+            from: "categories",
+            localField: "categoryId",
+            foreignField: "_id",
+            as: "category",
           },
         },
-        { $unwind: { path: '$category', preserveNullAndEmptyArrays: true } },
+        {
+          $lookup: {
+            from: "flavors",
+            localField: "availableFlavorIds",
+            foreignField: '_id',
+            as: 'availableFlavors'
+          }
+        },
+        {
+          $lookup: {
+            from: 'diameters',
+            localField: 'availableDiameterConfigs.diameterId',
+            foreignField: '_id',
+            as: 'availableDiameters'
+          }
+        },
+        { $unwind: { path: "$category", preserveNullAndEmptyArrays: true } },
       ])
       .toArray();
 
@@ -43,20 +59,28 @@ export async function GET(_request: Request, { params }: Context) {
 
 // PUT
 export async function PUT(request: NextRequest, { params }: Context) {
+  const client = await clientPromise;
+  const db = client.db(process.env.MONGODB_DB_NAME);
   try {
     const { id } = params;
     const body = await request.json();
     
-    if (body.categoryId) {
-      body.categoryId = new ObjectId(body.categoryId);
+    if (body.categoryId) body.categoryId = new ObjectId(body.categoryId);
+    if (body.availableFlavorIds)
+      body.availableFlavorIds = body.availableFlavorIds.map(
+        (id: string) => new ObjectId(id)
+      );
+    if (body.allergenIds)
+      body.allergenIds = body.allergenIds.map((id: string) => new ObjectId(id));
+    if (body.availableDiameterConfigs) {
+      body.availableDiameterConfigs = body.availableDiameterConfigs.map(
+        (config: any) => ({
+          ...config,
+          diameterId: new ObjectId(config.diameterId),
+        })
+      );
     }
-    // const updateData = {
-    //   ...body,
-    //   categoryId: new ObjectId(body.categoryId)
-    // };
     
-    const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB_NAME);
 
     const result = await db.collection('products').updateOne(
       { _id: new ObjectId(id) },
