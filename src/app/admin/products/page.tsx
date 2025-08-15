@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Product, ProductWithCategory } from '@/types';
 import Link from 'next/link';
 import AdminProductCard from "@/components/admin/AdminProductCard";
+import LoadingSpinner from '@/components/Spinner';
 
 
 const ManageProductsPage = () => {
@@ -55,7 +56,7 @@ const ManageProductsPage = () => {
       </div>
 
       {isLoading ? (
-        <p>Loading products...</p>
+        <LoadingSpinner />
       ) : (
         <div className="bg-white shadow-md rounded-lg p-6 ">
           <div

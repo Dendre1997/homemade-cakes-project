@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ProductCategory } from '@/types';
 import CategoryForm from '@/components/admin/AllergenForm';
+import Spinner from '@/components/Spinner'
 
 const EditAllergenPage = () => {
   const params = useParams();
@@ -18,7 +19,7 @@ const EditAllergenPage = () => {
     }
   }, [id]);
 
-  if (!category) return <p>Loading...</p>;
+  if (!category) return <Spinner />;
 
   return (
     <section>

@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import DecorationsForm from '@/components/admin/DecorationsForm';
 import Link from 'next/link';
+import LoadingSpinner from '@/components/Spinner';
 // import  from 'react';
 import { Decoration, ProductCategory } from '@/types';
 const ManageDecorationsPage = () => {
@@ -86,7 +87,7 @@ setCategories(categoriesData);;
         <h2 className='text-2xl font-bold mb-4'>Existing Decorations</h2>
 
         {/* Show  loading state future spinner*/}
-        {isLoading && <p>Loading list of decorations...</p>}
+        {isLoading && <LoadingSpinner />}
 
         {/* Show an error if it exists */}
         {error && <p className='text-red-500'>Error: {error}</p>}

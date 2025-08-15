@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Flavor, ProductCategory } from '@/types';
 import FlavorForm from '@/components/admin/FlavorForm';
+import LoadingSpinner from '@/components/Spinner';
 
 const EditFlavorPage = () => {
   const params = useParams();
@@ -46,7 +47,7 @@ const EditFlavorPage = () => {
     router.push('/admin/flavors');
   };
 
-  if (isLoading) return <p>Loading data...</p>;
+  if (isLoading) return <LoadingSpinner />;
   if (error) return <p className='text-red-500'>Error: {error}</p>;
 
   return (

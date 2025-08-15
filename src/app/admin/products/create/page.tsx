@@ -3,6 +3,7 @@ import { useRouter } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
 import ProductForm from '@/components/admin/ProductForm';
 import { Flavor, Diameter, Allergen, ProductCategory, Product, ProductFormData } from '@/types';
+import LoadingSpinner from '@/components/Spinner';
 
 const CreateProductPage = () => {
   const router = useRouter()
@@ -91,7 +92,7 @@ const CreateProductPage = () => {
     },
     [router]
   );
-
+  if (isLoading) return <LoadingSpinner />;
   return (
     <section>
       <h1 className='text-3xl font-bold mb-6'>Create New Product</h1>

@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import FlavorForm from '@/components/admin/FlavorForm';
 import { Flavor, ProductCategory } from '@/types';
 import Link from 'next/link';
+import LoadingSpinner from '@/components/Spinner';
 const ManageFlavorsPage = () => {
   const [flavors, setFlavors] = useState<Flavor[]>([]);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
@@ -82,7 +83,7 @@ const ManageFlavorsPage = () => {
         <h2 className='text-2xl font-bold mb-4'>Existing Flavors</h2>
 
         {/* Show  loading state future spinner*/}
-        {isLoading && <p>Loading list of flavors...</p>}
+        {isLoading && <LoadingSpinner />}
 
         {/* Show an error if it exists */}
         {error && <p className='text-red-500'>Error: {error}</p>}

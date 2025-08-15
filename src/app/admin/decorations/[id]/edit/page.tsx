@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Decoration, ProductCategory } from '@/types';
 import DecorationsForm from '@/components/admin/DecorationsForm';
+import LoadingSpinner from '@/components/Spinner';
 
 const EditDecorationPage = () => {
   const params = useParams();
@@ -47,7 +48,7 @@ const EditDecorationPage = () => {
     router.push('/admin/decorations');
   };
 
-  if (isLoading) return <p>Loading decorations data...</p>;
+  if (isLoading) return <LoadingSpinner />;
   if (error) return <p className='text-red-500'>Error: {error}</p>;
 
   return (

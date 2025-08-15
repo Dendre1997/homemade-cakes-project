@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { ProductCategory } from '@/types';
 import CategoryForm from '@/components/admin/CategoryForm';
 import Link from 'next/link';
+import LoadingSpinner from '@/components/Spinner';
 
 const ManageCategoriesPage = () => {
   const [categories, setCategories] = useState<ProductCategory[]>([]);
@@ -45,7 +46,7 @@ const ManageCategoriesPage = () => {
       <div className='mt-10'>
         <h2 className='text-2xl font-bold mb-4'>Existing Categories</h2>
         {isLoading ? (
-          <p>Loading...</p>
+          <LoadingSpinner />
         ) : (
           <ul className='space-y-2'>
             {categories.map((cat) => (

@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import AllergenForm from '@/components/admin/AllergenForm';
 import Link from 'next/link';
 import { Allergen } from '@/types';
+import Spinner from '@/components/Spinner'
 const ManageAllergensPage = () => {
   const [allergens, setAllergens] = useState<Allergen[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -78,7 +79,7 @@ const ManageAllergensPage = () => {
         <h2 className='text-2xl font-bold mb-4'>Existing Allergens</h2>
 
         {/* Show  loading state future spinner*/}
-        {isLoading && <p>Loading list of allergens...</p>}
+        {isLoading && <Spinner />}
 
         {/* Show an error if it exists */}
         {error && <p className='text-red-500'>Error: {error}</p>}

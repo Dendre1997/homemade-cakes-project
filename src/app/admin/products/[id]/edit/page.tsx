@@ -3,6 +3,7 @@ import { useEffect, useState} from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Product, ProductCategory, Flavor, Diameter, Allergen, ProductFormData } from '@/types';
 import ProductForm from '@/components/admin/ProductForm';
+import LoadingSpinner from '@/components/Spinner';
 
 const EditProductPage = () => {
   const params = useParams();
@@ -81,7 +82,7 @@ const EditProductPage = () => {
     }
   };
 
-  if (isLoading) return <p>Loading product data for editing...</p>;
+  if (isLoading) return <LoadingSpinner />;
   if (error) return <p className='text-red-500'>Error: {error}</p>;
 
   return (

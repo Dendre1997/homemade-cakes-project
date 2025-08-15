@@ -71,6 +71,14 @@ const AdminSidebar = () => {
               Diameters
             </Link>
           </li>
+          <li className='mb-2'>
+            <Link
+              href='/admin/allergens'
+              className='block py-2 px-4 rounded hover:bg-gray-700 transition-colors duration-200'
+            >
+              Allergens
+            </Link>
+          </li>
         </ul>
       </nav>
     </aside>

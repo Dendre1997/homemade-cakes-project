@@ -5,6 +5,7 @@ import { notFound, useParams } from "next/navigation";
 import { ProductWithCategory, Flavor, AvailableDiameterConfig } from "@/types";
 import Image from "next/image";
 import { useCartStore } from "@/lib/store/cartStore";
+import LoadingSpinner from "@/components/Spinner";
 
 const SingleProductPage = () => {
   const params = useParams();
@@ -58,9 +59,10 @@ const SingleProductPage = () => {
     };
 }) || [];
 
-if (error) return <p className="text-red-500">Error: {error}</p>;
-if (!product) return <p>Product not found.</p>;
 
+if (error) return <p className="text-red-500">Error: {error}</p>;
+if (isLoading) return <LoadingSpinner />;
+if (!product) return <p>Product not found.</p>;
 const firstImage = product.imageUrls[0] || "/placeholder.png";
 
 let calculatedPrice = product.structureBasePrice;
@@ -101,7 +103,6 @@ if (selectedFlavor) {
       alert(`${product.name} added to cart!`);
     };
 
-    if (isLoading) return <p>Loading product...</p>;
     return (
       <div className="bg-white">
         <div className="pt-6 pb-16 sm:pb-24">

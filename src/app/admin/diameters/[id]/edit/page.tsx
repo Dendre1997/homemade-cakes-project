@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Diameter, ProductCategory } from '@/types';
 import DiameterForm from '@/components/admin/DiameterForm';
+import LoadingSpinner from '@/components/Spinner';
 
 const EditDiameterPage = () => {
   const params = useParams();
@@ -47,7 +48,7 @@ const EditDiameterPage = () => {
     router.push('/admin/diameters');
   };
 
-  if (isLoading) return <p>Loading diameter data...</p>;
+  if (isLoading) return <LoadingSpinner />;
   if (error) return <p className='text-red-500'>Error: {error}</p>;
 
   return (

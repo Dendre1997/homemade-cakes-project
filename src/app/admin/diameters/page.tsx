@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import DiameterForm from '@/components/admin/DiameterForm';
 import Link from 'next/link';
 import { Diameter, ProductCategory } from '@/types';
+import LoadingSpinner from '@/components/Spinner';
 
 const ManageDiametersPage = () => {
   const [diameters, setDiameters] = useState<Diameter[]>([]);
@@ -85,7 +86,7 @@ const ManageDiametersPage = () => {
       <div className='mt-10'>
         <h2 className='text-2xl font-bold mb-4'>Existing Diameters</h2>
 
-        {isLoading && <p>Loading list of diameters...</p>}
+        {isLoading && <LoadingSpinner />}
         {error && <p className='text-red-500'>Error: {error}</p>}
 
         {!isLoading && !error && (
