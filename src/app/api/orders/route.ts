@@ -3,6 +3,35 @@ import clientPromise from "@/lib/db";
 import { Order, OrderItem } from "@/types";
 import { ObjectId } from "mongodb";
 
+
+
+// GET
+export async function GET() {
+  try {
+    const client = await clientPromise;
+    const db = client.db(process.env.MONGODB_DB_NAME);
+      
+    const orders = await db
+      .collection("orders")
+      .find({})
+      .sort({ createdAt: -1 })
+      .toArray();
+
+    return NextResponse.json(orders);
+  } catch (error) {
+    console.error("Error fetching orders:", error);
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 }
+    );
+  }
+}
+
+
+
+
+
+// POST
 export async function POST(request: NextRequest) {
   try {
     const { customerInfo, deliveryInfo, items, totalAmount }: Partial<Order> =
