@@ -52,8 +52,8 @@ const CreateProductPage = () => {
         // Will create api which can fillter by category
         // For now load all
         const [flavorsRes, diametersRes] = await Promise.all([
-          fetch('/api/flavors'), //todo change on /api/flavors?categoryId=...
-          fetch('/api/diameters'), //todo change on /api/diameters?categoryId=...
+          fetch(`/api/flavors?categoryId=${selectedCategoryId}`),
+          fetch(`/api/diameters?categoryId=${selectedCategoryId}`),
         ]);
         if (!flavorsRes.ok || !diametersRes.ok) throw new Error('Failed to fetch dependent data');
         setFilteredFlavors(await flavorsRes.json());

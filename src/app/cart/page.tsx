@@ -4,6 +4,7 @@ import { useCartStore } from "@/lib/store/cartStore";
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import LoadingSpinner from "@/components/Spinner";
 
 const CartPage = () => {
   const { items, removeItem, clearCart } = useCartStore();
@@ -19,7 +20,7 @@ const CartPage = () => {
   );
 
   if (!isMounted) {
-    return null;
+    return <LoadingSpinner />;
   }
 
   return (
@@ -112,12 +113,12 @@ const CartPage = () => {
                 </div>
               </dl>
               <div className="mt-6">
-                <button
-                  type="submit"
+                <Link
+                  href="/checkout"
                   className="w-full rounded-md border border-transparent bg-indigo-600 px-4 py-3 text-base font-medium text-white shadow-sm hover:bg-indigo-700"
                 >
                   Checkout
-                </button>
+                </Link>
               </div>
             </section>
           </form>

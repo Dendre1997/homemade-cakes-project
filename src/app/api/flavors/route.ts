@@ -42,12 +42,20 @@ export async function POST(request: NextRequest) {
 }
 
 // GET
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const searchParams = request.nextUrl.searchParams;
+    const categoryId = searchParams.get('categoryId')
+    
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
 
-    const flavors = await db.collection('flavors').find({}).toArray();
+    const filter: { categoryIds?: string } = {};
+    
+    if (categoryId) {
+      filter.categoryIds = categoryId;
+    }
+    const flavors = await db.collection('flavors').find(filter).toArray();
     
     return NextResponse.json(flavors, { status: 200 }); // 200 - OK
   } catch (error) {

@@ -44,6 +44,8 @@ export interface Product {
   availableDiameterConfigs: AvailableDiameterConfig[];
   allergenIds: ObjectId[];
   isActive: boolean;
+  // defaultFlavorId?: ObjectId;
+  // defaultDiameterId?: ObjectId;
 }
 
 export interface ProductFormData {
@@ -67,4 +69,39 @@ export interface ProductWithCategory extends Product {
   category: ProductCategory;
   availableFlavors: Flavor[];
   availableDiameters: Diameter[];
+}
+
+export interface OrderItem {
+  id: string;
+  productId: ObjectId;
+  name: string;
+  flavor: string;
+  diameterId: ObjectId;
+  price: number;
+  quantity: number;
+  imageUrl: string;
+}
+
+export interface Order {
+  _id: ObjectId;
+  customerId?: ObjectId;
+  items: OrderItem[];
+  totalAmount: number;
+  
+  customerInfo: {
+    name: string;
+    email: string;
+    phone: string;
+  };
+  deliveryInfo: {
+    method: "pickup" | "delivery";
+    address?: string;
+    deliveryDate: Date;
+  };
+  status: "new" | "paid" | "in_progress" | "ready" | "delivered" | "cancelled";
+  paymentDetails?: {
+    transactionId: string;
+    status: string;
+  };
+  createdAt: Date;
 }
