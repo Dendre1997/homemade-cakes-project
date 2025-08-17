@@ -1,103 +1,308 @@
-import Image from 'next/image';
+import type { NextPage } from "next";
+import Image from "next/image";
+import Link from "next/link";
+import { theme } from "@/styles/theme";
 
-export default function Home() {
+// --- Style Objects for Components & Sections ---
+
+// Card Styles
+const cardBaseStyle: React.CSSProperties = {
+  backgroundColor: theme.colors.cardBackground,
+  borderRadius: theme.borderRadius.large, // Rule 4: large rounded corners
+  padding: `${theme.spacing.unit * 3}px`,
+  boxShadow: "0 4px 12px rgba(74, 68, 63, 0.08)", // Rule 4: subtle, soft shadow
+  textAlign: "center",
+};
+
+const placeholderImageStyle: React.CSSProperties = {
+  width: "100%",
+  height: "192px",
+  backgroundColor: "#EAE6DA", // A light version of the cream background
+  borderRadius: theme.borderRadius.medium,
+  marginBottom: `${theme.spacing.unit * 2}px`,
+};
+
+// Button Styles
+const primaryButtonStyle: React.CSSProperties = {
+  padding: `${theme.spacing.unit * 1.5}px ${theme.spacing.unit * 4}px`,
+  backgroundColor: theme.colors.primary, // Rule 1
+  color: theme.colors.textOnPrimary, // Rule 1
+  fontFamily: theme.typography.bodyFont,
+  fontSize: "1rem",
+  fontWeight: 600,
+  letterSpacing: "0.025em",
+  borderRadius: theme.borderRadius.medium, // Rule 4
+  border: "none",
+  cursor: "pointer",
+  transition: "opacity 0.2s",
+};
+
+const secondaryButtonStyle: React.CSSProperties = {
+  padding: `${theme.spacing.unit * 1.5}px ${theme.spacing.unit * 4}px`,
+  backgroundColor: "transparent",
+  border: `2px solid ${theme.colors.accent}`, // Rule 4
+  color: theme.colors.accent, // Rule 4
+  fontFamily: theme.typography.bodyFont,
+  fontSize: "1rem",
+  fontWeight: 600,
+  letterSpacing: "0.025em",
+  borderRadius: theme.borderRadius.medium, // Rule 4
+  cursor: "pointer",
+  transition: "background-color 0.2s, color 0.2s",
+};
+
+// Section Styles
+const sectionStyle: React.CSSProperties = {
+  width: "100%",
+  padding: `${theme.spacing.unit * 12}px 0`,
+};
+
+const sectionContainerStyle: React.CSSProperties = {
+  maxWidth: "1152px",
+  margin: "0 auto",
+  padding: `0 ${theme.spacing.unit * 2}px`,
+};
+
+const sectionHeadingStyle: React.CSSProperties = {
+  fontFamily: theme.typography.headingFont,
+  fontSize: "2.5rem", // text-4xl
+  fontWeight: "bold",
+  textAlign: "center",
+  color: theme.colors.text,
+  marginBottom: `${theme.spacing.unit * 8}px`,
+};
+
+const gridContainerStyle: React.CSSProperties = {
+  display: "grid",
+  gap: `${theme.spacing.unit * 4}px`,
+  // A responsive grid that works on all screen sizes
+  gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+};
+
+// --- Helper Components (Refactored) ---
+
+const ProductCardPlaceholder = ({ name }: { name: string }) => (
+  <div style={cardBaseStyle}>
+    <div style={placeholderImageStyle}></div>
+    <h4
+      style={{
+        fontFamily: theme.typography.headingFont,
+        fontSize: "1.25rem",
+        fontWeight: 600,
+        color: theme.colors.text,
+      }}
+    >
+      {name}
+    </h4>
+    <p
+      style={{
+        color: theme.colors.primary,
+        fontWeight: "bold",
+        marginTop: theme.spacing.unit,
+      }}
+    >
+      $25.00
+    </p>
+  </div>
+);
+
+const TestimonialCardPlaceholder = ({ author }: { author: string }) => (
+  <div style={{ ...cardBaseStyle, textAlign: "left" }}>
+    <p
+      style={{
+        fontFamily: theme.typography.bodyFont,
+        lineHeight: theme.typography.lineHeight,
+        color: theme.colors.text,
+        fontStyle: "italic",
+      }}
+    >
+      This was the most delicious cake I have ever had! Truly homemade quality
+      and exceptional service. Highly recommended!
+    </p>
+    <p
+      style={{
+        fontFamily: theme.typography.bodyFont,
+        fontWeight: 600,
+        color: theme.colors.text,
+        marginTop: theme.spacing.unit * 2,
+      }}
+    >
+      - {author}
+    </p>
+  </div>
+);
+
+// --- Homepage Component (Refactored) ---
+
+const Homepage: NextPage = () => {
   return (
-    <div className='grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]'>
-      <main className='flex flex-col gap-[32px] row-start-2 items-center sm:items-start'>
+    <div style={{ backgroundColor: theme.colors.background }}>
+      {/* Hero Section */}
+      <section
+        style={{
+          position: "relative",
+          width: "100%",
+          height: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          textAlign: "center",
+          color: theme.colors.textOnPrimary,
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.25)",
+            zIndex: 10,
+          }}
+        ></div>
         <Image
-          className='dark:invert'
-          src='/next.svg'
-          alt='Next.js logo'
-          width={180}
-          height={38}
+          src="/placeholderw.jpg"
+          alt="Signature homemade cake"
+          fill
+          style={{ objectFit: "cover" }}
+          // quality={85}
+          sizes="100vw"
           priority
         />
-        <ol className='list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]'>
-          <li className='mb-2 tracking-[-.01em]'>
-            Get started by editing{' '}
-            <code className='bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold'>
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className='tracking-[-.01em]'>
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className='flex gap-4 items-center flex-col sm:flex-row'>
-          <a
-            className='rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto'
-            href='https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app'
-            target='_blank'
-            rel='noopener noreferrer'
+        <div
+          style={{
+            position: "relative",
+            zIndex: 20,
+            padding: `0 ${theme.spacing.unit * 2}px`,
+          }}
+        >
+          <h1
+            style={{
+              fontFamily: theme.typography.headingFont,
+              fontSize: "clamp(2.5rem, 8vw, 4.5rem)",
+              fontWeight: "bold",
+            }}
           >
-            <Image
-              className='dark:invert'
-              src='/vercel.svg'
-              alt='Vercel logomark'
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className='rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]'
-            href='https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app'
-            target='_blank'
-            rel='noopener noreferrer'
+            The Taste of Home, Baked Fresh For You
+          </h1>
+          <h3
+            style={{
+              fontFamily: theme.typography.bodyFont,
+              fontSize: "clamp(1.25rem, 4vw, 1.75rem)",
+              fontWeight: 400,
+              marginTop: theme.spacing.unit * 2,
+            }}
           >
-            Read our docs
-          </a>
+            Discover cakes made with passion and the finest ingredients.
+          </h3>
+          <button
+            style={{ ...primaryButtonStyle, marginTop: theme.spacing.unit * 8 }}
+          >
+            Explore The Menu
+          </button>
         </div>
-      </main>
-      <footer className='row-start-3 flex gap-[24px] flex-wrap items-center justify-center'>
-        <a
-          className='flex items-center gap-2 hover:underline hover:underline-offset-4'
-          href='https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app'
-          target='_blank'
-          rel='noopener noreferrer'
-        >
-          <Image
-            aria-hidden
-            src='/file.svg'
-            alt='File icon'
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className='flex items-center gap-2 hover:underline hover:underline-offset-4'
-          href='https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app'
-          target='_blank'
-          rel='noopener noreferrer'
-        >
-          <Image
-            aria-hidden
-            src='/window.svg'
-            alt='Window icon'
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className='flex items-center gap-2 hover:underline hover:underline-offset-4'
-          href='https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app'
-          target='_blank'
-          rel='noopener noreferrer'
-        >
-          <Image
-            aria-hidden
-            src='/globe.svg'
-            alt='Globe icon'
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      </section>
+
+      {/* Featured Products Section */}
+      <section
+        style={{
+          ...sectionStyle,
+          backgroundColor: theme.colors.background,
+        }}
+      >
+        <div style={sectionContainerStyle}>
+          <h2 style={sectionHeadingStyle}>Our Customer Favorites</h2>
+          <div style={gridContainerStyle}>
+            <ProductCardPlaceholder name="Classic Chocolate Fudge" />
+            <ProductCardPlaceholder name="Red Velvet Dream" />
+            <ProductCardPlaceholder name="Lemon Zest Delight" />
+            <ProductCardPlaceholder name="Strawberry Shortcake" />
+          </div>
+        </div>
+      </section>
+
+      {/* "Our Mission" Section */}
+      <section
+        style={{ ...sectionStyle, backgroundColor: theme.colors.background }}
+      >
+        <div style={sectionContainerStyle}>
+          <div
+            style={{
+              ...gridContainerStyle,
+              gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+              alignItems: "center",
+            }}
+          >
+            <div
+              style={{
+                position: "relative",
+                width: "100%",
+                height: "384px",
+                borderRadius: theme.borderRadius.large,
+                overflow: "hidden",
+              }}
+            >
+              <Image
+                src="/placeholder.png"
+                alt="Baking process"
+                fill
+                style={{ objectFit: "cover" }}
+                sizes="100vw"
+              />
+            </div>
+            <div style={{ textAlign: "left" }}>
+              <h3
+                style={{
+                  fontFamily: theme.typography.headingFont,
+                  fontSize: "2rem",
+                  fontWeight: 600,
+                  color: theme.colors.text,
+                }}
+              >
+                Crafted With Love & The Finest Ingredients
+              </h3>
+              <p
+                style={{
+                  fontFamily: theme.typography.bodyFont,
+                  lineHeight: theme.typography.lineHeight,
+                  color: theme.colors.text,
+                  marginTop: theme.spacing.unit * 2,
+                }}
+              >
+                At Homemade Cakes, every creation is a piece of our heart. We
+                believe in the magic of traditional baking, using only
+                locally-sourced, high-quality ingredients to ensure every bite
+                is a moment of pure joy.
+              </p>
+              <button
+                style={{
+                  ...secondaryButtonStyle,
+                  marginTop: theme.spacing.unit * 4,
+                }}
+              >
+                Learn Our Story
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials Section */}
+      <section
+        style={{
+          ...sectionStyle,
+          backgroundColor: theme.colors.background,
+        }}
+      >
+        <div style={sectionContainerStyle}>
+          <h2 style={sectionHeadingStyle}>Sweet Words From Our Customers</h2>
+          <div style={gridContainerStyle}>
+            <TestimonialCardPlaceholder author="Jane D." />
+            <TestimonialCardPlaceholder author="Mark T." />
+            <TestimonialCardPlaceholder author="Sarah L." />
+          </div>
+        </div>
+      </section>
     </div>
   );
-}
+};
+
+export default Homepage;
