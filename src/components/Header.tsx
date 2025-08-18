@@ -2,8 +2,12 @@
 
 import Link from "next/link";
 import { useCartStore } from "@/lib/store/cartStore";
-import { ShoppingBasket, ShoppingBasketIcon } from "lucide-react";
-import { theme } from "../styles/theme"; // Adjust this import path as needed
+import { ShoppingBasket, ShoppingBasketIcon, User, LogOut } from "lucide-react";
+import { theme } from "../styles/theme";
+import { useAuthStore } from "@/lib/store/authStore";
+import { auth } from "@/lib/firebase/client";
+import { signOut } from "firebase/auth";
+import { useRouter } from "next/navigation";
 
 // --- Style Objects for the Header Component ---
 // Each object uses the imported `theme` to apply the design rules.
@@ -91,7 +95,20 @@ const cartBadgeStyle: React.CSSProperties = {
 
 const Header = () => {
   const items = useCartStore((state) => state.items);
+  const { user, isLoading } = useAuthStore();
+  const router = useRouter()
   const itemCount = items.length;
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      // alert("You have been logged out.");
+      router.push("/");
+    } catch (error) {
+      console.error("Error signing out:", error);
+      alert("Failed to log out.");
+    }
+  };
 
   return (
     <header style={headerStyle}>
@@ -104,9 +121,6 @@ const Header = () => {
             </Link>
           </div>
 
-          {/* Center: Navigation */}
-          {/* Note: The 'hidden md:flex' is best handled with CSS media queries. */}
-          {/* This is a simplified representation. */}
           <nav className="hidden md:flex">
             <ul style={navListStyle}>
               <li>
@@ -136,6 +150,41 @@ const Header = () => {
               </li>
             </ul>
           </nav>
+
+          {/* User */}
+
+          <div className="flex items-center gap-4">
+            {isLoading ? (
+              <div className="h-6 w-24 bg-gray-200 animate-pulse rounded-md"></div>
+            ) : user ? (
+              <>
+                <Link
+                  href="/profile"
+                  className="text-sm font-medium text-gray-700 hover:text-gray-900"
+                >
+                  <User style={navLinkDefaultStyle} />
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="text-sm font-medium text-gray-700 hover:text-gray-900"
+                >
+                  <LogOut style={navLinkDefaultStyle} />
+                </button>
+              </>
+            ) : (
+              <>
+                <Link href="/login" style={navLinkDefaultStyle}>
+                  Login
+                </Link>
+                {/* <Link
+                  href="/register"
+                  className="text-sm font-medium text-gray-700 hover:text-gray-900"
+                >
+                  Sign Up
+                </Link> */}
+              </>
+            )}
+          </div>
 
           {/* Right: Cart Icon */}
           <div style={{ position: "relative" }}>

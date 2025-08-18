@@ -4,6 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { Product, ProductCategory, Flavor, Diameter, Allergen, ProductFormData } from '@/types';
 import ProductForm from '@/components/admin/ProductForm';
 import LoadingSpinner from '@/components/Spinner';
+// import { verifyAdmin } from "@/lib/auth/adminOnly";
 
 const EditProductPage = () => {
   const params = useParams();

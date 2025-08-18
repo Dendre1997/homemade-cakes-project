@@ -98,10 +98,31 @@ export interface Order {
     address?: string;
     deliveryDate: Date;
   };
-  status: "new" | "paid" | "in_progress" | "ready" | "delivered" | "cancelled";
+  status: "new" | "paid" | "In nprogress" | "ready" | "delivered" | "cancelled";
   paymentDetails?: {
     transactionId: string;
     status: string;
   };
   createdAt: Date;
+}
+
+export interface Address {
+  street: string;
+  city: string;
+  postalCode: string;
+  country: string;
+  isDefault: boolean;
+}
+
+export interface User {
+  _id: ObjectId;
+  firebaseUid: string; // ID from Firebase Authentication
+  email: string;
+  role: "customer" | "admin";
+  name?: {
+    first?: string;
+    last?: string;
+  };
+  phone?: string;
+  addresses?: Address[];
 }
