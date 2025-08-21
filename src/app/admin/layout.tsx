@@ -1,6 +1,7 @@
 import React from 'react';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import { verifyAdmin } from "@/lib/auth/adminOnly";
+import HeaderAdmin from '@/components/admin/HeaderAdmin'
 
 export default async function AdminLayout({
   children,
@@ -9,6 +10,8 @@ export default async function AdminLayout({
   }) {
   await verifyAdmin()
   return (
+    <>
+    <HeaderAdmin/>
     <div className='flex h-screen bg-gray-100'>
       <AdminSidebar />
 
@@ -17,5 +20,6 @@ export default async function AdminLayout({
         {children}
       </main>
     </div>
+    </>
   );
 }

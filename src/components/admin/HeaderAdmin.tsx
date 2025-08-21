@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCartStore } from "@/lib/store/cartStore";
 import { ShoppingBasket, ShoppingBasketIcon, User, LogOut } from "lucide-react";
-import { theme } from "../styles/theme";
+import { theme } from "@/styles/theme";
 import { useAuthStore } from "@/lib/store/authStore";
 import { auth } from "@/lib/firebase/client";
 import { signOut } from "firebase/auth";
@@ -13,7 +13,7 @@ import { useRouter } from "next/navigation";
 // Each object uses the imported `theme` to apply the design rules.
 
 const headerStyle: React.CSSProperties = {
-  backgroundColor: theme.colors.subtleBackground, // Rule 1
+  backgroundColor: theme.colors.accent, // Rule 1
   position: "sticky",
   top: 0,
   zIndex: 50,
@@ -96,7 +96,7 @@ const cartBadgeStyle: React.CSSProperties = {
 const Header = () => {
   const items = useCartStore((state) => state.items);
   const { user, isLoading } = useAuthStore();
-  const router = useRouter()
+  const router = useRouter();
   const itemCount = items.length;
 
   const handleLogout = async () => {
@@ -117,7 +117,7 @@ const Header = () => {
           {/* Left: Logo */}
           <div>
             <Link href="/" style={logoStyle}>
-              Homemade Cakes
+              BACKER PLACE
             </Link>
           </div>
 
@@ -125,27 +125,17 @@ const Header = () => {
             <ul style={navListStyle}>
               <li>
                 <Link href="/" style={navLinkDefaultStyle}>
-                  Home
+                  To Client Page
                 </Link>
               </li>
               <li>
-                <Link href="/products" style={navLinkActiveStyle}>
-                  Catalog
+                <Link href="/admin/orders" style={navLinkDefaultStyle}>
+                  Orders
                 </Link>
               </li>
               <li>
-                <Link href="/about" style={navLinkDefaultStyle}>
-                  About
-                </Link>
-              </li>
-              <li>
-                <Link href="/testimonials" style={navLinkDefaultStyle}>
-                  Testimonials
-                </Link>
-              </li>
-              <li>
-                <Link href="/contact" style={navLinkDefaultStyle}>
-                  Contact
+                <Link href="/admin/products/create" style={navLinkDefaultStyle}>
+                  Create
                 </Link>
               </li>
             </ul>

@@ -1,4 +1,4 @@
-import ProductCard from "@/components/ProductCard";
+import ProductCard from "@/components/(client)/ProductCard";
 import { ProductWithCategory } from "@/types";
 
 async function getProducts() {

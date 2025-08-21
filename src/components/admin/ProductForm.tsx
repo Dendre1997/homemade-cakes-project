@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import {
   Allergen,
   Diameter,
@@ -20,6 +21,7 @@ interface ProductFormProps {
   categories: ProductCategory[];
   categoryId?: string;
   onCategoryChange: (newCategoryId: string) => void;
+  isSubmitting?: boolean;
 }
 
 const ProductForm = ({
@@ -46,6 +48,7 @@ const ProductForm = ({
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
 
   const handleMultiSelectChange = (
     idToToggle: string,
@@ -100,10 +103,46 @@ const ProductForm = ({
         existingProduct.availableDiameterConfigs?.map((config) => ({
           ...config,
           diameterId: config.diameterId.toString(),
+          
         })) || []
       );
+      setImageUrls(existingProduct.imageUrls || []);
     }
   }, [existingProduct]);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // TODO: Add another state isUploading to prevent blocking of whole form
+    setIsLoading(true);
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", "homemade_cakes_preset");
+
+    try {
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      if (!response.ok) throw new Error("Image upload failed");
+
+      const data = await response.json();
+
+      // Додаємо новий URL до нашого існуючого масиву
+      setImageUrls((prevUrls) => [...prevUrls, data.secure_url]);
+    } catch (err) {
+      if (err instanceof Error) setError(err.message);
+      else setError("An image upload error occurred");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -121,7 +160,7 @@ const ProductForm = ({
       availableFlavorIds,
       allergenIds,
       availableDiameterConfigs,
-      imageUrls: [],
+      imageUrls: imageUrls,
     };
 
     onFormSubmit(productData);
@@ -130,25 +169,25 @@ const ProductForm = ({
   return (
     <form
       onSubmit={handleSubmit}
-      className='space-y-8 p-8 bg-white rounded-lg shadow-md'
+      className="space-y-8 p-8 bg-white rounded-lg shadow-md"
     >
-      <div className='space-y-4'>
-        <h2 className='text-xl font-semibold'>Basic Information</h2>
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold">Basic Information</h2>
         <div>
           <label
-            htmlFor='category'
-            className='block text-sm font-medium text-gray-700'
+            htmlFor="category"
+            className="block text-sm font-medium text-gray-700"
           >
             Product Category
           </label>
           <select
-            id='category'
+            id="category"
             value={categoryId}
             onChange={(e) => onCategoryChange(e.target.value)}
-            className='mt-1 block w-full p-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500'
+            className="mt-1 block w-full p-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
             required
           >
-            <option value=''>-- Select a Category --</option>
+            <option value="">-- Select a Category --</option>
             {categories.map((cat) => (
               <option key={cat._id.toString()} value={cat._id.toString()}>
                 {cat.name}
@@ -157,54 +196,83 @@ const ProductForm = ({
           </select>
         </div>
         <div>
-          <label htmlFor='name'>Product Name</label>
+          <label htmlFor="name">Product Name</label>
           <input
-            type='text'
-            id='name'
+            type="text"
+            id="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
           />
         </div>
         <div>
-          <label htmlFor='description'>Description</label>
+          <label htmlFor="description">Description</label>
           <textarea
-            id='description'
+            id="description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={4}
           />
         </div>
         <div>
-          <label htmlFor='price'>Base Price</label>
+          <label className="block text-sm font-medium text-gray-700">
+            Images
+          </label>
+          {/* Відображаємо прев'ю завантажених зображень */}
+          <div className="mt-2 flex flex-wrap gap-4">
+            {imageUrls.map((url) => (
+              <div key={url} className="relative w-24 h-24">
+                <Image
+                  src={url}
+                  alt="Uploaded image"
+                  layout="fill"
+                  className="object-cover rounded-md"
+                />
+                {/* TODO: Add a delete button for each image */}
+              </div>
+            ))}
+          </div>
+          {/* Поле для завантаження */}
+          <div className="mt-2">
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              disabled={isLoading}
+              className="text-sm"
+            />
+          </div>
+        </div>
+        <div>
+          <label htmlFor="price">Base Price</label>
           <input
-            type='number'
-            id='price'
+            type="number"
+            id="price"
             value={structureBasePrice}
             onChange={(e) => setStructureBasePrice(e.target.value)}
             required
           />
         </div>
-        <div className='flex items-center'>
+        <div className="flex items-center">
           <input
-            type='checkbox'
-            id='isActive'
+            type="checkbox"
+            id="isActive"
             checked={isActive}
             onChange={(e) => setIsActive(e.target.checked)}
-            className='h-4 w-4'
+            className="h-4 w-4"
           />
-          <label htmlFor='isActive' className='ml-2'>
+          <label htmlFor="isActive" className="ml-2">
             Product is Active
           </label>
         </div>
       </div>
-      <div className='space-y-2'>
-        <h3 className='text-lg font-medium'>Available Flavors</h3>
-        <div className='p-4 border rounded-md grid grid-cols-2 md:grid-cols-3 gap-4'>
+      <div className="space-y-2">
+        <h3 className="text-lg font-medium">Available Flavors</h3>
+        <div className="p-4 border rounded-md grid grid-cols-2 md:grid-cols-3 gap-4">
           {flavors.map((flavor) => (
-            <div key={flavor._id.toString()} className='flex items-center'>
+            <div key={flavor._id.toString()} className="flex items-center">
               <input
-                type='checkbox'
+                type="checkbox"
                 id={`flavor-${flavor._id.toString()}`}
                 checked={availableFlavorIds.includes(flavor._id.toString())}
                 onChange={() =>
@@ -216,7 +284,7 @@ const ProductForm = ({
               />
               <label
                 htmlFor={`flavor-${flavor._id.toString()}`}
-                className='ml-2'
+                className="ml-2"
               >
                 {flavor.name}
               </label>
@@ -224,13 +292,13 @@ const ProductForm = ({
           ))}
         </div>
       </div>
-      <div className='space-y-2'>
-        <h3 className='text-lg font-medium'>Allergens</h3>
-        <div className='p-4 border rounded-md grid grid-cols-2 md:grid-cols-3 gap-4'>
+      <div className="space-y-2">
+        <h3 className="text-lg font-medium">Allergens</h3>
+        <div className="p-4 border rounded-md grid grid-cols-2 md:grid-cols-3 gap-4">
           {allergens.map((allergen) => (
-            <div key={allergen._id.toString()} className='flex items-center'>
+            <div key={allergen._id.toString()} className="flex items-center">
               <input
-                type='checkbox'
+                type="checkbox"
                 id={`allergen-${allergen._id.toString()}`}
                 checked={allergenIds.includes(allergen._id.toString())}
                 onChange={() =>
@@ -242,7 +310,7 @@ const ProductForm = ({
               />
               <label
                 htmlFor={`allergen-${allergen._id.toString()}`}
-                className='ml-2'
+                className="ml-2"
               >
                 {allergen.name}
               </label>
@@ -250,26 +318,26 @@ const ProductForm = ({
           ))}
         </div>
       </div>
-      <div className='space-y-2'>
-        <h3 className='text-lg font-medium'>
+      <div className="space-y-2">
+        <h3 className="text-lg font-medium">
           Available Diameters & Price Multipliers
         </h3>
-        <div className='p-4 border rounded-md space-y-4'>
+        <div className="p-4 border rounded-md space-y-4">
           {diameters.map((diameter) => {
             const currentMultiplier =
               availableDiameterConfigs.find(
                 (c) => c.diameterId === diameter._id.toString()
-              )?.multiplier || '';
+              )?.multiplier || "";
             return (
               <div
                 key={diameter._id.toString()}
-                className='grid grid-cols-2 gap-4 items-center'
+                className="grid grid-cols-2 gap-4 items-center"
               >
                 <label htmlFor={`diameter-${diameter._id.toString()}`}>
                   {diameter.name} {diameter.sizeValue}
                 </label>
                 <input
-                  type='number'
+                  type="number"
                   id={`diameter-${diameter._id.toString()}`}
                   value={currentMultiplier}
                   onChange={(e) =>
@@ -278,8 +346,8 @@ const ProductForm = ({
                       e.target.value
                     )
                   }
-                  placeholder='e.g., 1.5'
-                  step='0.1'
+                  placeholder="e.g., 1.5"
+                  step="0.1"
                 />
               </div>
             );
@@ -287,10 +355,10 @@ const ProductForm = ({
         </div>
       </div>
 
-      {error && <p className='text-red-500'>Error: {error}</p>}
+      {error && <p className="text-red-500">Error: {error}</p>}
 
-      <button type='submit' disabled={isLoading} className='...'>
-        {isLoading ? 'Creating Product...' : 'Create Product'}
+      <button type="submit" disabled={isLoading} className="...">
+        {isLoading ? "Creating Product..." : "Create Product"}
       </button>
     </form>
   );

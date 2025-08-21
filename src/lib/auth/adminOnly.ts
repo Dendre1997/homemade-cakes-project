@@ -18,11 +18,10 @@ export async function verifyAdmin() {
     const user = await db
       .collection("users")
       .findOne({ firebaseUid: decodedToken.uid });
-
+      
     if (!user || user.role !== "admin") {
       throw new Error("Not an admin");
     }
-
     return { user };
   } catch (error) {
     redirect("/");
