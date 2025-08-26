@@ -59,12 +59,7 @@ const ManageProductsPage = () => {
         <LoadingSpinner />
       ) : (
         <div className="bg-white shadow-md rounded-lg p-6 ">
-          <div
-            className="grid gap-6 sm:gap-8
-      grid-cols-1 sm:grid-cols-2 lg:grid-cols-3
-      xl:grid-cols-4
-      auto-rows-fr"
-          >
+          <div className="mt-16 flex flex-col gap-8">
             {products.map((product) => (
               <AdminProductCard
                 key={product._id.toString()}

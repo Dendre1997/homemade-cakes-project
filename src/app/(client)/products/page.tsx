@@ -32,7 +32,7 @@ const ProductsPage = async () => {
         </div>
 
         {/* Products Grid */}
-        <div className="mt-16 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="mt-16 flex flex-col gap-8">
           {products.map((product) => (
             <div
               key={product._id.toString()}

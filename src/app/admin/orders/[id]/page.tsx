@@ -1,9 +1,10 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
-import { Order } from "@/types";
+import { Order, Diameter } from "@/types";
 import Link from "next/link";
 import Image from "next/image";
+import LoadingSpinner from "@/components/Spinner";
 
 const OrderDetailsPage = () => {
   const params = useParams();
@@ -12,8 +13,8 @@ const OrderDetailsPage = () => {
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [diameters, setDiameters] = useState<Diameter[]>([]);
 
-  // Стан для нового статусу, який обирає адмін
   const [newStatus, setNewStatus] = useState("");
 
   const fetchOrder = useCallback(async () => {
@@ -33,8 +34,31 @@ const OrderDetailsPage = () => {
   }, [id]);
 
   useEffect(() => {
-    fetchOrder();
-  }, [fetchOrder]);
+    if (id) {
+      const fetchAllData = async () => {
+        try {
+          setIsLoading(true);
+          const [orderRes, diametersRes] = await Promise.all([
+            fetch(`/api/orders/${id}`),
+            fetch("/api/diameters"),
+          ]);
+
+          if (!orderRes.ok || !diametersRes.ok)
+            throw new Error("Failed to fetch data");
+
+          const orderData = await orderRes.json();
+          setOrder(orderData);
+          setNewStatus(orderData.status);
+          setDiameters(await diametersRes.json());
+        } catch (err) {
+          if (err instanceof Error) setError(err.message);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      fetchAllData();
+    }
+  }, [id]);
 
   const handleStatusUpdate = async () => {
     try {
@@ -53,7 +77,7 @@ const OrderDetailsPage = () => {
     }
   };
 
-  if (isLoading) return <p>Loading order details...</p>;
+  if (isLoading) return <LoadingSpinner />;
   if (error) return <p className="text-red-500">Error: {error}</p>;
   if (!order) return <p>Order not found.</p>;
 
@@ -75,25 +99,34 @@ const OrderDetailsPage = () => {
           <div className="bg-white p-6 rounded-lg shadow">
             <h2 className="text-xl font-semibold mb-4">Items</h2>
             <ul className="divide-y divide-gray-200">
-              {order.items.map((item) => (
-                <li key={item.id} className="py-4 flex">
-                  <Image
-                    src={item.imageUrl}
-                    alt={item.name}
-                    width={64} 
-                    height={64}
-                    className="rounded-md object-cover"
-                  />
-                  <div className="ml-4">
-                    <p className="font-medium">{item.name}</p>
-                    <p className="text-sm text-gray-500">{item.flavor}</p>
-                    {/* TODO: Display size name */}
-                  </div>
-                  <p className="ml-auto font-medium">
-                    ${item.price.toFixed(2)}
-                  </p>
-                </li>
-              ))}
+              {order.items.map((item) => {
+                
+                const diameter = diameters.find(
+                  (d) => d._id.toString() === item.diameterId.toString()
+                );
+
+                return (
+                  <li key={item.id} className="py-4 flex ">
+                    <Image
+                      src={item.imageUrl}
+                      alt={item.name}
+                      width={64}
+                      height={64}
+                      className="h-16 w-16 rounded-md object-cover"
+                    />
+                    <div className="ml-4">
+                      <p className="font-medium">{item.name}</p>
+                      <p className="text-sm text-gray-500">{item.flavor}</p>
+                      {diameter && (
+                        <p className="text-sm text-gray-500">{diameter.name}</p>
+                      )}
+                    </div>
+                    <p className="ml-auto font-medium">
+                      ${item.price.toFixed(2)}
+                    </p>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         </div>

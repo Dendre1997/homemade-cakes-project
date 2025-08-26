@@ -1,8 +1,16 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-// TODO: Create deteiled type for CartItem
-type CartItem = any;
+export interface CartItem {
+  id: string; 
+  productId: string;
+  name: string;
+  flavor: string;
+  diameterId: string;
+  price: number; // calculated price for one item
+  quantity: number;
+  imageUrl: string;
+}
 
 interface CartState {
   items: CartItem[];

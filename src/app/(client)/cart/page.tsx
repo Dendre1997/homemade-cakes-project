@@ -5,13 +5,26 @@ import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import LoadingSpinner from "@/components/Spinner";
+import { Diameter } from '@/types'
 
 const CartPage = () => {
   const { items, removeItem, clearCart } = useCartStore();
-
+  const [diameters, setDiameters] = useState<Diameter[]>([]);
   const [isMounted, setIsMounted] = useState(false);
+
+  const fetchDiameters = async () => {
+    try {
+      const res = await fetch("/api/diameters");
+      if (res.ok) {
+        setDiameters(await res.json());
+      }
+    } catch (error) {
+      console.error("Failed to fetch diameters", error);
+    }
+  };
   useEffect(() => {
     setIsMounted(true);
+    fetchDiameters();
   }, []);
 
   const subtotal = items.reduce(
@@ -50,44 +63,53 @@ const CartPage = () => {
                 role="list"
                 className="divide-y divide-gray-200 border-b border-t border-gray-200"
               >
-                {items.map((item) => (
-                  <li key={item.id} className="flex py-6 sm:py-10">
-                    <div className="flex-shrink-0">
-                      <Image
-                        src={item.imageUrl}
-                        alt={item.name}
-                        width={100}
-                        height={100}
-                        className="h-24 w-24 rounded-md object-cover object-center sm:h-48 sm:w-48"
-                      />
-                    </div>
-                    <div className="ml-4 flex flex-1 flex-col justify-between sm:ml-6">
-                      <div>
-                        <h3 className="text-base font-medium text-gray-900">
-                          {item.name}
-                        </h3>
-                        <p className="mt-1 text-sm text-gray-500">
-                          {item.flavor}
-                        </p>
-                        {/* TODO: Add display for size here */}
-                      </div>
-                      <div className="flex flex-1 items-end justify-between text-sm">
-                        <p className="text-gray-900 font-medium">
-                          ${item.price.toFixed(2)}
-                        </p>
-                        <div className="flex">
-                          <button
-                            type="button"
-                            onClick={() => removeItem(item.id)}
-                            className="font-medium text-indigo-600 hover:text-indigo-500"
-                          >
-                            Remove
-                          </button>
+                  {items.map((item) => {
+                    const diameter = diameters.find(
+                      (d) => d._id.toString() === item.diameterId.toString()
+                    );
+                    return (
+                      <li key={item.id} className="flex py-6 sm:py-10">
+                        <div className="flex-shrink-0">
+                          <Image
+                            src={item.imageUrl}
+                            alt={item.name}
+                            width={100}
+                            height={100}
+                            className="h-24 w-24 rounded-md object-cover object-center sm:h-48 sm:w-48"
+                          />
                         </div>
-                      </div>
-                    </div>
-                  </li>
-                ))}
+                        <div className="ml-4 flex flex-1 flex-col justify-between sm:ml-6">
+                          <div>
+                            <h3 className="text-base font-medium text-gray-900">
+                              {item.name}
+                            </h3>
+                            <p className="mt-1 text-sm text-gray-500">
+                              {item.flavor}
+                            </p>
+                            {diameter && (
+                              <p className="mt-1 text-sm text-gray-500">
+                                {diameter.name}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex flex-1 items-end justify-between text-sm">
+                            <p className="text-gray-900 font-medium">
+                              ${item.price.toFixed(2)}
+                            </p>
+                            <div className="flex">
+                              <button
+                                type="button"
+                                onClick={() => removeItem(item.id)}
+                                className="font-medium text-indigo-600 hover:text-indigo-500"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </li>
+                    );
+                  })}
               </ul>
             </section>
 

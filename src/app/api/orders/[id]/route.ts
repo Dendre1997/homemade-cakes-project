@@ -37,7 +37,7 @@ export async function PUT(request: NextRequest, { params }: Context) {
     const { id } = params;
     const { status } = await request.json(); // getting from request body just new status
 
-    // Валідація
+    // Validation
     if (!status) {
       return NextResponse.json(
         { error: "Status is required" },

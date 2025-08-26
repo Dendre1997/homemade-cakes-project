@@ -11,6 +11,24 @@ import {
   AvailableDiameterConfig,
   ProductFormData
 } from '@/types';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  rectSortingStrategy,
+} from "@dnd-kit/sortable";
+
+import SortableImage from './SortableImage';
+
 
 interface ProductFormProps {
   existingProduct?: Product | null;
@@ -44,9 +62,9 @@ const ProductForm = ({
   const [availableDiameterConfigs, setAvailableDiameterConfigs] = useState<
     AvailableDiameterConfig[]
   >([]);
-  // const [categoryIds, setCategoryIds] = useState('');
 
   const [isLoading, setIsLoading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
 
@@ -111,42 +129,53 @@ const ProductForm = ({
   }, [existingProduct]);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
-    // TODO: Add another state isUploading to prevent blocking of whole form
-    setIsLoading(true);
+    setIsUploading(true);
+    setError(null);
 
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("upload_preset", "homemade_cakes_preset");
+    const uploadPromises: Promise<any>[] = [];
 
-    try {
-      const response = await fetch(
+    for (const file of Array.from(files)) {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("upload_preset", "homemade_cakes_preset");
+
+      const uploadPromise = fetch(
         `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
         {
           method: "POST",
           body: formData,
         }
-      );
+      ).then((response) => {
+        if (!response.ok)
+          throw new Error(`Image upload failed for ${file.name}`);
+        return response.json();
+      });
+      uploadPromises.push(uploadPromise);
+    }
 
-      if (!response.ok) throw new Error("Image upload failed");
+    try {
+      const results = await Promise.all(uploadPromises);
+      const newUrls = results.map((result) => result.secure_url);
 
-      const data = await response.json();
-
-      // Додаємо новий URL до нашого існуючого масиву
-      setImageUrls((prevUrls) => [...prevUrls, data.secure_url]);
+      setImageUrls((prevUrls) => [...prevUrls, ...newUrls]);
     } catch (err) {
       if (err instanceof Error) setError(err.message);
       else setError("An image upload error occurred");
     } finally {
-      setIsLoading(false);
+      setIsUploading(false);
     }
   };
+   const handleRemoveImage = (indexToRemove: number) => {
+     setImageUrls((prevUrls) =>
+       prevUrls.filter((_, index) => index !== indexToRemove)
+     );
+   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // setIsLoading(true);
     if (!categoryId) {
       alert("Please select a category before submitting.");
       return;
@@ -164,6 +193,22 @@ const ProductForm = ({
     };
 
     onFormSubmit(productData);
+  };
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const handleDragEnd = (event: any) => {
+    const { active, over } = event;
+    if (active.id !== over.id) {
+      setImageUrls((items) => {
+        const oldIndex = items.indexOf(active.id);
+        const newIndex = items.indexOf(over.id);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
   };
 
   return (
@@ -218,29 +263,38 @@ const ProductForm = ({
           <label className="block text-sm font-medium text-gray-700">
             Images
           </label>
-          {/* Відображаємо прев'ю завантажених зображень */}
-          <div className="mt-2 flex flex-wrap gap-4">
-            {imageUrls.map((url) => (
-              <div key={url} className="relative w-24 h-24">
-                <Image
-                  src={url}
-                  alt="Uploaded image"
-                  layout="fill"
-                  className="object-cover rounded-md"
-                />
-                {/* TODO: Add a delete button for each image */}
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext items={imageUrls} strategy={rectSortingStrategy}>
+              <div className="mt-2 flex flex-wrap gap-4">
+                {imageUrls.map((url, index) => (
+                  <SortableImage
+                    key={url}
+                    url={url}
+                    index={index}
+                    handleRemoveImage={handleRemoveImage}
+                  />
+                ))}
               </div>
-            ))}
-          </div>
-          {/* Поле для завантаження */}
-          <div className="mt-2">
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleImageUpload}
-              disabled={isLoading}
-              className="text-sm"
-            />
+            </SortableContext>
+          </DndContext>
+          <div className="mt-4">
+            <label className="flex items-center justify-center px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-sm font-medium rounded-xl shadow-md cursor-pointer hover:opacity-90 transition">
+              {isUploading ? "Uploading..." : "Upload Image"}
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleImageUpload}
+                disabled={isUploading}
+                className="hidden"
+              />
+            </label>
+
+            {error && <p className="mt-2 text-sm text-red-500">{error}</p>}
           </div>
         </div>
         <div>
@@ -357,8 +411,8 @@ const ProductForm = ({
 
       {error && <p className="text-red-500">Error: {error}</p>}
 
-      <button type="submit" disabled={isLoading} className="...">
-        {isLoading ? "Creating Product..." : "Create Product"}
+      <button type="submit" className="...">
+        Create Product
       </button>
     </form>
   );
