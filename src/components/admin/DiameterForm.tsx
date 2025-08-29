@@ -1,7 +1,8 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { Diameter, ProductCategory } from '@/types';
-
+import { Button } from '../ui/Button';
+import { Input } from '../ui/Input'
 interface DiameterFormProps {
   existingDiameter?: Diameter | null;
   onFormSubmit: () => void;
@@ -88,7 +89,7 @@ const DiameterForm = ({
       onSubmit={handleSubmit}
       className='p-6 bg-white rounded-lg shadow-md max-w-lg'
     >
-      <h2 className='text-2xl font-semibold mb-4'>
+      <h2 className='text-2xl font-heading mb-4'>
         {isEditMode ? 'Update Diameter' : 'Add New Diameter'}
       </h2>
       <div className='space-y-6'>
@@ -99,7 +100,7 @@ const DiameterForm = ({
           >
             Name
           </label>
-          <input
+          <Input
             type='text'
             id='name'
             value={name}
@@ -115,7 +116,7 @@ const DiameterForm = ({
           >
             Size Value (in inches)
           </label>
-          <input
+          <Input
             type='number'
             id='sizeValue'
             value={sizeValue}
@@ -127,11 +128,11 @@ const DiameterForm = ({
         </div>
 
         <div className='space-y-2'>
-          <h3 className='text-lg font-medium'>Categories</h3>
+          <h3 className='text-lg font-heading'>Categories</h3>
           <div className='p-4 border border-gray-200 rounded-md grid grid-cols-2 md:grid-cols-3 gap-4'>
             {categories.map((cat) => (
               <div key={cat._id.toString()} className='flex items-center'>
-                <input
+                <Input
                   type='checkbox'
                   id={`cat-dia-${cat._id.toString()}`}
                   checked={categoryIds.includes(cat._id.toString())}
@@ -155,17 +156,17 @@ const DiameterForm = ({
           </div>
         )}
         <div>
-          <button
+          <Button
             type='submit'
             disabled={isLoading}
-            className='w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300'
+            className='w-full'
           >
             {isLoading
               ? 'Saving...'
               : isEditMode
               ? 'Update Diameter'
               : 'Add Diameter'}
-          </button>
+          </Button>
         </div>
       </div>
     </form>

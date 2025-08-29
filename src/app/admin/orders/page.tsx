@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Order } from "@/types";
 import Link from "next/link";
 import LoadingSpinner from "@/components/Spinner";
+import { Button } from "@/components/ui/Button";
 
 const ManageOrdersPage = () => {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -29,7 +30,7 @@ const ManageOrdersPage = () => {
 
   return (
     <section>
-      <h1 className="text-3xl font-bold mb-6">Manage Orders</h1>
+      <h1 className="text-3xl font-heading mb-6">Manage Orders</h1>
       <div className="bg-white shadow-md rounded-lg overflow-x-auto">
         <table className="min-w-full">
           <thead className="bg-gray-50">
@@ -69,7 +70,9 @@ const ManageOrdersPage = () => {
                     href={`/admin/orders/${order._id.toString()}`}
                     className="text-indigo-600 hover:text-indigo-900"
                   >
-                    View Details
+                    <Button variant="primary" size="sm">
+                      View
+                    </Button>
                   </Link>
                 </td>
               </tr>

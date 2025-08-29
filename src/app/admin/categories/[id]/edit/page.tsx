@@ -2,10 +2,10 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ProductCategory } from '@/types';
-import CategoryForm from '@/components/admin/AllergenForm';
+import CategoryForm from '@/components/admin/CategoryForm';
 import Spinner from '@/components/Spinner'
 
-const EditAllergenPage = () => {
+const EditCategoryPage = () => {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
@@ -24,10 +24,10 @@ const EditAllergenPage = () => {
   return (
     <section>
       <CategoryForm
-        existingAllergen={category}
-        onAllergenSubmit={() => router.push('/admin/categories')}
+        existingCategory={category}
+        onFormSubmit={() => router.push('/admin/categories')}
       />
     </section>
   );
 };
-export default EditAllergenPage;
+export default EditCategoryPage;

@@ -5,6 +5,7 @@ import { Order, Diameter } from "@/types";
 import Link from "next/link";
 import Image from "next/image";
 import LoadingSpinner from "@/components/Spinner";
+import { Button } from "@/components/ui/Button";
 
 const OrderDetailsPage = () => {
   const params = useParams();
@@ -89,7 +90,7 @@ const OrderDetailsPage = () => {
       >
         &larr; Back to all orders
       </Link>
-      <h1 className="text-3xl font-bold mb-6">
+      <h1 className="text-3xl font-heading mb-6">
         Order #{order._id.toString().slice(-6)}
       </h1>
 
@@ -97,7 +98,7 @@ const OrderDetailsPage = () => {
         <div className="md:col-span-2 space-y-6">
           {/* Order Items */}
           <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-xl font-semibold mb-4">Items</h2>
+            <h2 className="text-xl font-heading mb-4">Items</h2>
             <ul className="divide-y divide-gray-200">
               {order.items.map((item) => {
                 
@@ -134,7 +135,7 @@ const OrderDetailsPage = () => {
         {/* Customer & Status Info */}
         <div className="space-y-6">
           <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-xl font-semibold mb-4">Customer Details</h2>
+            <h2 className="text-xl font-heading mb-4">Customer Details</h2>
             <div className="text-sm space-y-2">
               <p>
                 <strong>Name:</strong> {order.customerInfo.name}
@@ -151,7 +152,7 @@ const OrderDetailsPage = () => {
             </div>
           </div>
           <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-xl font-semibold mb-4">Order Status</h2>
+            <h2 className="text-xl font-heading mb-4">Order Status</h2>
             <div className="space-y-4">
               <p>
                 Current status:{" "}
@@ -178,12 +179,12 @@ const OrderDetailsPage = () => {
                   <option value="cancelled">Cancelled</option>
                 </select>
               </div>
-              <button
+              <Button
                 onClick={handleStatusUpdate}
-                className="w-full bg-indigo-600 text-white py-2 rounded-md hover:bg-indigo-700"
+                className="w-full"
               >
                 Update Status
-              </button>
+              </Button>
             </div>
           </div>
         </div>

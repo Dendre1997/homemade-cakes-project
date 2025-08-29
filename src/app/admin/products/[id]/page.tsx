@@ -6,6 +6,7 @@ import { ProductWithCategory, Flavor, AvailableDiameterConfig } from "@/types";
 import Image from "next/image";
 import { useCartStore } from "@/lib/store/cartStore";
 import LoadingSpinner from "@/components/Spinner";
+import { Button } from "@/components/ui/Button";
 
 const SingleProductPage = () => {
   const params = useParams();
@@ -101,7 +102,7 @@ const SingleProductPage = () => {
 
             {/* Product info */}
             <div className="mt-10 lg:mt-0">
-              <h1 className="text-3xl font-bold tracking-tight text-gray-900">
+              <h1 className="text-3xl font-heading tracking-tight">
                 {product.name}
               </h1>
               <p className="text-lg mt-2 text-gray-500">
@@ -112,7 +113,7 @@ const SingleProductPage = () => {
               </p>
 
               <div className="mt-6">
-                <h3 className="text-sm font-medium text-gray-900">
+                <h3 className="text-sm font-heading">
                   Description
                 </h3>
                 <p className="prose prose-sm mt-4 text-gray-500">
@@ -123,7 +124,7 @@ const SingleProductPage = () => {
               <div className="mt-8 border-t pt-8">
                 {/* Flavor Selector */}
                 <div>
-                  <h3 className="text-sm font-medium text-gray-900">Flavors</h3>
+                  <h3 className="text-sm font-heading">Flavors</h3>
                   <fieldset className="mt-2">
                     <div className="flex flex-wrap gap-3">
                       {product.availableFlavors.map((flavor: Flavor) => {
@@ -140,7 +141,7 @@ const SingleProductPage = () => {
                   </fieldset>
                 </div>
                 <div className="mt-4">
-                  <h3 className="text-sm font-medium text-gray-900">
+                  <h3 className="text-sm font-heading">
                     Diameters
                   </h3>
                   <fieldset className="mt-2">
@@ -160,12 +161,12 @@ const SingleProductPage = () => {
             </div>
           </div>
           <div className="mt-10">
-            <button
+            <Button
               onClick={() => handleDelete(product._id.toString())}
               className="flex w-full items-center justify-center rounded-md border border-transparent bg-indigo-600 px-8 py-3 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-900"
             >
               Delete
-            </button>
+            </Button>
           </div>
         </div>
       </div>

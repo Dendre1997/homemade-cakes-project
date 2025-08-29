@@ -52,7 +52,7 @@ const EditFlavorPage = () => {
 
   return (
     <section>
-      <h1 className='text-3xl font-bold mb-6'>Edit Flavor: {flavor?.name}</h1>
+      <h1 className='text-3xl font-heading mb-6'>Edit Flavor: {flavor?.name}</h1>
       <FlavorForm
         existingFlavor={flavor}
         onFormSubmit={handleUpdateSuccess}

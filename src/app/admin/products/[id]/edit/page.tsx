@@ -126,7 +126,7 @@ const EditProductPage = () => {
 
   return (
     <section>
-      <h1 className="text-3xl font-bold mb-6">Edit Product: {product?.name}</h1>
+      <h1 className="text-3xl font-heading mb-6">Edit Product: {product?.name}</h1>
       {product && (
         <ProductForm
           existingProduct={product}

@@ -4,7 +4,7 @@ import { ProductCategory } from '@/types';
 import CategoryForm from '@/components/admin/CategoryForm';
 import Link from 'next/link';
 import LoadingSpinner from '@/components/Spinner';
-
+import { Button } from '@/components/ui/Button';
 const ManageCategoriesPage = () => {
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -41,33 +41,34 @@ const ManageCategoriesPage = () => {
 
   return (
     <section>
-      <h1 className='text-3xl font-bold mb-6'>Category Management</h1>
+      <h1 className="text-3xl font-heading mb-6">Category Management</h1>
       <CategoryForm onFormSubmit={fetchCategories} />
-      <div className='mt-10'>
-        <h2 className='text-2xl font-bold mb-4'>Existing Categories</h2>
+      <div className="mt-10">
+        <h2 className="text-2xl font-heading mb-4">Existing Categories</h2>
         {isLoading ? (
           <LoadingSpinner />
         ) : (
-          <ul className='space-y-2'>
+          <ul className="space-y-2">
             {categories.map((cat) => (
               <li
                 key={cat._id.toString()}
-                className='p-4 bg-white rounded-md shadow flex justify-between items-center'
+                className="p-4 bg-white rounded-md shadow flex justify-between items-center"
               >
-                <span className='font-medium'>{cat.name}</span>
-                <div className='flex items-center gap-2'>
+                <span className="font-medium">{cat.name}</span>
+                <div className="flex items-center gap-2">
                   <Link
                     href={`/admin/categories/${cat._id.toString()}/edit`}
-                    className='bg-blue-100 text-blue-700 hover:bg-blue-200 font-semibold py-1 px-3 rounded-md text-sm'
+                    className="bg-blue-100 text-blue-700 hover:bg-blue-200 font-semibold py-1 px-3 rounded-md text-sm"
                   >
                     Update
                   </Link>
-                  <button
-                    onClick={() => handleDelete(cat._id.toString())}
-                    className='bg-red-100 text-red-700 hover:bg-red-200 font-semibold py-1 px-3 rounded-md text-sm'
+                  <Button
+                  onClick={() => handleDelete(cat._id.toString())}
+                    variant="danger"
+                    size="sm"
                   >
                     Delete
-                  </button>
+                  </Button>
                 </div>
               </li>
             ))}

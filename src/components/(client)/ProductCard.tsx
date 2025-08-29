@@ -16,22 +16,24 @@ const ProductCard = ({ product }: ProductCardProps) => {
       href={`/products/${product._id.toString()}`}
       className="group block w-full"
     >
-      <div className="flex h-full w-full flex-col overflow-hidden rounded-xl bg-white shadow-lg transition-all duration-300 hover:shadow-2xl md:flex-row">
+      <div className="flex h-full w-full flex-col overflow-hidden rounded-xl bg-card-background shadow-lg transition-all duration-300 hover:shadow-2xl md:flex-row">
         {/* Left Side: Image Container */}
         <div className="relative w-full p-4 md:w-2/5">
           {/* Decorative Gradient Background Shape */}
-          <div className="absolute inset-0 z-0 m-auto h-5/6 w-5/6 rounded-full bg-gradient-to-br from-blue-50 via-rose-50 to-amber-50 blur-lg"></div>
+          <div className="absolute inset-0 z-0 m-auto h-5/6 w-5/6 rounded-full "></div>
 
           {/* The Product Image */}
-          <div className="relative aspect-square w-full">
-            <Image
-              src={firstImage}
-              alt={product.name}
-              fill
-              className="object-contain drop-shadow-lg transition-transform duration-300 group-hover:scale-105"
-            />
+          <div className="relative aspect-square w-full rounded-large">
+            <div className="relative aspect-square w-full rounded-large overflow-hidden">
+              <Image
+                src={firstImage}
+                alt={product.name}
+                fill
+                className="object-cover"
+              />
+            </div>
             {otherImagesCount > 0 && (
-              <div className="absolute bottom-2 right-2 flex items-center gap-1.5 rounded-lg bg-gray-900 bg-opacity-80 px-2.5 py-1.5 text-xs font-semibold text-white">
+              <div className="absolute bottom-2 right-2 flex items-center gap-1.5 rounded-large bg-gray-900 bg-opacity-80 px-2.5 py-1.5 text-xs font-semibold text-white">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 20 20"
@@ -69,10 +71,10 @@ const ProductCard = ({ product }: ProductCardProps) => {
 
           {/* Buttons Area - visual only, since the card is the link */}
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3 md:justify-start">
-            <div className="rounded-lg bg-yellow-400 px-5 py-2.5 font-bold text-gray-900 transition-colors group-hover:bg-yellow-500">
+            <div className="rounded-large bg-yellow-400 px-5 py-2.5 font-bold text-gray-900 transition-colors group-hover:bg-yellow-500">
               Order Now
             </div>
-            <div className="rounded-lg bg-stone-700 px-5 py-2.5 font-bold text-white transition-colors group-hover:bg-stone-800">
+            <div className="rounded-large bg-stone-700 px-5 py-2.5 font-bold text-white transition-colors group-hover:bg-stone-800">
               Learn More
             </div>
           </div>

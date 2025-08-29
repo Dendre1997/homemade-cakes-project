@@ -1,21 +1,21 @@
-import Link from 'next/link';
-import React from 'react';
+import Link from "next/link";
+import React from "react";
 
 interface SidebarProps {
   isOpen: boolean;
 }
 
-const AdminSidebar = ({ isOpen }: SidebarProps) => {
+const ClientSideBar = ({ isOpen }: SidebarProps) => {
   return (
     <aside
-      className={`fixed top-0 left-0 h-full bg-subtleBackground text-white shadow-md transition-transform duration-300 p-5 pt-20 ${
+      className={`w-64 flex-shrink-0 bg-gray-800 text-white p-5 ${
         isOpen ? "translate-x-0" : "-translate-x-full"
       }`}
     >
-      <h1 className="text-2xl font-heading mb-8">Homemade Cakes</h1>
+      <div className="text-2xl font-semibold mb-8">Homemade Cakes</div>
       <nav>
         <ul>
-          <li className="mb-2 font-heading">
+          <li className="mb-2">
             <Link
               href="/admin/dashboard"
               className="block py-2 px-4 rounded hover:bg-gray-700 transition-colors duration-200"
@@ -23,7 +23,7 @@ const AdminSidebar = ({ isOpen }: SidebarProps) => {
               General
             </Link>
           </li>
-          <li className="mb-2 font-heading">
+          <li className="mb-2">
             <Link
               href="/admin/products"
               className="block py-2 px-4 rounded hover:bg-gray-700 transition-colors duration-200"
@@ -31,7 +31,7 @@ const AdminSidebar = ({ isOpen }: SidebarProps) => {
               Products
             </Link>
           </li>
-          <li className="mb-2 font-heading">
+          <li className="mb-2">
             <Link
               href="/admin/orders"
               className="block py-2 px-4 rounded hover:bg-gray-700 transition-colors duration-200"
@@ -39,7 +39,7 @@ const AdminSidebar = ({ isOpen }: SidebarProps) => {
               Orders
             </Link>
           </li>
-          <li className="mb-2 font-heading">
+          <li className="mb-2">
             <Link
               href="/admin/products/create"
               className="block py-2 px-4 rounded hover:bg-gray-700 transition-colors duration-200"
@@ -47,7 +47,7 @@ const AdminSidebar = ({ isOpen }: SidebarProps) => {
               Create Product
             </Link>
           </li>
-          <li className="mb-2 font-heading">
+          <li className="mb-2">
             <Link
               href="/admin/decorations"
               className="block py-2 px-4 rounded hover:bg-gray-700 transition-colors duration-200"
@@ -55,7 +55,7 @@ const AdminSidebar = ({ isOpen }: SidebarProps) => {
               Decoration
             </Link>
           </li>
-          <li className="mb-2 font-heading">
+          <li className="mb-2">
             <Link
               href="/admin/flavors"
               className="block py-2 px-4 rounded hover:bg-gray-700 transition-colors duration-200"
@@ -63,7 +63,7 @@ const AdminSidebar = ({ isOpen }: SidebarProps) => {
               Flavors
             </Link>
           </li>
-          <li className="mb-2 font-heading">
+          <li className="mb-2">
             <Link
               href="/admin/categories"
               className="block py-2 px-4 rounded hover:bg-gray-700 transition-colors duration-200"
@@ -71,7 +71,7 @@ const AdminSidebar = ({ isOpen }: SidebarProps) => {
               Categories
             </Link>
           </li>
-          <li className="mb-2 font-heading">
+          <li className="mb-2">
             <Link
               href="/admin/diameters"
               className="block py-2 px-4 rounded hover:bg-gray-700 transition-colors duration-200"
@@ -79,7 +79,7 @@ const AdminSidebar = ({ isOpen }: SidebarProps) => {
               Diameters
             </Link>
           </li>
-          <li className="mb-2 font-heading">
+          <li className="mb-2">
             <Link
               href="/admin/allergens"
               className="block py-2 px-4 rounded hover:bg-gray-700 transition-colors duration-200"
@@ -93,4 +93,4 @@ const AdminSidebar = ({ isOpen }: SidebarProps) => {
   );
 };
 
-export default AdminSidebar;
+export default ClientSideBar;

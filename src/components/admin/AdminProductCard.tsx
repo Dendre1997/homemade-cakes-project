@@ -2,6 +2,7 @@ import React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ProductWithCategory } from "@/types";
+import { Button } from "../ui/Button";
 
 interface AdminProductCardProps {
   product: ProductWithCategory;
@@ -13,22 +14,19 @@ const AdminProductCard = ({ product, onDelete }: AdminProductCardProps) => {
   const otherImagesCount = product.imageUrls.length - 1
 
   return (
-    <div className="flex w-full flex-col overflow-hidden rounded-xl bg-white shadow-lg md:flex-row">
-      {/* --- Left Side: Image --- */}
+    <div className="flex w-full flex-col overflow-hidden rounded-large bg-card-background shadow-lg md:flex-row">
       <div className="relative w-full p-4 md:w-2/5">
-        {/* Decorative Gradient Background */}
-        <div className="absolute inset-0 z-0 m-auto h-5/6 w-5/6 rounded-full bg-gradient-to-br from-blue-50 via-rose-50 to-amber-50 blur-lg"></div>
-
-        {/* Product Image */}
-        <div className="relative aspect-square w-full">
-          <Image
-            src={firstImage}
-            alt={product.name}
-            fill
-            className="object-contain drop-shadow-lg"
-          />
+        <div className="relative aspect-square w-full rounded-large ">
+          <div className="relative aspect-square w-full rounded-large overflow-hidden">
+            <Image
+              src={firstImage}
+              alt={product.name}
+              fill
+              className="object-cover"
+            />
+          </div>
           {otherImagesCount > 0 && (
-            <div className="absolute bottom-2 right-2 flex items-center gap-1.5 rounded-lg bg-gray-900 bg-opacity-80 px-2.5 py-1.5 text-xs font-semibold text-white">
+            <div className="absolute bottom-2 right-2 flex items-center gap-1.5 rounded-large bg-gray-900 bg-opacity-80 px-2.5 py-1.5 text-xs font-semibold text-white">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 20 20"
@@ -46,15 +44,13 @@ const AdminProductCard = ({ product, onDelete }: AdminProductCardProps) => {
           )}
         </div>
       </div>
-
-      {/* --- Right Side: Content & Actions --- */}
       <div className="flex flex-1 flex-col p-6">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-semibold uppercase text-gray-500">
+          <span className="text-sm uppercase text-main">
             {product.category.name}
           </span>
           <span
-            className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+            className={`rounded-full px-2.5 py-0.5 text-xs ${
               product.isActive
                 ? "bg-green-100 text-green-800"
                 : "bg-red-100 text-red-800"
@@ -64,7 +60,7 @@ const AdminProductCard = ({ product, onDelete }: AdminProductCardProps) => {
           </span>
         </div>
 
-        <h3 className="mt-2 text-2xl font-bold text-gray-900">
+        <h3 className="mt-2 text-2xl font-heading text-primary">
           {product.name}
         </h3>
 
@@ -72,29 +68,26 @@ const AdminProductCard = ({ product, onDelete }: AdminProductCardProps) => {
           ${product.structureBasePrice}
         </p>
 
-        {/* Spacer to push actions to the bottom */}
         <div className="flex-grow" />
 
-        {/* Action Buttons */}
         <div className="mt-4 flex items-center justify-end gap-4 border-t pt-4">
-          <Link
-            href={`/admin/products/${product._id.toString()}`}
-            className="text-sm font-medium text-gray-600 hover:text-gray-900"
-          >
-            View
+          <Link href={`/admin/products/${product._id.toString()}`}>
+            <Button variant="primary" size="sm">
+              View
+            </Button>
           </Link>
-          <Link
-            href={`/admin/products/${product._id.toString()}/edit`}
-            className="text-sm font-medium text-indigo-600 hover:text-indigo-800"
-          >
-            Edit
+          <Link href={`/admin/products/${product._id.toString()}/edit`}>
+            <Button variant="ghost" size="sm">
+              Edit
+            </Button>
           </Link>
-          <button
+          <Button
             onClick={() => onDelete(product._id.toString())}
-            className="text-sm font-medium text-red-600 hover:text-red-800"
+            variant="danger"
+            size="sm"
           >
             Delete
-          </button>
+          </Button>
         </div>
       </div>
     </div>

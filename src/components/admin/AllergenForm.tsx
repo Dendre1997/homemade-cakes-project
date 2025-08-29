@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 import { Allergen } from '@/types';
-
+import { Button } from '../ui/Button';
+import { Input } from '../ui/Input';
 interface AllergenFormProps {
   existingAllergen?: Allergen | null;
   onAllergenSubmit: () => void;
@@ -67,7 +68,7 @@ const AllergenForm = ({
       onSubmit={handleSubmit}
       className='p-6 bg-white rounded-lg shadow-md max-w-lg'
     >
-      <h2 className='text-2xl font-semibold mb-4'>
+      <h2 className='text-2xl font-heading mb-4'>
         {isEditMode ? 'Update Allergen' : 'Add New Allergen'}
       </h2>
       <div className='space-y-4'>
@@ -78,7 +79,7 @@ const AllergenForm = ({
           >
             Name
           </label>
-          <input
+          <Input
             type='text'
             id='name'
             value={name}
@@ -93,10 +94,10 @@ const AllergenForm = ({
           </div>
         )}
         <div>
-          <button
+          <Button
             type='submit'
             disabled={isLoading}
-            className='w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-300'
+            className='w-full'
           >
             {isLoading
               ? isEditMode
@@ -105,7 +106,7 @@ const AllergenForm = ({
               : isEditMode
               ? 'Update Allergen'
               : 'Add Allergen'}
-          </button>
+          </Button>
         </div>
       </div>
     </form>

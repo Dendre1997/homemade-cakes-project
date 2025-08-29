@@ -29,6 +29,8 @@ import {
 
 import SortableImage from './SortableImage';
 
+import { Button } from '../ui/Button';
+import { Input } from '@/components/ui/Input';
 
 interface ProductFormProps {
   existingProduct?: Product | null;
@@ -217,11 +219,11 @@ const ProductForm = ({
       className="space-y-8 p-8 bg-white rounded-lg shadow-md"
     >
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold">Basic Information</h2>
+        <h2 className="text-xl font-heading">Basic Information</h2>
         <div>
           <label
             htmlFor="category"
-            className="block text-sm font-medium text-gray-700"
+            className="block text-lg font-heading"
           >
             Product Category
           </label>
@@ -242,7 +244,7 @@ const ProductForm = ({
         </div>
         <div>
           <label htmlFor="name">Product Name</label>
-          <input
+          <Input
             type="text"
             id="name"
             value={name}
@@ -284,7 +286,7 @@ const ProductForm = ({
           <div className="mt-4">
             <label className="flex items-center justify-center px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-sm font-medium rounded-xl shadow-md cursor-pointer hover:opacity-90 transition">
               {isUploading ? "Uploading..." : "Upload Image"}
-              <input
+              <Input
                 type="file"
                 accept="image/*"
                 multiple
@@ -299,7 +301,7 @@ const ProductForm = ({
         </div>
         <div>
           <label htmlFor="price">Base Price</label>
-          <input
+          <Input
             type="number"
             id="price"
             value={structureBasePrice}
@@ -308,7 +310,7 @@ const ProductForm = ({
           />
         </div>
         <div className="flex items-center">
-          <input
+          <Input
             type="checkbox"
             id="isActive"
             checked={isActive}
@@ -321,11 +323,11 @@ const ProductForm = ({
         </div>
       </div>
       <div className="space-y-2">
-        <h3 className="text-lg font-medium">Available Flavors</h3>
+        <h3 className="text-lg font-heading">Available Flavors</h3>
         <div className="p-4 border rounded-md grid grid-cols-2 md:grid-cols-3 gap-4">
           {flavors.map((flavor) => (
             <div key={flavor._id.toString()} className="flex items-center">
-              <input
+              <Input
                 type="checkbox"
                 id={`flavor-${flavor._id.toString()}`}
                 checked={availableFlavorIds.includes(flavor._id.toString())}
@@ -347,11 +349,11 @@ const ProductForm = ({
         </div>
       </div>
       <div className="space-y-2">
-        <h3 className="text-lg font-medium">Allergens</h3>
+        <h3 className="text-lg font-heading">Allergens</h3>
         <div className="p-4 border rounded-md grid grid-cols-2 md:grid-cols-3 gap-4">
           {allergens.map((allergen) => (
             <div key={allergen._id.toString()} className="flex items-center">
-              <input
+              <Input
                 type="checkbox"
                 id={`allergen-${allergen._id.toString()}`}
                 checked={allergenIds.includes(allergen._id.toString())}
@@ -373,7 +375,7 @@ const ProductForm = ({
         </div>
       </div>
       <div className="space-y-2">
-        <h3 className="text-lg font-medium">
+        <h3 className="text-lg font-heading">
           Available Diameters & Price Multipliers
         </h3>
         <div className="p-4 border rounded-md space-y-4">
@@ -390,7 +392,7 @@ const ProductForm = ({
                 <label htmlFor={`diameter-${diameter._id.toString()}`}>
                   {diameter.name} {diameter.sizeValue}
                 </label>
-                <input
+                <Input
                   type="number"
                   id={`diameter-${diameter._id.toString()}`}
                   value={currentMultiplier}
@@ -411,9 +413,9 @@ const ProductForm = ({
 
       {error && <p className="text-red-500">Error: {error}</p>}
 
-      <button type="submit" className="...">
+      <Button type="submit" className="w-full">
         Create Product
-      </button>
+      </Button>
     </form>
   );
 };

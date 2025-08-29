@@ -8,9 +8,7 @@ import { useAuthStore } from "@/lib/store/authStore";
 import { auth } from "@/lib/firebase/client";
 import { signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
-
-// --- Style Objects for the Header Component ---
-// Each object uses the imported `theme` to apply the design rules.
+import  SidebarToggleButton from '@/components/SidebarToggleButton'
 
 const headerStyle: React.CSSProperties = {
   backgroundColor: theme.colors.accent, // Rule 1
@@ -75,6 +73,7 @@ const cartIconStyle: React.CSSProperties = {
   color: theme.colors.text,
 };
 
+
 const cartBadgeStyle: React.CSSProperties = {
   position: "absolute",
   top: "-8px",
@@ -91,9 +90,12 @@ const cartBadgeStyle: React.CSSProperties = {
   color: theme.colors.text, // Using main text for high contrast on pink
 };
 
+interface HeaderProps {
+  onToggleSidebar: () => void;
+}
 // --- The React Component ---
 
-const Header = () => {
+const HeaderAdmin = ({ onToggleSidebar }: HeaderProps) => {
   const items = useCartStore((state) => state.items);
   const { user, isLoading } = useAuthStore();
   const router = useRouter();
@@ -114,9 +116,10 @@ const Header = () => {
     <header style={headerStyle}>
       <div style={containerStyle}>
         <div style={flexContainerStyle}>
+          <SidebarToggleButton onClick={onToggleSidebar} />
           {/* Left: Logo */}
           <div>
-            <Link href="/" style={logoStyle}>
+            <Link href="/" className="text-3xl font-bold mb-6 font-heading">
               BACKER PLACE
             </Link>
           </div>
@@ -218,4 +221,4 @@ const Header = () => {
   );
 };
 
-export default Header;
+export default HeaderAdmin;

@@ -1,6 +1,8 @@
 'use client'
 import React, { useState } from "react"
 import { Decoration, ProductCategory } from "@/types";
+import { Button } from "../ui/Button";
+import { Input } from "../ui/Input";
 interface DecorationsFormProps {
   existingDecoration?: Decoration | null;
   onFormSubmit: () => void;
@@ -72,74 +74,74 @@ const DecorationsForm = ({ existingDecoration, onFormSubmit, categories}: Decora
   return (
     <form
       onSubmit={handleSubmit}
-      className='p-6 bg-white rounded-lg shadow-md max-w-lg'
+      className="p-6 bg-white rounded-lg shadow-md max-w-lg"
     >
-      <h2 className='text-2xl font-semibold mb-4'>
-        {isEditMode ? 'Add New Decoration' : 'Update Decoration'}
+      <h2 className="text-2xl font-heading mb-4">
+        {isEditMode ? "Update Decoration" : "Add New Decoration"}
       </h2>
-      <div className='space-y-4'>
+      <div className="space-y-4">
         <div>
           <label
-            htmlFor='name'
-            className='block text-sm font-medium text-gray-700'
+            htmlFor="name"
+            className="block text-sm font-medium text-gray-700"
           >
             Name
           </label>
-          <input
-            type='text'
-            id='name'
+          <Input
+            type="text"
+            id="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className='mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500'
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
             required
           />
         </div>
         <div>
           <label
-            htmlFor='price'
-            className='block text-sm font-medium text-gray-700'
+            htmlFor="price"
+            className="block text-sm font-medium text-gray-700"
           >
             Price
           </label>
-          <input
-            type='number'
-            id='price'
+          <Input
+            type="number"
+            id="price"
             value={price}
             onChange={(e) => setPrice(e.target.value)}
-            className='mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500'
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
             required
           />
         </div>
         <div>
           <label
-            htmlFor='imageUrl'
-            className='block text-sm font-medium text-gray-700'
+            htmlFor="imageUrl"
+            className="block text-sm font-medium text-gray-700"
           >
             URL Image (optional)
           </label>
-          <input
-            type='text'
-            id='imageUrl'
+          <Input
+            type="text"
+            id="imageUrl"
             value={imageUrl}
             onChange={(e) => setImageUrl(e.target.value)}
-            className='mt-1 block w-full input-class'
+            className="mt-1 block w-full input-class"
           />
         </div>
-        <div className='space-y-2'>
-          <h3 className='text-lg font-medium'>Categories</h3>
-          <div className='p-4 border border-gray-200 rounded-md grid grid-cols-2 md:grid-cols-3 gap-4'>
+        <div className="space-y-2">
+          <h3 className="text-lg font-heading">Categories</h3>
+          <div className="p-4 border border-gray-200 rounded-md grid grid-cols-2 md:grid-cols-3 gap-4">
             {categories.map((cat) => (
-              <div key={cat._id.toString()} className='flex items-center'>
-                <input
-                  type='checkbox'
+              <div key={cat._id.toString()} className="flex items-center">
+                <Input
+                  type="checkbox"
                   id={`cat-deco-${cat._id.toString()}`}
                   checked={categoryIds.includes(cat._id.toString())}
                   onChange={() => handleCategoryChange(cat._id.toString())}
-                  className='h-4 w-4 rounded border-gray-300 text-indigo-600'
+                  className="h-4 w-4 rounded border-gray-300 text-indigo-600"
                 />
                 <label
                   htmlFor={`cat-deco-${cat._id.toString()}`}
-                  className='ml-3 text-sm'
+                  className="ml-3 text-sm"
                 >
                   {cat.name}
                 </label>
@@ -148,22 +150,18 @@ const DecorationsForm = ({ existingDecoration, onFormSubmit, categories}: Decora
           </div>
         </div>
         {error && (
-          <div className='text-red-500 text-sm'>
+          <div className="text-red-500 text-sm">
             <p>Error: {error}</p>
           </div>
         )}
         <div>
-          <button
-            type='submit'
-            disabled={isLoading}
-            className='w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-300'
-          >
+          <Button type="submit" disabled={isLoading} className="w-full">
             {isLoading
-              ? 'Adding...'
+              ? "Adding..."
               : isEditMode
-              ? 'Update Decoration'
-              : 'Add Decoration'}
-          </button>
+              ? "Update Decoration"
+              : "Add Decoration"}
+          </Button>
         </div>
       </div>
     </form>

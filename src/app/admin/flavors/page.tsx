@@ -4,6 +4,7 @@ import FlavorForm from '@/components/admin/FlavorForm';
 import { Flavor, ProductCategory } from '@/types';
 import Link from 'next/link';
 import LoadingSpinner from '@/components/Spinner';
+import { Button } from '@/components/ui/Button';
 const ManageFlavorsPage = () => {
   const [flavors, setFlavors] = useState<Flavor[]>([]);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
@@ -75,44 +76,45 @@ const ManageFlavorsPage = () => {
 
   return (
     <section>
-      <h1 className='text-3xl font-bold mb-6'>Flavors Managment</h1>
+      <h1 className="text-3xl font-heading mb-6">Flavors Managment</h1>
 
       <FlavorForm onFormSubmit={fetchFlavors} categories={categories} />
 
-      <div className='mt-10'>
-        <h2 className='text-2xl font-bold mb-4'>Existing Flavors</h2>
+      <div className="mt-10">
+        <h2 className="text-2xl font-heading mb-4">Existing Flavors</h2>
 
         {/* Show  loading state future spinner*/}
         {isLoading && <LoadingSpinner />}
 
         {/* Show an error if it exists */}
-        {error && <p className='text-red-500'>Error: {error}</p>}
+        {error && <p className="text-red-500">Error: {error}</p>}
 
         {/* If no loading and no errors show the list */}
         {!isLoading && !error && (
-          <ul className='space-y-2'>
+          <ul className="space-y-2">
             {flavors.map((flavor) => (
               <li
                 key={flavor._id.toString()}
-                className='p-4 bg-white rounded-md shadow flex justify-between items-center'
+                className="p-4 bg-white rounded-md shadow flex justify-between items-center"
               >
                 <div>
-                  <span className='font-medium'>{flavor.name}</span>
-                  <span className='text-gray-500 ml-4'>${flavor.price}</span>
+                  <span className="font-medium">{flavor.name}</span>
+                  <span className="text-gray-500 ml-4">${flavor.price}</span>
                 </div>
-                <div className='flex items-center gap-2'>
+                <div className="flex items-center gap-2">
                   <Link
                     href={`/admin/flavors/${flavor._id.toString()}/edit`}
-                    className='bg-blue-100 text-blue-700 hover:bg-blue-200 font-semibold py-1 px-3 rounded-md text-sm transition-colors'
+                    className="bg-blue-100 text-blue-700 hover:bg-blue-200 font-semibold py-1 px-3 rounded-md text-sm transition-colors"
                   >
                     Update
                   </Link>
-                  <button
-                    onClick={() => handleDelete(flavor._id.toString())} // Додаємо обробник кліку
-                    className='bg-red-100 text-red-700 hover:bg-red-200 font-semibold py-1 px-3 rounded-md text-sm transition-colors'
+                  <Button
+                  onClick={() => handleDelete(flavor._id.toString())}
+                    variant="danger"
+                    size="sm"
                   >
                     Delete
-                  </button>
+                  </Button>
                 </div>
               </li>
             ))}

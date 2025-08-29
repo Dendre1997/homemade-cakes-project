@@ -4,6 +4,7 @@ import { Product, ProductWithCategory } from '@/types';
 import Link from 'next/link';
 import AdminProductCard from "@/components/admin/AdminProductCard";
 import LoadingSpinner from '@/components/Spinner';
+import { Button } from '@/components/ui/Button';
 
 
 const ManageProductsPage = () => {
@@ -46,12 +47,13 @@ const ManageProductsPage = () => {
   return (
     <section>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Manage Products</h1>
-        <Link
-          href="/admin/products/create"
-          className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded"
-        >
-          Add New Product
+        <h1 className="text-3xl font-bold mb-6 font-heading">
+          Manage Products
+        </h1>
+        <Link href="/admin/products/create">
+          <Button variant="primary" size="default">
+            + Add New Product
+          </Button>
         </Link>
       </div>
 

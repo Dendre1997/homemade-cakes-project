@@ -5,6 +5,7 @@ import DiameterForm from '@/components/admin/DiameterForm';
 import Link from 'next/link';
 import { Diameter, ProductCategory } from '@/types';
 import LoadingSpinner from '@/components/Spinner';
+import { Button } from '@/components/ui/Button';
 
 const ManageDiametersPage = () => {
   const [diameters, setDiameters] = useState<Diameter[]>([]);
@@ -79,44 +80,45 @@ const ManageDiametersPage = () => {
 
   return (
     <section>
-      <h1 className='text-3xl font-bold mb-6'>Diameter Management</h1>
+      <h1 className="text-3xl font-heading mb-6">Diameter Management</h1>
 
       <DiameterForm onFormSubmit={fetchDiameters} categories={categories} />
 
-      <div className='mt-10'>
-        <h2 className='text-2xl font-bold mb-4'>Existing Diameters</h2>
+      <div className="mt-10">
+        <h2 className="text-2xl font-heading mb-4">Existing Diameters</h2>
 
         {isLoading && <LoadingSpinner />}
-        {error && <p className='text-red-500'>Error: {error}</p>}
+        {error && <p className="text-red-500">Error: {error}</p>}
 
         {!isLoading && !error && (
-          <ul className='space-y-2'>
+          <ul className="space-y-2">
             {diameters.map((diameter) => (
               <li
                 key={diameter._id.toString()}
-                className='p-4 bg-white rounded-md shadow flex justify-between items-center'
+                className="p-4 bg-white rounded-md shadow flex justify-between items-center"
               >
                 <div>
-                  <span className='text-gray-500 ml-4'>
+                  <span className="text-gray-500 ml-4">
                     Name: {diameter.name}
                   </span>
-                  <span className='text-gray-500 ml-4'>
+                  <span className="text-gray-500 ml-4">
                     SizeValue: {diameter.sizeValue}
                   </span>
                 </div>
-                <div className='flex items-center gap-2'>
+                <div className="flex items-center gap-2">
                   <Link
                     href={`/admin/diameters/${diameter._id.toString()}/edit`}
-                    className='bg-blue-100 text-blue-700 hover:bg-blue-200 font-semibold py-1 px-3 rounded-md text-sm transition-colors'
+                    className="bg-blue-100 text-blue-700 hover:bg-blue-200 font-semibold py-1 px-3 rounded-md text-sm transition-colors"
                   >
                     Update
                   </Link>
-                  <button
+                  <Button
                     onClick={() => handleDelete(diameter._id.toString())}
-                    className='bg-red-100 text-red-700 hover:bg-red-200 font-semibold py-1 px-3 rounded-md text-sm transition-colors'
+                    variant="danger"
+                    size="sm"
                   >
                     Delete
-                  </button>
+                  </Button>
                 </div>
               </li>
             ))}
