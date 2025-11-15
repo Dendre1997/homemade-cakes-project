@@ -4,14 +4,18 @@ import { useCartStore } from "@/lib/store/cartStore";
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import LoadingSpinner from "@/components/Spinner";
-import { Diameter } from '@/types'
-
+import LoadingSpinner from "@/components/ui/Spinner";
+import { Diameter } from "@/types";
+import { Button } from "@/components/ui/Button";
+import { Trash2, Plus, Minus } from "lucide-react";
+import QuantityStepper from "@/components/ui/QuantityStepper";
 const CartPage = () => {
-  const { items, removeItem, clearCart } = useCartStore();
+  const { items, removeItem, increaseQuantity, decreaseQuantity } = useCartStore();
   const [diameters, setDiameters] = useState<Diameter[]>([]);
+  // This state is used to prevent hydration mismatches with the client side cart
   const [isMounted, setIsMounted] = useState(false);
 
+  // Fetch all available diameters to map diameter Id from cart to display names
   const fetchDiameters = async () => {
     try {
       const res = await fetch("/api/diameters");
@@ -37,113 +41,123 @@ const CartPage = () => {
   }
 
   return (
-    <div className="bg-white">
-      <div className="mx-auto max-w-2xl px-4 pt-16 pb-24 sm:px-6 lg:max-w-7xl lg:px-8">
-        <h1 className="text-3xl font-heading tracking-tight text-gray-900 sm:text-4xl">
-          Shopping Cart
-        </h1>
+    <div className="bg-background">
+      <div className="mx-auto max-w-7xl px-lg py-xl">
+        <h1 className="font-heading text-h1 text-center text-primary">Your Cart</h1>
 
         {items.length === 0 ? (
-          <div className="mt-12">
-            <p>Your cart is empty.</p>
-            <Link
-              href="/products"
-              className="text-indigo-600 hover:text-indigo-500 font-medium"
-            >
-              Continue Shopping &rarr;
-            </Link>
+          // --- 3. Empty State ---
+          <div className="py-xxl text-center">
+            <p className="font-body text-lg text-primary">
+              Your cart is currently empty.
+            </p>
+            <div className="mt-lg">
+              <Link href="/products">
+                <Button variant="secondary">Return to Catalog</Button>
+              </Link>
+            </div>
           </div>
         ) : (
-          <form className="mt-12 lg:grid lg:grid-cols-12 lg:items-start lg:gap-x-12 xl:gap-x-16">
-            <section aria-labelledby="cart-heading" className="lg:col-span-7">
-              <h2 id="cart-heading" className="sr-only">
-                Items in your shopping cart
-              </h2>
-              <ul
-                role="list"
-                className="divide-y divide-gray-200 border-b border-t border-gray-200"
-              >
-                  {items.map((item) => {
-                    const diameter = diameters.find(
-                      (d) => d._id.toString() === item.diameterId.toString()
-                    );
-                    return (
-                      <li key={item.id} className="flex py-6 sm:py-10">
-                        <div className="flex-shrink-0">
-                          <Image
-                            src={item.imageUrl}
-                            alt={item.name}
-                            width={100}
-                            height={100}
-                            className="h-24 w-24 rounded-md object-cover object-center sm:h-48 sm:w-48"
-                          />
-                        </div>
-                        <div className="ml-4 flex flex-1 flex-col justify-between sm:ml-6">
+          <div className="mt-lg grid grid-cols-1 gap-xl lg:grid-cols-3">
+            <section className="lg:col-span-2">
+              <ul role="list" className="space-y-lg">
+                {items.map((item) => {
+                  const diameter = diameters.find(
+                    (d) => d._id.toString() === item.diameterId.toString()
+                  );
+                  return (
+                    <li
+                      key={item.id}
+                      className="flex flex-col gap-md border-b border-border pb-lg sm:flex-row"
+                    >
+                      <div className="relative h-32 w-32 shrink-0 overflow-hidden rounded-medium">
+                        <Image
+                          src={item.imageUrl}
+                          alt={item.name}
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+
+                      <div className="ml-0 mt-md flex flex-1 flex-col justify-between sm:ml-md sm:mt-0">
+                        <div className="flex justify-between">
                           <div>
-                            <h3 className="text-base font-medium text-gray-900">
+                            <h3 className="font-heading text-h3 text-primary">
                               {item.name}
                             </h3>
-                            <p className="mt-1 text-sm text-gray-500">
+                            <p className="mt-sm font-body text-body text-primary/80">
                               {item.flavor}
                             </p>
                             {diameter && (
-                              <p className="mt-1 text-sm text-gray-500">
+                              <p className="font-body text-body text-primary/80">
                                 {diameter.name}
                               </p>
                             )}
                           </div>
-                          <div className="flex flex-1 items-end justify-between text-sm">
-                            <p className="text-gray-900 font-medium">
-                              ${item.price.toFixed(2)}
-                            </p>
-                            <div className="flex">
-                              <button
-                                type="button"
-                                onClick={() => removeItem(item.id)}
-                                className="font-medium text-indigo-600 hover:text-indigo-500"
-                              >
-                                Remove
-                              </button>
-                            </div>
-                          </div>
+                          <p className="font-body text-lg font-semibold text-primary">
+                            ${(item.price * item.quantity).toFixed(2)}
+                          </p>
                         </div>
-                      </li>
-                    );
-                  })}
+
+                        <div className="mt-md flex items-center justify-between">
+                          {/* Quantity Selector */}
+                          <QuantityStepper
+                            quantity={item.quantity}
+                            onIncrease={() => increaseQuantity(item.id)}
+                            onDecrease={() => decreaseQuantity(item.id)}
+                          />
+
+                          {/* Remove Button */}
+                          <Button
+                            variant="text"
+                            size="sm"
+                            onClick={() => removeItem(item.id)}
+                          >
+                            <Trash2 className="h-4 w-4 mr-sm" />
+                            Remove
+                          </Button>
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             </section>
 
-            {/* Order summary */}
-            <section
-              aria-labelledby="summary-heading"
-              className="mt-16 rounded-lg bg-gray-50 px-4 py-6 sm:p-6 lg:col-span-5 lg:mt-0 lg:p-8"
-            >
-              <h2
-                id="summary-heading"
-                className="text-lg font-medium text-gray-900"
-              >
-                Order summary
-              </h2>
-              <dl className="mt-6 space-y-4">
-                <div className="flex items-center justify-between border-t border-gray-200 pt-4">
-                  <dt className="text-base font-medium text-gray-900">
-                    Order total
-                  </dt>
-                  <dd className="text-base font-medium text-gray-900">
-                    ${subtotal.toFixed(2)}
-                  </dd>
+            {/* --- Right Column: Order Summary --- */}
+            <section className="lg:col-span-1">
+              <div className="rounded-medium bg-card-background p-lg shadow-md">
+                <h2 className="font-heading text-h3 text-primary">
+                  Order Summary
+                </h2>
+                <dl className="mt-lg space-y-md font-body text-body">
+                  <div className="flex items-center justify-between">
+                    <dt>Subtotal</dt>
+                    <dd className="font-semibold">
+                      ${subtotal.toFixed(2)} CAD
+                    </dd>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <dt>Shipping</dt>
+                    <dd className="text-primary/80">Calculated at next step</dd>
+                  </div>
+                  <div className="flex items-center justify-between border-t border-border pt-md mt-md">
+                    <dt className="font-bold text-lg">Total</dt>
+                    <dd className="font-bold text-lg">
+                      ${subtotal.toFixed(2)} CAD
+                    </dd>
+                  </div>
+                </dl>
+                <div className="mt-lg">
+                  <Link href="/checkout">
+                    <Button variant="primary" className="w-full">
+                      Proceed to Checkout
+                    </Button>
+                  </Link>
                 </div>
-              </dl>
-              <div className="mt-6">
-                <Link
-                  href="/checkout"
-                  className="w-full rounded-md border border-transparent bg-indigo-600 px-4 py-3 text-base font-medium text-white shadow-sm hover:bg-indigo-700"
-                >
-                  Checkout
-                </Link>
               </div>
             </section>
-          </form>
+          </div>
         )}
       </div>
     </div>

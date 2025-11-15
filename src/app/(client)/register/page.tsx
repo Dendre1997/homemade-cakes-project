@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase/client";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import Link from "next/link";
+import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
 
 const RegisterPage = () => {
   const router = useRouter();
@@ -59,12 +61,12 @@ const RegisterPage = () => {
           <div>
             <label
               htmlFor="email"
-              className="block text-sm font-medium leading-6 text-gray-900"
+              className="block font-body text-small text-text-primary/80 mb-sm"
             >
-              Email address
+              Email
             </label>
             <div className="mt-2">
-              <input
+              <Input
                 id="email"
                 name="email"
                 type="email"
@@ -72,7 +74,6 @@ const RegisterPage = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300"
               />
             </div>
           </div>
@@ -80,12 +81,12 @@ const RegisterPage = () => {
           <div>
             <label
               htmlFor="password"
-              className="block text-sm font-medium leading-6 text-gray-900"
+              className="block font-body text-small text-text-primary/80 mb-sm"
             >
               Password
             </label>
             <div className="mt-2">
-              <input
+              <Input
                 id="password"
                 name="password"
                 type="password"
@@ -93,7 +94,6 @@ const RegisterPage = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300"
               />
             </div>
           </div>
@@ -101,13 +101,9 @@ const RegisterPage = () => {
           {error && <p className="text-sm text-red-600">{error}</p>}
 
           <div>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 disabled:bg-indigo-300"
-            >
+            <Button type="submit" disabled={isLoading} className="w-full ">
               {isLoading ? "Creating account..." : "Sign up"}
-            </button>
+            </Button>
           </div>
         </form>
 

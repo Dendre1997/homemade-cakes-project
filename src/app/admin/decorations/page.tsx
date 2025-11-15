@@ -1,73 +1,117 @@
-'use client';
-import React, { useState, useEffect, useCallback } from 'react';
-import DecorationsForm from '@/components/admin/DecorationsForm';
-import Link from 'next/link';
-import LoadingSpinner from '@/components/Spinner';
-import { Button } from '@/components/ui/Button';
-// import  from 'react';
-import { Decoration, ProductCategory } from '@/types';
+"use client";
+import React, { useState, useEffect, useCallback } from "react";
+import DecorationsForm from "@/components/admin/DecorationsForm";
+import { Decoration, ProductCategory } from "@/types";
+import LoadingSpinner from "@/components/ui/Spinner";
+import { Button } from "@/components/ui/Button";
+import { useAlert } from "@/contexts/AlertContext";
+import { useConfirmation } from "@/contexts/ConfirmationContext";
+import { AdminListItem } from "@/components/admin/AdminListItem";
+
+type DecorationFormData = Omit<Decoration, "_id">;
+
 const ManageDecorationsPage = () => {
+  const { showAlert } = useAlert();
+  const showConfirmation = useConfirmation();
   const [decorations, setDecorations] = useState<Decoration[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingDecoration, setEditingDecoration] = useState<Decoration | null>(
+    null
+  );
 
   const fetchDecorations = useCallback(async () => {
     try {
       setError(null);
       setIsLoading(true);
       const [decorationsRes, categoriesRes] = await Promise.all([
-  fetch('/api/decorations'),
-  fetch('/api/categories'),
-]);
-if (!decorationsRes.ok || !categoriesRes.ok)
-  throw new Error('Failed to fetch data');
+        fetch("/api/admin/decorations"),
+        fetch("/api/admin/categories"),
+      ]);
+      if (!decorationsRes.ok || !categoriesRes.ok)
+        throw new Error("Failed to fetch data");
 
-const decorationsData = await decorationsRes.json();
-const categoriesData = await categoriesRes.json();
-
-setDecorations(decorationsData);
-setCategories(categoriesData);;
+      setDecorations(await decorationsRes.json());
+      setCategories(await categoriesRes.json());
     } catch (err: unknown) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('An unknown error occurred while fetching decorations');
-      }
+      const msg =
+        err instanceof Error ? err.message : "An unknown error occurred";
+      setError(msg);
+      showAlert(msg, "error");
     } finally {
       setIsLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleDelete = async (id: string) => {
-    if (
-      !window.confirm(
-        "Are you sure, you want to delete this decoration? This action can't be undone."
-      )
-    ) {
-      return;
-    }
+  const handleSubmit = async (formData: DecorationFormData) => {
+    setIsSubmitting(true);
+    const url = editingDecoration
+      ? `/api/admin/decorations/${editingDecoration._id}`
+      : "/api/admin/decorations";
+    const method = editingDecoration ? "PUT" : "POST";
 
     try {
-      const response = await fetch(`/api/decorations/${id}`, {
-        method: 'DELETE',
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
       });
 
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Failed to save decoration");
+      }
+
+      await fetchDecorations();
+      setEditingDecoration(null);
+      showAlert(
+        `Decoration ${editingDecoration ? "updated" : "created"} successfully!`,
+        "success"
+      );
+    } catch (error) {
+      console.error(error);
+      showAlert(
+        error instanceof Error ? error.message : "Error saving decoration",
+        "error"
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (id: string, name: string) => {
+    const confirmed = await showConfirmation({
+      title: "Delete Decoration?",
+      body: (
+        <p>
+          Are you sure you want to delete the decoration{" "}
+          <strong>&quot;{name}&quot;</strong>? This action cannot be undone.
+        </p>
+      ),
+      confirmText: "Delete",
+      variant: "danger",
+    });
+
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch(`/api/admin/decorations/${id}`, {
+        method: "DELETE",
+      });
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to delete decoration');
+        throw new Error(errorData.error || "Failed to delete decoration");
       }
-      setDecorations((prevDecorations) =>
-        prevDecorations.filter((decoration) => decoration._id.toString() !== id)
-      );
-
-      alert('Decoration was successfully deleted');
+      setDecorations((prev) => prev.filter((d) => d._id.toString() !== id));
+      showAlert("Decoration was successfully deleted", "success");
     } catch (err: unknown) {
-      if (err instanceof Error) {
-        alert(`Error: ${err.message}`);
-      } else {
-        alert('Unknown error occurred.');
-      }
+      const msg =
+        err instanceof Error ? err.message : "Unknown error occurred.";
+      setError(msg);
+      showAlert(msg, "error");
     }
   };
 
@@ -76,61 +120,78 @@ setCategories(categoriesData);;
   }, [fetchDecorations]);
 
   return (
-    <section>
-      <h1 className="text-3xl font-heading mb-6">Flavors Managment</h1>
+    <section className="relative">
+      {isSubmitting && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <LoadingSpinner />
+        </div>
+      )}
 
-      <DecorationsForm
-        onFormSubmit={fetchDecorations}
-        categories={categories}
-      />
+      <h1 className="font-heading text-h1 text-primary mb-lg">
+        Manage Decorations
+      </h1>
 
-      <div className="mt-10">
-        <h2 className="text-2xl font-heading mb-4">Existing Decorations</h2>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-lg">
 
-        {/* Show  loading state future spinner*/}
-        {isLoading && <LoadingSpinner />}
+        <div className="md:col-span-1">
+          <h2 className="font-heading text-h3 text-primary mb-md">
+            {editingDecoration ? "Edit Decoration" : "Create New Decoration"}
+          </h2>
+          <DecorationsForm
+            onSubmit={handleSubmit}
+            categories={categories}
+            existingDecoration={editingDecoration}
+            isSubmitting={isSubmitting}
+          />
+          {editingDecoration && (
+            <Button
+              variant="text"
+              onClick={() => setEditingDecoration(null)}
+              className="mt-md"
+            >
+              Cancel Edit
+            </Button>
+          )}
+        </div>
 
-        {/* Show an error if it exists */}
-        {error && <p className="text-red-500">Error: {error}</p>}
-
-        {/* If no loading and no errors show the list */}
-        {!isLoading && !error && (
-          <ul className="space-y-2">
-            {decorations.map((decoration) => (
-              <li
-                key={decoration._id.toString()}
-                className="p-4 bg-white rounded-md shadow flex justify-between items-center"
-              >
-                <div>
-                  <span className="font-medium">{decoration.name}</span>
-                  <span className="text-gray-500 ml-4">
-                    ${decoration.price}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Link
-                    href={`/admin/decorations/${decoration._id.toString()}/edit`}
-                    className="bg-blue-100 text-blue-700 hover:bg-blue-200 font-semibold py-1 px-3 rounded-md text-sm transition-colors"
-                  >
-                    Update
-                  </Link>
-                  <Button
-                  onClick={() => handleDelete(decoration._id.toString())}
-                    variant="danger"
-                    size="sm"
-                  >
-                    Delete
-                  </Button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        {/* If Loading is over and array is empty */}
-        {!isLoading && !error && decorations.length === 0 && (
-          <p>No decorations have been added yet</p>
-        )}
+        <div className="md:col-span-2">
+          <h2 className="font-heading text-h3 text-primary mb-md">
+            Existing Decorations
+          </h2>
+          {error && <p className="text-error text-center p-lg">{error}</p>}
+          <div className="space-y-md">
+            {isLoading ? (
+              <div className="flex justify-center items-center p-xl">
+                <h1>Loading Decorations...</h1>
+              </div>
+            ) : decorations.length === 0 ? (
+              <p className="font-body text-primary/80 text-center p-lg">
+                No decorations found. Create one to get started!
+              </p>
+            ) : (
+              decorations.map((deco) => (
+                <AdminListItem
+                  key={deco._id.toString()}
+                  title={deco.name}
+                  description={`$${deco.price.toFixed(2)} (${deco.type})`}
+                  imageUrl={deco.imageUrl}
+                  details={{
+                    ...deco,
+                    price: `$${deco.price.toFixed(2)}`,
+                    categories:
+                      (deco.categoryIds || [])
+                        .map((id) => categories.find((c) => c._id === id)?.name)
+                        .filter(Boolean)
+                        .join(", ") || "None",
+                    categoryIds: '',
+                  }}
+                  onEdit={() => setEditingDecoration(deco)}
+                  onDelete={() => handleDelete(deco._id.toString(), deco.name)}
+                />
+              ))
+            )}
+          </div>
+        </div>
       </div>
     </section>
   );

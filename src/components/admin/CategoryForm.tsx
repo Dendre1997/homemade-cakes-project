@@ -1,79 +1,131 @@
-'use client';
-import { useState } from 'react';
-import { ProductCategory } from '@/types';
-import { Button } from '../ui/Button';
-import { Input } from '../ui/Input';
+"use client";
+import { useState, useEffect } from "react";
+import { ProductCategory } from "@/types";
+import { slugify } from "@/lib/utils";
+import { Button } from "../ui/Button";
+import { Input } from "../ui/Input";
+
+const FormLabel = ({
+  htmlFor,
+  children,
+}: {
+  htmlFor: string;
+  children: React.ReactNode;
+}) => (
+  <label
+    htmlFor={htmlFor}
+    className="block font-body text-small text-text-primary/80 mb-sm"
+  >
+    {children}
+  </label>
+);
 interface CategoryFormProps {
   existingCategory?: ProductCategory | null;
-  onFormSubmit: () => void;
+  onSubmit: (
+    formData: Omit<ProductCategory, "_id" | "slug"> & {
+      slug: string;
+      manufacturingTimeInMinutes: number;
+    }
+  ) => void;
+  isSubmitting: boolean;
 }
 
 const CategoryForm = ({
   existingCategory,
-  onFormSubmit,
+  onSubmit,
+  isSubmitting
 }: CategoryFormProps) => {
-  const isEditMode = !!existingCategory;
-  const [name, setName] = useState(existingCategory?.name || '');
-  const [isLoading, setIsLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    slug: "",
+    manufacturingTimeInMinutes: 0,
+  });
+
+  useEffect(() => {
+    if (existingCategory) {
+      setFormData({
+        name: existingCategory.name || "",
+        slug: existingCategory.slug || "",
+        manufacturingTimeInMinutes:
+          existingCategory.manufacturingTimeInMinutes || 0,
+      });
+    } else if (!isSubmitting) {
+      setFormData({
+        name: "",
+        slug: "",
+        manufacturingTimeInMinutes: 0,
+      });
+    }
+  }, [existingCategory, isSubmitting]);
+
+  useEffect(() => {
+    if (!existingCategory) {
+      setFormData((prev) => ({
+        ...prev,
+        slug: slugify(prev.name),
+      }));
+    }
+  }, [formData.name, existingCategory]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setIsLoading(true);
-    try {
-      const response = await fetch(
-        isEditMode
-          ? `/api/categories/${existingCategory?._id}`
-          : '/api/categories',
-        {
-          method: isEditMode ? 'PUT' : 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name }),
-        }
-      );
-      if (!response.ok) throw new Error('Failed to submit category');
-      onFormSubmit();
-    } catch (error) {
-      console.error(error);
-      alert('Error submitting form');
-    } finally {
-      setIsLoading(false);
-    }
+    onSubmit(formData);
   };
 
   return (
     <form
       onSubmit={handleSubmit}
-      className='p-6 bg-accent rounded-lg shadow-md max-w-lg'
+      className="p-lg bg-card-background rounded-large shadow-md max-w-lg space-y-md"
     >
-      <h2 className='text-2xl font-heading mb-4'>
-        {isEditMode ? 'Update Category' : 'Create New Category'}
-      </h2>
-      <div className='space-y-4'>
-        <div>
-          <label
-            htmlFor='name'
-            className='block text-sm font-medium text-gray-700'
-          >
-            Name
-          </label>
-          <Input
-            type='text'
-            id='name'
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className='mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm'
-            required
-          />
-        </div>
-        <div>
-          <Button
-            type='submit'
-            disabled={isLoading}
-            className='w-full'
-          >
-            {isLoading ? 'Saving...' : isEditMode ? 'Update' : 'Create'}
-          </Button>
-        </div>
+      <div>
+        <FormLabel htmlFor="name">Name</FormLabel>
+        <Input
+          type="text"
+          id="name"
+          value={formData.name}
+          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+          required
+        />
+      </div>
+      <div>
+        <FormLabel htmlFor="slug">URL Slug (auto-generated)</FormLabel>
+        <Input
+          id="slug"
+          value={formData.slug}
+          onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+          placeholder="e.g., bento-cakes"
+          required
+        />
+      </div>
+      <div>
+        <FormLabel htmlFor="manufacturingTime">
+          Manufacturing Time (minutes)
+        </FormLabel>
+        <Input
+          id="manufacturingTime"
+          type="number"
+          value={formData.manufacturingTimeInMinutes}
+          onChange={(e) =>
+            setFormData({
+              ...formData,
+              manufacturingTimeInMinutes: parseInt(e.target.value) || 0,
+            })
+          }
+          placeholder="e.g., 90"
+        />
+        <p className="mt-1 text-xs text-gray-500">
+          Time required to prepare one item from this category.
+        </p>
+      </div>
+      <div>
+        <Button
+          type="submit"
+          disabled={isSubmitting}
+          className="w-full"
+          variant="primary"
+        >
+          {isSubmitting ? "Saving..." : existingCategory ? "Update" : "Create"}
+        </Button>
       </div>
     </form>
   );

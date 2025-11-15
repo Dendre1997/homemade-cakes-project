@@ -12,5 +12,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/api/admin/:path*"], // Захищаємо і сторінки, і API
+  matcher: ["/admin/:path*", "/api/admin/:path*"],
 };

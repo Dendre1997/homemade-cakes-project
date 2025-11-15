@@ -1,17 +1,39 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
-import DiameterForm from '@/components/admin/DiameterForm';
-import Link from 'next/link';
-import { Diameter, ProductCategory } from '@/types';
-import LoadingSpinner from '@/components/Spinner';
-import { Button } from '@/components/ui/Button';
+import React, { useState, useEffect, useCallback } from "react";
+import DiameterForm from "@/components/admin/DiameterForm";
+import { Diameter, ProductCategory } from "@/types";
+import LoadingSpinner from "@/components/ui/Spinner";
+import { Button } from "@/components/ui/Button";
+import { useConfirmation } from "@/contexts/ConfirmationContext";
+import { useAlert } from "@/contexts/AlertContext";
+import { AdminListItem } from "@/components/admin/AdminListItem";
+
+import { FourInchBentoIcon } from "@/components/icons/cake-sizes/FourInchBentoIcon";
+import { FiveInchBentoIcon } from "@/components/icons/cake-sizes/FiveInchBentoIcon";
+import { SixInchCakeIcon } from "@/components/icons/cake-sizes/SixInchCakeIcon";
+import { SevenInchCakeIcon } from "@/components/icons/cake-sizes/SevenInchCakeIcon";
+import { EightInchCakeIcon } from "@/components/icons/cake-sizes/EightInchCakeIcon";
+
+const availableIcons = [
+  { name: "FourInchBentoIcon", size: 4, component: FourInchBentoIcon },
+  { name: "FiveInchBentoIcon", size: 5, component: FiveInchBentoIcon },
+  { name: "SixInchCakeIcon", size: 6, component: SixInchCakeIcon },
+  { name: "SevenInchCakeIcon", size: 7, component: SevenInchCakeIcon },
+  { name: "EightInchCakeIcon", size: 8, component: EightInchCakeIcon },
+].sort((a, b) => a.size - b.size);
+
+type DiameterFormData = Omit<Diameter, "_id">;
 
 const ManageDiametersPage = () => {
+  const showConfirmation = useConfirmation();
+  const { showAlert } = useAlert(); 
   const [diameters, setDiameters] = useState<Diameter[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false); 
+  const [editingDiameter, setEditingDiameter] = useState<Diameter | null>(null);
 
   const fetchDiameters = useCallback(async () => {
     try {
@@ -19,11 +41,11 @@ const ManageDiametersPage = () => {
       setIsLoading(true);
 
       const [diametersRes, categoriesRes] = await Promise.all([
-        fetch('/api/diameters'),
-        fetch('/api/categories'),
+        fetch("/api/admin/diameters"),
+        fetch("/api/admin/categories"),
       ]);
       if (!diametersRes.ok || !categoriesRes.ok)
-        throw new Error('Failed to fetch data');
+        throw new Error("Failed to fetch data");
 
       const diametersData = await diametersRes.json();
       const categoriesData = await categoriesRes.json();
@@ -31,46 +53,87 @@ const ManageDiametersPage = () => {
       setDiameters(diametersData);
       setCategories(categoriesData);
     } catch (err: unknown) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('An unknown error occurred while fetching diameters');
-      }
+      const msg =
+        err instanceof Error ? err.message : "An unknown error occurred";
+      setError(msg);
+      showAlert(msg, "error");
     } finally {
       setIsLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleDelete = async (id: string) => {
-    if (
-      !window.confirm(
-        "Are you sure you want to delete this diameter? This action can't be undone."
-      )
-    ) {
-      return;
-    }
+  const handleDelete = async (id: string, name: string) => {
+    const confirmed = await showConfirmation({
+      title: "Delete Diameter?",
+      body: (
+        <p>
+          Are you sure you want to delete the diameter{" "}
+          <strong>&quot;{name}&quot;</strong>? This action cannot be undone.
+        </p>
+      ),
+      confirmText: "Delete",
+      variant: "danger",
+    });
+
+    if (!confirmed) return;
 
     try {
-      const response = await fetch(`/api/diameters/${id}`, {
-        method: 'DELETE',
+      const response = await fetch(`/api/admin/diameters/${id}`, {
+        method: "DELETE",
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to delete diameter');
+        throw new Error(errorData.error || "Failed to delete diameter");
       }
 
       setDiameters((prev) =>
         prev.filter((diameter) => diameter._id.toString() !== id)
       );
 
-      alert('Diameter was successfully deleted');
+      showAlert("Diameter was successfully deleted", "success"); 
     } catch (err: unknown) {
-      if (err instanceof Error) {
-        alert(`Error: ${err.message}`);
-      } else {
-        alert('Unknown error occurred.');
+      const msg =
+        err instanceof Error ? err.message : "Unknown error occurred.";
+      setError(msg);
+      showAlert(msg, "error");
+    }
+  };
+
+  const handleSubmit = async (formData: DiameterFormData) => {
+    setIsSubmitting(true);
+    const url = editingDiameter
+      ? `/api/admin/diameters/${editingDiameter._id}`
+      : "/api/admin/diameters";
+    const method = editingDiameter ? "PUT" : "POST";
+
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Failed to save diameter");
       }
+
+      await fetchDiameters();
+      setEditingDiameter(null);
+      showAlert(
+        `Diameter ${editingDiameter ? "updated" : "created"} successfully!`,
+        "success"
+      );
+    } catch (error) {
+      console.error(error);
+      showAlert(
+        error instanceof Error ? error.message : "Error saving diameter",
+        "error"
+      );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -79,55 +142,92 @@ const ManageDiametersPage = () => {
   }, [fetchDiameters]);
 
   return (
-    <section>
-      <h1 className="text-3xl font-heading mb-6">Diameter Management</h1>
+    <section className="relative">
+      {isSubmitting && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <LoadingSpinner />
+        </div>
+      )}
 
-      <DiameterForm onFormSubmit={fetchDiameters} categories={categories} />
+      <h1 className="font-heading text-h1 text-primary mb-lg">
+        Manage Diameters
+      </h1>
 
-      <div className="mt-10">
-        <h2 className="text-2xl font-heading mb-4">Existing Diameters</h2>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-lg">
+        <div className="md:col-span-1">
+          <h2 className="font-heading text-h3 text-primary mb-md">
+            {editingDiameter ? "Edit Diameter" : "Create New Diameter"}
+          </h2>
+          <DiameterForm
+            onSubmit={handleSubmit}
+            categories={categories}
+            existingDiameter={editingDiameter}
+            isSubmitting={isSubmitting}
+          />
+          {editingDiameter && (
+            <Button
+              variant="text"
+              onClick={() => setEditingDiameter(null)}
+              className="mt-md"
+            >
+              Cancel Edit
+            </Button>
+          )}
+        </div>
 
-        {isLoading && <LoadingSpinner />}
-        {error && <p className="text-red-500">Error: {error}</p>}
+        {/* List Items*/}
+        <div className="md:col-span-2">
+          <h2 className="font-heading text-h3 text-primary mb-md">
+            Existing Diameters
+          </h2>
+          {error && <p className="text-error text-center p-lg">{error}</p>}
+          <div className="space-y-md">
+            {isLoading ? (
+              <div className="flex justify-center items-center p-xl">
+                <h1>Loading Diameters...</h1>
+              </div>
+            ) : diameters.length === 0 ? (
+              <p className="font-body text-primary/80 text-center p-lg">
+                No diameters found. Create one to get started!
+              </p>
+            ) : (
+              diameters.map((diameter) => {
+                const IconComponent = availableIcons.find(
+                  (icon) => icon.name === diameter.illustration
+                )?.component;
 
-        {!isLoading && !error && (
-          <ul className="space-y-2">
-            {diameters.map((diameter) => (
-              <li
-                key={diameter._id.toString()}
-                className="p-4 bg-white rounded-md shadow flex justify-between items-center"
-              >
-                <div>
-                  <span className="text-gray-500 ml-4">
-                    Name: {diameter.name}
-                  </span>
-                  <span className="text-gray-500 ml-4">
-                    SizeValue: {diameter.sizeValue}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Link
-                    href={`/admin/diameters/${diameter._id.toString()}/edit`}
-                    className="bg-blue-100 text-blue-700 hover:bg-blue-200 font-semibold py-1 px-3 rounded-md text-sm transition-colors"
-                  >
-                    Update
-                  </Link>
-                  <Button
-                    onClick={() => handleDelete(diameter._id.toString())}
-                    variant="danger"
-                    size="sm"
-                  >
-                    Delete
-                  </Button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
+                const detailsForModal = ({
+                    ...diameter,
+                    sizeValue: `${diameter.sizeValue} inches`,
+                    categories:
+                      (diameter.categoryIds || [])
+                        .map((id) => categories.find((c) => c._id === id)?.name)
+                        .filter(Boolean)
+                        .join(", ") || "None",
+                  categoryIds: '',
+                    illustration: '',
+                  })
 
-        {!isLoading && !error && diameters.length === 0 && (
-          <p>No diameters have been added yet.</p>
-        )}
+
+                return (
+                  <AdminListItem
+                    key={diameter._id.toString()}
+                    title={diameter.name}
+                    description={diameter.servings}
+                    imageUrl={null}
+
+                    icon={IconComponent ? <IconComponent /> : null}
+                    details={detailsForModal}
+                    onEdit={() => setEditingDiameter(diameter)}
+                    onDelete={() =>
+                      handleDelete(diameter._id.toString(), diameter.name)
+                    }
+                  />
+                );
+              })
+            )}
+          </div>
+        </div>
       </div>
     </section>
   );

@@ -1,4 +1,3 @@
-// src/app/api/orders/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import clientPromise from "@/lib/db";
 import { ObjectId } from "mongodb";
@@ -7,7 +6,6 @@ interface Context {
   params: { id: string };
 }
 
-// GET:
 export async function GET(_request: Request, { params }: Context) {
   try {
     const { id } = params;
@@ -31,7 +29,7 @@ export async function GET(_request: Request, { params }: Context) {
   }
 }
 
-// PUT:
+
 export async function PUT(request: NextRequest, { params }: Context) {
   try {
     const { id } = params;

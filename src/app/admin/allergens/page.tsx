@@ -1,125 +1,182 @@
-'use client';
-import React, { useState, useEffect, useCallback } from 'react';
-import AllergenForm from '@/components/admin/AllergenForm';
-import Link from 'next/link';
-import { Allergen } from '@/types';
-import Spinner from '@/components/Spinner'
-import { Button } from '@/components/ui/Button';
+"use client";
+import React, { useState, useEffect, useCallback } from "react";
+import AllergenForm from "@/components/admin/AllergenForm";
+import { Allergen, ProductCategory } from "@/types"; // Імпортуємо ProductCategory
+import LoadingSpinner from "@/components/ui/Spinner";
+import { Button } from "@/components/ui/Button";
+import { useAlert } from "@/contexts/AlertContext";
+import { useConfirmation } from "@/contexts/ConfirmationContext";
+import { AdminListItem } from "@/components/admin/AdminListItem"; 
+
+type AllergenFormData = Omit<Allergen, "_id">;
+
 const ManageAllergensPage = () => {
+  const { showAlert } = useAlert();
+  const showConfirmation = useConfirmation();
   const [allergens, setAllergens] = useState<Allergen[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingAllergen, setEditingAllergen] = useState<Allergen | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const fetchAllergens = useCallback(async () => {
     try {
       setError(null);
       setIsLoading(true);
-
-      const response = await fetch('/api/allergens');
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch allergens');
-      }
-
+      const response = await fetch("/api/allergens");
+      if (!response.ok) throw new Error("Failed to fetch allergens");
       const data = await response.json();
       setAllergens(data);
     } catch (err: unknown) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('An unknown error occurred while fetching allergens');
-      }
+      const msg =
+        err instanceof Error ? err.message : "An unknown error occurred";
+      setError(msg);
+      showAlert(msg, "error");
     } finally {
       setIsLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const handleDelete = async (id: string) => {
-    if (
-      !window.confirm(
-        "Are you sure, you want to delete this allergen? This action can't be undone."
-      )
-    ) {
-      return;
-    }
-
-    try {
-      const response = await fetch(`/api/allergens/${id}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to delete allergen');
-      }
-      setAllergens((prevAllergen) =>
-        prevAllergen.filter((allergen) => allergen._id.toString() !== id)
-      );
-
-      alert('Allergen was successfully deleted');
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        alert(`Error: ${err.message}`);
-      } else {
-        alert('Unknown error occurred.');
-      }
-    }
-  };
 
   useEffect(() => {
     fetchAllergens();
   }, [fetchAllergens]);
 
+  const handleSubmit = async (formData: AllergenFormData) => {
+    setIsSubmitting(true);
+    const url = editingAllergen
+      ? `/api/admin/allergens/${editingAllergen._id}`
+      : "/api/admin/allergens";
+    const method = editingAllergen ? "PUT" : "POST";
+
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Failed to save allergen");
+      }
+
+      await fetchAllergens(); 
+      setEditingAllergen(null);
+      showAlert(
+        `Allergen ${editingAllergen ? "updated" : "created"} successfully!`,
+        "success"
+      );
+    } catch (error) {
+      console.error(error);
+      showAlert(
+        error instanceof Error ? error.message : "Error saving allergen",
+        "error"
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (id: string, name: string) => {
+    const confirmed = await showConfirmation({
+      title: "Delete Allergen?",
+      body: (
+        <p>
+          Are you sure you want to delete the allergen{" "}
+          <strong>&quot;{name}&quot;</strong>? This action cannot be undone.
+        </p>
+      ),
+      confirmText: "Delete",
+      variant: "danger",
+    });
+
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch(`/api/admin/allergens/${id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to delete allergen");
+      }
+      setAllergens((prevAllergen) =>
+        prevAllergen.filter((allergen) => allergen._id.toString() !== id)
+      );
+      showAlert("Allergen was successfully deleted", "success");
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error ? err.message : "Unknown error occurred.";
+      setError(msg);
+      showAlert(msg, "error");
+    }
+  };
+
   return (
-    <section>
-      <h1 className='text-3xl font-heading mb-6'>Flavors Managment</h1>
+    <section className="relative">
+      {isSubmitting && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <LoadingSpinner />
+        </div>
+      )}
 
-      <AllergenForm onAllergenSubmit={fetchAllergens} />
+      <h1 className="font-heading text-h1 text-primary mb-lg">
+        Manage Allergens
+      </h1>
 
-      <div className='mt-10'>
-        <h2 className='text-2xl font-heading mb-4'>Existing Allergens</h2>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-lg">
+        <div className="md:col-span-1">
+          <h2 className="font-heading text-h3 text-primary mb-md">
+            {editingAllergen ? "Edit Allergen" : "Create New Allergen"}
+          </h2>
+          <AllergenForm
+            onSubmit={handleSubmit}
+            existingAllergen={editingAllergen}
+            isSubmitting={isSubmitting}
+          />
+          {editingAllergen && (
+            <Button
+              variant="text"
+              onClick={() => setEditingAllergen(null)}
+              className="mt-md"
+            >
+              Cancel Edit
+            </Button>
+          )}
+        </div>
 
-        {/* Show  loading state future spinner*/}
-        {isLoading && <Spinner />}
-
-        {/* Show an error if it exists */}
-        {error && <p className='text-red-500'>Error: {error}</p>}
-
-        {/* If no loading and no errors show the list */}
-        {!isLoading && !error && (
-          <ul className='space-y-2'>
-            {allergens.map((allergen) => (
-              <li
-                key={allergen._id.toString()}
-                className='p-4 bg-white rounded-md shadow flex justify-between items-center'
-              >
-                <div>
-                  <span className='font-medium'>{allergen.name}</span>
-                </div>
-                <div className='flex items-center gap-2'>
-                  <Link
-                    href={`/admin/allergens/${allergen._id.toString()}/edit`}
-                  >
-                    <Button variant='secondary' size='sm'>
-                    Update
-                    </Button>
-                  </Link>
-                  <Button
-                    onClick={() => handleDelete(allergen._id.toString())}
-                    variant='danger' size='sm'
-                  >
-                    Delete
-                  </Button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        {/* If Loading is over and array is empty */}
-        {!isLoading && !error && allergens.length === 0 && (
-          <p>No allergens have been added yet</p>
-        )}
+        <div className="md:col-span-2">
+          <h2 className="font-heading text-h3 text-primary mb-md">
+            Existing Allergens
+          </h2>
+          {error && <p className="text-error text-center p-lg">{error}</p>}
+          <div className="space-y-md">
+            {isLoading ? (
+              <div className="flex justify-center items-center p-xl">
+                <h1>Loading Allergens</h1>
+              </div>
+            ) : allergens.length === 0 ? (
+              <p className="font-body text-primary/80 text-center p-lg">
+                No allergens found. Create one to get started!
+              </p>
+            ) : (
+              allergens.map((allergen) => (
+                <AdminListItem
+                  key={allergen._id.toString()}
+                  title={allergen.name}
+                  imageUrl={null}
+                  description={null}
+                  details={allergen}
+                  onEdit={() => setEditingAllergen(allergen)}
+                  onDelete={() =>
+                    handleDelete(allergen._id.toString(), allergen.name)
+                  }
+                />
+              ))
+            )}
+          </div>
+        </div>
       </div>
     </section>
   );

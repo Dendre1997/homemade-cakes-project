@@ -1,33 +1,33 @@
-'use client';
-import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { Allergen } from '@/types';
-import AllergenForm from '@/components/admin/AllergenForm';
-import Spinner from '@/components/Spinner'
+// "use client";
+// import { useEffect, useState } from "react";
+// import { useParams, useRouter } from "next/navigation";
+// import { Allergen } from "@/types";
+// import AllergenForm from "@/components/admin/AllergenForm";
+// import Spinner from "@/components/ui/Spinner";
 
-const EditAllergenPage = () => {
-  const params = useParams();
-  const router = useRouter();
-  const id = params.id as string;
-  const [allergen, setAllergen] = useState<Allergen | null>(null);
+// const EditAllergenPage = () => {
+//   const params = useParams();
+//   const router = useRouter();
+//   const id = params.id as string;
+//   const [allergen, setAllergen] = useState<Allergen | null>(null);
 
-  useEffect(() => {
-    if (id) {
-      fetch(`/api/allergens/${id}`)
-        .then(res => res.json())
-        .then(data => setAllergen(data));
-    }
-  }, [id]);
+//   useEffect(() => {
+//     if (id) {
+//       fetch(`/api/admin/allergens/${id}`)
+//         .then((res) => res.json())
+//         .then((data) => setAllergen(data));
+//     }
+//   }, [id]);
 
-  if (!allergen) return <Spinner />;
+//   if (!allergen) return <Spinner />;
 
-  return (
-    <section>
-      <AllergenForm
-        existingAllergen={allergen}
-        onAllergenSubmit={() => router.push('/admin/allergens')}
-      />
-    </section>
-  );
-};
-export default EditAllergenPage;
+//   return (
+//     <section>
+//       <AllergenForm
+//         existingAllergen={allergen}
+//         onAllergenSubmit={() => router.push("/admin/allergens")}
+//       />
+//     </section>
+//   );
+// };
+// export default EditAllergenPage;

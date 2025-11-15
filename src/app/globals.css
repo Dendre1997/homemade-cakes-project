@@ -1,3 +1,38 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --color-primary: #231416;
+  --color-background: #f6dcda;
+  --color-subtle-background: #cea3a6;
+  --color-accent: #2f1b23;
+  --color-text: #764a4d;
+  --color-text-on-primary: #faded2;
+  --color-border: #a39e9a;
+  --color-card-background: #eebbbb;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: theme('colors.accent') theme('colors.subtleBackground');
+}
+
+/* For Webkit-based browsers (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: theme('colors.subtleBackground');
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: theme('colors.accent');
+  border-radius: 10px;
+  border: 2px solid theme('colors.subtleBackground'); /* Creates padding */
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: theme('colors.primary'); /* Darkens on hover */
+}

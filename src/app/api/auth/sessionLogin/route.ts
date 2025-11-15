@@ -12,7 +12,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 2. session term 5 days
+    // session term 5 days
     const expiresIn = 60 * 60 * 24 * 5 * 1000;
 
     await adminAuth.verifyIdToken(idToken, true);

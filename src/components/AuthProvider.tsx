@@ -4,27 +4,44 @@ import { useEffect } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
 import { useAuthStore } from "@/lib/store/authStore";
-import LoadingSpinner from "./Spinner";
+import LoadingSpinner from "./ui/Spinner";
+import { User } from "@/types";
 
 const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const { user, isLoading, setUser, setIsLoading } = useAuthStore();
+  const { setUser, setIsLoading, isLoading } = useAuthStore();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user); 
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        try {
+          const response = await fetch("/api/profile");
+          if (response.ok) {
+            const profileData: User = await response.json();
+            setUser(profileData); 
+          } else {
+            // Handle cases where the profile might not exist in DB yet
+            setUser(null);
+          }
+        } catch (error) {
+          console.error("Failed to fetch user profile:", error);
+          setUser(null);
+        }
+      } else {
+        setUser(null);
+      }
       setIsLoading(false);
     });
 
     return () => unsubscribe();
   }, [setUser, setIsLoading]);
-    
-    if (isLoading) {
-      return (
-        <div className="flex justify-center items-center h-screen">
-          <LoadingSpinner />
-        </div>
-      );
-    }
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <LoadingSpinner />
+      </div>
+    );
+  }
 
   return <>{children}</>;
 };

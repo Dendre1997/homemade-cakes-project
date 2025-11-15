@@ -24,4 +24,4 @@ export const theme = {
     medium: "8px", // Rule 4: For buttons and input fields.
     large: "16px", // Rule 4: For larger components like product cards.
   },
-};
+};  
