@@ -12,18 +12,18 @@ export default function AdminLayoutClient({
 
   return (
     <>
-      <HeaderAdmin onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)} />
-      <div className="flex h-screen bg-gray-100">
-        <AdminSidebar isOpen={isSidebarOpen} />
-        <main
-          className={`
-      flex-1 p-8 overflow-y-auto transition-all duration-300
-      ${isSidebarOpen ? "ml-64" : "ml-0"}   /* desktop shift */
-      ${isSidebarOpen ? "hidden md:block" : "block"} /* mobile hide */
-    `}
-        >
-          {children}
-        </main>
+      <div className="relative min-h-screen bg-background xl:pl-64">
+        <AdminSidebar
+          isOpen={isSidebarOpen}
+          onClose={() => setIsSidebarOpen(false)}
+        />
+        <div className="flex flex-col">
+          <HeaderAdmin
+            title={""}
+            onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+          />
+          <main className="flex-grow p-4 md:p-8">{children}</main>
+        </div>
       </div>
     </>
   );

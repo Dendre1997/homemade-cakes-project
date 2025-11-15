@@ -1,173 +1,220 @@
-'use client';
-import { useState, useEffect } from 'react';
-import { Diameter, ProductCategory } from '@/types';
-import { Button } from '../ui/Button';
-import { Input } from '../ui/Input'
+"use client";
+import React, { useState, useEffect} from "react";
+import { Diameter, ProductCategory } from "@/types";
+import { Button } from "../ui/Button";
+import { Input } from "../ui/Input";;
+import { ChipCheckbox } from "../ui/ChipCheckbox";
+
+
+// ---Icon Components ---
+import { FourInchBentoIcon } from "@/components/icons/cake-sizes/FourInchBentoIcon";
+import { FiveInchBentoIcon } from "../icons/cake-sizes/FiveInchBentoIcon";
+import { SixInchCakeIcon } from "../icons/cake-sizes/SixInchCakeIcon";
+import { SevenInchCakeIcon } from "../icons/cake-sizes/SevenInchCakeIcon";
+import { EightInchCakeIcon } from "../icons/cake-sizes/EightInchCakeIcon";
+
+const availableIcons = [
+  { name: "FourInchBentoIcon", size: 4, component: FourInchBentoIcon },
+  { name: "FiveInchBentoIcon", size: 5, component: FiveInchBentoIcon },
+  { name: "SixInchCakeIcon", size: 6, component: SixInchCakeIcon },
+  { name: "SevenInchCakeIcon", size: 7, component: SevenInchCakeIcon },
+  { name: "EightInchCakeIcon", size: 8, component: EightInchCakeIcon },
+].sort((a, b) => a.size - b.size);
+
+const FormLabel = ({
+  htmlFor,
+  children,
+}: {
+  htmlFor: string;
+  children: React.ReactNode;
+}) => (
+  <label
+    htmlFor={htmlFor}
+    className="block font-body text-small text-primary/80 mb-sm"
+  >
+    {children}
+  </label>
+);
+
+type DiameterFormData = Omit<Diameter, "_id">;
 interface DiameterFormProps {
   existingDiameter?: Diameter | null;
-  onFormSubmit: () => void;
+  onSubmit: (formData: DiameterFormData) => void;
+  isSubmitting: boolean;
   categories: ProductCategory[];
 }
 
 const DiameterForm = ({
   existingDiameter,
-  onFormSubmit,
+  onSubmit,
+  isSubmitting,
   categories,
 }: DiameterFormProps) => {
-  const isEditMode = !!existingDiameter;
+  const [formData, setFormData] = useState<DiameterFormData>({
+    name: "",
+    sizeValue: 0,
+    servings: "",
+    illustration: "",
+    categoryIds: [],
+  });
 
-  // State based on our final Diameter type
-  const [name, setName] = useState('');
-  const [sizeValue, setSizeValue] = useState('');
-  const [categoryIds, setCategoryIds] = useState<string[]>([]);
-
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // useEffect to populate the form when in edit mode
   useEffect(() => {
     if (existingDiameter) {
-      setName(existingDiameter.name || '');
-      setSizeValue(existingDiameter.sizeValue.toString() || '');
-      setCategoryIds(existingDiameter.categoryIds || []);
+      setFormData({
+        name: existingDiameter.name || "",
+        sizeValue: existingDiameter.sizeValue || 0,
+        servings: existingDiameter.servings || "",
+        illustration: existingDiameter.illustration || "",
+        categoryIds: existingDiameter.categoryIds || [],
+      });
+    } else if (!isSubmitting) {
+      setFormData({
+        name: "",
+        sizeValue: 0,
+        servings: "",
+        illustration: "",
+        categoryIds: [],
+      });
     }
-  }, [existingDiameter]);
+  }, [existingDiameter, isSubmitting]);
 
-  // Handler for category checkboxes
-  const handleCategoryChange = (categoryId: string) => {
-    setCategoryIds((prev) =>
-      prev.includes(categoryId)
-        ? prev.filter((id) => id !== categoryId)
-        : [...prev, categoryId]
-    );
+  useEffect(() => {
+    const numericSize = formData.sizeValue;
+    if (isNaN(numericSize) || availableIcons.length === 0) return;
+
+    const minIcon = availableIcons[0];
+    const maxIcon = availableIcons[availableIcons.length - 1];
+    let bestMatch = minIcon;
+
+    if (numericSize <= minIcon.size) bestMatch = minIcon;
+    else if (numericSize >= maxIcon.size) bestMatch = maxIcon;
+    else {
+      bestMatch =
+        availableIcons
+          .slice()
+          .reverse()
+          .find((icon) => numericSize >= icon.size) || minIcon;
+    }
+
+    if (formData.illustration !== bestMatch.name) {
+      setFormData((prev) => ({ ...prev, illustration: bestMatch.name }));
+    }
+  }, [formData.sizeValue, formData.illustration]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value, type } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [id]: type === "number" ? parseFloat(value) || 0 : value,
+    }));
   };
+
+  const handleCategoryChange = (categoryId: string) => {
+    setFormData((prev) => {
+      const currentCategoryIds = prev.categoryIds || [];
+      return {
+        ...prev,
+        categoryIds: currentCategoryIds.includes(categoryId)
+          ? currentCategoryIds.filter((id) => id !== categoryId)
+          : [...currentCategoryIds, categoryId],
+      };
+    });
+  };
+
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-
-    const body = {
-      name,
-      sizeValue: parseFloat(sizeValue),
-      categoryIds,
-    };
-
-    try {
-      const response = await fetch(
-        isEditMode
-          ? `/api/diameters/${existingDiameter?._id}`
-          : '/api/diameters',
-        {
-          method: isEditMode ? 'PUT' : 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(
-          `Failed to ${isEditMode ? 'update' : 'create'} diameter`
-        );
-      }
-
-      alert(`Diameter successfully ${isEditMode ? 'updated' : 'created'}!`);
-      onFormSubmit();
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('An unknown error occurred.');
-      }
-    } finally {
-      setIsLoading(false);
-    }
+    onSubmit(formData);
   };
+
+  const SelectedIcon = availableIcons.find(
+    (icon) => icon.name === formData.illustration
+  )?.component;
 
   return (
     <form
       onSubmit={handleSubmit}
-      className='p-6 bg-white rounded-lg shadow-md max-w-lg'
+      className="p-lg bg-card-background rounded-large shadow-md max-w-lg space-y-md"
     >
-      <h2 className='text-2xl font-heading mb-4'>
-        {isEditMode ? 'Update Diameter' : 'Add New Diameter'}
+      <h2 className="font-heading text-h3 text-primary">
+        {existingDiameter ? "Update Diameter" : "Add New Diameter"}
       </h2>
-      <div className='space-y-6'>
-        <div>
-          <label
-            htmlFor='name'
-            className='block text-sm font-medium text-gray-700'
-          >
-            Name
-          </label>
-          <Input
-            type='text'
-            id='name'
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className='mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm'
-            required
-          />
-        </div>
-        <div>
-          <label
-            htmlFor='sizeValue'
-            className='block text-sm font-medium text-gray-700'
-          >
-            Size Value (in inches)
-          </label>
-          <Input
-            type='number'
-            id='sizeValue'
-            value={sizeValue}
-            onChange={(e) => setSizeValue(e.target.value)}
-            className='mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm'
-            required
-            step='0.5'
-          />
-        </div>
 
-        <div className='space-y-2'>
-          <h3 className='text-lg font-heading'>Categories</h3>
-          <div className='p-4 border border-gray-200 rounded-md grid grid-cols-2 md:grid-cols-3 gap-4'>
-            {categories.map((cat) => (
-              <div key={cat._id.toString()} className='flex items-center'>
-                <Input
-                  type='checkbox'
-                  id={`cat-dia-${cat._id.toString()}`}
-                  checked={categoryIds.includes(cat._id.toString())}
-                  onChange={() => handleCategoryChange(cat._id.toString())}
-                  className='h-4 w-4 rounded border-gray-300 text-indigo-600'
-                />
-                <label
-                  htmlFor={`cat-dia-${cat._id.toString()}`}
-                  className='ml-3 text-sm text-gray-700'
-                >
-                  {cat.name}
-                </label>
-              </div>
-            ))}
-          </div>
-        </div>
+      <div>
+        <FormLabel htmlFor="name">Name (e.g., 6 Inch)</FormLabel>
+        <Input
+          type="text"
+          id="name"
+          value={formData.name}
+          onChange={handleChange}
+          required
+        />
+      </div>
 
-        {error && (
-          <div className='text-red-500 text-sm'>
-            <p>Error: {error}</p>
-          </div>
-        )}
-        <div>
-          <Button
-            type='submit'
-            disabled={isLoading}
-            className='w-full'
-          >
-            {isLoading
-              ? 'Saving...'
-              : isEditMode
-              ? 'Update Diameter'
-              : 'Add Diameter'}
-          </Button>
+      <div>
+        <FormLabel htmlFor="sizeValue">
+          Size Value (numerical, for sorting)
+        </FormLabel>
+        <div className="flex items-center gap-md">
+          <Input
+            type="number"
+            id="sizeValue"
+            value={formData.sizeValue === 0 ? "" : formData.sizeValue}
+            onChange={handleChange}
+            placeholder="0"
+            required
+            step="0.5"
+          />
+          {SelectedIcon && (
+            <div className="h-10 w-10 p-2 border border-border rounded-medium shrink-0">
+              <SelectedIcon />
+            </div>
+          )}
         </div>
+      </div>
+
+      <div>
+        <FormLabel htmlFor="servings">
+          Servings Text (e.g., 10-12 servings)
+        </FormLabel>
+        <Input
+          type="text"
+          id="servings"
+          value={formData.servings}
+          onChange={handleChange}
+          required
+        />
+      </div>
+
+      <div className="space-y-sm">
+        <h3 className="font-body text-body font-bold text-primary">
+          Categories
+        </h3>
+        <div
+          className="p-md border border-border rounded-medium 
+            grid gap-md
+            grid-cols-[repeat(auto-fit,minmax(150px,1fr))]"
+        >
+          {categories.map((cat) => (
+            <ChipCheckbox
+              key={cat._id}
+              checked={(formData.categoryIds || []).includes(cat._id)}
+              onCheckedChange={() => handleCategoryChange(cat._id)}
+            >
+              {cat.name}
+            </ChipCheckbox>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <Button type="submit" disabled={isSubmitting} className="w-full">
+          {isSubmitting
+            ? "Saving..."
+            : existingDiameter
+              ? "Update Diameter"
+              : "Add Diameter"}
+        </Button>
       </div>
     </form>
   );

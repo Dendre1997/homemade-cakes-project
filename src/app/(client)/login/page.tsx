@@ -4,6 +4,9 @@ import { useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase/client";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import Link from "next/link";
+import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
+import LoadingSpinner from "@/components/ui/Spinner";
 
 const LoginPage = () => {
   const router = useRouter();
@@ -23,8 +26,8 @@ const LoginPage = () => {
         email,
         password
       );
-
       const idToken = await userCredential.user.getIdToken();
+
       await fetch("/api/auth/sessionLogin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -33,10 +36,35 @@ const LoginPage = () => {
 
       router.push("/");
     } catch (err) {
+      let errorMessage = "An unknown error occurred. Please try again.";
+
+      if (err && typeof err === "object" && "code" in err) {
+        const firebaseError = err as { code: string };
+        switch (firebaseError.code) {
+          case "auth/user-not-found":
+            errorMessage = "No account found with this email address.";
+            break;
+
+          case "auth/wrong-password":
+          case "auth/invalid-credential":
+            errorMessage = "Incorrect password. Please try again.";
+            break;
+
+          case "auth/too-many-requests":
+            errorMessage =
+              "Access temporarily disabled due to too many failed login attempts.";
+            break;
+          default:
+            console.error("Firebase Auth Error:", firebaseError.code);
+            break;
+        }
+      }
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
   };
+
 
   return (
     <div className="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8">
@@ -51,12 +79,12 @@ const LoginPage = () => {
           <div>
             <label
               htmlFor="email"
-              className="block text-sm font-medium leading-6 text-gray-900"
+              className="block font-body text-small text-text-primary/80 mb-sm"
             >
               Email address
             </label>
             <div className="mt-2">
-              <input
+              <Input
                 id="email"
                 name="email"
                 type="email"
@@ -64,7 +92,6 @@ const LoginPage = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300"
               />
             </div>
           </div>
@@ -72,12 +99,13 @@ const LoginPage = () => {
           <div>
             <label
               htmlFor="password"
-              className="block text-sm font-medium leading-6 text-gray-900"
+              className="block font-body text-small text-text-primary/80 mb-sm"
             >
               Password
             </label>
+
             <div className="mt-2">
-              <input
+              <Input
                 id="password"
                 name="password"
                 type="password"
@@ -85,34 +113,39 @@ const LoginPage = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300"
               />
+            </div>
+            <div className="text-sm p-y-sm">
+              <Link
+                href="/forgot-password"
+                className="font-semibold text-accent hover:text-subtleBackground"
+              >
+                Forgot password?
+              </Link>
             </div>
           </div>
 
           {error && <p className="text-sm text-red-600">{error}</p>}
 
           <div>
-            <button
+            <Button
               type="submit"
               disabled={isLoading}
-              className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:bg-indigo-300"
+              variant="primary"
+              className="flex w-full justify-center"
             >
               {isLoading ? "Signing in..." : "Sign in"}
-            </button>
+            </Button>
           </div>
         </form>
-
         <p className="mt-10 text-center text-sm text-gray-500">
           Not a member?{" "}
-          <Link
-            href="/register"
-            className="font-semibold leading-6 text-indigo-600 hover:text-indigo-500"
-          >
-            Sign up now
+          <Link href="/register">
+            <Button variant="text">Sign up now</Button>
           </Link>
         </p>
       </div>
+      {isLoading && <LoadingSpinner />}
     </div>
   );
 };

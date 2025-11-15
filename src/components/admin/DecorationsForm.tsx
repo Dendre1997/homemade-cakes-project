@@ -1,171 +1,308 @@
-'use client'
-import React, { useState } from "react"
+"use client";
+import React, { useState, useEffect, useRef } from "react";
 import { Decoration, ProductCategory } from "@/types";
 import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
+import { ChipCheckbox } from "../ui/ChipCheckbox";
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from "@/components/ui/Select";
+import { ImageUploadPreview } from "@/components/ui/ImageUploadPreview";
+import LoadingSpinner from "@/components/ui/Spinner";
+import { useAlert } from "@/contexts/AlertContext";
+import { X } from "lucide-react";
+
+// Update in Future
+const DECORATION_TYPES = ["Chocolate", "Fruit", "Figurine", "Flowers", "Other"];
+
+const FormLabel = ({
+  htmlFor,
+  children,
+}: {
+  htmlFor: string;
+  children: React.ReactNode;
+}) => (
+  <label
+    htmlFor={htmlFor}
+    className="block font-body text-small text-primary/80 mb-sm"
+  >
+    {children}
+  </label>
+);
+
+
+type DecorationFormData = Omit<Decoration, "_id">;
+
 interface DecorationsFormProps {
   existingDecoration?: Decoration | null;
-  onFormSubmit: () => void;
+  onSubmit: (formData: DecorationFormData) => void;
+  isSubmitting: boolean;
   categories: ProductCategory[];
 }
-const DecorationsForm = ({ existingDecoration, onFormSubmit, categories}: DecorationsFormProps) => {
-  const isEditMode = !!existingDecoration;
-  const [name, setName] = useState(existingDecoration?.name || '');
-  const [price, setPrice] = useState( existingDecoration?.price.toString() || '');
-  const [imageUrl, setImageUrl] = useState(existingDecoration?.imageUrl || '');
-  const [categoryIds, setCategoryIds] = useState<string[]>([]);
-  
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+
+const DecorationsForm = ({
+  existingDecoration,
+  onSubmit,
+  isSubmitting,
+  categories,
+}: DecorationsFormProps) => {
+  const { showAlert } = useAlert();
+
+  const [formData, setFormData] = useState<DecorationFormData>({
+    name: "",
+    price: 0,
+    imageUrl: "",
+    type: "",
+    categoryIds: [],
+  });
+
+  const [isUploading, setIsUploading] = useState<boolean>(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [orphanedImageUrl, setOrphanedImageUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (existingDecoration) {
+      setFormData({
+        name: existingDecoration.name || "",
+        price: existingDecoration.price || 0,
+        imageUrl: existingDecoration.imageUrl || "",
+        type: existingDecoration.type || "",
+        categoryIds: existingDecoration.categoryIds || [],
+      });
+    } else if (!isSubmitting) {
+      setFormData({
+        name: "",
+        price: 0,
+        imageUrl: "",
+        type: "",
+        categoryIds: [],
+      });
+    }
+
+    setOrphanedImageUrl(null);
+    setUploadError(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }, [existingDecoration, isSubmitting]);
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { id, value, type } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [id]: type === "number" ? parseFloat(value) || 0 : value,
+    }));
+  };
 
   const handleCategoryChange = (categoryId: string) => {
-    setCategoryIds((prev) =>
-      prev.includes(categoryId)
-        ? prev.filter((id) => id !== categoryId)
-        : [...prev, categoryId]
-    );
+    setFormData((prev) => {
+      const currentCategoryIds = prev.categoryIds || [];
+      return {
+        ...prev,
+        categoryIds: currentCategoryIds.includes(categoryId)
+          ? currentCategoryIds.filter((id) => id !== categoryId)
+          : [...currentCategoryIds, categoryId],
+      };
+    });
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    setUploadError(null);
+
+    if (orphanedImageUrl) {
+      fetch("/api/admin/cloudinary-delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ urls: [orphanedImageUrl] }),
+      });
+    }
+
+    const uploadData = new FormData();
+    uploadData.append("file", file);
+    uploadData.append("upload_preset", "homemade_cakes_preset");
+
+    try {
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+        { method: "POST", body: uploadData }
+      );
+      if (!response.ok) throw new Error("Image upload failed.");
+      const result = await response.json();
+
+      setOrphanedImageUrl(result.secure_url);
+      setFormData((prev) => ({ ...prev, imageUrl: result.secure_url }));
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "Upload failed.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleImageRemove = () => {
+    if (orphanedImageUrl) {
+      fetch("/api/admin/cloudinary-delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ urls: [orphanedImageUrl] }),
+      });
+      setOrphanedImageUrl(null);
+    }
+    setFormData((prev) => ({ ...prev, imageUrl: "" }));
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-
-    const body = {
-      name,
-      price: parseFloat(price),
-      imageUrl,
-      categoryIds,
-    };
-
-    try {
-      const response = await fetch(
-        isEditMode ? `/api/decorations/${existingDecoration?._id}` : '/api/decorations',
-        {
-          method: isEditMode ? 'PUT' : 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Failed to ${isEditMode ? 'update' : 'create'} decoration`);
-      }
-      alert(`Decoration ${isEditMode ? 'updated' : 'added'}!`);
-      if (!isEditMode) {
-        setName('');
-        setPrice('');
-        setImageUrl('');
-      }
-      onFormSubmit();
-    } catch (err: unknown) {
-      console.error('An error occurred:', err);
-      let errorMessage = 'An unknown error occurred.';
-      if (err instanceof Error) {
-        errorMessage = err.message;
-      }
-
-      setError(errorMessage);
-    } finally {
-      setIsLoading(false);
+    if (!formData.type) {
+      showAlert("Please select a decoration type.", "error");
+      return;
     }
+    setOrphanedImageUrl(null);
+    onSubmit(formData);
   };
 
   return (
     <form
       onSubmit={handleSubmit}
-      className="p-6 bg-white rounded-lg shadow-md max-w-lg"
+      className="p-lg bg-card-background rounded-large shadow-md max-w-lg space-y-md"
     >
-      <h2 className="text-2xl font-heading mb-4">
-        {isEditMode ? "Update Decoration" : "Add New Decoration"}
+      <h2 className="font-heading text-h3 text-primary">
+        {existingDecoration ? "Update Decoration" : "Add New Decoration"}
       </h2>
-      <div className="space-y-4">
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-md">
         <div>
-          <label
-            htmlFor="name"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Name
-          </label>
+          <FormLabel htmlFor="name">Name</FormLabel>
           <Input
             type="text"
             id="name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+            value={formData.name}
+            onChange={handleChange}
             required
           />
         </div>
         <div>
-          <label
-            htmlFor="price"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Price
-          </label>
+          <FormLabel htmlFor="price">Price</FormLabel>
           <Input
             type="number"
             id="price"
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+            value={formData.price === 0 ? "" : formData.price}
+            onChange={handleChange}
+            placeholder="0.00"
             required
+            step="0.01"
           />
         </div>
-        <div>
-          <label
-            htmlFor="imageUrl"
-            className="block text-sm font-medium text-gray-700"
-          >
-            URL Image (optional)
-          </label>
-          <Input
-            type="text"
-            id="imageUrl"
-            value={imageUrl}
-            onChange={(e) => setImageUrl(e.target.value)}
-            className="mt-1 block w-full input-class"
-          />
-        </div>
-        <div className="space-y-2">
-          <h3 className="text-lg font-heading">Categories</h3>
-          <div className="p-4 border border-gray-200 rounded-md grid grid-cols-2 md:grid-cols-3 gap-4">
-            {categories.map((cat) => (
-              <div key={cat._id.toString()} className="flex items-center">
-                <Input
-                  type="checkbox"
-                  id={`cat-deco-${cat._id.toString()}`}
-                  checked={categoryIds.includes(cat._id.toString())}
-                  onChange={() => handleCategoryChange(cat._id.toString())}
-                  className="h-4 w-4 rounded border-gray-300 text-indigo-600"
-                />
-                <label
-                  htmlFor={`cat-deco-${cat._id.toString()}`}
-                  className="ml-3 text-sm"
-                >
-                  {cat.name}
-                </label>
-              </div>
+      </div>
+
+      <div>
+        <FormLabel htmlFor="type">Decoration Type</FormLabel>
+        <Select
+          value={formData.type}
+          onValueChange={(value) =>
+            setFormData((prev) => ({ ...prev, type: value }))
+          }
+        >
+          <SelectTrigger id="type">
+            <SelectValue placeholder="Select a type..." />
+          </SelectTrigger>
+          <SelectContent>
+            {DECORATION_TYPES.map((type) => (
+              <SelectItem key={type} value={type}>
+                {type}
+              </SelectItem>
             ))}
-          </div>
-        </div>
-        {error && (
-          <div className="text-red-500 text-sm">
-            <p>Error: {error}</p>
-          </div>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div>
+        <FormLabel htmlFor="image-upload">Image</FormLabel>
+        <ImageUploadPreview
+          imagePreview={formData.imageUrl || null}
+          isUploading={isUploading}
+          onRemove={handleImageRemove}
+          containerClassName="h-48 w-full"
+          imageFit="object-contain"
+        />
+        <Input
+          id="image-upload"
+          type="file"
+          accept="image/*"
+          onChange={handleImageUpload}
+          disabled={isUploading}
+          className="hidden"
+          ref={fileInputRef}
+        />
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() => fileInputRef.current?.click()}
+          className="mt-sm"
+          disabled={isUploading}
+        >
+          {isUploading ? (
+            <h1>Uploading Image...</h1>
+          ) : formData.imageUrl ? (
+            "Change Image"
+          ) : (
+            "Upload Image"
+          )}
+        </Button>
+        {uploadError && (
+          <p className="text-error text-small mt-sm">{uploadError}</p>
         )}
-        <div>
-          <Button type="submit" disabled={isLoading} className="w-full">
-            {isLoading
-              ? "Adding..."
-              : isEditMode
+      </div>
+
+      <div className="space-y-sm">
+        <h3 className="font-body text-body font-bold text-primary">
+          Categories
+        </h3>
+        <div
+          className="p-md border border-border rounded-medium 
+            grid gap-md
+            grid-cols-[repeat(auto-fit,minmax(150px,1fr))]"
+        >
+          {categories.map((cat) => (
+            <ChipCheckbox
+              key={cat._id}
+              checked={(formData.categoryIds || []).includes(cat._id)}
+              onCheckedChange={() => handleCategoryChange(cat._id)}
+            >
+              {cat.name}
+            </ChipCheckbox>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <Button
+          type="submit"
+          disabled={isSubmitting || isUploading}
+          className="w-full"
+        >
+          {isSubmitting
+            ? "Saving..."
+            : existingDecoration
               ? "Update Decoration"
               : "Add Decoration"}
-          </Button>
-        </div>
+        </Button>
       </div>
     </form>
   );
 };
- 
+
 export default DecorationsForm;

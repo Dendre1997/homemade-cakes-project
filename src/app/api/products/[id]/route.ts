@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import clientPromise from '@/lib/db';
 import { ObjectId } from 'mongodb';
-
+import cloudinary from "@/lib/cloudinary";
+import { getPublicIdFromUrl } from "@/lib/cloudinaryUtils";
 interface Context {
     params: { id: string }
 }
 
-// GET
+
 export async function GET(_request: Request, { params }: Context) {
   try {
     const { id } = params;
@@ -53,74 +54,5 @@ export async function GET(_request: Request, { params }: Context) {
   } catch (error) {
     console.error('Error fetching product:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
-  }
-}
-
-
-// PUT
-export async function PUT(request: NextRequest, { params }: Context) {
-  const client = await clientPromise;
-  const db = client.db(process.env.MONGODB_DB_NAME);
-  try {
-    const { id } = params;
-    const body = await request.json();
-    
-    if (body.categoryId) body.categoryId = new ObjectId(body.categoryId);
-    if (body.availableFlavorIds)
-      body.availableFlavorIds = body.availableFlavorIds.map(
-        (id: string) => new ObjectId(id)
-      );
-    if (body.allergenIds)
-      body.allergenIds = body.allergenIds.map((id: string) => new ObjectId(id));
-    if (body.availableDiameterConfigs) {
-      body.availableDiameterConfigs = body.availableDiameterConfigs.map(
-        (config: any) => ({
-          ...config,
-          diameterId: new ObjectId(config.diameterId),
-        })
-      );
-    }
-    
-
-    const result = await db.collection('products').updateOne(
-      { _id: new ObjectId(id) },
-      { $set: body }
-    );
-
-    if (result.matchedCount === 0) {
-      return NextResponse.json({ error: 'Product not found' }, { status: 404 });
-    }
-
-    return NextResponse.json({ message: 'Product updated successfully' });
-  } catch (error) {
-    console.error('Error updating product:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
-  }
-}
-
-
-
-export async function DELETE(
-  _request: Request,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const { id } = params;
-    const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB_NAME);
-
-    const result = await db.collection('products').deleteOne({ _id: new ObjectId(id) });
-
-    if (result.deletedCount === 0) {
-      return NextResponse.json({ error: 'Product not found' }, { status: 404 });
-    }
-
-    return NextResponse.json({ message: 'Product deleted successfully' });
-  } catch (error) {
-    console.error('Error deleting product:', error);
-    return NextResponse.json(
-      { error: 'Internal Server Error' },
-      { status: 500 }
-    );
   }
 }

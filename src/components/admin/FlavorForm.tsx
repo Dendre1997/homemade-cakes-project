@@ -1,183 +1,283 @@
-'use client';
-import React, { useState, useEffect } from 'react'
-import { Flavor, ProductCategory }  from '@/types';
-import { Button } from '../ui/Button';
-import { Input } from '@/components/ui/Input';
+"use client";
+import React, { useState, useEffect, useRef } from "react"; 
+import Image from "next/image";
+import { Flavor, ProductCategory } from "@/types";
+import { Button } from "../ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Textarea } from "../ui/Textarea";
+import { cn } from "@/lib/utils";
+import { ChipCheckbox } from "../ui/ChipCheckbox";
+import { ImageUploadPreview } from "../ui/ImageUploadPreview"; 
+import { X } from "lucide-react"; 
+
+const FormLabel = ({
+  htmlFor,
+  children,
+}: {
+  htmlFor: string;
+  children: React.ReactNode;
+}) => (
+  <label
+    htmlFor={htmlFor}
+    className="block font-body text-small text-primary/80 mb-sm"
+  >
+    {children}
+  </label>
+);
+
+type FlavorFormData = Omit<Flavor, "_id">;
+
 interface FlavorFormProps {
   existingFlavor?: Flavor | null;
-  onFormSubmit: () => void;
+  onSubmit: (formData: FlavorFormData) => void;
+  isSubmitting: boolean; 
   categories: ProductCategory[];
 }
-const FlavorForm = ({ existingFlavor, onFormSubmit, categories }: FlavorFormProps) => {
-  const isEditMode = !!existingFlavor;
-  const [name, setName] = useState(existingFlavor?.name || '');
-  const [price, setPrice] = useState(existingFlavor?.price.toString() || '');
-  const [description, setDescription] = useState(existingFlavor?.description || '');
-  const [categoryIds, setCategoryIds] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+
+const FlavorForm = ({
+  existingFlavor,
+  onSubmit,
+  isSubmitting, 
+  categories,
+}: FlavorFormProps) => {
+  const [formData, setFormData] = useState<FlavorFormData>({
+    name: "",
+    price: 0,
+    description: "",
+    imageUrl: "",
+    categoryIds: [],
+  });
+
+  const [isUploading, setIsUploading] = useState<boolean>(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [orphanedImageUrl, setOrphanedImageUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
 
   useEffect(() => {
     if (existingFlavor) {
-      setName(existingFlavor.name);
-      setPrice(existingFlavor.price.toString());
-      setDescription(existingFlavor.description || '');
-      setCategoryIds(existingFlavor.categoryIds || []);
+      setFormData({
+        name: existingFlavor.name || "",
+        price: existingFlavor.price || 0,
+        description: existingFlavor.description || "",
+        imageUrl: existingFlavor.imageUrl || "",
+        categoryIds: existingFlavor.categoryIds || [],
+      });
+    } else if (!isSubmitting) {
+      // Clear form *after* submit
+      setFormData({
+        name: "",
+        price: 0,
+        description: "",
+        imageUrl: "",
+        categoryIds: [],
+      });
     }
-  }, [existingFlavor]);
+    // Clear orphans/errors
+    setOrphanedImageUrl(null);
+    setUploadError(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }, [existingFlavor, isSubmitting]);
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { id, value, type } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [id]: type === "number" ? parseFloat(value) || 0 : value,
+    }));
+  };
 
   const handleCategoryChange = (categoryId: string) => {
-    setCategoryIds((prev) =>
-      prev.includes(categoryId)
-        ? prev.filter((id) => id !== categoryId)
-        : [...prev, categoryId]
-    );
-  };
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError(null);
+    setFormData((prev) => {
+      const currentCategoryIds = prev.categoryIds || [];
 
-    const body = {
-      name,
-      price: parseFloat(price),
-      description,
-      categoryIds,
-    };
+      const newCategoryIds = currentCategoryIds.includes(categoryId)
+        ? currentCategoryIds.filter((id) => id !== categoryId)
+        : [...currentCategoryIds, categoryId];
+
+      return {
+        ...prev,
+        categoryIds: newCategoryIds,
+      };
+    });
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    setUploadError(null);
+
+    if (orphanedImageUrl) {
+      fetch("/api/admin/cloudinary-delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ urls: [orphanedImageUrl] }),
+      });
+    }
+
+    const uploadData = new FormData();
+    uploadData.append("file", file);
+    uploadData.append("upload_preset", "homemade_cakes_preset");
 
     try {
-     let response;
-      if (isEditMode) {
-        response = await fetch(`/api/flavors/${existingFlavor?._id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        });
-      } else {
-        response = await fetch('/api/flavors', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        });
-      }
-      if (!response.ok) {
-        throw new Error(`Failed to ${isEditMode ? 'update' : 'create'} flavor`);
-      }
-      alert(`Flavor Successfully ${isEditMode ? 'Updated' : 'Added'}!`);
-      if (!isEditMode) {
-        setName(''); setPrice(''); setDescription('');
-      }
-      onFormSubmit();
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+        {
+          method: "POST",
+          body: uploadData,
+        }
+      );
+      if (!response.ok) throw new Error("Image upload failed.");
+      const result = await response.json();
 
-    } catch (err: unknown) {
-      console.error('An error occurred:', err);
-      let errorMessage = 'An unknown error occurred.';
-      if (err instanceof Error) {
-        errorMessage = err.message;
-      }
-
-      setError(errorMessage);
+      setOrphanedImageUrl(result.secure_url);
+      setFormData((prev) => ({ ...prev, imageUrl: result.secure_url }));
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "Upload failed.");
     } finally {
-      setIsLoading(false);
+      setIsUploading(false);
     }
+  };
+
+  const handleImageRemove = () => {
+    if (orphanedImageUrl) {
+      fetch("/api/admin/cloudinary-delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ urls: [orphanedImageUrl] }),
+      });
+      setOrphanedImageUrl(null);
+    }
+    setFormData((prev) => ({ ...prev, imageUrl: "" }));
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setOrphanedImageUrl(null);
+    onSubmit(formData);
   };
 
   return (
     <form
       onSubmit={handleSubmit}
-      className='p-6 bg-white rounded-lg shadow-md max-w-lg'
+      className="space-y-lg p-lg bg-card-background rounded-large shadow-md max-w-lg" // Updated styles
     >
-      <h2 className='text-2xl font-heading mb-4'>
-        {isEditMode ? 'Update Flavor' : 'Add New Flavor'}
+      <h2 className="font-heading text-h3 text-primary">
+        {existingFlavor ? "Update Flavor" : "Add New Flavor"}
       </h2>
-      <div className='space-y-4'>
+      <div className="space-y-md">
         <div>
-          <label
-            htmlFor='name'
-            className='block text-sm font-medium text-gray-700'
-          >
-            Name
-          </label>
+          <FormLabel htmlFor="name">Name</FormLabel>
           <Input
-            type='text'
-            id='name'
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className='mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500'
+            type="text"
+            id="name"
+            value={formData.name}
+            onChange={handleChange}
             required
           />
         </div>
         <div>
-          <label
-            htmlFor='price'
-            className='block text-sm font-medium text-gray-700'
-          >
-            Price
-          </label>
+          <FormLabel htmlFor="price">Price</FormLabel>
           <Input
-            type='number'
-            id='price'
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-            className='mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500'
+            type="number"
+            id="price"
+            value={formData.price === 0 ? "" : formData.price}
+            onChange={handleChange}
             required
+            step="0.01"
+            placeholder="0.00"
           />
         </div>
         <div>
-          <label
-            htmlFor='description'
-            className='block text-sm font-medium text-gray-700'
+          <FormLabel htmlFor="image-upload">Image</FormLabel>
+          {formData.imageUrl && (
+            <ImageUploadPreview
+              imagePreview={formData.imageUrl}
+              isUploading={isUploading}
+              onRemove={handleImageRemove}
+            />
+          )}
+          <Input
+            id="image-upload"
+            type="file"
+            accept="image/*"
+            onChange={handleImageUpload}
+            disabled={isUploading}
+            className="hidden"
+            ref={fileInputRef}
+          />
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => fileInputRef.current?.click()}
+            className="mt-sm"
+            disabled={isUploading}
           >
-            Description (optional)
-          </label>
-          <textarea
-            id='description'
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            {isUploading ? (
+              <h1>Uploading Image...</h1>
+            ) : formData.imageUrl ? (
+              "Change Image"
+            ) : (
+              "Upload Image"
+            )}
+          </Button>
+          {uploadError && (
+            <p className="text-error text-small mt-sm">{uploadError}</p>
+          )}
+        </div>
+
+        <div>
+          <FormLabel htmlFor="description">Description (optional)</FormLabel>
+          <Textarea
+            id="description"
+            value={formData.description}
+            onChange={handleChange}
             rows={3}
-            className='mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500'
           />
         </div>
-        <div className='space-y-2'>
-          <h3 className='text-lg font-medium text-gray-900'>Categories</h3>
-          <div className='p-4 border border-gray-200 rounded-md grid grid-cols-2 md:grid-cols-3 gap-4'>
+
+        <div className="space-y-sm">
+          <h3 className="font-body text-body font-bold text-primary">
+            Categories
+          </h3>
+          <div
+            className="p-md border border-border rounded-medium 
+            grid gap-md
+            grid-cols-[repeat(auto-fit,minmax(150px,1fr))]"
+          >
             {categories.map((cat) => (
-              <div key={cat._id.toString()} className='flex items-center'>
-                <Input
-                  type='checkbox'
-                  id={`cat-${cat._id.toString()}`}
-                  checked={categoryIds.includes(cat._id.toString())}
-                  onChange={() => handleCategoryChange(cat._id.toString())}
-                  className='h-4 w-4 rounded border-gray-300 text-indigo-600'
-                />
-                <label
-                  htmlFor={`cat-${cat._id.toString()}`}
-                  className='ml-3 text-sm text-gray-700'
-                >
-                  {cat.name}
-                </label>
-              </div>
+              <ChipCheckbox
+                key={cat._id}
+                checked={(formData.categoryIds || []).includes(cat._id)}
+                onCheckedChange={() => handleCategoryChange(cat._id)}
+              >
+                {cat.name}
+              </ChipCheckbox>
             ))}
           </div>
         </div>
-        {error && (
-          <div className='text-red-500 text-sm'>
-            <p>Error: {error}</p>
-          </div>
-        )}
-        <div>
-          <Button
-            type='submit'
-            disabled={isLoading}
-            className='w-full'
-          >
-            {isLoading
-              ? 'Saving...'
-              : isEditMode
-              ? 'Update Flavor'
-              : 'Add Flavor'}
-          </Button>
-        </div>
+      </div>
+      <div>
+        <Button
+          type="submit"
+          disabled={isSubmitting || isUploading}
+          className="w-full"
+        >
+          {isSubmitting
+            ? "Saving..."
+            : existingFlavor
+              ? "Update Flavor"
+              : "Add Flavor"}
+        </Button>
       </div>
     </form>
   );

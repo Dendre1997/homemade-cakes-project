@@ -6,7 +6,6 @@ export async function POST(request: NextRequest) {
   try {
     const { firebaseUid, email } = await request.json();
 
-    // 2. Validation
     if (!firebaseUid || !email) {
       return NextResponse.json(
         { error: "Firebase UID and email are required" },

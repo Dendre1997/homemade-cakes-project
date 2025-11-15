@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Order } from "@/types";
 import Link from "next/link";
-import LoadingSpinner from "@/components/Spinner";
+import LoadingSpinner from "@/components/ui/Spinner";
 import { Button } from "@/components/ui/Button";
 
 const ManageOrdersPage = () => {
@@ -12,7 +12,7 @@ const ManageOrdersPage = () => {
   const fetchOrders = useCallback(async () => {
     try {
       setIsLoading(true);
-      const res = await fetch("/api/orders");
+      const res = await fetch("/api/admin/orders");
       if (!res.ok) throw new Error("Failed to fetch orders");
       setOrders(await res.json());
     } catch (error) {
@@ -68,9 +68,8 @@ const ManageOrdersPage = () => {
                 <td className="px-6 py-4">
                   <Link
                     href={`/admin/orders/${order._id.toString()}`}
-                    className="text-indigo-600 hover:text-indigo-900"
                   >
-                    <Button variant="primary" size="sm">
+                    <Button variant='text' size="lg">
                       View
                     </Button>
                   </Link>

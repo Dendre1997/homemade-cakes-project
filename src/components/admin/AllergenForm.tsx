@@ -1,111 +1,85 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { Allergen } from '@/types';
-import { Button } from '../ui/Button';
-import { Input } from '../ui/Input';
+import React, { useState, useEffect } from "react";
+import { Allergen } from "@/types";
+import { Button } from "../ui/Button";
+import { Input } from "../ui/Input";
+
+
+const FormLabel = ({
+  htmlFor,
+  children,
+}: {
+  htmlFor: string;
+  children: React.ReactNode;
+}) => (
+  <label
+    htmlFor={htmlFor}
+    className="block font-body text-small text-text-primary/80 mb-sm"
+  >
+    {children}
+  </label>
+);
+
+type AllergenFormData = Omit<Allergen, "_id">;
+
 interface AllergenFormProps {
   existingAllergen?: Allergen | null;
-  onAllergenSubmit: () => void;
+  onSubmit: (formData: AllergenFormData) => void; 
+  isSubmitting: boolean; 
 }
 
 const AllergenForm = ({
   existingAllergen,
-  onAllergenSubmit,
+  onSubmit,
+  isSubmitting,
 }: AllergenFormProps) => {
-  const isEditMode = !!existingAllergen;
-  const [name, setName] = useState(existingAllergen?.name || '');
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+  const [name, setName] = useState("");
+
+  useEffect(() => {
+    if (existingAllergen) {
+      setName(existingAllergen.name || "");
+    } else if (!isSubmitting) {
+      setName("");
+    }
+  }, [existingAllergen, isSubmitting]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-
-    const body = { name };
-
-    try {
-      const response = await fetch(
-        isEditMode
-          ? `/api/allergens/${existingAllergen?._id}`
-          : '/api/allergens',
-        {
-          method: isEditMode ? 'PUT' : 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(body),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(
-          `Failed to ${isEditMode ? 'update' : 'create'} allergen.`
-        );
-      }
-
-      if (!isEditMode) {
-        setName('');
-      }
-
-      onAllergenSubmit();
-      alert(`Allergen successfully ${isEditMode ? 'updated' : 'added'}`);
-    } catch (err: unknown) {
-      console.error('An error occurred:', err);
-      let errorMessage = 'An unknown error occurred.';
-      if (err instanceof Error) {
-        errorMessage = err.message;
-      }
-      setError(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
+    onSubmit({ name });
   };
 
   return (
     <form
       onSubmit={handleSubmit}
-      className='p-6 bg-white rounded-lg shadow-md max-w-lg'
+      className="space-y-md p-lg bg-card-background rounded-large shadow-md max-w-lg"
     >
-      <h2 className='text-2xl font-heading mb-4'>
-        {isEditMode ? 'Update Allergen' : 'Add New Allergen'}
+      <h2 className="font-heading text-h3 text-primary">
+        {existingAllergen ? "Update Allergen" : "Add New Allergen"}
       </h2>
-      <div className='space-y-4'>
+      <div className="space-y-4">
         <div>
-          <label
-            htmlFor='name'
-            className='block text-sm font-medium text-gray-700'
-          >
-            Name
-          </label>
+          <FormLabel htmlFor="name">Name</FormLabel>
           <Input
-            type='text'
-            id='name'
+            type="text"
+            id="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className='mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500'
             required
           />
         </div>
-        {error && (
-          <div className='text-red-500 text-sm'>
-            <p>Error: {error}</p>
-          </div>
-        )}
         <div>
           <Button
-            type='submit'
-            disabled={isLoading}
-            className='w-full'
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full"
+            variant="primary" 
           >
-            {isLoading
-              ? isEditMode
-                ? 'Updating...'
-                : 'Adding...'
-              : isEditMode
-              ? 'Update Allergen'
-              : 'Add Allergen'}
+            {isSubmitting
+              ? "Saving..."
+              : existingAllergen
+                ? "Update Allergen"
+                : "Add Allergen"}
           </Button>
         </div>
       </div>

@@ -4,18 +4,22 @@ import { useEffect, useState } from "react";
 import { notFound, useParams, useRouter } from "next/navigation";
 import { ProductWithCategory, Flavor, AvailableDiameterConfig } from "@/types";
 import Image from "next/image";
-import { useCartStore } from "@/lib/store/cartStore";
-import LoadingSpinner from "@/components/Spinner";
+// import { useCartStore } from "@/lib/store/cartStore";
+import LoadingSpinner from "@/components/ui/Spinner";
 import { Button } from "@/components/ui/Button";
+import { useConfirmation } from "@/contexts/ConfirmationContext";
+
+// Admin-facing page to display a single product's details
+// Includes delete function
 
 const SingleProductPage = () => {
   const params = useParams();
   const id = params.id as string;
-    const router = useRouter()
+  const router = useRouter();
+  const showConfirmation = useConfirmation()
   const [product, setProduct] = useState<ProductWithCategory | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
 
   useEffect(() => {
     if (id) {
@@ -23,9 +27,10 @@ const SingleProductPage = () => {
         try {
           setIsLoading(true);
           setError(null);
-          const res = await fetch(`/api/products/${id}`);
+          const res = await fetch(`/api/admin/products/${id}`);
 
           if (res.status === 404) {
+            // Trigger the Next.js not-found page 
             notFound();
             return;
           }
@@ -43,17 +48,19 @@ const SingleProductPage = () => {
     }
   }, [id]);
 
+  // This logic merges the diameter price multiplier configs with the 
+  // diameter details (e.g, name) into a singl UI-friendly array
   const displayableDiameters =
     product?.availableDiameterConfigs.flatMap((config) => {
+      // find the full diameter object using the ID from config
       const details = product.availableDiameters.find(
         (d) => d._id.toString() === config.diameterId
       );
-
+      // if in some reason the details aren't found skip this item
       if (!details) {
-        return [];
+        return [];  //flatMap will discard this empty array
       }
-
-      // If details are found, return the object wrapped in an array.
+      // Combine the name from details with the multiplier from config
       return [
         {
           name: details.name,
@@ -61,7 +68,7 @@ const SingleProductPage = () => {
           id: details._id.toString(),
         },
       ];
-    }) || []; // filter(Boolean) will remove all null/falsy entries
+    }) || [];
 
   if (error) return <p className="text-red-500">Error: {error}</p>;
   if (isLoading) return <LoadingSpinner />;
@@ -69,15 +76,23 @@ const SingleProductPage = () => {
   const firstImage = product.imageUrls[0] || "/placeholder.png";
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this product?"))
+    const confirmed = await showConfirmation({
+      title: "Delete Product?",
+      body: `Are you sure you want to delete ${product.name} ? This action cannot be undone.`,
+      confirmText: "Delete",
+      variant: "danger",
+    });
+
+    if (!confirmed) {
       return;
+    }
 
     try {
-      const res = await fetch(`/api/products/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/admin/products/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete product");
 
-        router.push("/admin/products");
-        router.refresh();
+      router.push("/admin/products");
+      router.refresh(); //Invalidate the cache for the product list page
     } catch (error) {
       console.error(error);
       alert("Error deleting product");
@@ -89,7 +104,6 @@ const SingleProductPage = () => {
       <div className="pt-6 pb-16 sm:pb-24">
         <div className="mx-auto mt-8 max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8">
           <div className="lg:grid lg:grid-cols-2 lg:gap-x-8">
-            {/* Image gallery */}
             <div className="aspect-square w-full overflow-hidden rounded-lg relative">
               <Image
                 src={firstImage}
@@ -99,8 +113,6 @@ const SingleProductPage = () => {
                 priority
               />
             </div>
-
-            {/* Product info */}
             <div className="mt-10 lg:mt-0">
               <h1 className="text-3xl font-heading tracking-tight">
                 {product.name}
@@ -113,16 +125,13 @@ const SingleProductPage = () => {
               </p>
 
               <div className="mt-6">
-                <h3 className="text-sm font-heading">
-                  Description
-                </h3>
+                <h3 className="text-sm font-heading">Description</h3>
                 <p className="prose prose-sm mt-4 text-gray-500">
                   {product.description}
                 </p>
               </div>
 
               <div className="mt-8 border-t pt-8">
-                {/* Flavor Selector */}
                 <div>
                   <h3 className="text-sm font-heading">Flavors</h3>
                   <fieldset className="mt-2">
@@ -141,9 +150,7 @@ const SingleProductPage = () => {
                   </fieldset>
                 </div>
                 <div className="mt-4">
-                  <h3 className="text-sm font-heading">
-                    Diameters
-                  </h3>
+                  <h3 className="text-sm font-heading">Diameters</h3>
                   <fieldset className="mt-2">
                     <div className="flex flex-wrap gap-3">
                       {displayableDiameters.map((diameter) => (

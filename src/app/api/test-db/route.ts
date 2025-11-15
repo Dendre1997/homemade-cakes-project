@@ -1,6 +1,5 @@
-// src/app/api/test-db/route.ts
 import { NextResponse } from 'next/server';
-import clientPromise from '@/lib/db'; // Імпортуємо наш 'помічник'
+import clientPromise from '@/lib/db';
 
 export async function GET() {
   try {
@@ -18,7 +17,7 @@ export async function GET() {
 
     return NextResponse.json(
       { error: 'Failed to connect to the database.' },
-      { status: 500 } // Статус 500 означає "внутрішня помилка сервера"
+      { status: 500 }
     );
   }
 }

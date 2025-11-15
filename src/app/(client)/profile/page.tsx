@@ -5,7 +5,7 @@ import { useAuthStore } from "@/lib/store/authStore";
 import { useRouter } from "next/navigation";
 import { Order } from "@/types";
 import Link from "next/link";
-import LoadingSpinner from "@/components/Spinner";
+import LoadingSpinner from "@/components/ui/Spinner";
 
 const ProfilePage = () => {
   const { user, isLoading: isAuthLoading } = useAuthStore();
@@ -38,7 +38,7 @@ const ProfilePage = () => {
   }, [user]);
 
   if (isAuthLoading || isLoading) {
-    return <LoadingSpinner />
+    return <LoadingSpinner />;
   }
 
   if (!user) {
