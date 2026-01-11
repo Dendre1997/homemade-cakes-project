@@ -1,6 +1,7 @@
 import ProductCard from "@/components/(client)/ProductCard";
 import { ProductWithCategory, Collection } from "@/types";
 import { notFound } from "next/navigation";
+import { getActiveDiscounts } from "@/lib/data";
 
 const baseUrl = process.env.NEXT_PUBLIC_API_URL;
 async function getCollectionBySlug(slug: string) {
@@ -34,15 +35,16 @@ async function getProductsByCollection(collectionId: string) {
 const CollectionPage = async ({
   params,
 }: {
-  params: { collectionSlug: string }; 
+  params: Promise<{ collectionSlug: string }>;
 }) => {
-  const collection: Collection = await getCollectionBySlug(
-    params.collectionSlug
-  );
+  const { collectionSlug } = await params;
+  const collection: Collection = await getCollectionBySlug(collectionSlug);
 
   const products: ProductWithCategory[] = await getProductsByCollection(
     collection._id.toString()
   );
+
+  const discounts = await getActiveDiscounts();
 
   return (
     <div className="bg-background min-h-screen">
@@ -60,7 +62,7 @@ const CollectionPage = async ({
         {products.length > 0 ? (
           <div className="mt-xl grid grid-cols-1 gap-md sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 auto-rows-fr">
             {products.map((product) => (
-              <ProductCard key={product._id.toString()} product={product} />
+              <ProductCard key={product._id.toString()} product={product} validDiscounts={discounts} />
             ))}
           </div>
         ) : (

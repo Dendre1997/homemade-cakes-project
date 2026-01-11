@@ -1,15 +1,13 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Order, ScheduleSettings } from "@/types"; // 'ScheduleSettings' не використовується, можна видалити
+import { Order } from "@/types"; 
 import { format, isSameDay } from "date-fns";
-import { extractOriginalItemId } from "@/lib/utils";
+import { extractOriginalItemId } from "../../../lib/utils";
 import { useAlert } from "@/contexts/AlertContext";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
 import { X, Clock } from "lucide-react";
-import LoadingSpinner from "@/components/ui/Spinner";
 import { TimeSlotManager } from "@/components/ui/TimeSlotManager";
 
 interface OrderDetailAssignedDatesProps {

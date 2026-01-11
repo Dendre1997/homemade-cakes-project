@@ -18,7 +18,7 @@ import {
 } from "date-fns";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { CartItem, UniqueCartItem } from "@/types";
+import { UniqueCartItem } from "@/types";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
 import { Button } from "@/components/ui/Button";
 
@@ -88,12 +88,14 @@ const CustomDatePicker = ({
         </h2>
         <div className="absolute inset-0 flex items-center justify-between">
           <button
+            type="button"
             onClick={goToPreviousMonth}
             className="p-sm rounded-full transition-colors hover:bg-background"
           >
             <ChevronLeft className="h-5 w-5 text-primary" />
           </button>
           <button
+            type="button"
             onClick={goToNextMonth}
             className="p-sm rounded-full transition-colors hover:bg-background"
           >
@@ -164,6 +166,7 @@ const CustomDatePicker = ({
                           </p>
                           <PopoverPrimitive.Close asChild>
                             <button
+                              type="button"
                               aria-label="Close"
                               className="p-1 rounded-full hover:bg-subtleBackground transition-colors"
                               onClick={() => setPopupDate?.(null)}

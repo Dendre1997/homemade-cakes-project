@@ -4,7 +4,7 @@ import { Collection } from '@/types';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
-import { ImageUploadPreview } from '../ui/ImageUploadPreview';
+import { ImageUploadPreview } from './ImageUploadPreview';
 import { slugify } from "@/lib/utils";
 
 const FormLabel = ({ htmlFor, children }: { htmlFor: string; children: React.ReactNode; }) => (
@@ -31,11 +31,12 @@ const CollectionForm = ({
     slug: "",
   });
   
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 const fileInputRef = useRef<HTMLInputElement>(null);
-    const [orphanedImageUrl, setOrphanedImageUrl] = useState<string | null>(null);
+  const [orphanedImageUrl, setOrphanedImageUrl] = useState<string | null>(null);
+
 
   useEffect(() => {
     if (existingCollection) {
@@ -45,7 +46,6 @@ const fileInputRef = useRef<HTMLInputElement>(null);
         imageUrl: existingCollection.imageUrl || "",
         slug: existingCollection.slug || "",
       });
-      setImagePreview(existingCollection.imageUrl || null);
     } else if (!isSubmitting) {
       setFormData({
         name: "",
@@ -53,7 +53,6 @@ const fileInputRef = useRef<HTMLInputElement>(null);
         imageUrl: "",
         slug: "",
       });
-      setImagePreview(null);
       setOrphanedImageUrl(null);
       setUploadError(null);
       if (fileInputRef.current) {
@@ -79,7 +78,7 @@ const fileInputRef = useRef<HTMLInputElement>(null);
 
     setIsUploading(true);
     setUploadError(null);
-      setImagePreview(URL.createObjectURL(file));
+
       
       if (orphanedImageUrl) {
         console.log(
@@ -112,24 +111,27 @@ const fileInputRef = useRef<HTMLInputElement>(null);
       setFormData((prev) => ({ ...prev, imageUrl: result.secure_url }));
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : "Upload failed.");
-        setImagePreview(null);
         setOrphanedImageUrl(null);
     } finally {
       setIsUploading(false);
     }
   };
 
-    const handleImageRemove = () => {
-      if (orphanedImageUrl) {
-        console.log("Cleaning up (removed) unsaved image:", orphanedImageUrl);
-        fetch("/api/admin/cloudinary-delete", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ urls: [orphanedImageUrl] }),
-        });
-        setOrphanedImageUrl(null);
-      }
-    setImagePreview(null);
+  const handleCropSave = (newUrl: string) => {
+    // Update the form state with the new URL
+    setFormData((prev) => ({ ...prev, imageUrl: newUrl }));
+  };
+
+  const handleImageRemove = () => {
+    if (orphanedImageUrl) {
+      console.log("Cleaning up (removed) unsaved image:", orphanedImageUrl);
+      fetch("/api/admin/cloudinary-delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ urls: [orphanedImageUrl] }),
+      });
+      setOrphanedImageUrl(null);
+    }
     setFormData((prev) => ({ ...prev, imageUrl: "" }));
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -176,9 +178,13 @@ const fileInputRef = useRef<HTMLInputElement>(null);
         <FormLabel htmlFor="image">Collection Image</FormLabel>
 
         <ImageUploadPreview
-          imagePreview={imagePreview}
+          imagePreview={formData.imageUrl || null}
           isUploading={isUploading}
           onRemove={handleImageRemove}
+          containerClassName="h-48 w-full"
+          allowPositioning={true}
+          // imageFit="object-cover"
+          onCropSave={handleCropSave}
         />
 
         <Input
@@ -197,7 +203,7 @@ const fileInputRef = useRef<HTMLInputElement>(null);
           className="mt-sm"
           disabled={isUploading}
         >
-          {imagePreview ? "Change Image" : "Upload Image"}
+          {formData.imageUrl ? "Change Image" : "Upload Image"}
         </Button>
         {uploadError && (
           <p className="text-error text-small mt-sm">{uploadError}</p>

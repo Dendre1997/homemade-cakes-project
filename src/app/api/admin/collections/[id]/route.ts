@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import clientPromise from "@/lib/db";
 import { Collection } from "@/types";
 import { ObjectId } from "mongodb";
@@ -6,14 +7,14 @@ import cloudinary  from "@/lib/cloudinary";
 import { getPublicIdFromUrl } from "@/lib/cloudinaryUtils";
 import { slugify } from "@/lib/utils";
 interface Context {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 
 
 export async function PUT(request: NextRequest, { params }: Context) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const { name, description, imageUrl }: Partial<Collection> =
       await request.json();
 
@@ -69,6 +70,8 @@ export async function PUT(request: NextRequest, { params }: Context) {
         { status: 404 }
       );
     }
+    
+    revalidatePath("/", "page");
 
     return NextResponse.json({ message: "Collection updated successfully" });
   } catch (error) {
@@ -82,7 +85,7 @@ export async function PUT(request: NextRequest, { params }: Context) {
 
 export async function DELETE(_request: Request, { params }: Context) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
     const collection = db.collection("collections");
@@ -117,6 +120,8 @@ export async function DELETE(_request: Request, { params }: Context) {
           );
       }
     }
+
+    revalidatePath("/", "page");
 
     return NextResponse.json({ message: "Collection deleted successfully" });
   } catch (error) {

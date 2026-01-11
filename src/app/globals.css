@@ -36,3 +36,21 @@
 ::-webkit-scrollbar-thumb:hover {
   background-color: theme('colors.primary'); /* Darkens on hover */
 }
+
+@layer utilities {
+  /* Define the keyframes */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); } /* Start slightly lower and invisible */
+    to { opacity: 1; transform: translateY(0); }      /* End in place and visible */
+  }
+
+  /* Create a utility class to use it */
+  .animate-page-enter {
+    animation: fadeIn 0.5s ease-out forwards;
+  }
+}
+
+.image-zoom {
+  transform: scale(3);
+  transform-origin: center;
+}

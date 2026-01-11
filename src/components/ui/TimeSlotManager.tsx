@@ -101,9 +101,7 @@ export const TimeSlotManager = ({ value, onChange }: TimeSlotManagerProps) => {
 
         {/* Start Time Picker */}
         <div className="flex items-center gap-2">
-          {/* <label className="font-body text-small text-primary/80 min-w-[40px]">
-            Start:
-          </label> */}
+          
           <Select value={startHour} onValueChange={setStartHour}>
             <SelectTrigger className="flex-grow">
               <SelectValue />
@@ -227,9 +225,9 @@ export const TimeSlotManager = ({ value, onChange }: TimeSlotManagerProps) => {
             No time slots added yet.
           </p>
         ) : (
-          value.map((slot) => (
+          value.map((slot, index) => (
             <div
-              key={slot}
+              key={`${slot}-${index}`}
               className={cn(
                 "flex items-center gap-sm rounded-medium pl-md pr-sm py-xs",
                 "font-body text-small font-semibold",

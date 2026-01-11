@@ -3,15 +3,16 @@ import clientPromise from "@/lib/db";
 
 export async function GET(
   _request: Request,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
+    const { slug } = await params;
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
 
     const collection = await db
       .collection("collections")
-      .findOne({ slug: params.slug });
+      .findOne({ slug });
 
     if (!collection) {
       return NextResponse.json(

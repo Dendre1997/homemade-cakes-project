@@ -2,142 +2,168 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { adminAuth } from "@/lib/firebase/adminApp";
 import clientPromise from "@/lib/db";
-import { Order, OrderStatus, CartItem } from "@/types";
+import { OrderStatus,  User } from "@/types";
 import { ObjectId } from "mongodb";
-import { Resend } from "resend";
-import { NewOrderEmail } from "@/emails/NewOrderEmail";
-import OrderConfirmationEmail from "@/emails/OrderConfirmationEmail";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
 
-export async function POST(request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
-    const { customerInfo, deliveryInfo, items, totalAmount }: Partial<Order> =
-      await request.json();
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get("session")?.value;
 
-    if (!customerInfo || !items || items.length === 0) {
-      return NextResponse.json(
-        { error: "Missing required information." },
-        { status: 400 }
-      );
+    if (!sessionCookie) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const decodedToken = await adminAuth
+       .verifySessionCookie(sessionCookie, true)
+       .catch(() => null);
+
+    if (!decodedToken) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
-
-    const sessionCookie = cookies().get("session")?.value;
-    let customerId: ObjectId | undefined = undefined;
-    if (sessionCookie) {
-      const decodedToken = await adminAuth
-        .verifySessionCookie(sessionCookie, true)
-        .catch(() => null);
-      if (decodedToken) {
-        const user = await db
-          .collection("users")
-          .findOne({ firebaseUid: decodedToken.uid });
-        if (user) customerId = user._id;
-      }
+    
+    // Verify Admin Role
+    const adminUser = await db.collection<User>("users").findOne({ firebaseUid: decodedToken.uid });
+    if (!adminUser || adminUser.role !== 'admin') {
+         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const itemsForDb = items.map((item: CartItem) => ({
-      ...item,
-      productId: new ObjectId(item.productId),
-      categoryId: new ObjectId(item.categoryId),
-      diameterId: new ObjectId(item.diameterId),
-    }));
+    const { searchParams } = new URL(request.url);
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
 
-    const newOrder = {
-      customerId,
-      customerInfo,
-      deliveryInfo: deliveryInfo
-        ? {
-            ...deliveryInfo,
-            deliveryDates: deliveryInfo.deliveryDates.map((d) => ({
-              ...d,
-              date: new Date(d.date),
-            })),
-          }
-        : ({
-            method: "pickup",
-            address: "",
-            deliveryDates: [],
-          } as Order["deliveryInfo"]),
-      items: itemsForDb,
-      totalAmount: totalAmount || 0,
-      status: OrderStatus.NEW,
-      createdAt: new Date(),
-    };
+    const query: any = {};
 
-    const result = await db.collection("orders").insertOne(newOrder);
-const finalOrder: Order = {
-  _id: result.insertedId.toString(),
-  customerId: newOrder.customerId?.toString(),
-  customerInfo: newOrder.customerInfo,
-  deliveryInfo: newOrder.deliveryInfo,
-  totalAmount: newOrder.totalAmount,
-  status: newOrder.status,
-  createdAt: newOrder.createdAt,
-  items: newOrder.items.map((item) => ({
-    ...item,
-    productId: item.productId.toString(),
-    categoryId: item.categoryId.toString(),
-    diameterId: item.diameterId.toString(),
-  })),
-};
-  
-    try {
-  await Promise.all([
-    // For Admin
-    resend.emails.send({
-      from: "Homemade Cakes <onboarding@resend.dev>",
-      to: "anastasiiadilna@gmail.com",
-      subject: `New Order #${finalOrder._id.toString().slice(-6).toUpperCase()}`,
-      react: NewOrderEmail({ order: finalOrder }),
-    }),
-
-    // For Client
-    resend.emails.send({
-      from: "Homemade Cakes <onboarding@resend.dev>",
-      to: finalOrder.customerInfo.email,
-      subject: `Your Order Confirmation #${finalOrder._id.toString().slice(-6).toUpperCase()}`,
-      react: OrderConfirmationEmail({ order: finalOrder }),
-    }),
-  ]);
-    } catch (emailError) {
-      console.error("Error sending email:", emailError);
+    if (startDate && endDate) {
+        query["deliveryInfo.deliveryDates.date"] = {
+            $gte: new Date(startDate),
+            $lte: new Date(endDate)
+        };
     }
 
-    return NextResponse.json(
-      { message: "Order created", orderId: result.insertedId },
-      { status: 201 }
-    );
-  } catch (error) {
-    console.error("Error creating order:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
-  }
-}
-
-
-export async function GET() {
-  try {
-    const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB_NAME);
-
-    const orders = await db
-      .collection("orders")
-      .find({})
-      .sort({ createdAt: -1 })
-      .toArray();
+    const orders = await db.collection("orders")
+        .find(query)
+        .sort({ "deliveryInfo.deliveryDates.0.date": 1 })
+        .toArray();
 
     return NextResponse.json(orders);
   } catch (error) {
     console.error("Error fetching orders:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get("session")?.value;
+
+    if (!sessionCookie) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const decodedToken = await adminAuth
+       .verifySessionCookie(sessionCookie, true)
+       .catch(() => null);
+
+    if (!decodedToken) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const client = await clientPromise;
+    const db = client.db(process.env.MONGODB_DB_NAME);
+    const adminUser = await db.collection<User>("users").findOne({ firebaseUid: decodedToken.uid });
+    if (!adminUser || adminUser.role !== 'admin') {
+         return NextResponse.json({ error: "Forbidden: Admin access required" }, { status: 403 });
+    }
+
+    const body = await request.json();
+    const { 
+        customerInfo, 
+        items, 
+        deliveryInfo, 
+        source = 'other', 
+        isPaid = false,
+        paymentDetails
+    } = body;
+
+    if (!customerInfo || !customerInfo.phone || !items || items.length === 0) {
+        return NextResponse.json({ error: "Missing required fields: Customer Phone and Items are mandatory." }, { status: 400 });
+    }
+
+    let userId: ObjectId | undefined = undefined;
+    const existingUser = await db.collection<User>("users").findOne({
+        $or: [
+            { phone: customerInfo.phone },
+            { email: customerInfo.email }
+        ]
+    });
+
+    if (existingUser) {
+        userId = new ObjectId(existingUser._id);
+      }
+      
+    let calculatedTotal = 0;
+    
+    const itemsForDb = items.map((item: any) => {
+        const lineTotal = Number(item.price) * Number(item.quantity);
+        calculatedTotal += lineTotal;
+
+        return {
+            ...item,
+            productId: item.productId ? new ObjectId(String(item.productId)) : undefined,
+            categoryId: item.categoryId ? new ObjectId(String(item.categoryId)) : undefined,
+            diameterId: item.diameterId ? new ObjectId(String(item.diameterId)) : undefined,
+            
+            // Explicitly cast numbers
+            price: Number(item.price),
+            quantity: Number(item.quantity),
+            rowTotal: lineTotal,
+            isCustom: !!item.isCustom,
+            
+            // Safety: Ensure name is present
+            name: item.name || "Custom Item"
+        };
+    });
+
+    const newOrder = {
+        customerId: userId,
+        customerInfo,
+        deliveryInfo: {
+            ...deliveryInfo,
+            // Ensure date is a Date object
+            deliveryDates: deliveryInfo.deliveryDates?.map((d: any) => ({
+                ...d,
+                date: new Date(d.date)
+            })) || []
+        },
+        items: itemsForDb,
+        totalAmount: calculatedTotal,
+        status: isPaid ? OrderStatus.PAID : OrderStatus.NEW, // If marked as paid, set to PAID 
+        isPaid: !!isPaid, // Explicit Flag
+        source, // 'web', 'instagram', etc.
+        paymentDetails: paymentDetails || (isPaid ? { method: 'manual', status: 'completed' } : undefined),
+        createdAt: new Date(),
+    };
+
+    if (isPaid) {
+        newOrder.status = OrderStatus.NEW; 
+    } else {
+        newOrder.status = OrderStatus.NEW;
+    }
+
+    const result = await db.collection("orders").insertOne(newOrder);
+
+    return NextResponse.json({ 
+        message: "Manual order created successfully", 
+        orderId: result.insertedId 
+    }, { status: 201 });
+
+  } catch (error) {
+    console.error("Error creating manual order:", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

@@ -81,7 +81,7 @@ const LoginPage = () => {
               htmlFor="email"
               className="block font-body text-small text-text-primary/80 mb-sm"
             >
-              Email address
+              Email
             </label>
             <div className="mt-2">
               <Input
@@ -139,7 +139,7 @@ const LoginPage = () => {
           </div>
         </form>
         <p className="mt-10 text-center text-sm text-gray-500">
-          Not a member?{" "}
+          Don`t have an account?{" "}
           <Link href="/register">
             <Button variant="text">Sign up now</Button>
           </Link>

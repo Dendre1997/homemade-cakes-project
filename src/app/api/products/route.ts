@@ -3,26 +3,43 @@ import clientPromise from "@/lib/db";
 import { Product } from "@/types";
 import { ObjectId } from "mongodb";
 
-
+// GET
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const context = searchParams.get("context");
+
+
     const categoryId = searchParams.get("categoryId");
     const collectionId = searchParams.get("collectionId");
+    const seasonalEventId = searchParams.get("seasonalEventId");
+
+    const search = searchParams.get("search");
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "100");
+    const skip = (page - 1) * limit;
 
     const matchFilter: any = {};
 
     if (categoryId) {
       matchFilter.categoryId = new ObjectId(categoryId);
     }
-
     if (collectionId) {
       matchFilter.collectionIds = new ObjectId(collectionId);
+    }
+    if (seasonalEventId) {
+      matchFilter.seasonalEventIds = new ObjectId(seasonalEventId);
     }
 
     if (context !== "admin") {
       matchFilter.isActive = true;
+    }
+
+    if (search) {
+      matchFilter.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } },
+      ];
     }
 
     const client = await clientPromise;
@@ -45,9 +62,23 @@ export async function GET(request: NextRequest) {
         {
           $unwind: "$category",
         },
+        ...(search
+          ? [
+              {
+                $match: {
+                  $or: [
+                    { name: { $regex: search, $options: "i" } },
+                    { "category.name": { $regex: search, $options: "i" } },
+                  ],
+                },
+              },
+            ]
+          : []),
         {
-          $sort: { createdAt: -1 },
+          $sort: { createdAt: -1, _id: -1 },
         },
+        { $skip: skip },
+        { $limit: limit },
       ])
       .toArray();
 
@@ -56,6 +87,9 @@ export async function GET(request: NextRequest) {
       _id: product._id.toString(),
       categoryId: product.categoryId.toString(),
       collectionIds: (product.collectionIds || []).map((id: ObjectId) =>
+        id.toString()
+      ),
+      seasonalEventIds: (product.seasonalEventIds || []).map((id: ObjectId) =>
         id.toString()
       ),
       availableFlavorIds: (product.availableFlavorIds || []).map(

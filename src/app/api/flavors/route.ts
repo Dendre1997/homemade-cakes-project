@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import clientPromise from '@/lib/db';
-import { Flavor } from '@/types';
 
 
 export async function GET(request: NextRequest) {

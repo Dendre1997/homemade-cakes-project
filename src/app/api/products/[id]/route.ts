@@ -3,21 +3,24 @@ import clientPromise from '@/lib/db';
 import { ObjectId } from 'mongodb';
 import cloudinary from "@/lib/cloudinary";
 import { getPublicIdFromUrl } from "@/lib/cloudinaryUtils";
+import { isValidObjectId } from '../../../../lib/utils';
 interface Context {
-    params: { id: string }
+    params: Promise<{ id: string }>
 }
 
 
 export async function GET(_request: Request, { params }: Context) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
+    
+    const query = isValidObjectId(id) ? { _id: new ObjectId(id) } : { slug: id };
 
     const products = await db
       .collection("products")
       .aggregate([
-        { $match: { _id: new ObjectId(id) } },
+        { $match: query },
         {
           $lookup: {
             from: "categories",

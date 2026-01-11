@@ -7,15 +7,7 @@ import { Button } from "@/components/ui/Button";
 import LoadingSpinner from "@/components/ui/Spinner";
 import { Order } from "@/types";
 import Image from "next/image";
-
-
-interface OrderItem {
-  id: string;
-  name: string;
-  quantity: number;
-  price: number;
-  flavor: string;
-}
+import { Tag } from "lucide-react"; // Tag icon for discount
 
 const ThankYouPage = () => {
   const searchParams = useSearchParams();
@@ -74,19 +66,25 @@ const ThankYouPage = () => {
     );
   }
 
+  const discountAmount = order.discountInfo?.amount || 0;
+  // Reverse engineer subtotal: Final + Discount = Original Subtotal
+  const subtotal = order.totalAmount + discountAmount;
+
   return (
-    <div className="flex min-h-screen  justify-center bg-background">
-      <div className="mx-auto max-w-2xl p-lg text-center">
+    <div className="flex min-h-screen justify-center bg-background py-xl">
+      <div className="mx-auto max-w-2xl w-full p-lg text-center">
         <h1 className="font-heading text-h1 text-primary">
           Thank you for your order!
         </h1>
-        <div className="flex justify-center">
+        <div className="flex justify-center my-md">
           <Image
-            alt="logo-main"
+            alt="Thank you illustration"
             src="/ThankYouImage.png"
             width={300}
             height={212}
             quality={100}
+            priority
+            className="object-contain"
           />
         </div>
         <p className="mt-md font-body text-lg text-primary/80">
@@ -94,29 +92,75 @@ const ThankYouPage = () => {
           details.
         </p>
 
-        <div className="mt-lg rounded-medium border border-border bg-card-background p-md text-left">
-          <h3 className="font-body font-bold text-primary">
-            Order #{order._id.toString().slice(-6).toUpperCase()}
-          </h3>
-          <ul className="mt-md divide-y divide-border">
-            {order.items.map((item: OrderItem) => (
+        <div className="mt-lg rounded-medium border border-border bg-card-background p-md text-left shadow-sm">
+          <div className="flex justify-between items-center mb-md border-b border-border pb-sm">
+            <h3 className="font-body font-bold text-primary text-lg">
+              Order #{order._id.toString().slice(-6).toUpperCase()}
+            </h3>
+            <span className="text-xs text-primary/60">
+              {new Date(order.createdAt).toLocaleDateString()}
+            </span>
+          </div>
+
+          <ul className="divide-y divide-border">
+            {order.items.map((item) => (
               <li
                 key={item.id}
                 className="py-sm flex items-center justify-between font-body"
               >
-                <span>
-                  {item.name} (x{item.quantity})
-                </span>
-                <span>{item.flavor}</span>
-                <span className="font-semibold">
+                <div className="flex items-center gap-md">
+                  {/* Item Thumbnail */}
+                  <div className="relative h-12 w-12 rounded-small overflow-hidden border border-border bg-neutral-100 flex-shrink-0">
+                    <Image
+                      src={item.imageUrl || "/placeholder.png"}
+                      alt={item.name}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="font-medium text-primary">
+                      {item.name}{" "}
+                      <span className="text-primary/60 text-xs">
+                        x{item.quantity}
+                      </span>
+                    </span>
+                    <span className="text-xs text-primary/70">
+                      {item.flavor}
+                    </span>
+                  </div>
+                </div>
+                <span className="font-semibold text-primary">
                   ${(item.price * item.quantity).toFixed(2)}
                 </span>
               </li>
             ))}
           </ul>
-          <div className="mt-md flex justify-between border-t border-border pt-md text-lg font-bold">
-            <span>Total</span>
-            <span>${order.totalAmount.toFixed(2)}</span>
+
+          <div className="mt-md pt-md border-t border-border space-y-sm">
+            {/* Subtotal Row */}
+            <div className="flex justify-between text-primary/80 text-sm">
+              <span>Subtotal</span>
+              <span>${subtotal.toFixed(2)}</span>
+            </div>
+
+            {/* --- 2. Discount Row --- */}
+            {discountAmount > 0 && (
+              <div className="flex justify-between text-accent font-medium text-sm">
+                <span className="flex items-center gap-1">
+                  <Tag className="h-3 w-3" />
+                  Discount{" "}
+                  {order.discountInfo?.name && `(${order.discountInfo.name})`}
+                </span>
+                <span>-${discountAmount.toFixed(2)}</span>
+              </div>
+            )}
+
+            {/* Total Row */}
+            <div className="flex justify-between border-t border-border pt-sm text-lg font-bold text-primary">
+              <span>Total</span>
+              <span>${order.totalAmount.toFixed(2)}</span>
+            </div>
           </div>
         </div>
 

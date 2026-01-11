@@ -4,7 +4,8 @@ import { adminAuth } from "@/lib/firebase/adminApp";
 import clientPromise from "@/lib/db";
 
 export async function verifyAdmin() {
-  const sessionCookie = cookies().get("session")?.value;
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get("session")?.value;
   if (!sessionCookie) redirect("/login");
 
   try {

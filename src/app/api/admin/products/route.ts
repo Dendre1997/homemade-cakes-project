@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidatePath } from "next/cache";
 import clientPromise from '@/lib/db';
 import { Product } from '@/types'; 
 import { ObjectId } from 'mongodb';
+import { generateSlug } from '../../../../lib/utils';
 
 // GET
 export async function GET(request: NextRequest) {
@@ -58,7 +60,7 @@ export async function POST(request: NextRequest) {
   try {
     const body: Partial<Product> = await request.json();
 
-    const {
+    let {
       name,
       description,
       imageUrls,
@@ -69,8 +71,30 @@ export async function POST(request: NextRequest) {
       allergenIds,
       isActive,
       inscriptionSettings,
-      collectionIds
+      collectionIds,
+      // New Fields
+      productType,
+      availableQuantityConfigs,
+      comboConfig
     } = body;
+
+    // RULE: Auto-set Base Price for Sets
+    let finalPrice = Number(structureBasePrice) || 0;
+
+    if (productType === 'set') {
+        const firstBoxPrice = (availableQuantityConfigs && availableQuantityConfigs.length > 0)
+          ? Number(availableQuantityConfigs[0].price) || 0
+          : 0;
+
+        if (comboConfig && comboConfig.hasCake) {
+             // Combo Set: Base Price = Input (Cake) + Box Price
+             finalPrice = finalPrice + firstBoxPrice;
+        } else {
+             // Simple Set: Base Price = Box Price
+             finalPrice = firstBoxPrice;
+        }
+    }
+    structureBasePrice = finalPrice;
 
     if (!name || typeof structureBasePrice !== 'number' ||  !categoryId) {
       return NextResponse.json(
@@ -82,6 +106,13 @@ export async function POST(request: NextRequest) {
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
     
+    // Process Combo Config IDs if present
+    const processedComboConfig = comboConfig ? {
+        ...comboConfig,
+        cakeFlavorIds: comboConfig.cakeFlavorIds?.map((id: string) => new ObjectId(id)) || [],
+        cakeDiameterIds: comboConfig.cakeDiameterIds?.map((id: string) => new ObjectId(id)) || [],
+    } : null;
+
     const newProduct = {
       name,
       description: description || "",
@@ -103,9 +134,36 @@ export async function POST(request: NextRequest) {
         maxLength: 0,
       },
       collectionIds: collectionIds?.map((id) => new ObjectId(id)) || [],
+      
+      // New Fields Logic
+      productType: productType || 'cake',
+      availableQuantityConfigs: availableQuantityConfigs || [],
+      comboConfig: processedComboConfig,
+    };
+    
+    // SLUG GENERATION
+    let slug = generateSlug(name);
+    let counter = 0;
+    let isUnique = false;
+    
+    while (!isUnique) {
+        const existing = await db.collection("products").findOne({ slug: slug });
+        if (!existing) {
+            isUnique = true;
+        } else {
+            counter++;
+            slug = `${generateSlug(name)}-${counter}`;
+        }
+    }
+    
+    const productToInsert = {
+        ...newProduct,
+        slug
     };
 
-    const result = await db.collection('products').insertOne(newProduct);
+    const result = await db.collection('products').insertOne(productToInsert);
+
+    revalidatePath("/", "page");
 
     return NextResponse.json(
       { message: 'Product created successfully', productId: result.insertedId },

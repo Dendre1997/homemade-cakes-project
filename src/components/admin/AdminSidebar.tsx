@@ -19,6 +19,15 @@ import {
   Clock,
   Calendar,
   LayoutGrid,
+  Images,
+  Database,
+  SunSnow,
+  BadgePercent,
+  Newspaper,
+  ChartNoAxesCombined,
+  Inbox,
+  ClipboardList,
+  Settings 
 } from "lucide-react";
 
 interface SidebarProps {
@@ -26,27 +35,96 @@ interface SidebarProps {
   onClose?: () => void;
 }
 
+
+
 const navItems = [
-  { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/admin/", label: "Dashboard", icon: LayoutDashboard },
+  {
+    href: "/admin/custom-orders",
+    label: "Custom Requests",
+    icon: ClipboardList,
+  },
   { href: "/admin/products", label: "Products", icon: Package },
   { href: "/admin/orders", label: "Orders", icon: ShoppingCart },
+  { href: "/admin/analytics", label: "Analytics", icon: ChartNoAxesCombined },
   { href: "/admin/products/create", label: "Create Product", icon: PlusCircle },
   { isSeparator: true },
-  { href: "/admin/categories", label: "Categories", icon: Tag },
-  { href: "/admin/flavors", label: "Flavors", icon: Palette },
-  { href: "/admin/decorations", label: "Decorations", icon: Sparkles },
-  { href: "/admin/diameters", label: "Diameters", icon: Scaling },
-  { href: "/admin/allergens", label: "Allergens", icon: TriangleAlert },
-  { href: "/admin/collections", label: "Collections", icon: LayoutGrid },
+  {
+    label: "Catalog/Inventory",
+    href: "/admin/catalog",
+    icon: Database,
+  },
+  {
+    href: "/admin/content",
+    label: "Content",
+    icon: Images,
+  },
   {
     href: "/admin/schedule",
     label: "Schedule Management",
     icon: Calendar,
   },
+  {
+    href: "/admin/seasonals",
+    label: "Seasonal Events",
+    icon: SunSnow,
+  },
+  {
+    href: "/admin/discounts",
+    label: "Discounts",
+    icon: BadgePercent,
+  },
+  {
+    href: "/admin/blogs",
+    label: "Your Blog",
+    icon: Newspaper,
+  },
+  {
+    href: "/admin/settings",
+    label: "Settings",
+    icon: Settings,
+  },
 ];
+
+
 
 const AdminSidebar = ({ isOpen, onClose }: SidebarProps) => {
   const pathname = usePathname();
+  const [newCustomRequestsCount, setNewCustomRequestsCount] = React.useState(0);
+  const [newOrdersCount, setNewOrdersCount] = React.useState(0);
+
+  React.useEffect(() => {
+    const fetchCounts = async () => {
+      try {
+        // 1. Custom Orders
+        const customRes = await fetch("/api/custom-orders");
+        if (customRes.ok) {
+          const customOrders = await customRes.json();
+          const newCustomCount = customOrders.filter((o: any) => o.status === 'new').length;
+          setNewCustomRequestsCount(newCustomCount);
+        }
+
+        // 2. Regular Orders
+        const ordersRes = await fetch("/api/admin/orders");
+        if (ordersRes.ok) {
+            const orders = await ordersRes.json();
+            // Count "new" and "pending_confirmation" as actionable
+            const newOrderCount = orders.filter((o: any) => 
+                o.status === 'new' || o.status === 'pending_confirmation'
+            ).length;
+            setNewOrdersCount(newOrderCount);
+        }
+
+      } catch (error) {
+        console.error("Failed to fetch sidebar counts", error);
+      }
+    };
+
+    fetchCounts();
+    // Optional: Poll every 60s
+    const interval = setInterval(fetchCounts, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <aside
@@ -61,7 +139,7 @@ const AdminSidebar = ({ isOpen, onClose }: SidebarProps) => {
       <div className="flex h-full flex-col p-md overflow-y-auto">
         {" "}
         <div className="flex items-center justify-between mb-lg">
-          <Link href="/admin/dashboard" onClick={onClose}>
+          <Link href="/admin/" onClick={onClose}>
             <h1 className="font-heading text-h3 text-white">Admin Panel</h1>
           </Link>
           <button
@@ -90,13 +168,28 @@ const AdminSidebar = ({ isOpen, onClose }: SidebarProps) => {
                     href={item.href}
                     onClick={onClose}
                     className={cn(
-                      "flex items-center gap-sm rounded-medium p-sm font-body text-body text-white/80 transition-colors",
+                      "flex items-center justify-between gap-sm rounded-medium p-sm font-body text-body text-white/80 transition-colors",
                       "hover:bg-white/10 hover:text-white",
                       isActive && "bg-accent text-white"
                     )}
                   >
-                    <Icon className="h-5 w-5 shrink-0" />
-                    <span>{item.label}</span>
+                    <div className="flex items-center gap-sm">
+                      <Icon className="h-5 w-5 shrink-0" />
+                      <span>{item.label}</span>
+                    </div>
+
+                    {/* Badges */}
+                    {item.label === "Custom Requests" &&
+                      newCustomRequestsCount > 0 && (
+                        <span className="bg-accent text-white  text-[15px] font-bold px-2 rounded-full shadow-sm">
+                          {newCustomRequestsCount}
+                        </span>
+                      )}
+                    {item.label === "Orders" && newOrdersCount > 0 && (
+                      <span className="bg-accent text-white text-[15px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+                        {newOrdersCount}
+                      </span>
+                    )}
                   </Link>
                 </li>
               );

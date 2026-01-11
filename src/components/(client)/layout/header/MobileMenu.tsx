@@ -1,11 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { X, LogOut, UserCircle, Phone, PencilRuler } from "lucide-react";
-import { User } from "@/types";
+import { User, Collection } from "@/types";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
+import SearchInput from "./SearchInput";
+import HeaderLogo from "@/components/ui/HeaderLogo";
+import { useActiveSeasonal } from "@/hooks/useActiveSeasonal";
+import { Sparkles, ArrowRight } from "lucide-react";
 
 interface MobileMenuProps {
   isOpen: boolean;
@@ -24,6 +28,23 @@ const MobileMenu = ({
   user,
   handleLogout,
 }: MobileMenuProps) => {
+  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
+  const { activeEvent } = useActiveSeasonal();
+  const [collections, setCollections] = useState<Collection[]>([]);
+
+  useEffect(() => {
+    const fetchCollections = async () => {
+      try {
+        const res = await fetch("/api/collections");
+        if (res.ok) {
+          setCollections(await res.json());
+        }
+      } catch (error) {
+        console.error("Failed to fetch collections:", error);
+      }
+    };
+    fetchCollections();
+  }, []);
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
@@ -57,27 +78,107 @@ const MobileMenu = ({
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        <div className="flex justify-end p-md border-b border-border">
-          <button onClick={onClose} aria-label="Close menu">
+        <div className="relative flex items-center justify-between p-md border-b border-border h-16">
+          {/* Left: Search Input */}
+          <div className="z-10">
+            <SearchInput
+              onExpandChange={setIsSearchExpanded}
+              className={cn(
+                "flex",
+                isSearchExpanded ? "w-[70vw] sm:w-80" : "w-10"
+              )}
+            />
+          </div>
+
+          <div
+            className={cn(
+              "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transition-all duration-300 ease-in-out",
+              isSearchExpanded
+                ? "opacity-0 scale-90 pointer-events-none"
+                : "opacity-100 scale-100"
+            )}
+          >
+            <HeaderLogo />
+          </div>
+
+          <button
+            onClick={onClose}
+            aria-label="Close menu"
+            className="shrink-0 z-10 p-2 rounded-full hover:bg-subtleBackground transition-colors"
+          >
             <X className="h-6 w-6 text-primary" />
           </button>
         </div>
         <nav className="flex-grow overflow-y-auto p-lg">
-          <h3 className="font-heading text-h3 text-primary mb-md">
-            Categories
-          </h3>
-          <ul className="flex flex-col w-full">
-            {categories.map((link) => (
-              <li key={link.href} className="w-full">
+          <ul className="flex flex-col w-full space-y-md">
+            <li className="w-full">
+              <Link
+                href={`/products`}
+                onClick={onClose}
+                className="text-md text-primary hover:text-accent hover:bg-subtleBackground text-center rounded p-2 transition-colors truncate font-bold"
+              >
+                Full Menu
+              </Link>
+            </li>
+            {activeEvent && (
+              <li className="w-full">
                 <Link
-                  href={link.href}
+                  href={`/specials/${activeEvent.slug}`}
                   onClick={onClose}
-                  className="block w-full rounded-medium p-md font-heading text-xl text-primary hover:bg-subtleBackground transition-colors"
+                  className="block w-full rounded-medium p-md bg-gradient-to-r from-accent/20 to-transparent border border-accent/20"
                 >
-                  {link.name}
+                  <div className="flex items-center gap-sm mb-1 text-accent font-bold">
+                    <Sparkles className="h-4 w-4" />
+                    <span>{activeEvent.name}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-primary font-heading text-lg">
+                    <span>Shop Specials</span>
+                    <ArrowRight className="h-4 w-4" />
+                  </div>
                 </Link>
               </li>
-            ))}
+            )}
+
+            <li>
+              <p className="text-sm font-bold text-primary/50 uppercase tracking-wider mb-2 px-md">
+                Categories
+              </p>
+              <ul className="flex flex-col w-full">
+                {categories.map((link) => (
+                  <li key={link.href} className="w-full">
+                    <Link
+                      href={link.href}
+                      onClick={onClose}
+                      className="block w-full rounded-medium p-md font-heading text-xl text-primary hover:bg-subtleBackground transition-colors"
+                    >
+                      {link.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </li>
+
+            {/* Collections */}
+            {collections.length > 0 && (
+              <li>
+                <p className="text-sm font-bold text-primary/50 uppercase tracking-wider mb-2 px-md mt-4">
+                  Collections
+                </p>
+                <ul className="flex flex-col w-full">
+                  {collections.map((col) => (
+                    <li key={col._id.toString()} className="w-full">
+                      <Link
+                        href={`/products/collections/${col.slug}`}
+                        onClick={onClose}
+                        className="block w-full rounded-medium p-md font-heading text-xl text-primary hover:bg-subtleBackground transition-colors"
+                      >
+                        {col.name}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            )}
           </ul>
           <hr className="w-full my-lg border-border" />
           <ul className="flex flex-col w-full">
@@ -132,10 +233,12 @@ const MobileMenu = ({
             )}
           </ul>
           <div className="mt-xl">
-            <Button variant="secondary" className="w-full">
-              <PencilRuler className="h-4 w-4 mr-sm" />
-              Create a Custom Cake
-            </Button>
+            <Link href="/custom-order" onClick={onClose}>
+              <Button variant="secondary" className="w-full">
+                <PencilRuler className="h-4 w-4 mr-sm" />
+                Create a Custom Cake
+              </Button>
+            </Link>
           </div>
         </nav>
       </div>

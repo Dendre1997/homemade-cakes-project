@@ -21,7 +21,11 @@ interface NewOrderEmailProps {
   order: Order;
 }
 
-const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+const baseUrl = process.env.NEXT_PUBLIC_API_URL
+  ? process.env.NEXT_PUBLIC_API_URL
+  : process.env.VERCEL_URL
+  ? `https://${process.env.VERCEL_URL}`
+  : "http://localhost:3000";
 
 export const NewOrderEmail = ({ order }: NewOrderEmailProps) => (
   <Html>
@@ -59,6 +63,60 @@ export const NewOrderEmail = ({ order }: NewOrderEmailProps) => (
           <Text style={details}>
             <strong>Phone:</strong> {order.customerInfo.phone}
           </Text>
+
+          <Hr style={hr} />
+
+          {/* Delivery Details */}
+          <Heading as="h2" style={sectionHeading}>
+            Delivery Details
+          </Heading>
+          <Text style={details}>
+            <strong>Method:</strong>{" "}
+            {order.deliveryInfo.method === "delivery" ? "Delivery 🚚" : "Pickup 🏪"}
+          </Text>
+          {order.deliveryInfo.method === "delivery" && order.deliveryInfo.address && (
+            <Text style={details}>
+              <strong>Address:</strong> {order.deliveryInfo.address}
+            </Text>
+          )}
+
+          <Text style={{ ...details, marginTop: "12px", marginBottom: "8px" }}>
+            <strong>Schedule:</strong>
+          </Text>
+          {order.deliveryInfo.deliveryDates.map((dateInfo, index) => (
+            <Section
+              key={index}
+              style={{
+                marginBottom: "12px",
+                paddingLeft: "12px",
+                borderLeft: "2px solid #C58C5F",
+              }}
+            >
+              <Text style={{ ...details, fontWeight: "bold", margin: "0" }}>
+                {new Date(dateInfo.date).toLocaleDateString("en-US", {
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
+                })}{" "}
+                @ {dateInfo.timeSlot}
+              </Text>
+              {dateInfo.itemIds.length > 0 && (
+                <Text
+                  style={{
+                    ...itemText,
+                    fontSize: "14px",
+                    color: "rgba(74, 46, 44, 0.7)",
+                    marginTop: "4px",
+                  }}
+                >
+                  {order.items
+                    .filter((i) => dateInfo.itemIds.includes(i.id))
+                    .map((i) => i.name)
+                    .join(", ")}
+                </Text>
+              )}
+            </Section>
+          ))}
 
           <Hr style={hr} />
 

@@ -5,7 +5,8 @@ import clientPromise from "@/lib/db";
 
 export async function GET() {
   try {
-    const sessionCookie = cookies().get("session")?.value;
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get("session")?.value;
     if (!sessionCookie)
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

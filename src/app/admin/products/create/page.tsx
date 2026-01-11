@@ -7,7 +7,6 @@ import {
   Diameter,
   Allergen,
   ProductCategory,
-  Product,
   ProductFormData,
   Collection
 } from "@/types";
@@ -112,12 +111,12 @@ const CreateProductPage = () => {
         if (!response.ok) {
           throw new Error("Failed to create product");
         }
-
-        alert("Product created successfully!");
+        
+        // Alert handled by ProductForm
         router.push("/admin/products");
       } catch (error) {
         console.error("Error creating product:", error);
-        alert("Something went wrong!");
+        throw error; // Propagate to ProductForm
       }
     },
     [router] // Dependency for router.push

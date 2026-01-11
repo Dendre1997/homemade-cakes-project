@@ -1,16 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server';
+import {  NextResponse } from 'next/server';
 import clientPromise from '@/lib/db';
 import { ObjectId } from 'mongodb';
-import cloudinary from "@/lib/cloudinary";
-import { getPublicIdFromUrl } from "@/lib/cloudinaryUtils";
 interface Context {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 
 export async function GET(_request: Request, { params }: Context) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
     const flavor = await db

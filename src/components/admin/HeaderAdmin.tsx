@@ -23,7 +23,7 @@ const AdminHeader = ({ onToggleSidebar, title }: AdminHeaderProps) => {
   };
 
   return (
-    <header className="sticky top-0 z-30 w-full bg-background border-b border-border">
+    <header className="w-full bg-background border-b border-border">
       <div className="flex items-center justify-between p-md">
         <div className="flex items-center gap-md">
           <button

@@ -1,11 +1,11 @@
 "use client";
 
 import { Order, OrderStatus, CartItem, ScheduleSettings } from "@/types";
-import { format, isSameDay, startOfDay } from "date-fns";
+import { format } from "date-fns";
 import { OrderAssignmentDatePicker } from "@/components/admin/OrderAssignmentDatePicker";
 import LoadingSpinner from "@/components/ui/Spinner";
 import { Button } from "@/components/ui/Button";
-import { extractOriginalItemId } from "@/lib/utils";
+import { extractOriginalItemId } from "../../../lib/utils";
 import {
   Select,
   SelectTrigger,
@@ -216,10 +216,10 @@ export const OrderDetailActions = ({
                       </span>
                     </p>
                   )}
-                  <div className="flex gap-md">
+                  <div className="flex-col">
                     <Button
                       onClick={handleSaveSingleDate}
-                      className="flex-1"
+                      className="w-full mb-1"
                       variant="primary"
                       disabled={
                         !adminSelectedSingleDate ||
@@ -231,8 +231,8 @@ export const OrderDetailActions = ({
                     </Button>
                     <Button
                       onClick={handleToggleEditDates}
-                      className="flex-1"
-                      variant="secondary"
+                        variant="secondary"
+                        className="w-full"
                       disabled={isConfirmingDate || isLoading}
                     >
                       Cancel Edit

@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import Image from "next/image";
 import { useAlert } from "@/contexts/AlertContext";
 import { cn } from "@/lib/utils";
-import { X, CheckCircle, AlertTriangle, XCircle } from "lucide-react";
+import { X, AlertTriangle, XCircle } from "lucide-react";
 
 const iconMap = {
   success: (

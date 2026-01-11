@@ -15,7 +15,8 @@ import ProductForm from "@/components/admin/ProductForm";
 import LoadingSpinner from "@/components/ui/Spinner";
 import { useConfirmation } from "@/contexts/ConfirmationContext";
 import { useAlert } from "@/contexts/AlertContext";
-
+import { Button } from "@/components/ui/Button";
+import { ArrowLeft } from "lucide-react";
 // Handles fetching all data for editing a product, including 
 // dependent data (flavors, diameters etc..) that changes base on category
 
@@ -129,12 +130,12 @@ const EditProductPage = () => {
         throw new Error("Failed to update product");
       }
 
-      showAlert("Product updated successfully!", 'success');
+      // Alert handled by ProductForm
       router.push("/admin/products");
       router.refresh();
     } catch (err) {
-      if (err instanceof Error) alert(`Error: ${err.message}`);
       console.error(err);
+      throw err; // Propagate to ProductForm
     }
   };
 
@@ -144,9 +145,18 @@ const EditProductPage = () => {
 
   return (
     <section>
+      <div className="flex justify-between mb-1">
+                <Button 
+                  variant="ghost" 
+                  className="gap-2 pl-0 text-muted-foreground hover:text-foreground" 
+                  onClick={() => router.push('/admin/products')}
+                >
+                   <ArrowLeft className="w-4 h-4" /> Back to Products
+        </Button>
       <h1 className="text-3xl font-heading mb-6">
         Edit Product: {product?.name}
       </h1>
+        </div>
       {product && (
         <ProductForm
           existingProduct={product}

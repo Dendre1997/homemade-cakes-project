@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import clientPromise from "@/lib/db";
 import { ProductCategory } from "@/types";
 import { slugify } from "@/lib/utils";
@@ -8,7 +9,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    const { name, manufacturingTimeInMinutes }: Partial<ProductCategory> = body;
+    const { name, manufacturingTimeInMinutes, imageUrl }: Partial<ProductCategory> = body;
 
     if (!name) {
       return NextResponse.json(
@@ -25,9 +26,12 @@ export async function POST(request: NextRequest) {
       name,
       slug,
       manufacturingTimeInMinutes: Number(manufacturingTimeInMinutes) || 0,
+      imageUrl: imageUrl || "",
     };
 
     const result = await db.collection("categories").insertOne(newCategoryData);
+
+    revalidatePath("/", "page");
 
     return NextResponse.json(
       {

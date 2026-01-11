@@ -4,7 +4,7 @@ export const theme = {
     primary: "#231416", // Used for links and buttons.
     background: "#f6dcda", // The main background color for all pages.
     subtleBackground: "#cea3a6", // Used for the header, footer, and sidebar. // Accents & Text
-
+    primaryDark: "#070505ff",
     accent: "#2f1b23", // Used for icons, sale tags, and secondary buttons.
     text: "#764a4d", // The default color for all text (headings, paragraphs, etc.).
     textOnPrimary: "#faded2", // Used exclusively for text on a 'primary' color background. // UI Elements

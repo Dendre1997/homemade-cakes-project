@@ -46,7 +46,7 @@ export const MiniCart = ({ isOpen, onClose }: MiniCartProps) => {
         "absolute top-full right-lg z-50 w-80 max-w-sm rounded-medium border border-border bg-card-background shadow-lg transition-all duration-300 ease-in-out overflow-hidden",
         isOpen
           ? "opacity-100 translate-y-0"
-          : "opacity-0 -translate-y-4 pointer-events-none"
+          : "opacity-0 -translate-y-0 pointer-events-none"
       )}
     >
 
@@ -89,9 +89,22 @@ export const MiniCart = ({ isOpen, onClose }: MiniCartProps) => {
                   Qty: {lastItemAdded.quantity}
                 </p>
               </div>
-              <p className="font-body font-semibold text-primary">
-                ${(lastItemAdded.price * lastItemAdded.quantity).toFixed(2)}
-              </p>
+              <div className="text-right">
+                {lastItemAdded.originalPrice ? (
+                  <>
+                    <p className="text-xs text-gray-400 line-through">
+                      ${(lastItemAdded.originalPrice * lastItemAdded.quantity).toFixed(2)}
+                    </p>
+                    <p className="font-body font-semibold text-error">
+                      ${(lastItemAdded.price * lastItemAdded.quantity).toFixed(2)}
+                    </p>
+                  </>
+                ) : (
+                  <p className="font-body font-semibold text-primary">
+                    ${(lastItemAdded.price * lastItemAdded.quantity).toFixed(2)}
+                  </p>
+                )}
+              </div>
             </div>
 
             <div className="mt-md flex gap-sm">

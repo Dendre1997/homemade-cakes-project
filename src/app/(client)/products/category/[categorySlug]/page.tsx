@@ -1,6 +1,7 @@
 import ProductCard from "@/components/(client)/ProductCard";
 import { ProductWithCategory, ProductCategory } from "@/types";
 import { notFound } from "next/navigation";
+import { getActiveDiscounts } from "@/lib/data";
 
 
 const baseUrl = process.env.NEXT_PUBLIC_API_URL;
@@ -34,15 +35,16 @@ async function getProductsByCategory(categoryId: string) {
 const CategoryPage = async ({
   params,
 }: {
-  params: { categorySlug: string };
+  params: Promise<{ categorySlug: string }>;
 }) => {
-  const category: ProductCategory = await getCategoryBySlug(
-    params.categorySlug
-  );
+  const { categorySlug } = await params;
+  const category: ProductCategory = await getCategoryBySlug(categorySlug);
 
   const products: ProductWithCategory[] = await getProductsByCategory(
     category._id
   );
+
+  const discounts = await getActiveDiscounts();
 
   return (
     <div className="bg-background min-h-screen">
@@ -58,7 +60,7 @@ const CategoryPage = async ({
         {products.length > 0 ? (
           <div className="mt-xl grid grid-cols-1 gap-md sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {products.map((product) => (
-              <ProductCard key={product._id} product={product} />
+              <ProductCard key={product._id} product={product} validDiscounts={discounts} />
             ))}
           </div>
         ) : (
