@@ -1,4 +1,4 @@
-"use client"; // 👈 This is the crucial line!
+"use client"; 
 
 import Lottie from "lottie-react";
 import catAnimationData from "@/assets/Loading_Cat _x2.json";

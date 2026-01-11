@@ -12,12 +12,17 @@ const buttonVariants = cva(
           "border border-accent bg-transparent text-accent hover:bg-accent/20",
         text: "text-accent underline-offset-4 hover:underline",
         danger: "bg-error text-white hover:bg-error/90",
+        default: "bg-primary text-text-on-primary shadow hover:opacity-90",
+        outline:
+          "border border-border bg-transparent shadow-sm hover:bg-subtleBackground hover:text-primary",
+        ghost: "hover:bg-subtleBackground hover:text-primary",
       },
       size: {
         default: "py-sm px-lg",
         text: "p-xs",
         sm: "h-9 px-3",
         lg: "h-11 px-8",
+        icon: "h-10 w-10 p-2",
       },
     },
     defaultVariants: {

@@ -20,7 +20,8 @@ export async function POST(request: Request) {
       expiresIn,
     });
 
-    cookies().set("session", sessionCookie, {
+    const cookieStore = await cookies();
+    cookieStore.set("session", sessionCookie, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       maxAge: expiresIn / 1000,

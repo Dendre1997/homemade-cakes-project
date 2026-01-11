@@ -32,6 +32,7 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${playfair.variable} ${montserrat.variable} bg-background`}
+      suppressHydrationWarning
     >
       <body className="font-body bg-background text-text-main h-full min-h-screen">
         <AuthProvider>

@@ -6,11 +6,23 @@ export interface CartItem {
   productId: string;
   categoryId: string;
   name: string;
-  flavor: string;
-  diameterId: string;
+  flavor?: string;
+  flavorId?: string;
+  diameterId?: string;
   price: number;
   quantity: number;
   imageUrl: string;
+  inscription?: string;
+  originalPrice?: number;
+  discountName?: string;
+  selectedConfig?: {
+    items?: { flavorId: string; count: number }[];
+    cake?: {
+      flavorId: string;
+      diameterId: string;
+      inscription?: string;
+    };
+  };
 }
 
 interface CartState {
@@ -24,8 +36,16 @@ interface CartState {
   lastItemAdded: CartItem | null;
   openMiniCart: () => void;
   closeMiniCart: () => void;
-}
+  discountTotal: number;
+  discountCode: string | null;
+  discountName: string | null;
 
+  setDiscount: (
+    amount: number,
+    code: string | null,
+    name: string | null
+  ) => void;
+}
 
 export const useCartStore = create<CartState>()(
   persist(
@@ -34,9 +54,20 @@ export const useCartStore = create<CartState>()(
       isMiniCartOpen: false,
       lastItemAdded: null,
 
+      // Ініціалізація
+      discountTotal: 0,
+      discountCode: null,
+      discountName: null,
+
       addItem: (itemToAdd) => {
         const items = get().items;
         const existingItem = items.find((item) => item.id === itemToAdd.id);
+
+        const newState = {
+          discountTotal: 0,
+          discountCode: null,
+          discountName: null,
+        };
 
         if (existingItem) {
           const updatedItems = items.map((item) =>
@@ -48,12 +79,14 @@ export const useCartStore = create<CartState>()(
             items: updatedItems,
             isMiniCartOpen: true,
             lastItemAdded: itemToAdd,
+            ...newState,
           });
         } else {
           set({
             items: [...items, itemToAdd],
             isMiniCartOpen: true,
             lastItemAdded: itemToAdd,
+            ...newState,
           });
         }
       },
@@ -61,6 +94,8 @@ export const useCartStore = create<CartState>()(
       removeItem: (itemId) =>
         set((state) => ({
           items: state.items.filter((item) => item.id !== itemId),
+          discountTotal: 0, 
+          discountCode: null,
         })),
 
       increaseQuantity: (itemId: string) => {
@@ -68,6 +103,7 @@ export const useCartStore = create<CartState>()(
           items: state.items.map((item) =>
             item.id === itemId ? { ...item, quantity: item.quantity + 1 } : item
           ),
+          discountTotal: 0,
         }));
       },
 
@@ -79,18 +115,27 @@ export const useCartStore = create<CartState>()(
                 ? { ...item, quantity: item.quantity - 1 }
                 : item
             )
-            .filter((item) => item.quantity > 0), // Remove item if quantity is 0
+            .filter((item) => item.quantity > 0),
+          discountTotal: 0, // Скидаємо
         }));
       },
 
-      clearCart: () => set({ items: [], lastItemAdded: null }),
+      clearCart: () =>
+        set({
+          items: [],
+          lastItemAdded: null,
+          discountTotal: 0,
+          discountCode: null,
+        }),
       openMiniCart: () => set({ isMiniCartOpen: true }),
       closeMiniCart: () => set({ isMiniCartOpen: false, lastItemAdded: null }),
+
+      setDiscount: (amount, code, name) =>
+        set({ discountTotal: amount, discountCode: code, discountName: name }),
     }),
     {
       name: "cart-storage",
-      partialize: (state) => ({ items: state.items }),
+      partialize: (state) => ({ items: state.items }), 
     }
   )
 );
-

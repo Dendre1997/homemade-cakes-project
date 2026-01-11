@@ -9,6 +9,7 @@ type MultiSelectProps = {
   mode: "multiple";
   selectedIds: string[];
   onToggleId: (id: string) => void;
+  maxSelection?: number;
 };
 
 type SingleSelectProps = {
@@ -20,6 +21,7 @@ type SingleSelectProps = {
 type FlavorSelectorProps = {
   flavors: Flavor[];
   className?: string;
+  hidePrice?: boolean;
 } & (MultiSelectProps | SingleSelectProps);
 
 const FlavorSelector = (props: FlavorSelectorProps) => {
@@ -33,6 +35,11 @@ const FlavorSelector = (props: FlavorSelectorProps) => {
             ? "Available Flavors"
             : "Choose your Flavor"}
         </h3>
+        {props.mode === "multiple" && props.maxSelection && (
+             <span className="text-sm font-medium text-primary/70">
+                 Selected: {props.selectedIds.length} / {props.maxSelection}
+             </span>
+        )}
       </div>
 
       <div className="space-y-xs max-h-96 overflow-y-auto rounded-medium border border-border p-sm custom-scrollbar">
@@ -42,9 +49,21 @@ const FlavorSelector = (props: FlavorSelectorProps) => {
               ? props.selectedIds.includes(flavor._id)
               : props.selectedId === flavor._id;
 
+          const isDisabled = 
+               props.mode === "multiple" && 
+               !isSelected && 
+               props.maxSelection && 
+               props.selectedIds.length >= props.maxSelection;
+
           const handleClick = () => {
             if (props.mode === "multiple") {
-              props.onToggleId(flavor._id);
+                 // Prevent adding if max reached and not already selected
+                if (props.maxSelection && 
+                    props.selectedIds.length >= props.maxSelection && 
+                    !props.selectedIds.includes(flavor._id)) {
+                    return;
+                }
+               props.onToggleId(flavor._id);
             } else {
               props.onSelectId(flavor._id);
             }
@@ -55,12 +74,14 @@ const FlavorSelector = (props: FlavorSelectorProps) => {
               key={flavor._id}
               type="button"
               onClick={handleClick}
+              disabled={!!isDisabled}
               className={cn(
-                "flex w-full items-center gap-md rounded-medium p-md transition-all",
+                "flex w-full items-center gap-md rounded-medium p-md transition-all text-left",
                 "hover:bg-subtleBackground",
                 isSelected
-                  ? "ring-2 ring-accent ring-offset-2 ring-offset-background"
-                  : "border border-border"
+                  ? "ring-2 ring-accent ring-offset-2 ring-offset-background bg-subtleBackground"
+                  : "border border-border",
+                !!isDisabled && "opacity-50 cursor-not-allowed hover:bg-transparent"
               )}
             >
               <div className="relative flex h-16 w-16 flex-shrink-0 items-center justify-center overflow-hidden rounded-medium">
@@ -68,7 +89,7 @@ const FlavorSelector = (props: FlavorSelectorProps) => {
                   src={flavor.imageUrl || "/placeholder-flavor.png"}
                   alt={flavor.name}
                   fill
-                  className="object-cover"
+                  className="object-center"
                 />
                 {isSelected && (
                   <div className="absolute inset-0 flex h-full w-full items-center justify-center bg-accent/70">
@@ -80,9 +101,11 @@ const FlavorSelector = (props: FlavorSelectorProps) => {
                 <span className="font-body font-bold text-primary">
                   {flavor.name}
                 </span>
-                <p className="font-body text-small text-primary/80">
-                  +${flavor.price.toFixed(2)}
-                </p>
+                {!props.hidePrice && flavor.price > 0 && (
+                  <p className="font-body text-small text-primary/80">
+                    +${flavor.price.toFixed(2)}
+                  </p>
+                )}
               </div>
             </button>
           );

@@ -18,7 +18,7 @@ function SortableImage({ url, index, handleRemoveImage }: { url: string, index: 
       style={style}
       {...attributes}
       {...listeners}
-      className={`relative w-24 h-24 rounded-md overflow-hidden border-4 ${
+      className={`relative w-36 h-36 rounded-md overflow-hidden border-4 ${
         index === 0 ? "border-background" : "border-transparent"
       }`}
     >

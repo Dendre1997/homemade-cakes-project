@@ -1,13 +1,27 @@
-"use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import Image from "next/image";
 import Link from "next/link";
-import ProductCard from "@/components/(client)/ProductCard";
-import { Button } from "@/components/ui/Button";
-import LoadingSpinner from "@/components/ui/Spinner";
-import { Gem, Leaf, Heart } from "lucide-react";
-import TestimonialCard from "@/components/ui/TestimonialCard";
+import HomeCategories from "@/components/(client)/home/HomeCategories";
+import HomeCollections from "@/components/(client)/home/HomeCollections";
+import HeroSlider from "@/components/(client)/home/HeroSlider";
+import {
+  getBestsellers,
+  getActiveFlavors,
+  getLatestBlogs,
+} from "@/lib/db/data";
+import {
+  getActiveDiscounts,
+  getActiveCategories,
+  getActiveCollections,
+  getHeroSlides,
+  getActiveSeasonalEvent,
+  getActiveDiscountedProducts,
+} from "@/lib/data";
+import DiscountShowcase from "@/components/(client)/home/DiscountShowcase";
+import ProductCarousel from "@/components/(client)/home/ProductCarousel";
+import SeasonalHomeBanner from "@/components/(client)/home/SeasonalHomeBanner";
+import BlogCarousel from "@/components/(client)/home/BlogCarousel";
+import { FlavorCarousel } from "@/components/(client)/home/flavors/FlavorCarousel";
+import { VideoBanner } from "@/components/content/VideoBanner";
+import { getVideoBanner } from "@/app/actions/site-content";
 
 const Section = ({
   children,
@@ -27,166 +41,132 @@ const Container = ({
   <div className={`mx-auto max-w-7xl px-lg ${className || ""}`}>{children}</div>
 );
 
+const Homepage = async () => {
+  const [
+    bestsellers,
+    discounts,
+    latestBlogs,
+    categories,
+    collections,
+    heroSlides,
+    activeSeasonalEvent,
+    discountedProducts,
+    activeFlavors,
+    videoBannerContent,
+  ] = await Promise.all([
+    getBestsellers(),
+    getActiveDiscounts(),
+    getLatestBlogs(),
+    getActiveCategories(),
+    getActiveCollections(),
+    getHeroSlides(),
+    getActiveSeasonalEvent(),
+    getActiveDiscountedProducts(),
+    getActiveFlavors(),
+    getVideoBanner(),
+  ]);
 
+  // Filter Flavors
+  const bentoCategoryIds = categories
+    .filter((c) => c.name.toLowerCase().includes("bento"))
+    .map((c) => c._id);
 
-const Homepage = () => {
-  const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
+  const cakeCategoryIds = categories
+    .filter(
+      (c) =>
+        c.name.toLowerCase().includes("cake") &&
+        !c.name.toLowerCase().includes("bento")
+    )
+    .map((c) => c._id);
 
-  const handleNavClick = (e: React.MouseEvent, path: string) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setTimeout(() => router.push(path), 500);
-  };
+  const bentoFlavors = activeFlavors.filter((f) =>
+    f.categoryIds?.some((id) => bentoCategoryIds.includes(id))
+  );
 
-  const featuredProducts = [
-    /* product objects */
-  ];
+  const cakeFlavors = activeFlavors.filter((f) =>
+    f.categoryIds?.some((id) => cakeCategoryIds.includes(id))
+  );
 
-  // Placeholder Version
   return (
     <div className="bg-background font-body text-primary">
-      <section className="relative flex h-[80vh] items-center justify-center text-center text-white">
-        <div className="absolute inset-0 bg-black/40 z-10"></div>
-        <Image
-          src="/placeholderw.jpg"
-          alt="A stunning signature cake"
-          fill
-          className="object-cover"
-          priority
-        />
-        <div className="relative z-20">
-          <h1 className="font-heading text-h1">
-            Handcrafted Cakes for Life`s Sweetest Moments
-          </h1>
-          <div className="mt-lg">
-            <Link
-              href="/products"
-              onClick={(e) => handleNavClick(e, "/products")}
-            >
-              <Button variant="primary" size="lg">
-                View The Catalog
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </section>
-      <Section>
-        <Container className="grid grid-cols-1 gap-xl text-center md:grid-cols-3">
-          <div className="flex flex-col items-center">
-            <Gem className="h-10 w-10 text-accent" />
-            <h3 className="mt-md font-heading text-h3">Unique Recipes</h3>
-            <p className="mt-sm max-w-xs">
-              Every cake is crafted from a time-honored recipe, perfected to
-              create a truly unforgettable taste.
-            </p>
-          </div>
-          <div className="flex flex-col items-center">
-            <Leaf className="h-10 w-10 text-accent" />
-            <h3 className="mt-md font-heading text-h3">Finest Ingredients</h3>
-            <p className="mt-sm max-w-xs">
-              We believe in quality you can taste, using only the freshest,
-              locally-sourced ingredients.
-            </p>
-          </div>
-          <div className="flex flex-col items-center">
-            <Heart className="h-10 w-10 text-accent" />
-            <h3 className="mt-md font-heading text-h3">Made With Love</h3>
-            <p className="mt-sm max-w-xs">
-              Each cake is more than just a dessert-it`s a piece of our heart,
-              baked especially for you.
-            </p>
-          </div>
-        </Container>
-      </Section>
+      <HeroSlider slides={heroSlides} />
 
-      <Section className="border-t border-border">
+      <SeasonalHomeBanner activeEvent={activeSeasonalEvent} />
+      <HomeCollections collections={collections} />
+      <HomeCategories categories={categories} />
+      <VideoBanner content={videoBannerContent} />
+
+      {discountedProducts.length > 0 && (
+        <Section>
+          <Container>
+            <DiscountShowcase
+              products={discountedProducts}
+              validDiscounts={discounts}
+            />
+          </Container>
+        </Section>
+      )}
+
+      <Section>
         <Container>
           <h2 className="text-center font-heading text-h2">Our Bestsellers</h2>
-          <div className="mt-xl grid grid-cols-1 gap-md sm:grid-cols-2 lg:grid-cols-3">
-            {/* <ProductCard product={...} /> */}
-            {/* <ProductCard product={...} /> */}
-            {/* <ProductCard product={...} /> */}
-          </div>
-          <div className="mt-xl text-center">
-            <Link
-              href="/products"
-              onClick={(e) => handleNavClick(e, "/products")}
-            >
-              <Button variant="secondary" size="lg">
-                See The Full Catalog
-              </Button>
-            </Link>
-          </div>
-        </Container>
-      </Section>
-
-      <Section className="bg-accent-secondary/10">
-        <Container>
-          <h2 className="text-center font-heading text-h2">
-            Winter Wonderland
-          </h2>
-          <div className="mt-xl grid grid-cols-1 gap-md sm:grid-cols-2 lg:grid-cols-3">
-          </div>
-        </Container>
-      </Section>
-
-      <Section>
-        <Container className="grid grid-cols-1 items-center gap-xl md:grid-cols-2">
-          <div className="relative aspect-square w-full overflow-hidden rounded-medium">
-            <Image
-              src="/placeholder.png"
-              alt="A friendly photo of the baker"
-              fill
-              className="object-cover"
+          <div className="mx-auto max-w-7xl">
+            <ProductCarousel
+              products={bestsellers}
+              validDiscounts={discounts}
             />
           </div>
-          <div>
-            <h2 className="font-heading text-h2">Created with Love and Care</h2>
-            <p className="mt-md">
-              At Homemade Cakes, every creation is a piece of our heart. We
-              believe in the magic of traditional baking, using only
-              high-quality ingredients to ensure every bite is a moment of pure
-              joy.
-            </p>
-            <div className="mt-lg">
-              <Link href="/about" onClick={(e) => handleNavClick(e, "/about")}>
-                <Button variant="secondary">Read Our Story</Button>
+        </Container>
+      </Section>
+
+      {/* Latest Articles Section */}
+      {latestBlogs.length > 0 && (
+        <Section className=" border-t border-border">
+          <Container>
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="font-heading text-h2">Latest From The Blog</h2>
+              <Link
+                href="/blog"
+                className="hidden sm:inline-flex text-sm font-bold text-accent hover:underline"
+              >
+                View All
               </Link>
             </div>
-          </div>
-        </Container>
-      </Section>
+            <BlogCarousel blogs={latestBlogs} />
+            <div className="mt-6 text-center sm:hidden">
+              <Link
+                href="/blog"
+                className="text-sm font-bold text-accent hover:underline"
+              >
+                View All Articles
+              </Link>
+            </div>
+          </Container>
+        </Section>
+      )}
 
-      <Section className="border-t border-border">
-        <Container>
-          <h2 className="text-center font-heading text-h2">
-            What Our Customers Are Saying
-          </h2>
-          <div className="grid grid-cols-1 gap-md md:grid-cols-3">
-            <TestimonialCard
-              rating={5}
-              quote="This was the most delicious cake I have ever had! Truly homemade quality and exceptional service."
-              author="Anastasiia P."
-            />
-            <TestimonialCard
-              rating={5}
-              quote="Absolutely perfect for our celebration. The attention to detail and flavor was incredible."
-              author="John D."
-            />
-            <TestimonialCard
-              rating={4}
-              quote="You can taste the quality and the love baked into every single slice. We will definitely be back for more!"
-              author="Sarah L."
-            />
-          </div>
-        </Container>
-      </Section>
+      {/* Bento Flavors */}
+      {bentoFlavors.length > 0 && (
+        <Section className="bg-subtleBackground/30">
+          <Container>
+            <h2 className="text-center font-heading text-h2 mb-lg">
+              Bento Flavors
+            </h2>
+            <FlavorCarousel flavors={bentoFlavors} />
+          </Container>
+        </Section>
+      )}
 
-      {isLoading && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-          <LoadingSpinner />
-        </div>
+      {/* Cake Flavors */}
+      {cakeFlavors.length > 0 && (
+        <Section className="bg-subtleBackground/30 border-t border-border/50">
+          <Container>
+            <h2 className="text-center font-heading text-h2 mb-lg">
+              Cake Flavors
+            </h2>
+            <FlavorCarousel flavors={cakeFlavors} />
+          </Container>
+        </Section>
       )}
     </div>
   );

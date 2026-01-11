@@ -1,9 +1,12 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ProductCategory } from "@/types";
 import { slugify } from "@/lib/utils";
 import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
+import { ImageUploadPreview } from "@/components/admin/ImageUploadPreview";
+import LoadingSpinner from "@/components/ui/Spinner";
+import { useAlert } from "@/contexts/AlertContext";
 
 const FormLabel = ({
   htmlFor,
@@ -19,6 +22,8 @@ const FormLabel = ({
     {children}
   </label>
 );
+
+type CategoryFormData = Omit<ProductCategory, "_id">;
 interface CategoryFormProps {
   existingCategory?: ProductCategory | null;
   onSubmit: (
@@ -39,7 +44,15 @@ const CategoryForm = ({
     name: "",
     slug: "",
     manufacturingTimeInMinutes: 0,
+    imageUrl: "",
   });
+
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [orphanedImageUrl, setOrphanedImageUrl] = useState<string | null>(null);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
 
   useEffect(() => {
     if (existingCategory) {
@@ -48,12 +61,14 @@ const CategoryForm = ({
         slug: existingCategory.slug || "",
         manufacturingTimeInMinutes:
           existingCategory.manufacturingTimeInMinutes || 0,
+        imageUrl: existingCategory.imageUrl || "",
       });
     } else if (!isSubmitting) {
       setFormData({
         name: "",
         slug: "",
         manufacturingTimeInMinutes: 0,
+        imageUrl: "",
       });
     }
   }, [existingCategory, isSubmitting]);
@@ -67,10 +82,66 @@ const CategoryForm = ({
     }
   }, [formData.name, existingCategory]);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    onSubmit(formData);
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    setUploadError(null);
+
+    if (orphanedImageUrl) {
+      fetch("/api/admin/cloudinary-delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ urls: [orphanedImageUrl] }),
+      });
+    }
+
+    const uploadData = new FormData();
+    uploadData.append("file", file);
+    uploadData.append("upload_preset", "homemade_cakes_preset");
+
+    try {
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+        { method: "POST", body: uploadData }
+      );
+      if (!response.ok) throw new Error("Image upload failed.");
+      const result = await response.json();
+
+      setOrphanedImageUrl(result.secure_url);
+      setFormData((prev) => ({ ...prev, imageUrl: result.secure_url }));
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "Upload failed.");
+    } finally {
+      setIsUploading(false);
+    }
   };
+
+  
+  const handleCropSave = (newUrl: string) => {
+    // Update the form state with the new URL
+    setFormData((prev) => ({ ...prev, imageUrl: newUrl }));
+  };
+
+  const handleImageRemove = () => {
+    if (orphanedImageUrl) {
+      fetch("/api/admin/cloudinary-delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ urls: [orphanedImageUrl] }),
+      });
+      setOrphanedImageUrl(null);
+    }
+    setFormData((prev) => ({ ...prev, imageUrl: "" }));
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  e.preventDefault();
+  setOrphanedImageUrl(null);
+  onSubmit(formData);
+};
 
   return (
     <form
@@ -104,7 +175,11 @@ const CategoryForm = ({
         <Input
           id="manufacturingTime"
           type="number"
-          value={formData.manufacturingTimeInMinutes}
+          value={
+            formData.manufacturingTimeInMinutes === 0
+              ? ""
+              : formData.manufacturingTimeInMinutes
+          }
           onChange={(e) =>
             setFormData({
               ...formData,
@@ -117,6 +192,47 @@ const CategoryForm = ({
           Time required to prepare one item from this category.
         </p>
       </div>
+
+      <div>
+        <FormLabel htmlFor="image">Category Image</FormLabel>
+        <ImageUploadPreview
+          imagePreview={formData.imageUrl || null}
+          isUploading={isUploading}
+          onRemove={handleImageRemove}
+          containerClassName="h-48 w-full"
+          allowPositioning={true}
+          // imageFit="object-cover"
+          onCropSave={handleCropSave}
+        />
+        <Input
+          id="image"
+          type="file"
+          accept="image/*"
+          onChange={handleImageUpload}
+          className="hidden"
+          ref={fileInputRef}
+          disabled={isUploading}
+        />
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() => fileInputRef.current?.click()}
+          className="mt-sm"
+          disabled={isUploading}
+        >
+          {isUploading ? (
+            <p>Uploading...</p>
+          ) : formData.imageUrl ? (
+            "Change Image"
+          ) : (
+            "Upload Image"
+          )}
+        </Button>
+        {uploadError && (
+          <p className="text-error text-small mt-sm">{uploadError}</p>
+        )}
+      </div>
+
       <div>
         <Button
           type="submit"

@@ -4,10 +4,10 @@ import { ObjectId } from "mongodb";
 
 export async function GET(
   _request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
     const allergen = await db
@@ -31,10 +31,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const { name } = await request.json();
     if (!name) {
       return NextResponse.json({ error: "Name is required" }, { status: 400 });
@@ -62,10 +62,10 @@ export async function PUT(
 // DELETE
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = params.id;
+    const { id } = (await params) as { id: string };
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
 

@@ -5,10 +5,10 @@ import { ObjectId } from 'mongodb';
 
 export async function GET(
   _request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = params.id;
+    const { id } = await params;
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
 
@@ -36,10 +36,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = params.id;
+    const { id } = await params;
     const { sizeValue, categoryIds, name, servings, illustration } =
       await request.json();
 
@@ -89,10 +89,10 @@ export async function PUT(
 
 export async function DELETE(
   _request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = params.id;
+    const { id } = await params;
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
 

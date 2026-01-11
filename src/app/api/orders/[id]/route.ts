@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { adminAuth } from "@/lib/firebase/adminApp";
 import clientPromise from "@/lib/db";
 import { ObjectId } from "mongodb";
+import { OrderStatus } from "@/types";
 
 interface Context {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export async function GET(_request: Request, { params }: Context) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
 
@@ -32,8 +35,31 @@ export async function GET(_request: Request, { params }: Context) {
 
 export async function PUT(request: NextRequest, { params }: Context) {
   try {
-    const { id } = params;
-    const { status } = await request.json(); // getting from request body just new status
+    // -- 1. Security Check (Admin Only) --
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get("session")?.value;
+    if (!sessionCookie) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const decodedToken = await adminAuth
+       .verifySessionCookie(sessionCookie, true)
+       .catch(() => null);
+
+    if (!decodedToken) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const client = await clientPromise;
+    const db = client.db(process.env.MONGODB_DB_NAME);
+    
+    // Check DB role
+    const user = await db.collection("users").findOne({ firebaseUid: decodedToken.uid });
+    if (!user || user.role !== 'admin') {
+         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const { id } = await params;
+    const { status } = await request.json();
 
     // Validation
     if (!status) {
@@ -42,10 +68,16 @@ export async function PUT(request: NextRequest, { params }: Context) {
         { status: 400 }
       );
     }
-    // TODO: Add more complex validation
+    
+    // Validate Status Enum
+    const validStatuses = Object.values(OrderStatus);
+    if (!validStatuses.includes(status)) {
+        return NextResponse.json(
+            { error: `Invalid status. Must be one of: ${validStatuses.join(", ")}` },
+            { status: 400 }
+        );
+    }
 
-    const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB_NAME);
     const result = await db.collection("orders").updateOne(
       { _id: new ObjectId(id) },
       { $set: { status: status } } 

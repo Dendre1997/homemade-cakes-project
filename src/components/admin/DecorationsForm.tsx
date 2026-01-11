@@ -11,7 +11,7 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/Select";
-import { ImageUploadPreview } from "@/components/ui/ImageUploadPreview";
+import { ImageUploadPreview } from "@/components/admin/ImageUploadPreview";
 import LoadingSpinner from "@/components/ui/Spinner";
 import { useAlert } from "@/contexts/AlertContext";
 import { X } from "lucide-react";
@@ -63,6 +63,7 @@ const DecorationsForm = ({
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [orphanedImageUrl, setOrphanedImageUrl] = useState<string | null>(null);
+  const [imagePos, setImagePos] = useState({ x: 50, y: 50 });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -236,7 +237,10 @@ const DecorationsForm = ({
           isUploading={isUploading}
           onRemove={handleImageRemove}
           containerClassName="h-48 w-full"
-          imageFit="object-contain"
+          // allowPositioning={true}
+          // imageFit="object-cover"
+          // imagePosition={imagePos}
+          // onPositionChange={setImagePos}
         />
         <Input
           id="image-upload"

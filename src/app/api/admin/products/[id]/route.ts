@@ -1,23 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidatePath } from "next/cache";
 import clientPromise from '@/lib/db';
 import { ObjectId } from 'mongodb';
 import cloudinary from "@/lib/cloudinary";
 import { getPublicIdFromUrl } from "@/lib/cloudinaryUtils";
+import { generateSlug, isValidObjectId } from '../../../../../lib/utils';
 interface Context {
-    params: { id: string }
+    params: Promise<{ id: string }>
 }
 
 
 export async function GET(_request: Request, { params }: Context) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
+    
+    const query = isValidObjectId(id) ? { _id: new ObjectId(id) } : { slug: id };
 
     const products = await db
       .collection("products")
       .aggregate([
-        { $match: { _id: new ObjectId(id) } },
+        { $match: query },
         {
           $lookup: {
             from: "categories",
@@ -42,6 +46,22 @@ export async function GET(_request: Request, { params }: Context) {
             as: 'availableDiameters'
           }
         },
+        {
+          $lookup: {
+            from: 'collections',
+            localField: 'collectionIds',
+            foreignField: '_id',
+            as: 'collections'
+          }
+        },
+         {
+          $lookup: {
+            from: 'seasonals',
+            localField: 'seasonalEventIds',
+            foreignField: '_id',
+            as: 'seasonalEvents'
+          }
+        },
         { $unwind: { path: "$category", preserveNullAndEmptyArrays: true } },
       ])
       .toArray();
@@ -60,12 +80,13 @@ export async function GET(_request: Request, { params }: Context) {
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const client = await clientPromise;
   const db = client.db(process.env.MONGODB_DB_NAME);
+
   try {
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
     const collection = db.collection("products");
 
@@ -74,32 +95,105 @@ export async function PUT(
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
 
-    const oldImageUrls: string[] = existingProduct.imageUrls || [];
-    const newImageUrls: string[] = body.imageUrls || [];
-    const imagesToDelete = oldImageUrls.filter(
-      (oldUrl) => !newImageUrls.includes(oldUrl)
-    );
+    if (body.imageUrls !== undefined) {
+      const oldImageUrls: string[] = existingProduct.imageUrls || [];
+      const newImageUrls: string[] = body.imageUrls;
+      const imagesToDelete = oldImageUrls.filter(
+        (oldUrl) => !newImageUrls.includes(oldUrl)
+      );
 
-    if (body.categoryId) body.categoryId = new ObjectId(body.categoryId);
-    if (body.availableFlavorIds)
+      if (imagesToDelete.length > 0) {
+        const publicIds = imagesToDelete
+          .map(getPublicIdFromUrl)
+          .filter((id) => id !== null) as string[];
+
+        if (publicIds.length > 0) {
+          cloudinary.api
+            .delete_resources(publicIds, { invalidate: true })
+            .then((result) => console.log("Deleted old images:", result))
+            .catch((err) =>
+              console.error("Error deleting old images from Cloudinary:", err)
+            );
+        }
+      }
+    }
+
+    // RULE: Auto-set Base Price for Sets
+    // Determine Effective State
+    const effectiveProductType = body.productType || existingProduct.productType;
+    const effectiveComboConfig = body.comboConfig !== undefined ? body.comboConfig : existingProduct.comboConfig;
+    const effectiveQtyConfigs = body.availableQuantityConfigs !== undefined ? body.availableQuantityConfigs : existingProduct.availableQuantityConfigs;
+    
+    // Only recalculate if it's a Set
+    if (effectiveProductType === 'set') {
+         
+         if (body.structureBasePrice !== undefined) {
+             let userInputPrice = Number(body.structureBasePrice) || 0;
+             const firstBoxPrice = (effectiveQtyConfigs && effectiveQtyConfigs.length > 0) 
+                ? Number(effectiveQtyConfigs[0].price) || 0 
+                : 0;
+             
+             if (effectiveComboConfig && effectiveComboConfig.hasCake) {
+                 // Combo: Input + Box
+                 body.structureBasePrice = userInputPrice + firstBoxPrice;
+             } else {
+                 // Simple: Box only
+                 body.structureBasePrice = firstBoxPrice;
+             }
+         }
+    }
+
+    if (body.categoryId) body.categoryId = new ObjectId(String(body.categoryId));
+    if (body.availableFlavorIds) {
       body.availableFlavorIds = body.availableFlavorIds.map(
         (id: string) => new ObjectId(id)
       );
-    if (body.allergenIds)
+    }
+    if (body.allergenIds) {
       body.allergenIds = body.allergenIds.map((id: string) => new ObjectId(id));
+    }
     if (body.availableDiameterConfigs) {
       body.availableDiameterConfigs = body.availableDiameterConfigs.map(
         (config: any) => ({
           ...config,
-          diameterId: new ObjectId(config.diameterId),
+          diameterId: new ObjectId(String(config.diameterId)),
         })
       );
     }
-    
     if (body.collectionIds) {
       body.collectionIds = body.collectionIds.map(
         (id: string) => new ObjectId(id)
       );
+    }
+    
+    // Convert Combo Config IDs if present
+    if (body.comboConfig) {
+        if (body.comboConfig.cakeFlavorIds) {
+            body.comboConfig.cakeFlavorIds = body.comboConfig.cakeFlavorIds.map(
+                (id: string) => new ObjectId(id)
+            );
+        }
+        if (body.comboConfig.cakeDiameterIds) {
+            body.comboConfig.cakeDiameterIds = body.comboConfig.cakeDiameterIds.map(
+                (id: string) => new ObjectId(id)
+            );
+        }
+    }
+
+    // SLUG LOGIC (Immutable by default)
+    // If body contains a slug, we use it (Manual Override).
+    // If body does NOT contain a slug, we do NOT regenerate it, even if name changes.
+    // However, we must ensure uniqueness if it IS provided.
+    if (body.slug) {
+         let slug = body.slug;
+         // Normalize
+         slug = generateSlug(slug);
+         
+         const existing = await collection.findOne({ slug: slug, _id: { $ne: new ObjectId(id) } });
+         if (existing) {
+             return NextResponse.json({ error: "Slug already currently in use" }, { status: 409 });
+         }
+         body.slug = slug;
     }
 
     const result = await collection.updateOne(
@@ -111,21 +205,7 @@ export async function PUT(
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
 
-    if (imagesToDelete.length > 0) {
-      const publicIds = imagesToDelete
-        .map(getPublicIdFromUrl)
-        .filter((id) => id !== null) as string[];
-
-      if (publicIds.length > 0) {
-        cloudinary.api
-          .delete_resources(publicIds, { invalidate: true })
-          .then((result) => console.log("Deleted old images:", result))
-          .catch((err) =>
-            console.error("Error deleting old images from Cloudinary:", err)
-          );
-      }
-    }
-
+    revalidatePath("/", "page");
     return NextResponse.json({ message: "Product updated successfully" });
   } catch (error) {
     console.error("Error updating product:", error);
@@ -140,10 +220,10 @@ export async function PUT(
 
 export async function DELETE(
   _request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
     const productsCollection = db.collection("products");
@@ -176,6 +256,8 @@ export async function DELETE(
         { status: 404 }
       );
     }
+
+    revalidatePath("/", "page");
 
     return NextResponse.json({
       message: "Product and associated images deleted successfully",

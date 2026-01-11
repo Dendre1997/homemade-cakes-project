@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import clientPromise from "@/lib/db";
 import { ObjectId } from "mongodb";
+import { getPublicIdFromUrl } from "@/lib/cloudinaryUtils";
+import cloudinary from "@/lib/cloudinary";
 
 export async function GET(
   _request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
     const category = await db
@@ -31,34 +34,59 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
-    const { name, slug, manufacturingTimeInMinutes } = await request.json();
-    if (!name) {
+    const { id } = await params;
+    const { name, manufacturingTimeInMinutes, imageUrl } = await request.json();
+
+    if (!name)
       return NextResponse.json({ error: "Name is required" }, { status: 400 });
-    }
+
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
-    const result = await db
-      .collection("categories")
-      .updateOne(
-        { _id: new ObjectId(id) },
-        {
-          $set: {
-            name,
-            slug,
-            manufacturingTimeInMinutes: Number(manufacturingTimeInMinutes) || 0,
-          },
-        }
-      );
-    if (result.matchedCount === 0) {
+    const collection = db.collection("categories");
+
+    const existingCategory = await collection.findOne({
+      _id: new ObjectId(id),
+    });
+    if (!existingCategory)
       return NextResponse.json(
         { error: "Category not found" },
         { status: 404 }
       );
+
+    const oldImageUrl = existingCategory.imageUrl;
+    let finalImageUrl = oldImageUrl;
+
+    if (imageUrl === "") {
+      if (oldImageUrl) {
+        const publicId = getPublicIdFromUrl(oldImageUrl);
+        if (publicId)
+          cloudinary.uploader.destroy(publicId, { invalidate: true });
+      }
+      finalImageUrl = "";
+    } else if (imageUrl && imageUrl !== oldImageUrl) {
+      if (oldImageUrl) {
+        const publicId = getPublicIdFromUrl(oldImageUrl);
+        if (publicId)
+          cloudinary.uploader.destroy(publicId, { invalidate: true });
+      }
+      finalImageUrl = imageUrl;
     }
+
+    const result = await collection.updateOne(
+      { _id: new ObjectId(id) },
+      {
+        $set: {
+          name,
+          manufacturingTimeInMinutes: Number(manufacturingTimeInMinutes) || 0,
+          imageUrl: finalImageUrl,
+        },
+      }
+    );
+
+    revalidatePath("/", "page");
     return NextResponse.json({ message: "Category updated" });
   } catch (error) {
     console.error("Error updating category:", error);
@@ -71,21 +99,31 @@ export async function PUT(
 
 export async function DELETE(
   _request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
-    const result = await db
-      .collection("categories")
-      .deleteOne({ _id: new ObjectId(id) });
-    if (result.deletedCount === 0) {
+    const collection = db.collection("categories");
+
+    const existingCategory = await collection.findOne({
+      _id: new ObjectId(id),
+    });
+    if (!existingCategory)
       return NextResponse.json(
         { error: "Category not found" },
         { status: 404 }
       );
+
+    await collection.deleteOne({ _id: new ObjectId(id) });
+
+    if (existingCategory.imageUrl) {
+      const publicId = getPublicIdFromUrl(existingCategory.imageUrl);
+      if (publicId) cloudinary.uploader.destroy(publicId, { invalidate: true });
     }
+
+    revalidatePath("/", "page");
     return NextResponse.json({ message: "Category deleted" });
   } catch (error) {
     console.error("Error deleting category:", error);

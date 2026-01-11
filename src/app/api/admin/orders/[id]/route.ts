@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import clientPromise from "@/lib/db";
 import { ObjectId } from "mongodb";
-import { OrderStatus } from "@/types";
+import { OrderStatus, CartItem } from "@/types";
 
 interface Context {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 interface DeliveryDateUpdate {
   date: string | Date; 
@@ -14,11 +14,13 @@ interface DeliveryDateUpdate {
 interface UpdateBody {
   status?: OrderStatus;
   deliveryDates?: DeliveryDateUpdate[];
+  items?: CartItem[];
+  totalAmount?: number;
 }
 
 export async function GET(_request: Request, { params }: Context) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
 
@@ -45,9 +47,9 @@ export async function GET(_request: Request, { params }: Context) {
 
 export async function PUT(request: NextRequest, { params }: Context) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const body: UpdateBody = await request.json();
-    const { status, deliveryDates } = body;
+    const { status, deliveryDates, items, totalAmount } = body;
 
     if (!ObjectId.isValid(id)) {
       return NextResponse.json(
@@ -55,7 +57,7 @@ export async function PUT(request: NextRequest, { params }: Context) {
         { status: 400 }
       );
     }
-    if (!status && !deliveryDates) {
+    if (!status && !deliveryDates && !items && typeof totalAmount === "undefined") {
       return NextResponse.json(
         { error: "At least status or deliveryDates is required for update" },
         { status: 400 }
@@ -97,6 +99,14 @@ export async function PUT(request: NextRequest, { params }: Context) {
         date: new Date(d.date), // Convert to BSON Date
       }));
       updateFields.$set["deliveryInfo.deliveryDates"] = deliveryDatesForDb;
+    }
+
+    if (items) {
+      updateFields.$set.items = items;
+    }
+
+    if (typeof totalAmount === 'number') {
+      updateFields.$set.totalAmount = totalAmount;
     }
 
     // --- Perform Update ---

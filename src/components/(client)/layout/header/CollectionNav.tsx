@@ -44,9 +44,9 @@ const CollectionNav = () => {
   const isAllActive = pathname === "/products";
 
   return (
-    <nav className="w-full border-b border-border bg-card-background">
+    <nav className=" md:flex justify-center border-t border-border bg-white py-5">
       <div className="mx-auto max-w-7xl px-lg">
-        <div className="flex justify-center space-x-lg overflow-x-auto py-md custom-scrollbar">
+        <div className="flex w-full space-x-lg overflow-x-auto py-md custom-scrollbar">
           <Link
             href="/products"
             className="flex flex-col items-center gap-sm group"
@@ -66,8 +66,7 @@ const CollectionNav = () => {
                     ? "bg-accent/10"
                     : "bg-background group-hover:bg-subtleBackground"
                 )}
-              >
-              </div>
+              ></div>
             </div>
             <span
               className={cn(
@@ -77,7 +76,7 @@ const CollectionNav = () => {
                   : "text-primary/80 group-hover:text-primary"
               )}
             >
-              All Cakes
+              All
             </span>
           </Link>
 

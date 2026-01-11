@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import clientPromise from "@/lib/db";
 import { Collection } from "@/types";
 import cloudinary from "@/lib/cloudinary";
@@ -47,6 +48,8 @@ export async function POST(request: NextRequest) {
     };
 
     const result = await db.collection("collections").insertOne(newCollection);
+
+    revalidatePath("/", "page");
 
     return NextResponse.json(
       { ...newCollection, _id: result.insertedId },

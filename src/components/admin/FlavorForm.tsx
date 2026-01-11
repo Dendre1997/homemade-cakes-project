@@ -1,14 +1,11 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react"; 
-import Image from "next/image";
 import { Flavor, ProductCategory } from "@/types";
 import { Button } from "../ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "../ui/Textarea";
-import { cn } from "@/lib/utils";
 import { ChipCheckbox } from "../ui/ChipCheckbox";
-import { ImageUploadPreview } from "../ui/ImageUploadPreview"; 
-import { X } from "lucide-react"; 
+import { ImageUploadPreview } from "./ImageUploadPreview"; 
 
 const FormLabel = ({
   htmlFor,
@@ -51,6 +48,7 @@ const FlavorForm = ({
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [orphanedImageUrl, setOrphanedImageUrl] = useState<string | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
 
@@ -145,6 +143,11 @@ const FlavorForm = ({
     }
   };
 
+  const handleCropSave = (newUrl: string) => {
+    // Update the form state with the new URL
+    setFormData((prev) => ({ ...prev, imageUrl: newUrl }));
+  };
+
   const handleImageRemove = () => {
     if (orphanedImageUrl) {
       fetch("/api/admin/cloudinary-delete", {
@@ -190,7 +193,7 @@ const FlavorForm = ({
           <Input
             type="number"
             id="price"
-            value={formData.price === 0 ? "" : formData.price}
+            value={formData.price}
             onChange={handleChange}
             required
             step="0.01"
@@ -204,6 +207,9 @@ const FlavorForm = ({
               imagePreview={formData.imageUrl}
               isUploading={isUploading}
               onRemove={handleImageRemove}
+              allowPositioning={true}
+              // imageFit="object-cover"
+              onCropSave={handleCropSave}
             />
           )}
           <Input

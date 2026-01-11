@@ -3,31 +3,20 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { Order, Diameter, OrderStatus, ScheduleSettings } from "@/types"; // Import OrderStatus
 import Link from "next/link";
-import Image from "next/image";
 import LoadingSpinner from "@/components/ui/Spinner";
-import { Button } from "@/components/ui/Button";
 import OrderDetailAssignedDates from "@/components/admin/orders/OrderDetailAssignedDates";
-import {
-  Select,
-  SelectTrigger,
-  SelectContent,
-  SelectItem,
-  SelectValue,
-} from "@/components/ui/Select";
 import { useAlert } from "@/contexts/AlertContext";
 import {
   format,
   startOfDay,
-  addDays,
-  isSameDay,
-  eachDayOfInterval,
+  isSameDay
 } from "date-fns";
-import { OrderAssignmentDatePicker } from "@/components/admin/OrderAssignmentDatePicker";
 import { CartItem } from "@/types";
-import { extractOriginalItemId } from "@/lib/utils";
+import { extractOriginalItemId } from "../../../../lib/utils";
 import OrderDetailItems from "@/components/admin/orders/OrderDetailItems";
 import OrderDetailCustomer from "@/components/admin/orders/OrderDetailCustomer";
 import { OrderDetailActions } from "@/components/admin/orders/OrderDetailActions";
+import { OrderNotesSection } from "@/components/admin/orders/OrderNotesSection";
 import { useConfirmation } from "@/contexts/ConfirmationContext";
 interface AvailabilityData {
   leadTimeDays: number;
@@ -237,10 +226,10 @@ const OrderDetailsPage = () => {
             ...item,
             quantity: 1,
             id: `${item.id}-${unitIndex}`,
-            // Ensure types match CartItem
-            productId: item.productId.toString(),
-            categoryId: item.categoryId.toString(),
-            diameterId: item.diameterId.toString(),
+
+            productId: item.productId?.toString(),
+            categoryId: item.categoryId?.toString(),
+            diameterId: item.diameterId?.toString(),
           }))
       );
       const allocatedIds = new Set(currentDates.flatMap((d) => d.itemIds));
@@ -268,14 +257,13 @@ const OrderDetailsPage = () => {
       showAlert("Please select a new date first.", "warning");
       return;
     }
-    // setIsConfirmingDate(true);
+
     setError(null);
     try {
       const orderTotalMinutes = order.items.reduce(
         (sum, item) =>
           sum +
-          (availabilityData.manufacturingTimes[item.categoryId.toString()] ||
-            0) *
+          (item.categoryId ? (availabilityData.manufacturingTimes[item.categoryId.toString()] || 0) : 0) *
             item.quantity,
         0
       );
@@ -348,7 +336,7 @@ const OrderDetailsPage = () => {
           const itemDetails = order?.items.find((i) => i.id === originalItemId);
           return (
             sum +
-            (itemDetails
+            (itemDetails?.categoryId
               ? availabilityData.manufacturingTimes[
                   itemDetails.categoryId.toString()
                 ] || 0
@@ -456,9 +444,9 @@ const OrderDetailsPage = () => {
 
     const targetDate = adminPopupDate;
     const itemTime =
-      availabilityData.manufacturingTimes[
+      itemToAllocate.categoryId ? (availabilityData.manufacturingTimes[
         itemToAllocate.categoryId.toString()
-      ] || 0;
+      ] || 0) : 0;
     const dateString = format(targetDate, "yyyy-MM-dd");
 
     setEditedDeliveryDates((prev) => {
@@ -507,9 +495,9 @@ const OrderDetailsPage = () => {
         ...originalItem,
         id: unitIdToRemove,
         quantity: 1,
-        productId: originalItem.productId.toString(),
-        categoryId: originalItem.categoryId.toString(),
-        diameterId: originalItem.diameterId.toString(),
+        productId: originalItem.productId?.toString(),
+        categoryId: originalItem.categoryId?.toString(),
+        diameterId: originalItem.diameterId?.toString(),
       };
       setAdminUnallocatedItems((prev) =>
         prev.find((i) => i.id === itemToAddBack.id)
@@ -533,8 +521,7 @@ const OrderDetailsPage = () => {
       const orderTotalMinutes = order.items.reduce(
         (sum, item) =>
           sum +
-          (availabilityData.manufacturingTimes[item.categoryId.toString()] ||
-            0) *
+          (item.categoryId ? (availabilityData.manufacturingTimes[item.categoryId.toString()] || 0) : 0) *
             item.quantity,
         0
       );
@@ -605,7 +592,7 @@ const OrderDetailsPage = () => {
     <section>
       <Link
         href="/admin/orders"
-        className="font-body text-accent hover:underline mb-lg inline-block" // Style updated to match project
+        className="font-body text-accent hover:underline mb-lg inline-block"
       >
         &larr; Back to all orders
       </Link>
@@ -621,7 +608,7 @@ const OrderDetailsPage = () => {
       </h1>
 
       {isLoading &&
-        !isConfirmingDate && ( // Show general loading only if not confirming
+        !isConfirmingDate && (
           <div className="flex justify-center my-md">
             <LoadingSpinner />
           </div>
@@ -640,6 +627,8 @@ const OrderDetailsPage = () => {
             items={order.items}
             diameters={diameters}
             totalAmount={order.totalAmount}
+            onUpdate={fetchOrderAndDiameters}
+            referenceImages={order.referenceImages}
           />
 
           {/* --- Assigned Delivery Dates (Shown for non-pending orders) --- */}
@@ -687,6 +676,10 @@ const OrderDetailsPage = () => {
             setAdminPopupDate={setAdminPopupDate}
           />
         </div>
+      </div>
+      {/* Internal Notes Section */}
+      <div className="mt-8">
+        <OrderNotesSection order={order} onUpdate={fetchOrderAndDiameters} />
       </div>
     </section>
   );

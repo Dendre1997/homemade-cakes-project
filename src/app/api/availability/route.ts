@@ -47,15 +47,13 @@ export async function POST(request: NextRequest) {
 
     // --- Calculate booked time from all relevant existing orders ---
 
-    // Fetch a broad set of orders first, then process in-memory.
-    // This is more efficient than running multiple DB queries per day.
+    // Fetch a broad set of orders first, then process in-memory
     const potentiallyRelevantOrders = await db
       .collection("orders")
       .find({
         // Fetch all orders with at least one delivery date from today onwards
         "deliveryInfo.deliveryDates.date": { $gte: today },
-        // TODO: Should also filter out cancelled orders.
-        // status: { $nin: ["cancelled"] }
+        status: { $nin: ["cancelled"] }
       })
       .toArray();
 
@@ -94,6 +92,11 @@ export async function POST(request: NextRequest) {
           // Loop through the *specific* item units scheduled for this delivery date
           deliveryEntry.itemIds.forEach((unitId: string) => {
             const originalItemId = extractOriginalItemId(unitId);
+            if (unitId.startsWith("manual-") || originalItemId === "manual") {
+              // Manual items likely don't have catalog category IDs or fixed manufacturing times
+              return; 
+            }
+
             const orderItem = order.items.find(
               (item: any) => item.id === originalItemId
             );
@@ -107,7 +110,14 @@ export async function POST(request: NextRequest) {
 
               // Add this item's manufacturing time from our lookup map
               timeForThisDateEntry += manufacturingTimes[categoryIdString] || 0;
+            } else if (unitId.includes("custom") || originalItemId.includes("custom")) {
+               // Custom items often lack a categoryId. Default to "Cakes" manufacturing time.
+               const cakeCategory = categories.find((c: any) => c.name.toLowerCase().includes("cake"));
+               if (cakeCategory) {
+                   timeForThisDateEntry += manufacturingTimes[cakeCategory._id.toString()] || 0;
+               }
             } else {
+              // Only warn if it's NOT a manual item we failed to find
               console.warn(
                 `Could not find order item or categoryId for unitId: ${unitId} (originalId: ${originalItemId}) in order ${order._id}`
               );
@@ -121,7 +131,7 @@ export async function POST(request: NextRequest) {
       );
     });
 
-    // --- 3. Calculate final availability for the 3-month interval ---
+    // --- Calculate final availability for the 3-month interval ---
     const availableMinutesPerDay: Record<string, number> = {};
     const adminBlockedDates: string[] = [];
     const datesToCheck = eachDayOfInterval({ start: today, end: endDate });
@@ -155,14 +165,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // console.log("API Availability Response:", {
-    //   leadTimeDays,
-    //   manufacturingTimes,
-    //   availableMinutesPerDay,
-    //   adminBlockedDates,
-    //   defaultWorkMinutes,
-    //   dateOverrides,
-    // });
 
     // Return all calculated data for the front-end date picker
     return NextResponse.json({

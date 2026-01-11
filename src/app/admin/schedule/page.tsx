@@ -1,7 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { ScheduleSettings } from "@/types";
-import { ProductCategory } from "@/types";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import AdminDatePicker from "@/components/admin/AdminDatePicker";

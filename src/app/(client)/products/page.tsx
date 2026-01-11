@@ -1,23 +1,71 @@
-import ProductCard from "@/components/(client)/ProductCard";
-import { ProductWithCategory } from "@/types";
-import { Button } from "@/components/ui/Button";
-import LoadingSpinner from "@/components/ui/Spinner";
+import ProductFeed from "@/components/(client)/ProductFeed";
+import { 
+  getActiveDiscounts,
+  getActiveCategories
+} from "@/lib/data";
+import { getActiveFlavors as getDbActiveFlavors } from "@/lib/db/data";
+import { FlavorCarousel } from "@/components/(client)/home/flavors/FlavorCarousel";
 
-async function getProducts() {
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL;
-  const res = await fetch(`${baseUrl}/api/products`, {
+const Section = ({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) => <section className={`py-xxl ${className || ""}`}>{children}</section>;
+
+const Container = ({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) => (
+  <div className={`mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 ${className || ""}`}>{children}</div>
+);
+
+async function getInitialProducts() {
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL
+  const res = await fetch(`${baseUrl}/api/products?page=1&limit=10`, {
     cache: "no-store",
   });
 
   if (!res.ok) {
-    throw new Error("Failed to fetch products");
+    console.error("Failed to fetch initial products");
+    return [];
   }
 
   return res.json();
 }
 
 const ProductsPage = async () => {
-  const products: ProductWithCategory[] = await getProducts();
+  const [initialProducts, discounts, categories, activeFlavors] = await Promise.all([
+    getInitialProducts(),
+    getActiveDiscounts(),
+    getActiveCategories(),
+    getDbActiveFlavors(),
+  ]);
+
+  // Filter Flavors
+  const bentoCategoryIds = categories
+    .filter((c) => c.name.toLowerCase().includes("bento"))
+    .map((c) => c._id);
+
+  const cakeCategoryIds = categories
+    .filter(
+      (c) =>
+        c.name.toLowerCase().includes("cake") &&
+        !c.name.toLowerCase().includes("bento")
+    )
+    .map((c) => c._id);
+
+  const bentoFlavors = activeFlavors.filter((f) =>
+    f.categoryIds?.some((id) => bentoCategoryIds.includes(id))
+  );
+
+  const cakeFlavors = activeFlavors.filter((f) =>
+    f.categoryIds?.some((id) => cakeCategoryIds.includes(id))
+  );
 
   return (
     <div className="bg-background min-h-screen">
@@ -32,17 +80,32 @@ const ProductsPage = async () => {
           </p>
         </div>
 
-        <div className="mt-10 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4 auto-rows-fr">
-          {products.map((product) => (
-            <ProductCard key={product._id.toString()} product={product} />
-          ))}
-        </div>
-        <div className="mt-20 text-center">
-          <Button variant="primary" size="lg">
-            View More Cakes
-          </Button>
-        </div>
+        <ProductFeed initialProducts={initialProducts} validDiscounts={discounts} />
       </div>
+
+       {/* Bento Flavors */}
+       {bentoFlavors.length > 0 && (
+        <Section className="bg-subtleBackground/30">
+          <Container>
+            <h2 className="text-center font-heading text-h2 mb-10">
+              Bento Flavors
+            </h2>
+            <FlavorCarousel flavors={bentoFlavors} />
+          </Container>
+        </Section>
+      )}
+
+      {/* Cake Flavors */}
+      {cakeFlavors.length > 0 && (
+        <Section className="bg-subtleBackground/30 border-t border-border/50">
+          <Container>
+            <h2 className="text-center font-heading text-h2 mb-10">
+              Cake Flavors
+            </h2>
+            <FlavorCarousel flavors={cakeFlavors} />
+          </Container>
+        </Section>
+      )}
     </div>
   );
 };
