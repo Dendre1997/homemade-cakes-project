@@ -11,6 +11,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import ProductCard from "@/components/(client)/ProductCard";
 import { ObjectId } from "mongodb";
+import ProfileGuard from "@/components/auth/ProfileGuard";
 
 export const dynamic = "force-dynamic";
 
@@ -153,54 +154,56 @@ export default async function ProfilePage() {
   return (
     <div className="bg-background min-h-screen">
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-12">
-        {/* --- Header --- */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
-            <div>
-                <h1 className="font-heading text-3xl font-bold text-primary">Your Profile</h1>
-                <p className="text-muted-foreground">Welcome back, {userEmail}</p>
-            </div>
-            <ProfileLogoutButton />
-        </div>
+        <ProfileGuard>
+          {/* --- Header --- */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+              <div>
+                  <h1 className="font-heading text-3xl font-bold text-primary">Your Profile</h1>
+                  <p className="text-muted-foreground">Welcome back, {userEmail}</p>
+              </div>
+              <ProfileLogoutButton />
+          </div>
 
-        {/* --- Orders Tabs --- */}
-        <Tabs defaultValue="active" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 max-w-[400px] mb-8">
-                <TabsTrigger value="active">Orders ({activeOrders.length})</TabsTrigger>
-                <TabsTrigger value="history">Buy Again</TabsTrigger>
-            </TabsList>
+          {/* --- Orders Tabs --- */}
+          <Tabs defaultValue="active" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 max-w-[400px] mb-8">
+                  <TabsTrigger value="active">Orders ({activeOrders.length})</TabsTrigger>
+                  <TabsTrigger value="history">Buy Again</TabsTrigger>
+              </TabsList>
 
-            <TabsContent value="active" className="space-y-6">
-                {activeOrders.length > 0 ? (
-                    activeOrders.map(order => (
-                        <ClientOrderCard key={order._id.toString()} order={order} diameters={diameters} />
-                    ))
-                ) : (
-                    <div className="text-center py-12 bg-white rounded-lg border border-dashed border-gray-300">
-                        <p className="text-lg text-gray-500 mb-4">No active orders right now.</p>
-                        <Link href="/products">
-                            <Button>Browse Menu</Button>
-                        </Link>
-                    </div>
-                )}
-            </TabsContent>
+              <TabsContent value="active" className="space-y-6">
+                  {activeOrders.length > 0 ? (
+                      activeOrders.map(order => (
+                          <ClientOrderCard key={order._id.toString()} order={order} diameters={diameters} />
+                      ))
+                  ) : (
+                      <div className="text-center py-12 bg-white rounded-lg border border-dashed border-gray-300">
+                          <p className="text-lg text-gray-500 mb-4">No active orders right now.</p>
+                          <Link href="/products">
+                              <Button>Browse Menu</Button>
+                          </Link>
+                      </div>
+                  )}
+              </TabsContent>
 
-            <TabsContent value="history">
-                 {pastProducts.length > 0 ? (
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                        {pastProducts.map((product) => (
-                           <ProductCard key={product._id.toString()} product={product} /> 
-                        ))}
-                    </div>
-                 ) : (
-                    <div className="text-center py-12 text-gray-500">
-                        <p>No past purchases found.</p>
-                        <Link href="/products" className="mt-4 inline-block">
-                             <Button variant="outline">Start Shopping</Button>
-                        </Link>
-                    </div>
-                 )}
-            </TabsContent>
-        </Tabs>
+              <TabsContent value="history">
+                  {pastProducts.length > 0 ? (
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                          {pastProducts.map((product) => (
+                              <ProductCard key={product._id.toString()} product={product} /> 
+                          ))}
+                      </div>
+                  ) : (
+                      <div className="text-center py-12 text-gray-500">
+                          <p>No past purchases found.</p>
+                          <Link href="/products" className="mt-4 inline-block">
+                              <Button variant="outline">Start Shopping</Button>
+                          </Link>
+                      </div>
+                  )}
+              </TabsContent>
+          </Tabs>
+        </ProfileGuard>
       </div>
     </div>
   );

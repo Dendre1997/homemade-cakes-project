@@ -278,7 +278,7 @@ export default function CustomOrderDesigner({
         if (!res.ok) throw new Error(data.error || "Failed to convert");
 
         // Redirect to new order
-        router.push(`/admin/orders/${data.newOrderId}`);
+        router.push(`/bakery-manufacturing-orders/orders/${data.newOrderId}`);
         showAlert("Order converted successfully!", "success");
 
     } catch (err) {
@@ -352,7 +352,7 @@ export default function CustomOrderDesigner({
         <div className="bg-green-600 text-white p-4 text-center font-bold text-lg flex items-center justify-center gap-2 shadow-md">
             <Lock className="w-5 h-5" />
             Converted to Order 
-            <a href={`/admin/orders/${customOrder.convertedOrderId}`} className="underline hover:text-green-100 ml-1">
+            <a href={`/bakery-manufacturing-orders/orders/${customOrder.convertedOrderId}`} className="underline hover:text-green-100 ml-1">
                 #{customOrder.convertedOrderId?.slice(-4)}
             </a>
         </div>

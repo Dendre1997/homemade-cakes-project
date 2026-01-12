@@ -3,9 +3,10 @@ import { cookies } from "next/headers";
 
 export async function POST() {
   const cookieStore = await cookies();
-  
-  // Clear the session cookie
+
   cookieStore.delete("session");
+
+  cookieStore.delete("__session");
 
   return NextResponse.json({ success: true });
 }

@@ -99,7 +99,7 @@ export const CustomOrderCard = ({ order }: CustomOrderCardProps) => {
              </div>
          </div>
 
-         <Link href={`/admin/custom-orders/${order._id}`} className="w-full md:w-auto">
+         <Link href={`/bakery-manufacturing-orders/custom-orders/${order._id}`} className="w-full md:w-auto">
             <Button size="sm" variant={order.status === 'new' ? "default" : "outline"} className="w-full md:w-auto gap-2">
                 {isConverted ? "View Deal" : "Manage"} 
                 {!isConverted && <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />}

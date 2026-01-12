@@ -3,7 +3,6 @@ import { Playfair_Display, Montserrat } from "next/font/google";
 import { AlertProvider } from "@/contexts/AlertContext";
 import "./globals.css";
 import AuthProvider from "@/components/AuthProvider";
-import { getCategories } from "@/lib/data";
 import { CustomAlert } from "@/components/ui/CustomAlert";
 import { ConfirmationProvider } from "@/contexts/ConfirmationContext";
 

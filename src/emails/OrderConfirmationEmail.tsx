@@ -15,9 +15,7 @@ import {
   Hr,
   Link,
 } from "@react-email/components";
-import * as React from "react";
 import { Order, CartItem } from "@/types";
-import { Instagram, Facebook, Youtube } from "lucide-react";
 
 interface OrderConfirmationEmailProps {
   order: Order;

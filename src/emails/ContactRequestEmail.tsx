@@ -10,7 +10,6 @@ import {
   Section,
   Hr,
 } from "@react-email/components";
-import * as React from "react";
 
 interface ContactRequestEmailProps {
   name: string;
