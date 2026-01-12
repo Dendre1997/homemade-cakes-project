@@ -14,7 +14,6 @@ import {
   Column,
   Hr,
 } from "@react-email/components";
-import * as React from "react";
 import { Order, CartItem } from "@/types";
 
 interface NewOrderEmailProps {

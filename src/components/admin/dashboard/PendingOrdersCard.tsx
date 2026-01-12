@@ -25,7 +25,7 @@ export default function PendingOrdersCard({ pendingOrders }: PendingOrdersCardPr
 
   const handleOrderClick = (orderId: string) => {
     setIsOpen(false); // Close dialog
-    router.push(`/admin/orders/${orderId}`);
+    router.push(`/bakery-manufacturing-orders/orders/${orderId}`);
   };
 
   return (

@@ -9,16 +9,9 @@ import {
   Package,
   ShoppingCart,
   PlusCircle,
-  Sparkles,
-  Palette,
-  Tag,
-  Scaling,
-  TriangleAlert,
   Home,
   X,
-  Clock,
   Calendar,
-  LayoutGrid,
   Images,
   Database,
   SunSnow,
@@ -38,49 +31,49 @@ interface SidebarProps {
 
 
 const navItems = [
-  { href: "/admin/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/bakery-manufacturing-orders/", label: "Dashboard", icon: LayoutDashboard },
   {
-    href: "/admin/custom-orders",
+    href: "/bakery-manufacturing-orders/custom-orders",
     label: "Custom Requests",
     icon: ClipboardList,
   },
-  { href: "/admin/products", label: "Products", icon: Package },
-  { href: "/admin/orders", label: "Orders", icon: ShoppingCart },
-  { href: "/admin/analytics", label: "Analytics", icon: ChartNoAxesCombined },
-  { href: "/admin/products/create", label: "Create Product", icon: PlusCircle },
+  { href: "/bakery-manufacturing-orders/products", label: "Products", icon: Package },
+  { href: "/bakery-manufacturing-orders/orders", label: "Orders", icon: ShoppingCart },
+  { href: "/bakery-manufacturing-orders/analytics", label: "Analytics", icon: ChartNoAxesCombined },
+  { href: "/bakery-manufacturing-orders/products/create", label: "Create Product", icon: PlusCircle },
   { isSeparator: true },
   {
     label: "Catalog/Inventory",
-    href: "/admin/catalog",
+    href: "/bakery-manufacturing-orders/catalog",
     icon: Database,
   },
   {
-    href: "/admin/content",
+    href: "/bakery-manufacturing-orders/content",
     label: "Content",
     icon: Images,
   },
   {
-    href: "/admin/schedule",
+    href: "/bakery-manufacturing-orders/schedule",
     label: "Schedule Management",
     icon: Calendar,
   },
   {
-    href: "/admin/seasonals",
+    href: "/bakery-manufacturing-orders/seasonals",
     label: "Seasonal Events",
     icon: SunSnow,
   },
   {
-    href: "/admin/discounts",
+    href: "/bakery-manufacturing-orders/discounts",
     label: "Discounts",
     icon: BadgePercent,
   },
   {
-    href: "/admin/blogs",
+    href: "/bakery-manufacturing-orders/blogs",
     label: "Your Blog",
     icon: Newspaper,
   },
   {
-    href: "/admin/settings",
+    href: "/bakery-manufacturing-orders/settings",
     label: "Settings",
     icon: Settings,
   },
@@ -139,7 +132,7 @@ const AdminSidebar = ({ isOpen, onClose }: SidebarProps) => {
       <div className="flex h-full flex-col p-md overflow-y-auto">
         {" "}
         <div className="flex items-center justify-between mb-lg">
-          <Link href="/admin/" onClick={onClose}>
+          <Link href="/bakery-manufacturing-orders/" onClick={onClose}>
             <h1 className="font-heading text-h3 text-white">Admin Panel</h1>
           </Link>
           <button
@@ -196,15 +189,6 @@ const AdminSidebar = ({ isOpen, onClose }: SidebarProps) => {
             })}
           </ul>
         </nav>
-        <div className="mt-auto">
-          <Link
-            href="/"
-            className="flex items-center gap-sm rounded-medium p-sm font-body text-body text-white/80 transition-colors hover:bg-white/10 hover:text-white"
-          >
-            <Home className="h-5 w-5 shrink-0" />
-            <span>Back to Main Site</span>
-          </Link>
-        </div>
       </div>
     </aside>
   );

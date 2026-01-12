@@ -85,10 +85,6 @@ export const VideoUploadPreview = ({
       onRemove();
     } catch (error) {
       console.error("Failed to delete video:", error);
-      // Still remove from UI even if remote delete fails, or handle differently?
-      // User requested "delete video from cloudinary", so we should try.
-      // If it fails, maybe we still want to clear the field so they can upload a new one.
-      // For now, let's assume UI clear is ensuring they can move forward.
       onRemove();
     } finally {
       setIsDeleting(false);

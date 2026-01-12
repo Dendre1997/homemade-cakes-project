@@ -18,8 +18,20 @@ const AdminHeader = ({ onToggleSidebar, title }: AdminHeaderProps) => {
   const router = useRouter();
 
   const handleLogout = async () => {
-    await signOut(auth);
-    router.push("/");
+    try {
+
+      await signOut(auth);
+
+      await fetch("/api/auth/logout", {
+        method: "POST",
+      });
+
+      router.refresh();
+
+      router.push("/login");
+    } catch (error) {
+      console.error("Logout failed", error);
+    }
   };
 
   return (

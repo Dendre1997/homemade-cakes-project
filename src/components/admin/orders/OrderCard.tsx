@@ -180,12 +180,12 @@ export const OrderCard = ({ order, onStatusChange, diametersMap }: OrderCardProp
         </Select>
 
         <div className="flex items-center gap-1">
-          <Link href={`/admin/orders/${order._id.toString()}/print`} target="_blank">
+          <Link href={`/bakery-manufacturing-orders/orders/${order._id.toString()}/print`} target="_blank">
             <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-[#2f1b23] hover:bg-[#2f1b23]/5">
               <Printer className="w-4 h-4" />
             </Button>
           </Link>
-          <Link href={`/admin/orders/${order._id.toString()}`}>
+          <Link href={`/bakery-manufacturing-orders/orders/${order._id.toString()}`}>
              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-[#764a4d] hover:bg-[#764a4d]/5">
               <Eye className="w-4 h-4" />
             </Button>

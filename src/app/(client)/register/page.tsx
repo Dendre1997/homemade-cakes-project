@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase/client";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
 import Link from "next/link";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
@@ -26,6 +26,9 @@ const RegisterPage = () => {
         password
       );
 
+      // Send verification email immediately
+      await sendEmailVerification(userCredential.user);
+
       const idToken = await userCredential.user.getIdToken();
 
       await fetch("/api/auth/sessionLogin", {
@@ -40,10 +43,18 @@ const RegisterPage = () => {
         body: JSON.stringify({ firebaseUid: userCredential.user.uid, email }),
       });
 
-      router.push("/");
+      router.push("/verify-email");
     } catch (err: any) {
-      console.error("Registration failed:", err);
-      setError(err.message || "Failed to create account. Please try again.");
+      if (err.code === "auth/weak-password") {
+        setError("Password should be at least 6 characters.");
+      } else if (err.code === "auth/email-already-in-use") {
+        setError("This email is already registered.");
+      } else if (err.code === "auth/invalid-email") {
+        setError("Please enter a valid email address.");
+      } else {
+        console.error("Registration failed:", err);
+        setError("Failed to create account. Please try again.");
+      }
     } finally {
       setIsLoading(false);
     }

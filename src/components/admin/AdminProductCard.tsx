@@ -117,12 +117,12 @@ const AdminProductCard = ({
         )}
 
         <div className="mt-auto flex items-center justify-end gap-sm border-t border-border pt-md">
-          <Link href={`/admin/products/${product._id.toString()}`}>
+          <Link href={`/bakery-manufacturing-orders/products/${product._id.toString()}`}>
             <Button variant="primary" size="sm">
               View
             </Button>
           </Link>
-          <Link href={`/admin/products/${product._id.toString()}/edit`}>
+          <Link href={`/bakery-manufacturing-orders/products/${product._id.toString()}/edit`}>
             <Button variant="secondary" size="sm">
               Edit
             </Button>

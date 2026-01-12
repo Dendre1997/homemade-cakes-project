@@ -23,7 +23,6 @@ const SOURCE_COLORS: Record<string, string> = {
 const DEFAULT_COLOR = "#cbd5e1"; // Slate-300
 
 export function SourceChart({ data }: SourceChartProps) {
-  // Safe check for empty data
   if (!data || data.length === 0) {
     return (
       <div className="flex items-center justify-center h-[300px] text-muted-foreground">
