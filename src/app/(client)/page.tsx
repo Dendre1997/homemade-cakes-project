@@ -23,6 +23,8 @@ import { FlavorCarousel } from "@/components/(client)/home/flavors/FlavorCarouse
 import { VideoBanner } from "@/components/content/VideoBanner";
 import { getVideoBanner } from "@/app/actions/site-content";
 
+export const revalidate = 60; // Revalidate at most once every 60 seconds
+
 const Section = ({
   children,
   className,
