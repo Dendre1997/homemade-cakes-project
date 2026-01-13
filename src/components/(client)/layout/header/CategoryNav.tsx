@@ -48,9 +48,9 @@ const CategoryNav = ({ categories }: CategoryNavProps) => {
   return (
     <nav className="hidden md:flex justify-center border-t border-border bg-white py-5">
       <ul className="flex items-center gap-xl">
-        <li key={'/products'}>
-            <CategoryLink href={"/products"}>All</CategoryLink>
-          </li>
+        <li key={"/products"}>
+          <CategoryLink href={"/products"}>Full Menu</CategoryLink>
+        </li>
         {categories.map((cat) => (
           <li key={cat.href}>
             <CategoryLink href={cat.href}>{cat.name}</CategoryLink>

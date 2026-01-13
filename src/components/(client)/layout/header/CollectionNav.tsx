@@ -44,42 +44,9 @@ const CollectionNav = () => {
   const isAllActive = pathname === "/products";
 
   return (
-    <nav className=" md:flex justify-center border-t border-border bg-white py-5">
+    <nav className=" hidden md:flex justify-center border-t border-border bg-white py-5">
       <div className="mx-auto max-w-7xl px-lg">
         <div className="flex w-full space-x-lg overflow-x-auto py-md custom-scrollbar">
-          <Link
-            href="/products"
-            className="flex flex-col items-center gap-sm group"
-          >
-            <div
-              className={cn(
-                "w-16 h-16 rounded-full p-1 flex-shrink-0 transition-all",
-                isAllActive
-                  ? "border-2 border-accent"
-                  : "border border-border group-hover:border-accent/50"
-              )}
-            >
-              <div
-                className={cn(
-                  "w-full h-full rounded-full flex items-center justify-center transition-colors",
-                  isAllActive
-                    ? "bg-accent/10"
-                    : "bg-background group-hover:bg-subtleBackground"
-                )}
-              ></div>
-            </div>
-            <span
-              className={cn(
-                "font-body text-small font-semibold transition-colors",
-                isAllActive
-                  ? "text-accent"
-                  : "text-primary/80 group-hover:text-primary"
-              )}
-            >
-              All
-            </span>
-          </Link>
-
           {collections.map((collection) => {
             if (!collection.slug) {
               return null;

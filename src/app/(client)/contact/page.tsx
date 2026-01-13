@@ -113,8 +113,8 @@ export default function ContactPage() {
             </h2>
 
             {submitStatus === "success" ? (
-              <div className="bg-success/10 border border-success/20 rounded-lg p-6 text-center animate-in fade-in zoom-in duration-300">
-                <h3 className="font-heading text-2xl text-success mb-2">
+              <div className="rounded-lg p-6 text-center animate-in fade-in zoom-in duration-300">
+                <h3 className="font-heading text-2xl text-accent mb-2">
                   Thank You!
                 </h3>
                 <p className="text-text-primary">

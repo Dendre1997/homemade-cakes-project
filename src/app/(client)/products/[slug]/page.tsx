@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
+
 import { notFound, useParams, useRouter } from "next/navigation";
 import { ProductWithCategory, Flavor, AvailableDiameterConfig, Discount } from "@/types";
 import Link from "next/link";
@@ -53,9 +54,6 @@ const SingleProductPage = () => {
                     setFetchError("Product not found");
                 } else {
                     setProduct(data);
-                    
-                    // SEO Redirect Logic
-                    // If navigated via ID (slug is an ID) BUT the product has a real slug, redirect!
                     if (isValidObjectId(slug) && data.slug && data.slug !== slug) {
                          router.replace(`/products/${data.slug}`);
                     }
@@ -208,8 +206,22 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
   const isCombo = isSet && product?.comboConfig?.hasCake;
 
   // Filtered lists for the Combo Cake part
-  const comboCakeFlavors = product?.availableFlavors
-      .filter(f => !product.comboConfig?.cakeFlavorIds?.length || product.comboConfig.cakeFlavorIds.includes(f._id)) || [];
+  const comboCakeFlavors = useMemo(() => {
+      // If no config IDs, fallback to all available flavors (or keep empty if that is desired behavior? 
+      // Original logic was "if no IDs, show all". Let's preserve that logic but use relatedFlavors too if needed).
+      if (!product?.comboConfig?.cakeFlavorIds?.length) {
+          return product?.availableFlavors || [];
+      }
+      
+      const ids = product.comboConfig.cakeFlavorIds;
+      const allCandidates = [...(product.availableFlavors || []), ...relatedFlavors];
+      
+      const filtered = allCandidates.filter(f => ids.includes(f._id));
+      
+      // Deduplicate
+      const unique = Array.from(new Map(filtered.map(f => [f._id, f])).values());
+      return unique;
+  }, [product, relatedFlavors]);
 
   const comboCakeDiameters: DiameterOption[] = allDiameters
       .filter(d => !product?.comboConfig?.cakeDiameterIds?.length || product?.comboConfig.cakeDiameterIds.includes(d._id))
@@ -640,7 +652,7 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
                               flavorId: id,
                             }))
                           }
-                          hidePrice={false}
+                          hidePrice={true}
                         />
                       </CollapsibleSection>
 
