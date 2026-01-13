@@ -456,7 +456,7 @@ const ProductForm = ({
                     value={structureBasePrice}
                     onChange={(e) => setStructureBasePrice(e.target.value)}
                     required
-                    placeholder="0.00"
+                    placeholder=""
                   />
                 </div>
               </div>

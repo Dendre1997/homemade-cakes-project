@@ -68,15 +68,11 @@ const Homepage = async () => {
 
   // Filter Flavors
   const bentoCategoryIds = categories
-    .filter((c) => c.name.toLowerCase().includes("bento"))
+    .filter((c) => c.name.toLowerCase().includes("bento cakes"))
     .map((c) => c._id);
 
   const cakeCategoryIds = categories
-    .filter(
-      (c) =>
-        c.name.toLowerCase().includes("cake") &&
-        !c.name.toLowerCase().includes("bento")
-    )
+    .filter((c) => c.name.trim().toLowerCase() === "cakes")
     .map((c) => c._id);
 
   const bentoFlavors = activeFlavors.filter((f) =>
@@ -92,8 +88,8 @@ const Homepage = async () => {
       <HeroSlider slides={heroSlides} />
 
       <SeasonalHomeBanner activeEvent={activeSeasonalEvent} />
-      <HomeCollections collections={collections} />
       <HomeCategories categories={categories} />
+      <HomeCollections collections={collections} />
       <VideoBanner content={videoBannerContent} />
 
       {discountedProducts.length > 0 && (

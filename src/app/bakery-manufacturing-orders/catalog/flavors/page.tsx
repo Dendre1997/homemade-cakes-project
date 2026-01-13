@@ -11,6 +11,8 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/Tabs";
+
 type FlavorFormData = Omit<Flavor, "_id">;
 
 const ManageFlavorsPage = () => {
@@ -22,6 +24,7 @@ const ManageFlavorsPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingFlavor, setEditingFlavor] = useState<Flavor | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeTab, setActiveTab] = useState("all");
   const [error, setError] = useState<string | null>(null);
   const router = useRouter()
   
@@ -128,9 +131,20 @@ const ManageFlavorsPage = () => {
     return new Map(categories.map((cat) => [cat._id.toString(), cat.name]));
   }, [categories]);
 
-  const filteredFlavors = flavors.filter((flavor) =>
-    flavor.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredFlavors = useMemo(() => {
+    return flavors.filter((flavor) => {
+      const matchesSearch = flavor.name.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      if (activeTab === "all") {
+        return matchesSearch;
+      }
+      
+      const flavorCategories = flavor.categoryIds || [];
+      const matchesCategory = flavorCategories.includes(activeTab);
+      
+      return matchesSearch && matchesCategory;
+    });
+  }, [flavors, searchQuery, activeTab]);
 
 
   return (
@@ -178,6 +192,18 @@ const ManageFlavorsPage = () => {
           <h2 className="font-heading text-h3 text-primary mb-md">
             Existing Flavors
           </h2>
+
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-4">
+             <TabsList className="w-full flex-wrap h-auto">
+                <TabsTrigger value="all">All</TabsTrigger>
+                {categories.map((cat) => (
+                   <TabsTrigger key={cat._id} value={cat._id}>
+                      {cat.name}
+                   </TabsTrigger>
+                ))}
+             </TabsList>
+          </Tabs>
+
           <div className="mb-4">
             <Input
               placeholder="Search flavors..."
