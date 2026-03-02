@@ -66,7 +66,7 @@ const MobileMenu = ({
       <div
         className={cn(
           "fixed inset-0 bg-black/50 z-40 transition-opacity md:hidden",
-          isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+          isOpen ? "opacity-100" : "opacity-0 pointer-events-none",
         )}
         onClick={onClose}
         aria-hidden="true"
@@ -75,7 +75,7 @@ const MobileMenu = ({
       <div
         className={cn(
           "fixed top-0 left-0 h-full w-full max-w-sm bg-background flex flex-col z-50 transition-transform duration-300 ease-in-out md:hidden",
-          isOpen ? "translate-x-0" : "-translate-x-full"
+          isOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
         <div className="relative flex items-center justify-between p-md border-b border-border h-16">
@@ -85,20 +85,23 @@ const MobileMenu = ({
               onExpandChange={setIsSearchExpanded}
               className={cn(
                 "flex",
-                isSearchExpanded ? "w-[70vw] sm:w-80" : "w-10"
+                isSearchExpanded ? "w-[70vw] sm:w-80" : "w-10",
               )}
             />
           </div>
 
           <div
             className={cn(
-              "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transition-all duration-300 ease-in-out",
+              "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2",
+              "transition-all duration-300 ease-in-out",
+              "w-32 md:w-40",
               isSearchExpanded
                 ? "opacity-0 scale-90 pointer-events-none"
-                : "opacity-100 scale-100"
+                : "opacity-100 scale-100",
             )}
+            onClick={onClose}
           >
-            <HeaderLogo />
+            <HeaderLogo size="80%" />
           </div>
 
           <button

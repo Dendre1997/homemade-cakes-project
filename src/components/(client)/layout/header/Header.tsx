@@ -99,7 +99,7 @@ const Header = ({ categories }: HeaderProps) => {
       <div
         className={cn(
           "fixed top-0 left-0 right-0 z-50 flex justify-center pointer-events-none transition-opacity duration-300",
-          !isAtTop ? "opacity-100" : "opacity-0"
+          !isAtTop ? "opacity-100" : "opacity-0",
         )}
       >
         <button
@@ -120,7 +120,7 @@ const Header = ({ categories }: HeaderProps) => {
           isAtTop && "relative translate-y-0 opacity-100",
           !isAtTop && "fixed top-0 left-0 right-0 shadow-md",
           !isAtTop && !isOverlayOpen && "-translate-y-full opacity-0",
-          !isAtTop && isOverlayOpen && "translate-y-0 opacity-100"
+          !isAtTop && isOverlayOpen && "translate-y-0 opacity-100",
         )}
       >
         <div className="bg-white/80 backdrop-blur-md border-b border-white/20 shadow-sm">
@@ -145,8 +145,6 @@ const Header = ({ categories }: HeaderProps) => {
                   ></Link>
                 </div>
                 <div className="flex items-center gap-md justify-end">
-                  {/* 2. Search Input (Pass the handler & visibility class) */}
-
                   <SearchInput
                     onExpandChange={setIsSearchExpanded}
                     className="hidden md:flex"
@@ -156,7 +154,7 @@ const Header = ({ categories }: HeaderProps) => {
                       "hidden md:flex items-center gap-md transition-all duration-300 ease-in-out overflow-hidden",
                       isSearchExpanded
                         ? "w-0 opacity-0 translate-x-4"
-                        : "w-auto opacity-100 translate-x-0"
+                        : "w-auto opacity-100 translate-x-0",
                     )}
                   >
                     <Link
@@ -172,7 +170,7 @@ const Header = ({ categories }: HeaderProps) => {
                       "hidden md:flex items-center gap-md transition-all duration-300 ease-in-out overflow-hidden",
                       isSearchExpanded
                         ? "w-0 opacity-0 translate-x-4"
-                        : "w-auto opacity-100 translate-x-0"
+                        : "w-auto opacity-100 translate-x-0",
                     )}
                   >
                     <Link
@@ -186,9 +184,9 @@ const Header = ({ categories }: HeaderProps) => {
                 </div>
               </div>
 
-              <div className="absolute inset-x-0 flex justify-center pointer-events-none">
-                <div className="pointer-events-auto">
-                  <HeaderLogo />
+              <div className="flex-none flex justify-center items-center">
+                <div className="w-40  lg:w-48">
+                  <HeaderLogo size="70%" />
                 </div>
               </div>
               <div className="flex items-center gap-md justify-end">
@@ -197,7 +195,7 @@ const Header = ({ categories }: HeaderProps) => {
                     "hidden md:flex items-center gap-md transition-all duration-300 ease-in-out overflow-hidden",
                     isSearchExpanded
                       ? "w-0 opacity-0 translate-x-4"
-                      : "w-auto opacity-100 translate-x-0"
+                      : "w-auto opacity-100 translate-x-0",
                   )}
                 >
                   <Link
