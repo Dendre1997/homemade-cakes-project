@@ -9,17 +9,11 @@ const Footer: React.FC = () => {
       <div className="mx-auto max-w-7xl px-lg py-xxl">
         <div className="grid grid-cols-1 gap-x-md gap-y-lg sm:grid-cols-2 md:grid-cols-3">
           <div className="space-y-md">
-            <Link
-              href="/"
-              className="flex flex-col items-start group select-none"
-            >
-              <span className="font-heading text-2xl md:text-3xl font-bold tracking-wide text-accent">
-                DILNA
-              </span>
-              <span className="font-body text-[10px] md:text-xs tracking-[0.3em] text-accent uppercase ">
-                CAKES
-              </span>
-            </Link>
+            <div className="flex justify-start w-full">
+              <div className="w-32 md:w-48 lg:w-56 pointer-events-auto">
+                <HeaderLogo size="100%" />
+              </div>
+            </div>
             <p className="font-body text-body max-w-xs">
               Handcrafted cakes for your sweetest moments.
             </p>

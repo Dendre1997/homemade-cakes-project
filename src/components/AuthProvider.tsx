@@ -12,12 +12,21 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setIsLoading(true)
       if (firebaseUser) {
         try {
-          const response = await fetch("/api/profile");
+          // Geting new user token
+          const token = await firebaseUser.getIdToken();
+
+          const response = await fetch("/api/profile", {
+            headers: {
+              // send token to check on server side
+              Authorization: `Bearer ${token}`,
+            },
+          });
           if (response.ok) {
             const profileData: User = await response.json();
-            setUser(profileData); 
+            setUser(profileData);
           } else {
             // Handle cases where the profile might not exist in DB yet
             setUser(null);
