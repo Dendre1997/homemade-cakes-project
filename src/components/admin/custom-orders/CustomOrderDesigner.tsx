@@ -89,6 +89,10 @@ export default function CustomOrderDesigner({
   // Modals
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showConvertModal, setShowConvertModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  
+  // -- Cancel State --
+  const [isCanceling, setIsCanceling] = useState(false);
   
   // -- Delete Confirmation State --
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -288,6 +292,29 @@ export default function CustomOrderDesigner({
     }
   };
 
+  const executeCancel = async () => {
+    setIsCanceling(true);
+    setShowCancelModal(false);
+    try {
+      const res = await fetch(`/api/custom-orders/${customOrder._id}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to cancel order");
+      }
+      
+      showAlert("Order canceled successfully", "success");
+      router.push("/bakery-manufacturing-orders/custom-orders");
+      router.refresh();
+
+    } catch (err) {
+      console.error(err);
+      showAlert("Failed to cancel order", "error");
+      setIsCanceling(false);
+    }
+  };
+
   const handleConvertClick = () => {
     if (!agreedPrice || Number(agreedPrice) <= 0) {
         showAlert("Please enter a valid Agreed Price before converting.", "warning");
@@ -346,6 +373,17 @@ export default function CustomOrderDesigner({
         The customer will be linked, and the request will be locked.
       </ConfirmationModal>
 
+      <ConfirmationModal
+        isOpen={showCancelModal}
+        onClose={() => setShowCancelModal(false)}
+        onConfirm={executeCancel}
+        title="Cancel Custom Order?"
+        confirmText="Yes, Cancel Order"
+        variant="danger"
+      >
+        Are you sure you want to cancel and delete this custom order request? This action cannot be undone and will permanently delete all associated data and images.
+      </ConfirmationModal>
+
 
       {/* 1. Converted Banner */}
       {isConverted && (
@@ -382,11 +420,15 @@ export default function CustomOrderDesigner({
           <div className="flex gap-3">
              {!isConverted && (
                  <>
-                   <Button variant="outline" onClick={() => setShowSaveModal(true)} disabled={isSaving || isConverting}>
+                   <Button variant="danger" onClick={() => setShowCancelModal(true)} disabled={isSaving || isConverting || isCanceling}>
+                     {isCanceling ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                     Cancel
+                   </Button>
+                   <Button variant="outline" onClick={() => setShowSaveModal(true)} disabled={isSaving || isConverting || isCanceling}>
                      {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
                      Save Draft
                    </Button>
-                   <Button onClick={handleConvertClick} disabled={isSaving || isConverting}>
+                   <Button onClick={handleConvertClick} disabled={isSaving || isConverting || isCanceling}>
                      {isConverting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <ArrowRight className="w-4 h-4 mr-2" />}
                      Convert to Order
                    </Button>

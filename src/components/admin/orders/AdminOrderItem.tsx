@@ -12,6 +12,7 @@ interface AdminOrderItemProps {
   flavorMap: Record<string, string>;
   onEdit?: (item: CartItem) => void;
   referenceImages?: string[];
+  discountedLineTotal?: number;
 }
 
 export const AdminOrderItem = ({
@@ -20,6 +21,7 @@ export const AdminOrderItem = ({
   diameters = [],
   onEdit,
   referenceImages = [],
+  discountedLineTotal,
 }: AdminOrderItemProps) => {
   const getFlavorName = (id?: string) => {
     if (!id) return "Unknown Flavor";
@@ -127,7 +129,7 @@ export const AdminOrderItem = ({
                         </div>
                         
                          <span className="text-sm text-gray-500 font-mono mt-1 block flex items-center gap-2">
-                            ${item.price.toFixed(2)} x {item.quantity} = <span className="font-bold text-primary">${((item.rowTotal) || (item.price * item.quantity)).toFixed(2)}</span>
+                            ${((discountedLineTotal ?? (item.rowTotal || (item.price * item.quantity))) / item.quantity).toFixed(2)} x {item.quantity} = <span className="font-bold text-primary">${(discountedLineTotal ?? (item.rowTotal || (item.price * item.quantity))).toFixed(2)}</span>
                             {item.isManualPrice && (
                                 <span title="Manual Price Set" className="cursor-help text-primary">
                                     <AlertCircle className="w-4 h-4" />
@@ -212,7 +214,7 @@ export const AdminOrderItem = ({
               </span>
             )}
              <span className="text-sm text-primary font-mono">
-                 ${item.price.toFixed(2)} x {item.quantity} = ${((item.rowTotal) || (item.price * item.quantity)).toFixed(2)}
+                 ${((discountedLineTotal ?? (item.rowTotal || (item.price * item.quantity))) / item.quantity).toFixed(2)} x {item.quantity} = ${(discountedLineTotal ?? (item.rowTotal || (item.price * item.quantity))).toFixed(2)}
              </span>
           </div>
           

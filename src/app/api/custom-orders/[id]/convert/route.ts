@@ -219,9 +219,6 @@ export async function POST(
       paymentDetails: {
         status: "unpaid",
       },
-      discountInfo: {
-        amount: 0,
-      },
       isPaid: false,
     };
 

@@ -42,8 +42,8 @@ const SeasonalHomeBanner = ({ activeEvent }: SeasonalHomeBannerProps) => {
           {/* --- Content --- */}
           <div className="absolute inset-0 flex flex-col justify-center px-8 md:px-16 max-w-2xl text-white">
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest mb-4 w-fit backdrop-blur-md bg-white/10 border border-white/20">
-              <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest mb-4 w-fit backdrop-blur-md bg-accent/10 border border-accent/20 text-accent shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
               Limited Time Event
             </div>
 
@@ -74,9 +74,9 @@ const SeasonalHomeBanner = ({ activeEvent }: SeasonalHomeBannerProps) => {
                 </Button>
               </Link>
 
-              <div className="flex items-center gap-2 text-sm text-white/70 font-mono bg-black/30 px-4 py-2 rounded-md backdrop-blur-sm w-fit">
-                <span>Available until:</span>
-                <span className="text-white font-bold">
+              <div className="flex items-center gap-2 text-sm text-primary font-body bg-accent/10 border border-accent/20 px-4 py-2 rounded-full backdrop-blur-md w-fit shadow-sm">
+                <span className="text-secondary text-lg font-bold">Available until:</span>
+                <span className="text-accent text-lg font-bold">
                   {format(new Date(activeEvent.endDate), "MMM d")}
                 </span>
               </div>

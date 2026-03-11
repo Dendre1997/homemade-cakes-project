@@ -220,8 +220,8 @@ export async function POST(request: NextRequest) {
         status: OrderStatus.PENDING_CONFIRMATION,
         createdAt: new Date(),
         source: 'web', // Enforce source
-        discountInfo: pricingResult.appliedCode ? {
-            code: pricingResult.appliedCode,
+        discountInfo: pricingResult.discountTotal > 0 ? {
+            code: pricingResult.appliedCode || undefined,
             amount: pricingResult.discountTotal,
             name: pricingResult.appliedDiscount?.name
         } : undefined
@@ -413,8 +413,8 @@ export async function POST(request: NextRequest) {
                   diameterId: undefined, // Explicit null for Sets
                   
                   // PRICING (Source of Truth: Shared Logic with Discounts)
-                  price: safePrice(breakdown ? breakdown.finalPrice : finalCalculatedPrice),
-                  rowTotal: safePrice(breakdown ? breakdown.finalPrice * item.quantity : finalCalculatedPrice * item.quantity),
+                  price: safePrice(breakdown ? breakdown.finalPrice / item.quantity : finalCalculatedPrice),
+                  rowTotal: safePrice(breakdown ? breakdown.finalPrice : finalCalculatedPrice * item.quantity),
                   
                   // Metadata
                   originalPrice: breakdown ? breakdown.originalPrice : undefined,
@@ -481,8 +481,8 @@ export async function POST(request: NextRequest) {
         status: OrderStatus.NEW,
         createdAt: new Date(),
         source: 'web', // Enforce source
-        discountInfo: pricingResult.appliedCode ? {
-            code: pricingResult.appliedCode,
+        discountInfo: pricingResult.discountTotal > 0 ? {
+            code: pricingResult.appliedCode || undefined,
             amount: pricingResult.discountTotal,
             name: pricingResult.appliedDiscount?.name
         } : undefined

@@ -53,10 +53,6 @@ const CollectionPage = async ({
           <h1 className="font-heading text-h1 text-primary">
             {collection.name}
           </h1>
-          <p className="mt-md font-body text-lg text-primary/90 max-w-2xl mx-auto">
-            {collection.description ||
-              `Discover our ${collection.name.toLowerCase()} collection.`}
-          </p>
         </div>
 
         {products.length > 0 ? (

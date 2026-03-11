@@ -273,16 +273,37 @@ const OrderDetailItems = ({
     <div className="bg-card-background p-lg rounded-large shadow-md">
       <h2 className="font-heading text-h3 text-primary mb-md">Items</h2>
       <div className="flex flex-col">
-        {items.map((item) => (
-            <AdminOrderItem
-                key={item.id || item.productId?.toString() || Math.random().toString()}
-                item={item}
-                flavorMap={flavorMap}
-                diameters={diameters}
-                onEdit={handleEditClick}
-                referenceImages={referenceImages}
-            />
-        ))}
+        {(() => {
+            const orderSubtotal = items.reduce((sum, it) => sum + (it.rowTotal || (it.price * it.quantity)), 0);
+            const totalDiscount = Math.max(0, orderSubtotal - totalAmount);
+            const discountedItemsSubtotal = items.filter(it => it.discountId || it.discountName).reduce((sum, it) => sum + (it.rowTotal || (it.price * it.quantity)), 0);
+
+            const getDiscountedLineTotal = (item: CartItem) => {
+                const itemBaseTotal = item.rowTotal || (item.price * item.quantity);
+                if (totalDiscount <= 0.01) return itemBaseTotal;
+                
+                if (item.discountId || item.discountName) {
+                    if (discountedItemsSubtotal > 0) {
+                         return itemBaseTotal - (totalDiscount * (itemBaseTotal / discountedItemsSubtotal));
+                    }
+                } else if (discountedItemsSubtotal === 0) {
+                    return itemBaseTotal - (totalDiscount * (itemBaseTotal / orderSubtotal));
+                }
+                return itemBaseTotal;
+            };
+
+            return items.map((item) => (
+                <AdminOrderItem
+                    key={item.id || item.productId?.toString() || Math.random().toString()}
+                    item={item}
+                    flavorMap={flavorMap}
+                    diameters={diameters}
+                    onEdit={handleEditClick}
+                    referenceImages={referenceImages}
+                    discountedLineTotal={getDiscountedLineTotal(item)}
+                />
+            ));
+        })()}
       </div>
       <div className="mt-md pt-md border-t border-border text-right">
         <p className="font-body text-lg font-bold text-primary">

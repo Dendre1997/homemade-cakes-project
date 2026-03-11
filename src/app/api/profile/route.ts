@@ -1,21 +1,28 @@
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import { cookies } from "next/headers";
 import { adminAuth } from "@/lib/firebase/adminApp";
 import clientPromise from "@/lib/db";
 import { User } from "@/types";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const cookieStore = await cookies();
     const sessionCookie = cookieStore.get("session")?.value;
-    if (!sessionCookie) {
+    const authHeader = req.headers.get("authorization");
+    
+    let decodedToken;
+
+    if (sessionCookie) {
+      decodedToken = await adminAuth.verifySessionCookie(
+        sessionCookie,
+        true
+      );
+    } else if (authHeader?.startsWith("Bearer ")) {
+      const idToken = authHeader.split("Bearer ")[1];
+      decodedToken = await adminAuth.verifyIdToken(idToken);
+    } else {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    const decodedToken = await adminAuth.verifySessionCookie(
-      sessionCookie,
-      true
-    );
 
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);

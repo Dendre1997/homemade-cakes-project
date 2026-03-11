@@ -7,25 +7,44 @@ import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { MultiImageUpload } from "@/components/custom-order/MultiImageUpload";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/Select";
+import FlavorSelector from "@/components/ui/FlavorSelector";
+import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 import { Flavor } from "@/types";
 
 export default function StepDesign() {
   const { register, control, formState: { errors } } = useFormContext();
   const [flavors, setFlavors] = useState<Flavor[]>([]);
+  const [activeAccordion, setActiveAccordion] = useState<string | null>("flavor");
 
   useEffect(() => {
-    async function fetchFlavors() {
+    async function fetchData() {
       try {
-        const res = await fetch("/api/flavors");
-        if (res.ok) {
-          const data = await res.json();
-          setFlavors(data);
+        const [flavorsRes, categoriesRes] = await Promise.all([
+          fetch("/api/flavors"),
+          fetch("/api/categories")
+        ]);
+        if (flavorsRes.ok && categoriesRes.ok) {
+          const allFlavors: Flavor[] = await flavorsRes.json();
+          const allCategories = await categoriesRes.json();
+
+          const cakesCat = allCategories.find(
+            (c: any) => c.slug === "cakes" || c.name.toLowerCase().includes("cake")
+          );
+
+          let filteredFlavors = allFlavors;
+          if (cakesCat) {
+            filteredFlavors = allFlavors.filter(
+              (f) => f.categoryIds?.includes(cakesCat._id)
+            );
+          }
+
+          setFlavors(filteredFlavors);
         }
       } catch (error) {
-        console.error("Failed to fetch flavors", error);
+        console.error("Failed to fetch flavors or categories", error);
       }
     }
-    fetchFlavors();
+    fetchData();
   }, []);
 
   return (
@@ -52,25 +71,24 @@ export default function StepDesign() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Flavor Preferences */}
-          <div className="space-y-2">
-            <Label htmlFor="flavorPreferences" className="text-base font-semibold">Flavor Preferences</Label>
+          <div className="space-y-3">
              <Controller
               control={control}
               name="flavorPreferences"
               render={({ field }) => (
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <SelectTrigger id="flavorPreferences" className="w-full">
-                    <SelectValue placeholder="Select a flavor..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {flavors.map((flavor) => (
-                      <SelectItem key={flavor._id} value={flavor._id}>
-                        {flavor.name}
-                      </SelectItem>
-                    ))}
-                    <SelectItem value="Other/Surprise Me">Other / Surprise Me</SelectItem>
-                  </SelectContent>
-                </Select>
+                <CollapsibleSection
+                  title="Flavor Preferences"
+                  isOpen={activeAccordion === "flavor"}
+                  onToggle={() => setActiveAccordion((prev) => (prev === "flavor" ? null : "flavor"))}
+                >
+                  <FlavorSelector
+                    mode="single"
+                    flavors={flavors}
+                    selectedId={field.value || null}
+                    onSelectId={field.onChange}
+                    hidePrice={true}
+                  />
+                </CollapsibleSection>
               )}
             />
             {errors.flavorPreferences && (
@@ -80,22 +98,32 @@ export default function StepDesign() {
 
           {/* Budget Range */}
           <div className="space-y-2">
-            <Label htmlFor="budgetRange" className="text-base font-semibold">Approximate Budget</Label>
             <Controller
               control={control}
               name="budgetRange"
               render={({ field }) => (
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <SelectTrigger id="budgetRange" className="w-full">
-                    <SelectValue placeholder="Select Range..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="$50 - $100">$50 - $100</SelectItem>
-                    <SelectItem value="$100 - $200">$100 - $200</SelectItem>
-                    <SelectItem value="$200 - $300">$200 - $300</SelectItem>
-                    <SelectItem value="$300+">$300+</SelectItem>
-                  </SelectContent>
-                </Select>
+                <CollapsibleSection
+                  title="Approximate Budget"
+                  isOpen={activeAccordion === "budget"}
+                  onToggle={() => setActiveAccordion((prev) => (prev === "budget" ? null : "budget"))}
+                >
+                  <div className="grid grid-cols-2 gap-3 mt-4">
+                    {["$50 - $100", "$100 - $200", "$200 - $300", "$300+"].map((range) => (
+                      <button
+                        key={range}
+                        type="button"
+                        onClick={() => field.onChange(range)}
+                        className={`flex items-center justify-center rounded-medium p-3 transition-colors text-sm font-medium border ${
+                          field.value === range
+                            ? "bg-primary text-white border-primary"
+                            : "bg-white text-gray-700 border-border hover:bg-subtleBackground"
+                        }`}
+                      >
+                        {range}
+                      </button>
+                    ))}
+                  </div>
+                </CollapsibleSection>
               )}
             />
             {errors.budgetRange && (

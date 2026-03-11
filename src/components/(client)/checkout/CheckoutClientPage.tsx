@@ -556,6 +556,7 @@ const CheckoutClientPage = ({ isDeliveryEnabled }: CheckoutClientPageProps) => {
         deliveryDates: [],
       },
       items,
+      promoCode: discountCode || undefined,
       totalAmount: subtotal,
       status: "pending_confirmation",
     };

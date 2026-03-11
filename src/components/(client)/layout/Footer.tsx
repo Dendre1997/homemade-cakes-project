@@ -15,7 +15,7 @@ const Footer: React.FC = () => {
               </div>
             </div>
             <p className="font-body text-body max-w-xs">
-              Handcrafted cakes for your sweetest moments.
+              Sweet creations for your sweetest moments
             </p>
             <div className="flex items-center gap-md">
               <a
@@ -101,7 +101,7 @@ const Footer: React.FC = () => {
 
         <div className="mt-xl border-t border-background/20 pt-lg text-center">
           <p className="font-body text-small">
-            © 2025 Homemade Cakes. All rights reserved.
+            © 2025 D&K Creations. All rights reserved.
           </p>
         </div>
       </div>
