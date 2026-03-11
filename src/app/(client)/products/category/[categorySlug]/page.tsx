@@ -51,10 +51,6 @@ const CategoryPage = async ({
       <div className="mx-auto max-w-7xl px-lg py-xl">
         <div className="text-center">
           <h1 className="font-heading text-h1 text-primary">{category.name}</h1>
-          <p className="mt-md font-body text-lg text-primary/90 max-w-2xl mx-auto">
-            Discover our collection of handcrafted {category.name.toLowerCase()}
-            , made with love and the finest ingredients.
-          </p>
         </div>
 
         {products.length > 0 ? (

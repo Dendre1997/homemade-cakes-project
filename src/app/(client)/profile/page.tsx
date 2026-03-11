@@ -95,23 +95,7 @@ export default async function ProfilePage() {
           ]).toArray();
           
           // Serialize for Client Component (ProductCard)
-          pastProducts = productsRaw.map((product: any) => ({
-             ...product,
-             _id: product._id.toString(),
-             categoryId: product.categoryId.toString(),
-             collectionIds: (product.collectionIds || []).map((id: ObjectId) => id.toString()),
-             seasonalEventIds: (product.seasonalEventIds || []).map((id: ObjectId) => id.toString()),
-             availableFlavorIds: (product.availableFlavorIds || []).map((id: ObjectId) => id.toString()),
-             allergenIds: (product.allergenIds || []).map((id: ObjectId) => id.toString()),
-             availableDiameterConfigs: (product.availableDiameterConfigs || []).map((config: any) => ({
-                 ...config,
-                 diameterId: config.diameterId.toString()
-             })),
-             category: {
-                 ...product.category,
-                 _id: product.category._id.toString()
-             }
-          }));
+          pastProducts = JSON.parse(JSON.stringify(productsRaw));
 
       } catch (err) {
           console.error("Error fetching history products:", err);
@@ -136,16 +120,7 @@ export default async function ProfilePage() {
                 { $unwind: "$category" }
             ]).toArray();
             
-            pastProducts = productsRaw.map((product: any) => ({
-                ...product,
-                _id: product._id.toString(),
-                categoryId: product.categoryId.toString(),
-                availableDiameterConfigs: (product.availableDiameterConfigs || []).map((config: any) => ({
-                    ...config,
-                    diameterId: config.diameterId.toString()
-                })),
-                category: { ...product.category, _id: product.category._id.toString() }
-            }));
+            pastProducts = JSON.parse(JSON.stringify(productsRaw));
             
         } catch(err) { console.error("Error fetching fallback history:", err); }
       }

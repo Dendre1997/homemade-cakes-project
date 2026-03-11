@@ -116,7 +116,9 @@ export const OrderCard = ({ order, onStatusChange, diametersMap }: OrderCardProp
       <div className="mx-4 my-2 p-3 bg-[#fdf2f1] rounded-md flex-1">
         <div className="space-y-4">
           {order.items.map((item, idx) => {
-            const hasDiscount = item.originalPrice && item.originalPrice > item.price;
+            const isDiscounted = item.discountId !== null || item.discountName !== null;
+            const originalTotal = (item.originalPrice ?? (item.price * item.quantity)).toFixed(2);
+            const finalTotal = (item.rowTotal ?? (item.price * item.quantity)).toFixed(2);
             
             return (
               <div key={idx} className="flex gap-3 items-start relative">
@@ -133,11 +135,11 @@ export const OrderCard = ({ order, onStatusChange, diametersMap }: OrderCardProp
                     </span>
                     <div className="text-right flex flex-col items-end leading-none">
                        <span className="text-xs font-bold text-[#2f1b23]">
-                         ${(item.price * item.quantity).toFixed(2)}
+                         ${order.totalAmount}
                        </span>
-                       {hasDiscount && (
+                       {!!isDiscounted && (
                          <span className="text-[10px] text-gray-400 line-through decoration-red-400">
-                           ${((item.originalPrice ?? 0) * item.quantity).toFixed(2)}
+                           ${originalTotal}
                          </span>
                        )}
                     </div>
