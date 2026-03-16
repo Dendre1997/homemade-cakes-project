@@ -26,8 +26,7 @@ export default function ImageSelector({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-         <h3 className="text-sm font-semibold  uppercase tracking-wider">Reference Images</h3>
+      <div className="flex w-full items-center justify-between">
          <Button 
            variant="secondary"
            size="sm"

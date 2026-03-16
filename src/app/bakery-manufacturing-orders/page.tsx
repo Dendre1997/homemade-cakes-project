@@ -92,19 +92,24 @@ async function getDashboardData() {
   });
 
   
+  const flavors = await db.collection("flavors").find({}).toArray();
+  const flavorMap: Record<string, string> = {};
+  flavors.forEach(f => flavorMap[f._id.toString()] = f.name);
+
   return {
     revenueToday,
     ordersCountToday: revenueOrders.length,
     pendingConfirmationOrders: JSON.parse(JSON.stringify(pendingConfirmationOrders)),
     inboxOrders: JSON.parse(JSON.stringify(inboxOrders)),
-    productionQueue: JSON.parse(JSON.stringify(productionQueue))
+    productionQueue: JSON.parse(JSON.stringify(productionQueue)),
+    flavorMap
   };
 }
 
 
 export default async function AdminDashboard() {
   const data = await getDashboardData();
-  const { revenueToday, ordersCountToday, pendingConfirmationOrders, inboxOrders, productionQueue } = data;
+  const { revenueToday, ordersCountToday, pendingConfirmationOrders, inboxOrders, productionQueue, flavorMap } = data;
   
   const nextOrder = productionQueue[0];
   const nextDeliveryItem = nextOrder ? {
@@ -211,7 +216,7 @@ export default async function AdminDashboard() {
             </Link>
           </div>
 
-          <InboxQueue orders={inboxOrders} />
+          <InboxQueue orders={inboxOrders} flavorMap={flavorMap} />
         </section>
 
         <section className="space-y-4">
@@ -223,7 +228,7 @@ export default async function AdminDashboard() {
             <span className="text-sm text-muted-foreground">Next 5 tasks</span>
           </div>
 
-          <ProductionQueue orders={productionQueue} />
+          <ProductionQueue orders={productionQueue} flavorMap={flavorMap} />
         </section>
       </div>
     </div>

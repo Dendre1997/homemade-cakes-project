@@ -7,9 +7,10 @@ import { useAlert } from "@/contexts/AlertContext";
 
 interface ProductionQueueProps {
   orders: Order[];
+  flavorMap?: Record<string, string>;
 }
 
-export default function ProductionQueue({ orders }: ProductionQueueProps) {
+export default function ProductionQueue({ orders, flavorMap }: ProductionQueueProps) {
   
   const { showAlert } = useAlert();
   const [localOrders, setLocalOrders] = React.useState<Order[]>(orders);
@@ -68,6 +69,7 @@ export default function ProductionQueue({ orders }: ProductionQueueProps) {
             key={order._id.toString()} 
             order={order} 
             onStatusChange={handleStatusChange} 
+            flavorMap={flavorMap}
         />
       ))}
     </div>
