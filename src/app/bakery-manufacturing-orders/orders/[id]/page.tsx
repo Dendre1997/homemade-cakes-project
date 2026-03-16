@@ -18,6 +18,10 @@ import OrderDetailCustomer from "@/components/admin/orders/OrderDetailCustomer";
 import { OrderDetailActions } from "@/components/admin/orders/OrderDetailActions";
 import { OrderNotesSection } from "@/components/admin/orders/OrderNotesSection";
 import { useConfirmation } from "@/contexts/ConfirmationContext";
+import { ReceiptGeneratorModal } from "@/components/admin/orders/ReceiptGeneratorModal";
+import { Receipt } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { Flavor } from "@/types";
 interface AvailabilityData {
   leadTimeDays: number;
   manufacturingTimes: { [key: string]: number };
@@ -62,6 +66,9 @@ const OrderDetailsPage = () => {
   const [settings, setSettings] = useState<Partial<ScheduleSettings> | null>(
     null
   );
+  
+  const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
+  const [flavorMap, setFlavorMap] = useState<Record<string, string>>({});
 
   // --- Data Fetching ---
   const fetchOrderAndDiameters = useCallback(async () => {
@@ -158,6 +165,17 @@ const OrderDetailsPage = () => {
     console.log("Capacity percentages calculated:", percentages);
     setCapacityPercentages(percentages);
   }, [availabilityData]);
+
+  useEffect(() => {
+    fetch("/api/admin/flavors")
+      .then(res => res.json())
+      .then((flavors: Flavor[]) => {
+          const map: Record<string, string> = {};
+          flavors.forEach(f => map[f._id] = f.name);
+          setFlavorMap(map);
+      })
+      .catch(err => console.warn(err));
+  }, []);
 
   useEffect(() => {
     fetchOrderAndDiameters();
@@ -640,6 +658,20 @@ const OrderDetailsPage = () => {
         </div>{" "}
         {/* --- Right Column --- */}
         <div className="space-y-lg">
+          
+          <div className="bg-card-background rounded-medium p-lg shadow-sm border border-border/40">
+              <h2 className="font-heading text-h5 text-primary tracking-tight mb-2">Generate Receipt</h2>
+              <p className="text-sm text-primary-500 mb-4 leading-relaxed">Create a shareable image receipt</p>
+              <Button 
+                onClick={() => setIsReceiptModalOpen(true)}
+                variant="outline"
+                className="w-full font-semibold border-accent/20 bg-accent/5 hover:bg-accent hover:text-white transition-colors text-accent flex items-center justify-center gap-2"
+              >
+                 <Receipt className="w-4 h-4" />
+                 Preview & Download
+              </Button>
+          </div>
+
           <OrderDetailCustomer
             customerInfo={order.customerInfo}
             deliveryInfo={order.deliveryInfo}
@@ -681,6 +713,14 @@ const OrderDetailsPage = () => {
       <div className="mt-8">
         <OrderNotesSection order={order} onUpdate={fetchOrderAndDiameters} />
       </div>
+
+      <ReceiptGeneratorModal 
+        isOpen={isReceiptModalOpen}
+        onClose={() => setIsReceiptModalOpen(false)}
+        order={order}
+        diameters={diameters}
+        flavorMap={flavorMap}
+      />
     </section>
   );
 };

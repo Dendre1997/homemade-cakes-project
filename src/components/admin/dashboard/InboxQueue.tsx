@@ -8,9 +8,10 @@ import { useRouter } from "next/navigation";
 
 interface InboxQueueProps {
   orders: Order[];
+  flavorMap?: Record<string, string>;
 }
 
-export default function InboxQueue({ orders }: InboxQueueProps) {
+export default function InboxQueue({ orders, flavorMap }: InboxQueueProps) {
   const { showAlert } = useAlert();
   const router = useRouter(); 
   const [localOrders, setLocalOrders] = useState<Order[]>(orders);
@@ -65,6 +66,7 @@ export default function InboxQueue({ orders }: InboxQueueProps) {
             key={order._id.toString()} 
             order={order} 
             onStatusChange={handleStatusChange} 
+            flavorMap={flavorMap}
         />
       ))}
     </div>

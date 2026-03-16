@@ -25,6 +25,7 @@ interface CustomOrderItemFormProps {
       flavorValue: string;
       description: string;
       price: number;
+      quantity?: number;
   };
   submitLabel?: string;
 }
@@ -46,6 +47,7 @@ export default function CustomOrderItemForm({
   const [flavorValue, setFlavorValue] = useState<string>(initialValues?.flavorValue || "");
   const [description, setDescription] = useState<string>(initialValues?.description || "");
   const [price, setPrice] = useState<number>(initialValues?.price || 0);
+  const [quantity, setQuantity] = useState<number>(initialValues?.quantity || 1);
   
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -151,7 +153,8 @@ export default function CustomOrderItemForm({
           productType: 'custom',
           price: price,
           originalPrice: price,
-          quantity: 1,
+          quantity: quantity,
+          rowTotal: price * quantity,
           imageUrl: selectedImage || images[0] || "",
           
           isManualPrice: true,
@@ -175,24 +178,30 @@ export default function CustomOrderItemForm({
       newItem.flavor = flavorValue; 
       
       onSubmit(newItem);
+      
+      // Reset form state so the admin doesn't have to manually delete the previous image (which would trigger a Cloudinary deletion and break the previous item)
+      if (!initialValues?.id) {
+          setImages([]);
+          setSelectedImage("");
+          setSizeValue("");
+          setFlavorValue("");
+          setDescription("");
+          setPrice(0);
+          setQuantity(1);
+      }
   };
 
   return (
     <div className=" p-4 rounded-lg  ">
        <div className="flex justify-between items-center mb-6  pb-4">
            <h3 className="text-lg font-bold text-primary">New Custom Item Design</h3>
-           {/* {onCancel && (
-               <Button variant="ghost" size="sm" onClick={onCancel}>
-                   <X className="w-4 h-4" />
-               </Button>
-           )} */}
        </div>
 
        <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
            {/* LEFT: Images & Description (5 cols) */}
-           <div className="md:col-span-5 space-y-6">
-               <div>
-                   <Label className="mb-2 block">Reference Images</Label>
+           <div className="col-span-5 space-y-6">
+               <div className="col-span-1">
+                      <Label className="mb-2 block">Reference Images</Label>
                    <ImageSelector 
                        images={images}
                        selectedImage={selectedImage}
@@ -225,7 +234,7 @@ export default function CustomOrderItemForm({
 
            {/* RIGHT: Specs & Price (7 cols) */}
            <div className="md:col-span-7 space-y-6">
-               <div className="grid grid-cols-2 gap-4">
+               <div className="grid grid-cols-1 gap-4">
                    <HybridSelector 
                        label="Size / Configuration"
                        options={diameters}
@@ -245,33 +254,50 @@ export default function CustomOrderItemForm({
                </div>
 
                <div className="pt-4 border-t">
-                   <Label className="mb-2 block">Manual Price ($)</Label>
-                   <div className="flex items-center gap-4">
-                       <Input 
-                           type="number" 
-                           min="0"
-                           step="0.01"
-                           className="text-2xl font-bold w-48"
-                           placeholder="0.00"
-                           value={price || ""}
-                           onChange={(e) => setPrice(parseFloat(e.target.value))}
-                       />
-                       <div className="text-sm text-gray-500">
-                           * Override any calculated pricing.
+                   <div className="flex flex-col sm:flex-row gap-4">
+                       <div>
+                           <Label className="mb-2 block">Quantity</Label>
+                           <Input 
+                               type="number"
+                               min="1"
+                               className="text-2xl font-bold w-full sm:w-24"
+                               value={quantity}
+                               onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                           />
                        </div>
+                       <div>
+                           <Label className="mb-2 block">Unit Price ($)</Label>
+                           <Input 
+                               type="number" 
+                               min="0"
+                               step="0.01"
+                               className="text-2xl font-bold w-full sm:w-36"
+                               placeholder="0.00"
+                               value={price || ""}
+                               onChange={(e) => setPrice(parseFloat(e.target.value))}
+                           />
+                       </div>
+                   </div>
+                   <div className="text-sm text-gray-500 mt-2">
+                       * Override any calculated pricing.
                    </div>
                </div>
 
-               <div className="flex justify-end gap-3 pt-6 mt-6 border-t">
-                   {onCancel && (
-                       <Button variant="ghost" onClick={onCancel}>
-                           Cancel
+               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pt-6 mt-6 border-t">
+                   <div className="font-bold text-lg text-primary mb-2 sm:mb-0">
+                       Row Total: ${(price * quantity).toFixed(2)}
+                   </div>
+                   <div className="flex flex-col sm:flex-row justify-end gap-3 w-full sm:w-auto">
+                       {onCancel && (
+                           <Button variant="ghost" onClick={onCancel} className="w-full sm:w-auto">
+                               Cancel
+                           </Button>
+                       )}
+                       <Button onClick={handleSubmit} disabled={isUploading} className="w-full sm:w-auto">
+                           <Plus className="w-4 h-4 mr-2" />
+                           {submitLabel}
                        </Button>
-                   )}
-                   <Button onClick={handleSubmit} disabled={isUploading}>
-                       <Plus className="w-4 h-4 mr-2" />
-                       Add to Order
-                   </Button>
+                   </div>
                </div>
            </div>
        </div>

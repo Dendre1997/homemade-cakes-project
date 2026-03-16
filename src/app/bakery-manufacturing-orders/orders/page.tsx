@@ -22,6 +22,7 @@ const ManageOrdersPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [availabilityData, setAvailabilityData] = useState<any>(null); // New State for availability
   const [diametersMap, setDiametersMap] = useState<Record<string, number>>({});
+  const [flavorMap, setFlavorMap] = useState<Record<string, string>>({});
 
   // Filters
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -87,11 +88,28 @@ const ManageOrdersPage = () => {
     }
   }, []);
 
+  const fetchFlavors = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/flavors");
+      if (res.ok) {
+        const data = await res.json();
+        const map: Record<string, string> = {};
+        data.forEach((f: any) => {
+          map[f._id] = f.name;
+        });
+        setFlavorMap(map);
+      }
+    } catch (e) {
+      console.error("Failed to load flavors", e);
+    }
+  }, []);
+
   useEffect(() => {
     fetchOrders();
     fetchAvailability(); // Load availability on mount
     fetchDiameters();
-  }, [fetchOrders, fetchAvailability]);
+    fetchFlavors();
+  }, [fetchOrders, fetchAvailability, fetchDiameters, fetchFlavors]);
 
   // Smart Initial Date Selection
   useEffect(() => {
@@ -292,12 +310,13 @@ const ManageOrdersPage = () => {
                    ) : (
                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4">
                            {filteredOrders.map(order => (
-                               <OrderCard 
-                                    key={order._id} 
-                                    order={order} 
-                                    onStatusChange={handleStatusChange} 
-                                    diametersMap={diametersMap}
-                               />
+                                <OrderCard 
+                                     key={order._id} 
+                                     order={order} 
+                                     onStatusChange={handleStatusChange} 
+                                     diametersMap={diametersMap}
+                                     flavorMap={flavorMap}
+                                />
                            ))}
                        </div>
                    )}

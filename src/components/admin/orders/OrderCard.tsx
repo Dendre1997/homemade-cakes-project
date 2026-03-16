@@ -13,16 +13,22 @@ interface OrderCardProps {
   order: Order;
   onStatusChange: (orderId: string, status: OrderStatus) => void;
   diametersMap?: Record<string, number>;
+  flavorMap?: Record<string, string>;
 }
 
-export const OrderCard = ({ order, onStatusChange, diametersMap }: OrderCardProps) => {
+export const OrderCard = ({ order, onStatusChange, diametersMap, flavorMap }: OrderCardProps) => {
   const isDelivery = order.deliveryInfo.method === "delivery";
   const primaryDateObj = order.deliveryInfo.deliveryDates?.[0] || { date: order.createdAt, timeSlot: "N/A" };
   const primaryDate = new Date(primaryDateObj.date);
   const isUrgent = isToday(primaryDate) || isTomorrow(primaryDate);
 
   const renderItemDetails = (item: any) => {
-    if (item.selectedConfig?.cake) {
+    // 1. Combo (Bento + Box of Items)
+    // Legacy combos used 'item.flavor' strings, but new ones have BOTH '.cake' and a Set Config (like '.items' or '.quantityConfigId')
+    // Or if it strictly includes "Combo: ", we treat it visually as such.
+    const isCombo = (item.selectedConfig?.cake && (item.selectedConfig?.items || item.selectedConfig?.quantityConfigId)) || String(item.flavor).includes("Combo:");
+    
+    if (isCombo) {
       return (
         <div className="flex flex-col gap-2 mt-1 w-full">
           {/* Bento Section */}
@@ -31,8 +37,12 @@ export const OrderCard = ({ order, onStatusChange, diametersMap }: OrderCardProp
               <Cake className="w-3 h-3 text-[#764a4d]" />
               <span className="font-bold text-[#231416] uppercase tracking-wide">Bento Cake</span>
             </div>
-            <span className="text-[#231416] block">{item.flavor.split('For Bento')[1] || "Custom Flavor"}</span> 
-            {item.selectedConfig.cake.inscription && (
+            <span className="text-primary/60 block">
+               {item.selectedConfig?.cake?.flavorId 
+                   ? (flavorMap?.[item.selectedConfig.cake.flavorId] || "Custom Flavor")
+                   : (item.flavor.split('For Bento')[1] || "Custom Flavor")}
+            </span> 
+            {item.selectedConfig?.cake?.inscription && (
               <div className="flex items-start gap-1 mt-1 text-[#764a4d]">
                 <ScrollText className="w-3 h-3 shrink-0" />
                 <span className="italic font-medium">"{item.selectedConfig.cake.inscription}"</span>
@@ -44,39 +54,60 @@ export const OrderCard = ({ order, onStatusChange, diametersMap }: OrderCardProp
           <div className="pl-2 border-l-2 border-gray-300 text-xs text-gray-600">
              <div className="flex items-center gap-1.5 mb-0.5">
               <Box className="w-3 h-3" />
-              <span className="font-bold">Box Items ({item.selectedConfig.quantityConfigId})</span>
+              <span className="font-bold">Box Items {item.selectedConfig?.quantityConfigId ? `(${item.selectedConfig.quantityConfigId})` : ""}</span>
             </div>
-             <span>{item.flavor.split('For Bento')[0] || "Mix"}</span>
+            {item.selectedConfig?.items && item.selectedConfig.items.length > 0 ? (
+                <div className="mt-1 space-y-0.5 text-primary/60">
+                   {item.selectedConfig.items.map((boxItem: any, i: number) => (
+                       <div key={i}>{boxItem.count}x {flavorMap?.[boxItem.flavorId] || "Flavor"}</div>
+                   ))}
+                </div>
+            ) : (
+                <span className="text-primary/60 block">{item.flavor.split('For Bento')[0] || "Mix"}</span>
+            )}
           </div>
         </div>
       );
     }
 
+    // 2. Pure Set (Box Items only, no Cake)
     if (item.selectedConfig?.items && !item.selectedConfig?.cake) {
       return (
         <div className="flex flex-col gap-1 mt-0.5 w-full">
           <div className="flex items-center gap-1.5 text-xs text-[#764a4d] font-medium">
             <Box className="w-3 h-3" />
-            <span>Set of {item.selectedConfig.quantityConfigId}</span>
+            <span>Set {item.selectedConfig?.quantityConfigId ? `of ${item.selectedConfig.quantityConfigId}` : ""}</span>
           </div>
-          <span className="text-xs text-[#231416] pl-4.5">{item.flavor}</span>
+          <div className="text-xs text-[#231416] pl-4.5 space-y-0.5">
+             {item.selectedConfig.items.map((boxItem: any, i: number) => (
+                 <div key={i}>{boxItem.count}x {flavorMap?.[boxItem.flavorId] || "Flavor"}</div>
+             ))}
+          </div>
         </div>
       );
     }
 
+    // 3. Default Item (Standard Cake or Standard Custom Cake)
+    const mappedFlavorName = 
+         flavorMap?.[item.flavor] || 
+         (item.selectedConfig?.cake?.flavorId ? flavorMap?.[item.selectedConfig.cake.flavorId] : undefined) || 
+         item.flavor;
+         
+    const isCustomSize = item.customSize;
+    const sizeDisplay = isCustomSize 
+        ? item.customSize
+        : (item.diameterId && diametersMap && diametersMap[item.diameterId.toString()] 
+            ? `${diametersMap[item.diameterId.toString()]} inches` 
+            : undefined);
+
     return (
       <div className="flex flex-col gap-0.5 text-xs text-[#764a4d] mt-0.5">
         <span className="flex items-center gap-1">
-          <Layers className="w-3 h-3" />
-          {item.flavor}
+          <Layers className="w-3 h-3 shrink-0" />
+          <span className="truncate">{mappedFlavorName}</span>
         </span>
-        {item.diameterId && (
-          <span>
-            Size: {diametersMap && diametersMap[item.diameterId.toString()] 
-              ? `${diametersMap[item.diameterId.toString()]} inches` 
-              : `${String(item.diameterId).slice(-4)}...`}
-          </span>
-        )}
+        {sizeDisplay && <span className="text-primary/70">Size: {sizeDisplay}</span>}
+        {item.adminNotes && <span className="italic text-gray-500 line-clamp-2 mt-0.5">Note: {item.adminNotes}</span>}
       </div>
     );
   };
@@ -116,7 +147,7 @@ export const OrderCard = ({ order, onStatusChange, diametersMap }: OrderCardProp
       <div className="mx-4 my-2 p-3 bg-[#fdf2f1] rounded-md flex-1">
         <div className="space-y-4">
           {order.items.map((item, idx) => {
-            const isDiscounted = item.discountId !== null || item.discountName !== null;
+            const isDiscounted = !!item.discountId || !!item.discountName;
             const originalTotal = (item.originalPrice ?? (item.price * item.quantity)).toFixed(2);
             const finalTotal = (item.rowTotal ?? (item.price * item.quantity)).toFixed(2);
             
@@ -135,7 +166,7 @@ export const OrderCard = ({ order, onStatusChange, diametersMap }: OrderCardProp
                     </span>
                     <div className="text-right flex flex-col items-end leading-none">
                        <span className="text-xs font-bold text-[#2f1b23]">
-                         ${order.totalAmount}
+                         ${item.price}
                        </span>
                        {!!isDiscounted && (
                          <span className="text-[10px] text-gray-400 line-through decoration-red-400">

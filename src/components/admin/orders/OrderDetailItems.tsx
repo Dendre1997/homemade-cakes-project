@@ -63,6 +63,7 @@ const OrderDetailItems = ({
   const [products, setProducts] = useState<ProductWithCategory[]>([]);
   const [availableFlavors, setAvailableFlavors] = useState<Flavor[]>([]);
   const [availableDiameters, setAvailableDiameters] = useState<Diameter[]>([]);
+  const [allFlavors, setAllFlavors] = useState<Flavor[]>([]);
 
   // Fetch Products for the Picker (only once)
   useEffect(() => {
@@ -265,6 +266,7 @@ const OrderDetailItems = ({
             const map: Record<string, string> = {};
             flavors.forEach(f => map[f._id] = f.name);
             setFlavorMap(map);
+            setAllFlavors(flavors);
         })
         .catch(err => console.warn(err));
   }, []);
@@ -333,16 +335,17 @@ const OrderDetailItems = ({
                 )}
             </DialogHeader>
             
-            {editingItem && isCustomMode ? (
-                 <div className="py-4">
-                     <CustomOrderItemForm 
-                        flavors={availableFlavors.length > 0 ? availableFlavors : []} 
-                        diameters={diameters}
+             {editingItem && isCustomMode ? (
+                  <div className="py-4">
+                      <CustomOrderItemForm 
+                         flavors={allFlavors} 
+                         diameters={diameters}
                         submitLabel="Save Changes"
                         
                         initialValues={{
                             id: editingItem.id,
                             price: editingItem.price,
+                            quantity: editingItem.quantity,
                             images: editingItem.imageUrl ? [editingItem.imageUrl] : [],
                             selectedImage: editingItem.imageUrl || "",
                             sizeValue: editingItem.customSize || (editingItem.diameterId ? editingItem.diameterId.toString() : "") || "",
