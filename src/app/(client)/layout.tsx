@@ -5,6 +5,7 @@ import { ProductCategory } from "@/types";
 
 export default async function ClientLayout({ children }: { children: React.ReactNode }) {
   const categories: ProductCategory[] = await getCategories();
+
   return (
     <>
       <div className="flex min-h-screen flex-col">

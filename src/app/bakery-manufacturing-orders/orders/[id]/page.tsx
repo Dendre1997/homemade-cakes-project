@@ -19,7 +19,7 @@ import { OrderDetailActions } from "@/components/admin/orders/OrderDetailActions
 import { OrderNotesSection } from "@/components/admin/orders/OrderNotesSection";
 import { useConfirmation } from "@/contexts/ConfirmationContext";
 import { ReceiptGeneratorModal } from "@/components/admin/orders/ReceiptGeneratorModal";
-import { Receipt } from "lucide-react";
+import { Receipt, Printer } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Flavor } from "@/types";
 interface AvailabilityData {
@@ -625,12 +625,11 @@ const OrderDetailsPage = () => {
         )}
       </h1>
 
-      {isLoading &&
-        !isConfirmingDate && (
-          <div className="flex justify-center my-md">
-            <LoadingSpinner />
-          </div>
-        )}
+      {isLoading && !isConfirmingDate && (
+        <div className="flex justify-center my-md">
+          <LoadingSpinner />
+        </div>
+      )}
       {error && (
         <p className="mb-md text-center p-md bg-error/10 text-error rounded-medium">
           {error}
@@ -658,20 +657,42 @@ const OrderDetailsPage = () => {
         </div>{" "}
         {/* --- Right Column --- */}
         <div className="space-y-lg">
-          
           <div className="bg-card-background rounded-medium p-lg shadow-sm border border-border/40">
-              <h2 className="font-heading text-h5 text-primary tracking-tight mb-2">Generate Receipt</h2>
-              <p className="text-sm text-primary-500 mb-4 leading-relaxed">Create a shareable image receipt</p>
-              <Button 
-                onClick={() => setIsReceiptModalOpen(true)}
-                variant="outline"
-                className="w-full font-semibold border-accent/20 bg-accent/5 hover:bg-accent hover:text-white transition-colors text-accent flex items-center justify-center gap-2"
-              >
-                 <Receipt className="w-4 h-4" />
-                 Preview & Download
-              </Button>
+            <h2 className="font-heading text-h5 text-primary tracking-tight mb-2">
+              Generate Receipt
+            </h2>
+            <p className="text-sm text-primary-500 mb-4 leading-relaxed">
+              Create a shareable image receipt
+            </p>
+            <Button
+              onClick={() => setIsReceiptModalOpen(true)}
+              variant="outline"
+              className="w-full font-semibold border-accent/20 bg-accent/5 hover:bg-accent hover:text-white transition-colors text-accent flex items-center justify-center gap-2"
+            >
+              <Receipt className="w-4 h-4" />
+              Preview & Download
+            </Button>
           </div>
-
+          <div className="space-y-lg">
+            <div className="bg-card-background rounded-medium p-lg shadow-sm border border-border/40">
+              <h2 className="font-heading text-h5 text-primary tracking-tight mb-2">
+                Print Order Production Details
+              </h2>
+              <Link
+                href={`/bakery-manufacturing-orders/orders/${order._id.toString()}/print`}
+                target="_blank"
+              >
+                <Button
+                  onClick={() => setIsReceiptModalOpen(true)}
+                  variant="outline"
+                  className="w-full font-semibold border-accent/20 bg-accent/5 hover:bg-accent hover:text-white transition-colors text-accent flex items-center justify-center gap-2"
+                >
+                  <Printer className="w-4 h-4" />
+                  Print
+                </Button>
+              </Link>
+            </div>
+          </div>
           <OrderDetailCustomer
             customerInfo={order.customerInfo}
             deliveryInfo={order.deliveryInfo}
@@ -714,7 +735,7 @@ const OrderDetailsPage = () => {
         <OrderNotesSection order={order} onUpdate={fetchOrderAndDiameters} />
       </div>
 
-      <ReceiptGeneratorModal 
+      <ReceiptGeneratorModal
         isOpen={isReceiptModalOpen}
         onClose={() => setIsReceiptModalOpen(false)}
         order={order}
