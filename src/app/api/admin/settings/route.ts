@@ -22,9 +22,12 @@ export async function PUT(req: NextRequest) {
 
     const filter = { _id: "global_settings" };
     
+    // Omit _id from body to prevent MongoDB immutable field error
+    const { _id, ...updateData } = body;
+    
     const result = await db.collection<AppSettings>("app_settings").findOneAndUpdate(
       filter,
-      { $set: body }, 
+      { $set: updateData }, 
       { upsert: true, returnDocument: "after" }
     );
 

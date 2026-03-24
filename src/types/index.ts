@@ -40,9 +40,28 @@ export interface AvailableDiameterConfig {
 
 export interface AppSettings {
   _id: string; // constant: "global_settings"
+  
+  store?: {
+    isAcceptingOrders: boolean;
+    vacationMessage?: string;
+  };
+
   checkout: {
     isDeliveryEnabled: boolean;
     disabledMessage?: string;
+    
+    // New logistics fields
+    deliveryFee?: number;
+    minOrderForDelivery?: number;
+    deliveryInstructions?: string;
+    isPickupEnabled?: boolean;
+    pickupAddress?: string;
+    pickupInstructions?: string;
+  };
+  
+  support?: {
+    isLiveChatEnabled: boolean;
+    botGreetingMessage?: string;
   };
 }
 
@@ -396,4 +415,38 @@ export interface CustomOrder {
   agreedPrice?: number;
   adminNotes?: string;
   adminSelectedImage?: string;
+}
+
+// --- STATUSES AND ROLES ---
+
+// Who sent the message
+export type MessageSender = 'client' | 'admin' | 'bot';
+
+// Chat lifecycle status
+export type ChatStatus = 
+  | 'bot_active'    // Client is talking to the bot (hidden in admin panel)
+  | 'waiting_admin' // Client requested a human (shows as "new" in admin panel)
+  | 'admin_active'  // Admin replied and is conducting the dialogue
+  | 'archived_bot'  // Client closed the chat while still talking to the bot
+  | 'resolved';     // Admin resolved the issue and closed the chat
+
+// --- DATA STRUCTURE ---
+
+// Individual message within the array
+export interface IMessage {
+  id: string; // Unique message ID (e.g., crypto.randomUUID())
+  sender: MessageSender;
+  text: string;
+  createdAt: Date;
+}
+
+// Main chat object (MongoDB Document)
+export interface IChat {
+  _id?: string | ObjectId;
+  userId: string; // Client ID from NextAuth session
+  status: ChatStatus;
+  hasUnread: boolean; // For highlighting with a red dot in the admin panel
+  messages: IMessage[];
+  createdAt: Date;
+  updatedAt: Date;
 }
