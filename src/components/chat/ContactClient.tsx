@@ -2,24 +2,24 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { MessageCircle, Send, Loader2, Bot, ChevronLeft, PlusCircle, Mail, Phone } from "lucide-react";
-import { AppSettings, IChat, IMessage } from "@/types";
+import { MessageCircle, Send, Loader2, Bot, Cat, ChevronLeft, PlusCircle, Mail, Phone } from "lucide-react";
+import { AppSettings, IChat, IMessage, Flavor, Diameter } from "@/types";
 import { pusherClient } from "@/lib/pusher";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card, CardContent } from "@/components/ui/Card";
 import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
-import { botDecisionTree, BotOption } from "@/lib/chat/botLogic";
+import { botDecisionTree, BotOption, BotNode } from "@/lib/chat/botLogic";
 import { cn } from "@/lib/utils";
 
 interface PopulatedChat extends Omit<IChat, "createdAt" | "updatedAt"> {
   _id: string; // Mongo ID returned as string
   createdAt: string;
   updatedAt: string;
+  isLocal?: boolean;
 }
 
-export default function ContactClient({ initialSettings }: { initialSettings: AppSettings }) {
-  const [isGuest, setIsGuest] = useState(false);
+export default function ContactClient({ initialSettings, isAuthenticated = false }: { initialSettings: AppSettings, isAuthenticated?: boolean }) {
   const [isLoadingChats, setIsLoadingChats] = useState(true);
   const [chats, setChats] = useState<PopulatedChat[]>([]);
   const [activeChat, setActiveChat] = useState<PopulatedChat | null>(null);
@@ -40,6 +40,8 @@ export default function ContactClient({ initialSettings }: { initialSettings: Ap
 
   // Bot State
   const [currentBotNodeId, setCurrentBotNodeId] = useState<string>("greeting");
+  const [dynamicNode, setDynamicNode] = useState<BotNode | null>(null);
+  const [isTyping, setIsTyping] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -63,13 +65,13 @@ export default function ContactClient({ initialSettings }: { initialSettings: Ap
 
   // Load Chats on Mount
   useEffect(() => {
+    if (!isAuthenticated) {
+      setIsLoadingChats(false);
+      return;
+    }
     const fetchChats = async () => {
       try {
         const res = await fetch("/api/chat");
-        if (res.status === 401) {
-          setIsGuest(true);
-          return;
-        }
         if (res.ok) {
           const data = await res.json();
           setChats(data);
@@ -81,7 +83,7 @@ export default function ContactClient({ initialSettings }: { initialSettings: Ap
       }
     };
     fetchChats();
-  }, []);
+  }, [isAuthenticated]);
 
   // Auto-scroll Feed
   useEffect(() => {
@@ -97,7 +99,12 @@ export default function ContactClient({ initialSettings }: { initialSettings: Ap
     if (activeChat.status === "bot_active") {
         if (messages.length === 0) {
            setCurrentBotNodeId("greeting");
-           appendLocalBotMessage(initialSettings.support?.botGreetingMessage || "Hello! You are connected to D&K Creations Support.");
+           setDynamicNode(null);
+           setIsTyping(true);
+           setTimeout(() => {
+              appendLocalBotMessage(initialSettings.support?.botGreetingMessage || "Hello! You are connected to D&K Creations Support.");
+              setIsTyping(false);
+           }, 800);
         }
     } else {
         if (messages.length === 0) appendLocalBotMessage("Reconnected securely to active session.");
@@ -131,36 +138,18 @@ export default function ContactClient({ initialSettings }: { initialSettings: Ap
   };
 
   const handleCreateChat = async () => {
-    setIsCreating(true);
-    setToastMessage(null);
-    try {
-      const res = await fetch("/api/chat", { method: "POST" });
-      
-      if (res.status === 429) {
-        setToastMessage("You already have 3 active inquiries. Please resolve one before starting another.");
-        setTimeout(() => setToastMessage(null), 4000);
-        return;
-      }
-
-      if (res.ok) {
-        const data = await res.json();
-        const newChat: PopulatedChat = {
-          _id: data.chatId,
-          userId: "me",
-          status: "bot_active",
-          hasUnread: false,
-          messages: [],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
-        setChats([newChat, ...chats]);
-        changeActiveChat(newChat);
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsCreating(false);
-    }
+    const newChat: PopulatedChat = {
+      _id: "local_" + generateTempId(),
+      userId: isAuthenticated ? "me" : "guest",
+      status: "bot_active",
+      hasUnread: false,
+      messages: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      isLocal: true
+    };
+    setChats([newChat, ...chats]);
+    changeActiveChat(newChat);
   };
 
   const sendMessage = async (text: string, forceSender?: "client" | "bot" | "admin") => {
@@ -216,6 +205,15 @@ export default function ContactClient({ initialSettings }: { initialSettings: Ap
 
   const handleResolveChat = async () => {
     if (!activeChat) return;
+    
+    if (activeChat.isLocal) {
+        setChats(prev => prev.filter(c => c._id !== activeChat._id));
+        setActiveChat(null);
+        setIsConfirmCloseOpen(false);
+        setTimeout(() => setIsViewingThread(false), 400);
+        return;
+    }
+
     setIsResolving(true);
     try {
       const res = await fetch("/api/chat", {
@@ -247,36 +245,263 @@ export default function ContactClient({ initialSettings }: { initialSettings: Ap
     switch (option.action) {
       case 'NAVIGATE':
         if (option.nextNodeId) {
+          setDynamicNode(null);
           setCurrentBotNodeId(option.nextNodeId);
-          setTimeout(() => {
-             appendLocalBotMessage(botDecisionTree[option.nextNodeId!].botText);
-          }, 300);
+          setIsTyping(true);
+          await new Promise(resolve => setTimeout(resolve, 800));
+          appendLocalBotMessage(botDecisionTree[option.nextNodeId!].botText);
+          setIsTyping(false);
         }
         break;
 
       case 'SHOW_INFO':
-        const checkout = initialSettings.checkout || {} as any;
-        if (option.infoKey === 'delivery') {
-          if (checkout.isDeliveryEnabled) {
-            appendLocalBotMessage(`Yes, we offer delivery! The fee is $${checkout.deliveryFee} (Minimum order: $${checkout.minOrderForDelivery}).\n\n${checkout.deliveryInstructions}`);
-          } else {
-            appendLocalBotMessage(checkout.disabledMessage || "Sorry, delivery is currently unavailable.");
+        if (option.infoKey === 'flavors') {
+          setIsTyping(true);
+          await new Promise(resolve => setTimeout(resolve, 800));
+          appendLocalBotMessage("Looking up our menu categories...");
+          setIsTyping(false);
+          try {
+            setIsTyping(true);
+            const res = await fetch('/api/categories');
+            if (!res.ok) throw new Error("Failed");
+            const categories = await res.json();
+            const categoryOptions: BotOption[] = categories.map((c: any) => ({
+               label: c.name,
+               action: 'FETCH_FLAVORS',
+               categoryId: c._id
+            }));
+            categoryOptions.push({ label: "Go Back", action: 'NAVIGATE', nextNodeId: 'explore_menu_and_orders' });
+            
+            setDynamicNode({
+               id: 'dynamic_categories',
+               botText: "Which type of treat are you looking for?",
+               options: categoryOptions
+            });
+            setIsTyping(true);
+            await new Promise(resolve => setTimeout(resolve, 800));
+            setCurrentBotNodeId('dynamic_categories');
+            appendLocalBotMessage("Which type of treat are you looking for?");
+            setIsTyping(false);
+          } catch (err) {
+            console.error("Failed to fetch categories", err);
+            setIsTyping(true);
+            await new Promise(resolve => setTimeout(resolve, 800));
+            appendLocalBotMessage("Sorry, I'm having trouble retrieving the menu right now.");
+            setIsTyping(false);
+            await new Promise(resolve => setTimeout(resolve, 500));
+            setDynamicNode(null);
+            setCurrentBotNodeId('anything_else');
+            setIsTyping(true);
+            await new Promise(resolve => setTimeout(resolve, 800));
+            appendLocalBotMessage(botDecisionTree['anything_else'].botText);
+            setIsTyping(false);
           }
-        } else if (option.infoKey === 'pickup') {
-          if (checkout.isPickupEnabled) {
-            appendLocalBotMessage(`Pickup is available at:\n📍 ${checkout.pickupAddress}\n\n${checkout.pickupInstructions}`);
-          } else {
-            appendLocalBotMessage("Sorry, pickup is currently unavailable.");
+        } else if (option.infoKey === 'sizes') {
+          setIsTyping(true);
+          await new Promise(resolve => setTimeout(resolve, 800));
+          appendLocalBotMessage("Let me grab our sizing chart for you...");
+          setIsTyping(false);
+          try {
+            setIsTyping(true);
+            const res = await fetch('/api/diameters');
+            if (!res.ok) throw new Error("Failed");
+            const diameters: Diameter[] = await res.json();
+            
+            diameters.sort((a, b) => (a.sizeValue || 0) - (b.sizeValue || 0));
+            
+            let msg = "Here is our sizing guide:\n\n";
+            diameters.forEach(d => {
+               msg += `• **${d.name}** (feeds ${d.servings} people)\n`;
+            });
+            msg += "\nWe can also do tiered cakes for larger events! Are you ready to start your order?";
+            
+            setIsTyping(true);
+            await new Promise(resolve => setTimeout(resolve, 800));
+            appendLocalBotMessage(msg);
+            setIsTyping(false);
+            
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            setDynamicNode(null);
+            setCurrentBotNodeId('anything_else');
+            setIsTyping(true);
+            await new Promise(resolve => setTimeout(resolve, 800));
+            appendLocalBotMessage(botDecisionTree['anything_else'].botText);
+            setIsTyping(false);
+          } catch (err) {
+            console.error("Failed to fetch diameters", err);
+            setIsTyping(true);
+            await new Promise(resolve => setTimeout(resolve, 800));
+            appendLocalBotMessage("Sorry, I'm having trouble fetching the sizing guide right now.");
+            setIsTyping(false);
+            await new Promise(resolve => setTimeout(resolve, 500));
+            setDynamicNode(null);
+            setCurrentBotNodeId('anything_else');
+            setIsTyping(true);
+            await new Promise(resolve => setTimeout(resolve, 800));
+            appendLocalBotMessage(botDecisionTree['anything_else'].botText);
+            setIsTyping(false);
           }
+        } else {
+            const checkout = initialSettings.checkout || {} as any;
+            setIsTyping(true);
+            await new Promise(resolve => setTimeout(resolve, 800));
+            if (option.infoKey === 'delivery') {
+              if (checkout.isDeliveryEnabled) {
+                appendLocalBotMessage(`Yes, we offer delivery! The fee is $${checkout.deliveryFee} (Minimum order: $${checkout.minOrderForDelivery}).\n\n${checkout.deliveryInstructions}`);
+              } else {
+                appendLocalBotMessage(checkout.disabledMessage || "Sorry, delivery is currently unavailable.");
+              }
+            } else if (option.infoKey === 'pickup') {
+              if (checkout.isPickupEnabled) {
+                appendLocalBotMessage(`Pickup is available at:\n📍 ${checkout.pickupAddress}\n\n${checkout.pickupInstructions}`);
+              } else {
+                appendLocalBotMessage("Sorry, pickup is currently unavailable.");
+              }
+            }
+            setIsTyping(false);
+            await new Promise(resolve => setTimeout(resolve, 500));
+            setDynamicNode(null);
+            if (option.infoKey === 'delivery' || option.infoKey === 'pickup') {
+               setCurrentBotNodeId('logistics_followup');
+               setIsTyping(true);
+               await new Promise(resolve => setTimeout(resolve, 800));
+               appendLocalBotMessage(botDecisionTree['logistics_followup'].botText);
+               setIsTyping(false);
+            } else {
+               setCurrentBotNodeId('anything_else');
+               setIsTyping(true);
+               await new Promise(resolve => setTimeout(resolve, 800));
+               appendLocalBotMessage(botDecisionTree['anything_else'].botText);
+               setIsTyping(false);
+            }
         }
-        setTimeout(() => {
+        break;
+
+      case 'FETCH_FLAVORS':
+        setIsTyping(true);
+        await new Promise(resolve => setTimeout(resolve, 800));
+        appendLocalBotMessage("Give me a second to pull up the options...");
+        setIsTyping(false);
+        try {
+          setIsTyping(true);
+          const flavorsRes = await fetch(`/api/flavors`);
+          if (!flavorsRes.ok) throw new Error("Failed");
+          const allFlavors = await flavorsRes.json();
+          const categoryFlavors = allFlavors.filter((f: Flavor) => f.categoryIds?.includes(option.categoryId!));
+          
+          let msg = `Here are the options for this category:\n\n`;
+          if (categoryFlavors.length === 0) {
+              msg = "We don't have any specific flavors listed for this category right now, but we can usually accommodate requests!";
+          } else {
+              categoryFlavors.forEach((f: Flavor) => {
+                  msg += `• **${f.name}**${f.description ? ` - ${f.description}` : ''}\n`;
+              });
+             msg += `\nYou can refer to these when filling out the custom order form!`;
+          }
+          
+          setIsTyping(true);
+          await new Promise(resolve => setTimeout(resolve, 800));
+          appendLocalBotMessage(msg);
+          setIsTyping(false);
+          
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          setDynamicNode(null);
           setCurrentBotNodeId('anything_else');
+          setIsTyping(true);
+          await new Promise(resolve => setTimeout(resolve, 800));
           appendLocalBotMessage(botDecisionTree['anything_else'].botText);
-        }, 500);
+          setIsTyping(false);
+        } catch (err) {
+          console.error("Failed to fetch flavors", err);
+          setIsTyping(true);
+          await new Promise(resolve => setTimeout(resolve, 800));
+          appendLocalBotMessage("Sorry, I'm having trouble retrieving the flavors right now.");
+          setIsTyping(false);
+          await new Promise(resolve => setTimeout(resolve, 500));
+          setDynamicNode(null);
+          setCurrentBotNodeId('anything_else');
+          setIsTyping(true);
+          await new Promise(resolve => setTimeout(resolve, 800));
+          appendLocalBotMessage(botDecisionTree['anything_else'].botText);
+          setIsTyping(false);
+        }
         break;
 
       case 'ESCALATE':
-        sendMessage("I'd like to speak with a human support agent.", "client");
+        if (!isAuthenticated) {
+          setCurrentBotNodeId('login_required');
+          setIsTyping(true);
+          await new Promise(resolve => setTimeout(resolve, 800));
+          appendLocalBotMessage(botDecisionTree['login_required'].botText);
+          setIsTyping(false);
+          return;
+        }
+
+        let targetChatId = activeChat?._id;
+        
+        if (activeChat?.isLocal || !targetChatId) {
+          setIsCreating(true);
+          try {
+            const res = await fetch("/api/chat", { method: "POST" });
+            if (res.status === 429) {
+               setToastMessage("You already have 3 active inquiries. Please resolve one before starting another.");
+               setTimeout(() => setToastMessage(null), 4000);
+               setIsCreating(false);
+               return;
+            }
+            if (!res.ok) throw new Error("Failed to create chat");
+            
+            const data = await res.json();
+            targetChatId = data.chatId as string;
+
+            const updatedActiveChat = { ...activeChat!, _id: targetChatId, isLocal: false, status: "waiting_admin" as const };
+            setActiveChat(updatedActiveChat);
+            setChats(prev => prev.map(c => c._id === activeChat?._id ? updatedActiveChat : c));
+
+          } catch (e) {
+             console.error(e);
+             setToastMessage("Failed to connect to agent.");
+             setTimeout(() => setToastMessage(null), 4000);
+             setIsCreating(false);
+             return;
+          }
+          setIsCreating(false);
+        } else {
+            setActiveChat(prev => prev ? { ...prev, status: "waiting_admin" as const } : null);
+            setChats(prev => prev.map(c => c._id === activeChat?._id ? { ...c, status: "waiting_admin" as const } : c));
+        }
+
+        setIsSending(true);
+        const text = "I'd like to chat with Baker";
+        const tempId = generateTempId();
+        const optimisticMsg: IMessage = { id: tempId, sender: "client", text, createdAt: new Date() };
+        setMessages(prev => [...prev, optimisticMsg]);
+
+        try {
+           const resMsg = await fetch("/api/chat/message", {
+             method: "POST",
+             headers: { "Content-Type": "application/json" },
+             body: JSON.stringify({
+               chatId: targetChatId,
+               text,
+               sender: "client"
+             })
+           });
+           
+           if (!resMsg.ok) throw new Error("Delivery failed");
+           const serverMessage = await resMsg.json();
+           
+           setMessages(prev => prev.map(m => m.id === tempId ? serverMessage : m));
+           setChats(prev => prev.map(c => 
+             c._id === targetChatId 
+               ? { ...c, messages: (c.messages || []).map(m => m.id === tempId ? serverMessage : m) } 
+               : c
+           ));
+        } catch (err) {
+           console.error(err);
+        } finally {
+           setIsSending(false);
+        }
         break;
 
       case 'LINK':
@@ -291,45 +516,8 @@ export default function ContactClient({ initialSettings }: { initialSettings: Ap
     }
   };
 
-  // 1. Unauthenticated Guest Fallback UI
-  if (isGuest) {
-    return (
-      <div className="min-h-screen py-16 px-4 sm:px-6 lg:px-8 bg-background flex items-center justify-center font-body text-primary">
-        <Card className="max-w-2xl w-full shadow-2xl border-0 overflow-hidden bg-card-background">
-            <div className="bg-primary p-8 text-primary-foreground text-center">
-                <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-90" />
-                <h1 className="text-3xl font-heading mb-2">Homemade Cakes Support</h1>
-                <p className="text-primary-foreground/80">We're here to help make your day sweeter!</p>
-            </div>
-            <CardContent className="p-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-                    <div className="flex flex-col items-center text-center p-4 bg-subtleBackground rounded-xl">
-                        <Mail className="h-6 w-6 text-primary mb-3" />
-                        <h3 className="font-heading text-lg">Email Us</h3>
-                        <p className="text-sm text-primary/60 mt-1">support@homemadecakes.com</p>
-                    </div>
-                    <div className="flex flex-col items-center text-center p-4 bg-subtleBackground rounded-xl">
-                        <Phone className="h-6 w-6 text-primary mb-3" />
-                        <h3 className="font-heading text-lg">Call Us</h3>
-                        <p className="text-sm text-primary/60 mt-1">+1 (555) 123-4567</p>
-                    </div>
-                </div>
-                <div className="flex flex-col items-center pt-6 border-t border-border">
-                    <p className="text-primary/80 mb-4 text-center">To start a live real-time support session with our bakers, please log into your account.</p>
-                    <Link href="/login">
-                        <Button size="lg" className="px-8 shadow-md hover:shadow-lg transition-transform hover:-translate-y-0.5">
-                            Log In to Start Live Chat
-                        </Button>
-                    </Link>
-                </div>
-            </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   // 2. Active Split-Pane UI
-  const currentNode = botDecisionTree[currentBotNodeId] || botDecisionTree['greeting'];
+  const currentNode = dynamicNode?.id === currentBotNodeId ? dynamicNode : botDecisionTree[currentBotNodeId] || botDecisionTree['greeting'];
 
   return (
     <div className="h-[calc(100vh-[100px])] min-h-[600px] overflow-hidden bg-background p-4 md:p-8 flex justify-center items-center font-body text-primary">
@@ -395,15 +583,15 @@ export default function ContactClient({ initialSettings }: { initialSettings: Ap
                         <Button variant="ghost" size="icon" className="md:hidden mr-1 text-primary" onClick={() => setIsViewingThread(false)}>
                             <ChevronLeft className="h-5 w-5" />
                         </Button>
-                        <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                            <Bot className="h-5 w-5" />
+                        <div className="h-9 w-9 rounded-full bg-subtleBackground/30 flex items-center justify-center text-primary mr-2">
+                            <Cat className="h-5 w-5" />
                         </div>
                         <div className="flex-1">
-                            <h3 className="font-heading text-sm text-primary">Support Bot Assistant</h3>
+                            <h3 className="font-heading text-sm text-primary">Support Assistant</h3>
                             <p className="text-xs text-primary/60">Ticket #{activeChat._id.substring(activeChat._id.length - 6)}</p>
                         </div>
                         {activeChat.status !== "resolved" && (
-                            <Button variant="danger" size="sm" className="h-8 px-3 text-xs shadow-sm bg-error/10 hover:bg-error/20 text-error border border-error/20" onClick={() => setIsConfirmCloseOpen(true)}>
+                            <Button variant="danger" size="sm" className="h-8 px-3 text-xs shadow-sm bg-error/10 hover:bg-error/10 text-error border border-error/10" onClick={() => setIsConfirmCloseOpen(true)}>
                                 End conversation
                             </Button>
                         )}
@@ -419,8 +607,8 @@ export default function ContactClient({ initialSettings }: { initialSettings: Ap
                                     <React.Fragment key={msg.id}>
                                         <div className={cn("flex w-full gap-2", msg.sender === "client" ? "justify-end" : "justify-start")}>
                                             {msg.sender !== "client" && (
-                                                <div className="h-8 w-8 rounded-full bg-primary/10 flex-shrink-0 flex items-center justify-center text-primary mt-auto mb-5">
-                                                    <Bot className="h-4 w-4" />
+                                                <div className="h-8 w-8 rounded-full bg-subtleBackground/30 flex-shrink-0 flex items-center justify-center text-primary mt-auto mb-5">
+                                                    <Cat className="h-4 w-4" />
                                                 </div>
                                             )}
                                             <div className={cn("flex flex-col max-w-[85%] md:max-w-[70%]", msg.sender === "client" ? "items-end" : "items-start")}>
@@ -455,6 +643,22 @@ export default function ContactClient({ initialSettings }: { initialSettings: Ap
                                     </React.Fragment>
                                 );
                             })}
+                            
+                            {isTyping && (
+                                <div className="flex w-full gap-2 justify-start mb-2 animate-in fade-in zoom-in-95 duration-200">
+                                    <div className="h-8 w-8 rounded-full bg-subtleBackground/30 flex-shrink-0 flex items-center justify-center text-primary mt-auto mb-1">
+                                        <Cat className="h-4 w-4" />
+                                    </div>
+                                    <div className="flex flex-col max-w-[85%] md:max-w-[70%] items-start mt-auto">
+                                        <div className="px-4 py-3 bg-card-background border border-border shadow-sm rounded-2xl rounded-bl-sm flex items-center justify-center space-x-1 min-h-[40px]">
+                                            <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                                            <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                                            <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="h-2" />
                         </div>
                     </div>
