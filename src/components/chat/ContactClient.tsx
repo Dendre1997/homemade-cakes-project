@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/Input";
 import { Card, CardContent } from "@/components/ui/Card";
 import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
 import { botDecisionTree, BotOption, BotNode } from "@/lib/chat/botLogic";
+import { TypingIndicator } from "./TypingIndicator";
 import { cn } from "@/lib/utils";
 
 interface PopulatedChat extends Omit<IChat, "createdAt" | "updatedAt"> {
@@ -42,6 +43,13 @@ export default function ContactClient({ initialSettings, isAuthenticated = false
   const [currentBotNodeId, setCurrentBotNodeId] = useState<string>("greeting");
   const [dynamicNode, setDynamicNode] = useState<BotNode | null>(null);
   const [isTyping, setIsTyping] = useState(false);
+  
+  // Human Typing State
+  const [isRemoteUserTyping, setIsRemoteUserTyping] = useState(false);
+  const typingFailsafeRef = useRef<NodeJS.Timeout | null>(null);
+  
+  const [isLocallyTyping, setIsLocallyTyping] = useState(false);
+  const localTypingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -125,8 +133,22 @@ export default function ContactClient({ initialSettings, isAuthenticated = false
       ));
     });
 
+    channel.bind("typing-update", (data: { isTyping: boolean, sender: string }) => {
+        if (data.sender === "admin") {
+            setIsRemoteUserTyping(data.isTyping);
+            if (typingFailsafeRef.current) clearTimeout(typingFailsafeRef.current);
+            if (data.isTyping) {
+                typingFailsafeRef.current = setTimeout(() => {
+                    setIsRemoteUserTyping(false);
+                }, 5000); // 5s stuck-bubble failsafe
+            }
+        }
+    });
+
     return () => {
       pusherClient?.unsubscribe(channelName);
+      if (typingFailsafeRef.current) clearTimeout(typingFailsafeRef.current);
+      if (localTypingTimeoutRef.current) clearTimeout(localTypingTimeoutRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeChat?._id]);
@@ -138,6 +160,12 @@ export default function ContactClient({ initialSettings, isAuthenticated = false
   };
 
   const handleCreateChat = async () => {
+    if (chats.length >= 3) {
+      setToastMessage("You already have 3 active inquiries. Please resolve one before starting another.");
+      setTimeout(() => setToastMessage(null), 4000);
+      return;
+    }
+
     const newChat: PopulatedChat = {
       _id: "local_" + generateTempId(),
       userId: isAuthenticated ? "me" : "guest",
@@ -152,6 +180,31 @@ export default function ContactClient({ initialSettings, isAuthenticated = false
     changeActiveChat(newChat);
   };
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const val = e.target.value;
+      setInputValue(val);
+      
+      if (!activeChat || activeChat.isLocal || activeChat.status === "bot_active") return;
+      
+      if (!isLocallyTyping && val.trim() !== "") {
+          setIsLocallyTyping(true);
+          fetch("/api/chat/typing", {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ chatId: activeChat._id, isTyping: true, sender: "client" })
+          }).catch(console.error);
+      }
+      
+      if (localTypingTimeoutRef.current) clearTimeout(localTypingTimeoutRef.current);
+      
+      localTypingTimeoutRef.current = setTimeout(() => {
+          setIsLocallyTyping(false);
+          fetch("/api/chat/typing", {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ chatId: activeChat._id, isTyping: false, sender: "client" })
+          }).catch(console.error);
+      }, 1500);
+  };
+
   const sendMessage = async (text: string, forceSender?: "client" | "bot" | "admin") => {
     if (!text.trim() || !activeChat) return;
 
@@ -164,6 +217,15 @@ export default function ContactClient({ initialSettings, isAuthenticated = false
 
     setIsSending(true);
     setInputValue(""); // Clear input instantly so user doesn't spam
+    
+    if (localTypingTimeoutRef.current) clearTimeout(localTypingTimeoutRef.current);
+    if (isLocallyTyping && activeChat && !activeChat.isLocal) {
+        setIsLocallyTyping(false);
+        fetch("/api/chat/typing", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ chatId: activeChat._id, isTyping: false, sender: "client" })
+        }).catch(console.error);
+    }
 
     try {
       const res = await fetch("/api/chat/message", {
@@ -181,12 +243,20 @@ export default function ContactClient({ initialSettings, isAuthenticated = false
       const serverMessage = await res.json();
       
       // 2. Synchronize IDs when server confirms
-      setMessages(prev => prev.map(m => m.id === tempId ? serverMessage : m));
-      setChats(prev => prev.map(c => 
-        c._id === activeChat._id 
-          ? { ...c, messages: (c.messages || []).map(m => m.id === tempId ? serverMessage : m) } 
-          : c
-      ));
+      setMessages(prev => {
+          if (prev.some(m => m.id === serverMessage.id && m.id !== tempId)) {
+              return prev.filter(m => m.id !== tempId);
+          }
+          return prev.map(m => m.id === tempId ? serverMessage : m);
+      });
+      setChats(prev => prev.map(c => {
+        if (c._id !== activeChat._id) return c;
+        const msgs = c.messages || [];
+        if (msgs.some(m => m.id === serverMessage.id && m.id !== tempId)) {
+            return { ...c, messages: msgs.filter(m => m.id !== tempId) };
+        }
+        return { ...c, messages: msgs.map(m => m.id === tempId ? serverMessage : m) };
+      }));
 
       if (text.includes("speak with a human")) {
         setActiveChat({ ...activeChat, status: "waiting_admin" });
@@ -259,9 +329,7 @@ export default function ContactClient({ initialSettings, isAuthenticated = false
           setIsTyping(true);
           await new Promise(resolve => setTimeout(resolve, 800));
           appendLocalBotMessage("Looking up our menu categories...");
-          setIsTyping(false);
           try {
-            setIsTyping(true);
             const res = await fetch('/api/categories');
             if (!res.ok) throw new Error("Failed");
             const categories = await res.json();
@@ -272,26 +340,22 @@ export default function ContactClient({ initialSettings, isAuthenticated = false
             }));
             categoryOptions.push({ label: "Go Back", action: 'NAVIGATE', nextNodeId: 'explore_menu_and_orders' });
             
+            await new Promise(resolve => setTimeout(resolve, 800));
             setDynamicNode({
                id: 'dynamic_categories',
                botText: "Which type of treat are you looking for?",
                options: categoryOptions
             });
-            setIsTyping(true);
-            await new Promise(resolve => setTimeout(resolve, 800));
             setCurrentBotNodeId('dynamic_categories');
             appendLocalBotMessage("Which type of treat are you looking for?");
             setIsTyping(false);
           } catch (err) {
             console.error("Failed to fetch categories", err);
-            setIsTyping(true);
             await new Promise(resolve => setTimeout(resolve, 800));
             appendLocalBotMessage("Sorry, I'm having trouble retrieving the menu right now.");
-            setIsTyping(false);
             await new Promise(resolve => setTimeout(resolve, 500));
             setDynamicNode(null);
             setCurrentBotNodeId('anything_else');
-            setIsTyping(true);
             await new Promise(resolve => setTimeout(resolve, 800));
             appendLocalBotMessage(botDecisionTree['anything_else'].botText);
             setIsTyping(false);
@@ -300,9 +364,7 @@ export default function ContactClient({ initialSettings, isAuthenticated = false
           setIsTyping(true);
           await new Promise(resolve => setTimeout(resolve, 800));
           appendLocalBotMessage("Let me grab our sizing chart for you...");
-          setIsTyping(false);
           try {
-            setIsTyping(true);
             const res = await fetch('/api/diameters');
             if (!res.ok) throw new Error("Failed");
             const diameters: Diameter[] = await res.json();
@@ -315,28 +377,22 @@ export default function ContactClient({ initialSettings, isAuthenticated = false
             });
             msg += "\nWe can also do tiered cakes for larger events! Are you ready to start your order?";
             
-            setIsTyping(true);
             await new Promise(resolve => setTimeout(resolve, 800));
             appendLocalBotMessage(msg);
-            setIsTyping(false);
             
             await new Promise(resolve => setTimeout(resolve, 1000));
             setDynamicNode(null);
             setCurrentBotNodeId('anything_else');
-            setIsTyping(true);
             await new Promise(resolve => setTimeout(resolve, 800));
             appendLocalBotMessage(botDecisionTree['anything_else'].botText);
             setIsTyping(false);
           } catch (err) {
             console.error("Failed to fetch diameters", err);
-            setIsTyping(true);
             await new Promise(resolve => setTimeout(resolve, 800));
             appendLocalBotMessage("Sorry, I'm having trouble fetching the sizing guide right now.");
-            setIsTyping(false);
             await new Promise(resolve => setTimeout(resolve, 500));
             setDynamicNode(null);
             setCurrentBotNodeId('anything_else');
-            setIsTyping(true);
             await new Promise(resolve => setTimeout(resolve, 800));
             appendLocalBotMessage(botDecisionTree['anything_else'].botText);
             setIsTyping(false);
@@ -358,18 +414,15 @@ export default function ContactClient({ initialSettings, isAuthenticated = false
                 appendLocalBotMessage("Sorry, pickup is currently unavailable.");
               }
             }
-            setIsTyping(false);
             await new Promise(resolve => setTimeout(resolve, 500));
             setDynamicNode(null);
             if (option.infoKey === 'delivery' || option.infoKey === 'pickup') {
                setCurrentBotNodeId('logistics_followup');
-               setIsTyping(true);
                await new Promise(resolve => setTimeout(resolve, 800));
                appendLocalBotMessage(botDecisionTree['logistics_followup'].botText);
                setIsTyping(false);
             } else {
                setCurrentBotNodeId('anything_else');
-               setIsTyping(true);
                await new Promise(resolve => setTimeout(resolve, 800));
                appendLocalBotMessage(botDecisionTree['anything_else'].botText);
                setIsTyping(false);
@@ -381,9 +434,7 @@ export default function ContactClient({ initialSettings, isAuthenticated = false
         setIsTyping(true);
         await new Promise(resolve => setTimeout(resolve, 800));
         appendLocalBotMessage("Give me a second to pull up the options...");
-        setIsTyping(false);
         try {
-          setIsTyping(true);
           const flavorsRes = await fetch(`/api/flavors`);
           if (!flavorsRes.ok) throw new Error("Failed");
           const allFlavors = await flavorsRes.json();
@@ -399,28 +450,22 @@ export default function ContactClient({ initialSettings, isAuthenticated = false
              msg += `\nYou can refer to these when filling out the custom order form!`;
           }
           
-          setIsTyping(true);
           await new Promise(resolve => setTimeout(resolve, 800));
           appendLocalBotMessage(msg);
-          setIsTyping(false);
           
           await new Promise(resolve => setTimeout(resolve, 1000));
           setDynamicNode(null);
           setCurrentBotNodeId('anything_else');
-          setIsTyping(true);
           await new Promise(resolve => setTimeout(resolve, 800));
           appendLocalBotMessage(botDecisionTree['anything_else'].botText);
           setIsTyping(false);
         } catch (err) {
           console.error("Failed to fetch flavors", err);
-          setIsTyping(true);
           await new Promise(resolve => setTimeout(resolve, 800));
           appendLocalBotMessage("Sorry, I'm having trouble retrieving the flavors right now.");
-          setIsTyping(false);
           await new Promise(resolve => setTimeout(resolve, 500));
           setDynamicNode(null);
           setCurrentBotNodeId('anything_else');
-          setIsTyping(true);
           await new Promise(resolve => setTimeout(resolve, 800));
           appendLocalBotMessage(botDecisionTree['anything_else'].botText);
           setIsTyping(false);
@@ -472,7 +517,8 @@ export default function ContactClient({ initialSettings, isAuthenticated = false
         }
 
         setIsSending(true);
-        const text = "I'd like to chat with Baker";
+        const text =
+          "You're connected with the baker. Replies may take some time, but baker will get back to you as soon as possible";
         const tempId = generateTempId();
         const optimisticMsg: IMessage = { id: tempId, sender: "client", text, createdAt: new Date() };
         setMessages(prev => [...prev, optimisticMsg]);
@@ -491,12 +537,20 @@ export default function ContactClient({ initialSettings, isAuthenticated = false
            if (!resMsg.ok) throw new Error("Delivery failed");
            const serverMessage = await resMsg.json();
            
-           setMessages(prev => prev.map(m => m.id === tempId ? serverMessage : m));
-           setChats(prev => prev.map(c => 
-             c._id === targetChatId 
-               ? { ...c, messages: (c.messages || []).map(m => m.id === tempId ? serverMessage : m) } 
-               : c
-           ));
+           setMessages(prev => {
+               if (prev.some(m => m.id === serverMessage.id && m.id !== tempId)) {
+                   return prev.filter(m => m.id !== tempId);
+               }
+               return prev.map(m => m.id === tempId ? serverMessage : m);
+           });
+           setChats(prev => prev.map(c => {
+               if (c._id !== targetChatId) return c;
+               const msgs = c.messages || [];
+               if (msgs.some(m => m.id === serverMessage.id && m.id !== tempId)) {
+                   return { ...c, messages: msgs.filter(m => m.id !== tempId) };
+               }
+               return { ...c, messages: msgs.map(m => m.id === tempId ? serverMessage : m) };
+           }));
         } catch (err) {
            console.error(err);
         } finally {
@@ -528,14 +582,46 @@ export default function ContactClient({ initialSettings, isAuthenticated = false
         </div>
       )}
 
-      <Card className="w-full max-w-6xl shadow-xl flex bg-card-background overflow-hidden border-0 h-[80vh] min-h-[600px]">
+      <Card className="w-full max-w-6xl  flex bg-card-background overflow-hidden border-0 h-[80vh] min-h-[600px]">
+        {(!isLoadingChats && chats.length === 0) ? (
+            <div className="flex-1 flex flex-col items-center justify-center p-6 bg-background md:p-12 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-b from-transparent to-primary/5 pointer-events-none" />
+                <div className="relative bg-card-background p-8 md:p-12 rounded-[2.5rem] shadow-xl border border-primary/10 flex flex-col items-center max-w-lg text-center animate-in fade-in zoom-in-95 duration-500">
+                    <div className="h-24 w-24 bg-subtleBackground/30 text-primary rounded-full flex items-center justify-center mb-6 shadow-sm border border-primary/20">
+                        <Cat className="h-12 w-12" />
+                    </div>
+                    <h2 className="font-heading text-3xl md:text-4xl text-primary mb-4 tracking-tight">Hi there!</h2>
+                    <p className="text-primary/70 mb-8 leading-relaxed text-lg font-body">
+                I'm bakery assistant <br/>
+                I'm here to help you with orders, questions, and everything sweet.
+                Do you have any questions?
+                    </p>
+                    <Button 
+                        onClick={handleCreateChat} 
+                        className="rounded-full px-8 h-14 bg-primary hover:bg-primary/90 text-white font-medium shadow-md transition-all hover:-translate-y-0.5 text-[17px] w-full sm:w-auto"
+                        disabled={isCreating}
+                    >
+                        {isCreating ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <MessageCircle className="mr-2 h-5 w-5" />}
+                        Yes, I have a question
+                    </Button>
+                </div>
+            </div>
+        ) : (
+        <>
         {/* Left Sidebar: Inbox Array */}
         <div className={cn("w-full md:w-1/3 flex-col border-r border-border bg-subtleBackground/10", isViewingThread ? "hidden md:flex" : "flex")}>
-            <div className="p-4 flex items-center justify-between">
-                <h2 className="font-heading text-xl text-primary tracking-tight">Your conversations</h2>
-                <Button size="icon" variant="ghost" className="text-primary hover:bg-primary/10" onClick={handleCreateChat} disabled={isCreating}>
-                    {isCreating ? <Loader2 className="h-5 w-5 animate-spin" /> : <PlusCircle className="h-5 w-5" />}
-                </Button>
+            <div className="p-4 flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                    <h2 className="font-heading text-xl text-primary tracking-tight">Your conversations</h2>
+                    <Button size="icon" variant="ghost" className="text-primary hover:bg-primary/10" onClick={handleCreateChat} disabled={isCreating || chats.length >= 3}>
+                        {isCreating ? <Loader2 className="h-5 w-5 animate-spin" /> : <PlusCircle className="h-5 w-5" />}
+                    </Button>
+                </div>
+                {chats.length >= 3 && (
+                    <p className="text-xs text-error tracking-tight font-medium bg-error/10 p-2 rounded-md">
+                        Limit reached. Please end an existing conversation to start a new one.
+                    </p>
+                )}
             </div>
             
             <div className="flex-1 overflow-y-auto p-3 space-y-2">
@@ -601,7 +687,8 @@ export default function ContactClient({ initialSettings, isAuthenticated = false
                         <div className="space-y-6">
                             {messages.map((msg, idx) => {
                                 const isLastMessage = idx === messages.length - 1;
-                                const showOptions = isLastMessage && msg.sender === "bot" && activeChat.status === "bot_active";
+                                // Hide options while the bot is processing/fetching to prevent old options from flashing under transition messages
+                                const showOptions = isLastMessage && msg.sender === "bot" && activeChat.status === "bot_active" && !isTyping;
 
                                 return (
                                     <React.Fragment key={msg.id}>
@@ -644,20 +731,8 @@ export default function ContactClient({ initialSettings, isAuthenticated = false
                                 );
                             })}
                             
-                            {isTyping && (
-                                <div className="flex w-full gap-2 justify-start mb-2 animate-in fade-in zoom-in-95 duration-200">
-                                    <div className="h-8 w-8 rounded-full bg-subtleBackground/30 flex-shrink-0 flex items-center justify-center text-primary mt-auto mb-1">
-                                        <Cat className="h-4 w-4" />
-                                    </div>
-                                    <div className="flex flex-col max-w-[85%] md:max-w-[70%] items-start mt-auto">
-                                        <div className="px-4 py-3 bg-card-background border border-border shadow-sm rounded-2xl rounded-bl-sm flex items-center justify-center space-x-1 min-h-[40px]">
-                                            <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                                            <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                                            <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
+                            {isTyping && <TypingIndicator role="bot" />}
+                            {isRemoteUserTyping && <TypingIndicator role="admin" />}
 
                             <div className="h-2" />
                         </div>
@@ -670,7 +745,7 @@ export default function ContactClient({ initialSettings, isAuthenticated = false
                              </div>
                         ) : (
                             <form className="flex w-full items-center space-x-3" onSubmit={(e) => { e.preventDefault(); sendMessage(inputValue); }}>
-                                <Input placeholder="Type your message securely..." value={inputValue} onChange={(e) => setInputValue(e.target.value)} disabled={isSending} className="flex-1 focus-visible:ring-primary/50 h-12 rounded-xl bg-background border-border" autoFocus />
+                                <Input placeholder="Type your message securely..." value={inputValue} onChange={handleInputChange} disabled={isSending} className="flex-1 focus-visible:ring-primary/50 h-12 rounded-xl bg-background border-border" autoFocus />
                                 <Button type="submit" size="icon" className="h-12 w-12 rounded-xl transition-transform active:scale-95 shadow-md" disabled={!inputValue.trim() || isSending}>
                                     {isSending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
                                 </Button>
@@ -686,6 +761,8 @@ export default function ContactClient({ initialSettings, isAuthenticated = false
                 </div>
             )}
         </div>
+        </>
+        )}
 
         <ConfirmationModal
             isOpen={isConfirmCloseOpen}

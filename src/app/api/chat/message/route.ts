@@ -103,6 +103,15 @@ export async function POST(req: NextRequest) {
 
     // 4. Real-Time Broadcast Integration (Pusher Natively)
     await pusherServer.trigger(`private-chat-${chatId}`, 'new-message', newMessage);
+    
+    // Global Ping to wake up admin inbox
+    await pusherServer.trigger('private-admin-inbox', 'inbox-update', {
+      chatId,
+      message: newMessage,
+      hasUnread,
+      status: newStatus,
+      updatedAt: new Date()
+    });
 
     return NextResponse.json(newMessage, { status: 200 });
 

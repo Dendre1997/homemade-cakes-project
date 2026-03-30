@@ -42,7 +42,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "User profile not found in database" }, { status: 403 });
     }
 
-    // 3. Tenant Isolation & Ownership
+    // 3. Global Admin Channel Intercept
+    if (channel_name === 'private-admin-inbox') {
+      if (user.role !== 'admin') {
+        return NextResponse.json({ error: "Forbidden: Admin access required" }, { status: 403 });
+      }
+      const authResponse = pusherServer.authorizeChannel(socket_id, channel_name);
+      return NextResponse.json(authResponse, { status: 200 });
+    }
+
+    // 4. Tenant Isolation & Ownership
     const chatId = channel_name.replace("private-chat-", "");
 
     // Admin Bypass -> Skip Ownership Query
