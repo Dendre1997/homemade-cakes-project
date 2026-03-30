@@ -4,6 +4,7 @@ import Link from "next/link";
 import React from "react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { pusherClient } from "@/lib/pusher";
 import {
   LayoutDashboard,
   Package,
@@ -20,7 +21,8 @@ import {
   ChartNoAxesCombined,
   Inbox,
   ClipboardList,
-  Settings 
+  Settings,
+  MessageCircle,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -31,16 +33,41 @@ interface SidebarProps {
 
 
 const navItems = [
-  { href: "/bakery-manufacturing-orders/", label: "Dashboard", icon: LayoutDashboard },
+  {
+    href: "/bakery-manufacturing-orders/",
+    label: "Dashboard",
+    icon: LayoutDashboard,
+  },
   {
     href: "/bakery-manufacturing-orders/custom-orders",
     label: "Custom Requests",
     icon: ClipboardList,
   },
-  { href: "/bakery-manufacturing-orders/products", label: "Products", icon: Package },
-  { href: "/bakery-manufacturing-orders/orders", label: "Orders", icon: ShoppingCart },
-  { href: "/bakery-manufacturing-orders/analytics", label: "Analytics", icon: ChartNoAxesCombined },
-  { href: "/bakery-manufacturing-orders/products/create", label: "Create Product", icon: PlusCircle },
+  {
+    href: "/bakery-manufacturing-orders/support",
+    label: "Support Chat",
+    icon: MessageCircle,
+  },
+  {
+    href: "/bakery-manufacturing-orders/products",
+    label: "Products",
+    icon: Package,
+  },
+  {
+    href: "/bakery-manufacturing-orders/orders",
+    label: "Orders",
+    icon: ShoppingCart,
+  },
+  {
+    href: "/bakery-manufacturing-orders/analytics",
+    label: "Analytics",
+    icon: ChartNoAxesCombined,
+  },
+  {
+    href: "/bakery-manufacturing-orders/products/create",
+    label: "Create Product",
+    icon: PlusCircle,
+  },
   { isSeparator: true },
   {
     label: "Catalog/Inventory",
@@ -85,6 +112,13 @@ const AdminSidebar = ({ isOpen, onClose }: SidebarProps) => {
   const pathname = usePathname();
   const [newCustomRequestsCount, setNewCustomRequestsCount] = React.useState(0);
   const [newOrdersCount, setNewOrdersCount] = React.useState(0);
+  
+  // Real-time Support Chats synchronization
+  const [supportChats, setSupportChats] = React.useState<any[]>([]);
+
+  const unreadSupportCount = React.useMemo(() => {
+     return supportChats.filter(c => c.hasUnread).length;
+  }, [supportChats]);
 
   React.useEffect(() => {
     const fetchCounts = async () => {
@@ -108,6 +142,13 @@ const AdminSidebar = ({ isOpen, onClose }: SidebarProps) => {
             setNewOrdersCount(newOrderCount);
         }
 
+        // 3. Support Chats
+        const supportRes = await fetch("/api/admin/chats");
+        if (supportRes.ok) {
+            const chats = await supportRes.json();
+            setSupportChats(chats);
+        }
+
       } catch (error) {
         console.error("Failed to fetch sidebar counts", error);
       }
@@ -117,6 +158,47 @@ const AdminSidebar = ({ isOpen, onClose }: SidebarProps) => {
     // Optional: Poll every 60s
     const interval = setInterval(fetchCounts, 60000);
     return () => clearInterval(interval);
+  }, []);
+
+  // Global Sync Listeners
+  React.useEffect(() => {
+    // 1. DOM Event Bus for "Read" triggers dispatched from Support Chat local components
+    const handleRead = (e: Event) => {
+        const detail = (e as CustomEvent).detail;
+        if (detail && detail.chatId) {
+            setSupportChats(prev => prev.map(c => 
+                c._id === detail.chatId ? { ...c, hasUnread: false } : c
+            ));
+        }
+    };
+    window.addEventListener("support-ticket-read", handleRead);
+
+    // 2. Global Pusher Subscription to intercept Unread spikes globally
+    if (pusherClient) {
+        const channel = pusherClient.subscribe("private-admin-inbox");
+        channel.bind("inbox-update", (data: any) => {
+            // Depending on payload, either selectively mutate or just refresh if fundamentally new arrays exist
+            if (data && data.chatId) {
+                setSupportChats(prev => {
+                    const exists = prev.some(c => c._id === data.chatId);
+                    if (!exists) {
+                         // Ticket is brand new natively. Needs full structure fetch.
+                         fetch("/api/admin/chats").then(res => res.json()).then(setSupportChats);
+                         return prev;
+                    }
+                    return prev.map(c => c._id === data.chatId ? { ...c, hasUnread: true } : c);
+                });
+            } else {
+                fetch("/api/admin/chats").then(res => res.json()).then(setSupportChats);
+            }
+        });
+    }
+
+    return () => {
+        window.removeEventListener("support-ticket-read", handleRead);
+        // Do NOT aggressively unsubscribe pusher channel entirely as it destroys /support/page.tsx binding
+        pusherClient?.channel("private-admin-inbox")?.unbind("inbox-update");
+    };
   }, []);
 
   return (
@@ -181,6 +263,11 @@ const AdminSidebar = ({ isOpen, onClose }: SidebarProps) => {
                     {item.label === "Orders" && newOrdersCount > 0 && (
                       <span className="bg-accent text-white text-[15px] font-bold px-2 py-0.5 rounded-full shadow-sm">
                         {newOrdersCount}
+                      </span>
+                    )}
+                    {item.label === "Support Chat" && unreadSupportCount > 0 && (
+                      <span className="bg-accent text-white text-[15px] font-bold px-2 py-0.5 rounded-full shadow-sm flex-shrink-0">
+                        {unreadSupportCount}
                       </span>
                     )}
                   </Link>
