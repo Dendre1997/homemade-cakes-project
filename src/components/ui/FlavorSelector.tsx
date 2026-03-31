@@ -42,7 +42,7 @@ const FlavorSelector = (props: FlavorSelectorProps) => {
         )}
       </div>
 
-      <div className="space-y-xs max-h-96 overflow-y-auto rounded-medium border border-border p-sm custom-scrollbar">
+      <div className="space-y-xs max-h-96 overflow-y-auto rounded-medium  p-sm custom-scrollbar">
         {flavors.map((flavor) => {
           const isSelected =
             props.mode === "multiple"

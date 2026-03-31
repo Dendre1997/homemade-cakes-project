@@ -128,6 +128,9 @@ export async function DELETE(
     if (order.referenceImageUrls && Array.isArray(order.referenceImageUrls)) {
       allUrls = [...order.referenceImageUrls];
     }
+    if (order.referenceImages && Array.isArray(order.referenceImages)) {
+      allUrls = [...allUrls, ...order.referenceImages];
+    }
     if (order.adminSelectedImage && !allUrls.includes(order.adminSelectedImage)) {
       allUrls.push(order.adminSelectedImage);
     }

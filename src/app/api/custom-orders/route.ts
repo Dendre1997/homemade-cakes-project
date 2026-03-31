@@ -12,7 +12,7 @@ export async function GET() {
     const orders = await db
       .collection("custom_orders")
       .find({})
-      .sort({ eventDate: 1 }) // Ascending: Upcoming events first
+      .sort({ date: 1 }) // Ascending: Upcoming events first
       .toArray();
 
     return NextResponse.json(orders);
@@ -33,7 +33,7 @@ export async function POST(req: Request) {
     const validation = customOrderSchema.safeParse({
       ...body,
       createdAt: new Date(), // Ensure server set timestamp
-      eventDate: body.eventDate ? new Date(body.eventDate) : undefined
+      date: body.date ? new Date(body.date) : undefined
     });
 
     if (!validation.success) {

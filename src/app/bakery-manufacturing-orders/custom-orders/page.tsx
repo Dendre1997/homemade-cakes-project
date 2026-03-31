@@ -11,11 +11,33 @@ export default async function CustomOrdersListPage() {
   const client = await clientPromise;
   const db = client.db(process.env.MONGODB_DB_NAME);
 
-  const customOrders = (await db
+  const rawOrders = await db
     .collection("custom_orders")
     .find({})
-    .sort({ eventDate: 1 }) // Upcoming first
-    .toArray()) as unknown as CustomOrder[];
+    .sort({ date: 1 }) // Upcoming first
+    .toArray();
+
+  const customOrders = rawOrders.map((order) => {
+    return {
+      ...order,
+      _id: order._id.toString(),
+      // Legacy schema fallbacks to prevent undefined UI errors
+      contact: order.contact || {
+        name: order.customerName || "Legacy Customer",
+        email: order.customerEmail || "",
+        phone: order.customerPhone || ""
+      },
+      date: order.date || order.eventDate,
+      category: order.category || order.eventType || "Unknown",
+      details: order.details || {
+        size: order.servingSize || "",
+        flavor: order.flavorPreferences || "",
+        textOnCake: "",
+        designNotes: order.description || ""
+      },
+      referenceImages: order.referenceImages || order.referenceImageUrls || []
+    };
+  }) as unknown as CustomOrder[];
 
   return (
     <div className="p-4 sm:p-8 max-w-7xl mx-auto">

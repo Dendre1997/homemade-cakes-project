@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { X, LogOut, UserCircle, Phone, PencilRuler } from "lucide-react";
+import { X, LogOut, UserCircle, Phone, PencilRuler, ShieldCheck } from "lucide-react";
 import { User, Collection } from "@/types";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
@@ -234,7 +234,22 @@ const MobileMenu = ({
                 </button>
               </li>
             )}
+
+            {user?.role === 'admin' && (
+              <li className="w-full mt-2 pt-2 border-t border-border border-dashed">
+                <Link
+                  href="/bakery-manufacturing-orders/"
+                  onClick={onClose}
+                  className="flex items-center gap-md w-full rounded-medium p-md font-body text-lg text-accent hover:bg-accent/10 transition-colors"
+                >
+                  <ShieldCheck className="h-5 w-5" />
+                  <span className="font-bold">/Dashboard</span>
+                </Link>
+              </li>
+            )}
           </ul>
+
+          
           <div className="mt-xl">
             <Link href="/custom-order" onClick={onClose}>
               <Button variant="secondary" className="w-full">
