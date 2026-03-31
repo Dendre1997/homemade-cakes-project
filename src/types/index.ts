@@ -219,6 +219,7 @@ export enum OrderStatus {
   DELIVERED = "delivered",
   CANCELLED = "cancelled",
   PENDING_CONFIRMATION = "pending_confirmation",
+  AWAITING_PAYMENT = "awaiting_payment",
 }
 
 export interface Order {
@@ -396,17 +397,24 @@ export interface VideoBannerContent {
 
 export interface CustomOrder {
   _id: string;
-  status: 'new' | 'negotiating' | 'converted' | 'rejected' | string;
-  customerName: string;
-  customerEmail: string;
-  customerPhone: string;
-  eventDate?: string | Date;
-  servingSize?: string | number;
-  eventType?: string;
-  description: string;
-  budgetRange?: string;
-  referenceImageUrls?: string[];
-  communicationMethod?: string;
+  status: 'pending_review' | 'converted' | 'rejected' | string;
+  date: Date;
+  timeSlot: string;
+  category: 'Cake' | 'Bento' | 'Cupcakes' | 'Macarons' | string;
+  details: {
+    size?: string;
+    flavor?: string;
+    textOnCake?: string;
+    designNotes?: string;
+    [key: string]: any;
+  };
+  referenceImages: string[];
+  contact: {
+    name: string;
+    phone: string;
+    email: string;
+  };
+  
   convertedOrderId?: string;
   createdAt?: string | Date;
   updatedAt?: string | Date;
@@ -414,7 +422,6 @@ export interface CustomOrder {
   // Admin fields
   agreedPrice?: number;
   adminNotes?: string;
-  adminSelectedImage?: string;
 }
 
 // --- STATUSES AND ROLES ---

@@ -3,10 +3,11 @@
 import * as React from "react";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
 import Link from "next/link";
-import { ChevronDown, Sparkles, Layers, Tag } from "lucide-react";
+import { ChevronDown, Sparkles, Layers, Tag, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {  Collection } from "@/types";
 import { useActiveSeasonal } from "@/hooks/useActiveSeasonal";
+import { useAuthStore } from "@/lib/store/authStore";
 
 interface CatalogDropdownProps {
   categories: { name: string; href: string }[];
@@ -16,6 +17,8 @@ export const CatalogDropdown = ({ categories }: CatalogDropdownProps) => {
   const [isOpen, setIsOpen] = React.useState(false);
   const { activeEvent } = useActiveSeasonal();
   const [collections, setCollections] = React.useState<Collection[]>([]);
+  const { user } = useAuthStore();
+  const isAdmin = user?.role === 'admin';
 
   React.useEffect(() => {
     const fetchCollections = async () => {
@@ -65,6 +68,18 @@ export const CatalogDropdown = ({ categories }: CatalogDropdownProps) => {
           align="end"
         >
           <div className="flex flex-col gap-6">
+            {isAdmin && (
+              <div className="-mb-2 border-b border-border pb-4">
+                <Link
+                  href="/bakery-manufacturing-orders/"
+                  onClick={() => setIsOpen(false)}
+                  className="flex items-center justify-center gap-2 text-md text-accent font-bold bg-accent/5 hover:bg-accent/10 border border-accent/20 rounded-md p-2 transition-all"
+                >
+                  <ShieldCheck className="h-4 w-4" />
+                  /Dashboard
+                </Link>
+              </div>
+            )}
             <Link
               href={`/products`}
               onClick={() => setIsOpen(false)}
