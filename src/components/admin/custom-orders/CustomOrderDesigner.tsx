@@ -52,21 +52,21 @@ export default function CustomOrderDesigner({
   // State
   const [agreedPrice, setAgreedPrice] = useState<number | "">(customOrder.agreedPrice || "");
   const [adminNotes, setAdminNotes] = useState(customOrder.adminNotes || "");
-  const [imageUrls, setImageUrls] = useState<string[]>(customOrder.referenceImageUrls || []);
+  const [imageUrls, setImageUrls] = useState<string[]>(customOrder.referenceImages || []);
   const [selectedImage, setSelectedImage] = useState(
-    customOrder.adminSelectedImage || customOrder.referenceImageUrls?.[0] || ""
+    customOrder.adminSelectedImage || customOrder.referenceImages?.[0] || ""
   );
   
   // Design Specs
   // Design Specs
-  const [finalDescription, setFinalDescription] = useState(customOrder.finalDescription || customOrder.description || "");
+  const [finalDescription, setFinalDescription] = useState(customOrder.finalDescription || customOrder.details?.designNotes || "");
   
   // Hybrid Selectors
   // Try to match flavor by ID (if it's an ID) or Name if it's text
   const initialFlavor = (() => {
       if (customOrder.finalFlavor) return customOrder.finalFlavor;
       
-      const pref = customOrder.flavorPreferences;
+      const pref = customOrder.details?.flavor;
       if (!pref) return "";
 
       // Check if pref matches any flavor ID directly
@@ -79,7 +79,7 @@ export default function CustomOrderDesigner({
       return pref;
   })();
 
-  const [sizeValue, setSizeValue] = useState(customOrder.finalSize || customOrder.servingSize || "");
+  const [sizeValue, setSizeValue] = useState(customOrder.finalSize || customOrder.details?.size || "");
   const [flavorValue, setFlavorValue] = useState(initialFlavor);
 
   const [isSaving, setIsSaving] = useState(false);
@@ -194,7 +194,7 @@ export default function CustomOrderDesigner({
              
              // Update DB
              const newUrls = oldImageUrls.filter(u => u !== urlToRemove);
-             const payload = { referenceImageUrls: newUrls };
+             const payload = { referenceImages: newUrls };
              
              await fetch(`/api/custom-orders/${customOrder._id}`, {
                 method: "PUT",
@@ -234,7 +234,7 @@ export default function CustomOrderDesigner({
         finalDescription,
         finalSize: sizeValue,
         finalFlavor: flavorValue,
-        referenceImageUrls: imageUrls,
+        referenceImages: imageUrls,
       };
 
       const res = await fetch(`/api/custom-orders/${customOrder._id}`, {
@@ -402,7 +402,7 @@ export default function CustomOrderDesigner({
           <div>
             <div className="flex items-center gap-3 mb-1">
                 <h1 className="text-3xl font-bold font-heading text-gray-900">
-                {customOrder.customerName}'s Request
+                {customOrder.contact?.name}'s Request
                 </h1>
                 <span className={`px-3 py-1 rounded-full text-sm font-bold uppercase tracking-wide
                     ${customOrder.status === 'new' ? 'bg-red-100 text-red-800' : 
@@ -482,7 +482,7 @@ export default function CustomOrderDesigner({
                             className="resize-none"
                         />
                          <p className="text-xs text-gray-500">
-                            Original Request: "{customOrder.description}"
+                            Original Request: "{customOrder.details?.designNotes}"
                         </p>
                     </div>
                 </div>
@@ -498,20 +498,20 @@ export default function CustomOrderDesigner({
                         <div className="flex items-start gap-3">
                             <User className="w-5 h-5 text-primary mt-0.5" />
                             <div>
-                                <div className="font-bold text-primary">{customOrder.customerName}</div>
+                                <div className="font-bold text-primary">{customOrder.contact?.name}</div>
                                 <div className="text-xs text-primary">Client</div>
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
                             <Mail className="w-5 h-5 text-primary" />
-                            <a href={`mailto:${customOrder.customerEmail}`} className="text-primary hover:underline text-sm font-medium">
-                                {customOrder.customerEmail}
+                            <a href={`mailto:${customOrder.contact?.email}`} className="text-primary hover:underline text-sm font-medium">
+                                {customOrder.contact?.email || 'No email provided'}
                             </a>
                         </div>
                         <div className="flex items-center gap-3">
                             <Phone className="w-5 h-5 text-primary" />
-                            <a href={`tel:${customOrder.customerPhone}`} className="text-gray-700 text-sm font-medium">
-                                {customOrder.customerPhone}
+                            <a href={`tel:${customOrder.contact?.phone}`} className="text-gray-700 text-sm font-medium">
+                                {customOrder.contact?.phone}
                             </a>
                         </div>
                         
@@ -519,11 +519,11 @@ export default function CustomOrderDesigner({
                             <div className="flex items-center gap-2 mb-2">
                                 <Calendar className="w-4 h-4 text-primary" />
                                 <span className="font-bold text-gray-800">
-                                    {customOrder.eventDate ? format(new Date(customOrder.eventDate), "MMMM dd, yyyy") : "TBD"}
+                                    {customOrder.date ? format(new Date(customOrder.date), "MMMM dd, yyyy") : "TBD"}
                                 </span>
                             </div>
                             <div className="text-xs text-gray-500 ml-6">
-                                {customOrder.eventType} &bull; {customOrder.servingSize} Guests
+                                {customOrder.category} &bull; {customOrder.details?.size}
                             </div>
                         </div>
                     </div>
@@ -545,8 +545,8 @@ export default function CustomOrderDesigner({
                                 onChange={(e) => setAgreedPrice(e.target.value === "" ? "" : Number(e.target.value))}
                                 className="text-2xl font-bold font-mono"
                             />
-                            <p className="text-xs text-primary">
-                                Client Budget: {customOrder.budgetRange}
+                            <p className="text-xs text-primary capitalize mt-1">
+                                Logistics: {customOrder.deliveryMethod} - {customOrder.timeSlot}
                             </p>
                         </div>
                     </div>
