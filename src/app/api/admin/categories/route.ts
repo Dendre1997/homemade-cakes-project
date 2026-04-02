@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    const { name, manufacturingTimeInMinutes, imageUrl }: Partial<ProductCategory> = body;
+    const { name, manufacturingTimeInMinutes, imageUrl, basePrice }: Partial<ProductCategory> = body;
 
     if (!name) {
       return NextResponse.json(
@@ -27,6 +27,7 @@ export async function POST(request: NextRequest) {
       slug,
       manufacturingTimeInMinutes: Number(manufacturingTimeInMinutes) || 0,
       imageUrl: imageUrl || "",
+      basePrice: Number(basePrice) || 0,
     };
 
     const result = await db.collection("categories").insertOne(newCategoryData);

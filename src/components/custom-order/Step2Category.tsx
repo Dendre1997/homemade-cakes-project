@@ -38,9 +38,7 @@ export default function Step2Category({ onNext }: { onNext: () => void }) {
   }, []);
 
   const handleSelect = (name: string) => {
-    // We store the human-readable category name directly in the custom order document
     setValue("category", name, { shouldValidate: true });
-    // Reset nested details options when the root category changes
     setValue("details.size", "");
     setValue("details.flavor", "");
     
@@ -51,8 +49,8 @@ export default function Step2Category({ onNext }: { onNext: () => void }) {
   return (
     <div className="space-y-8">
       <div className="text-center">
-        <h2 className="text-3xl font-bold font-heading text-primary">What are we baking?</h2>
-        <p className="text-primary/70 mt-2">Select the type of creation you have in mind.</p>
+        <h2 className="text-3xl font-bold font-heading text-primary">What would you like to order?</h2>
+        <p className="text-primary/70 mt-2">Choose a kind of treat you'd like to order.</p>
       </div>
 
       {isLoading ? (
@@ -96,11 +94,6 @@ export default function Step2Category({ onNext }: { onNext: () => void }) {
                 {/* Category Details */}
                 <div>
                   <h3 className="text-lg font-bold font-heading text-primary leading-tight">{displayName}</h3>
-                  {/* {cat.manufacturingTimeInMinutes && (
-                     <p className="text-[10px] text-primary/50 mt-1 uppercase tracking-widest font-semibold block">
-                        {Math.max(1, Math.floor(cat.manufacturingTimeInMinutes / 60))}H Prep
-                     </p>
-                  )} */}
                 </div>
               </motion.div>
             );
