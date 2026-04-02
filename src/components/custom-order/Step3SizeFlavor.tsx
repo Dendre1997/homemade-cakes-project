@@ -1,7 +1,9 @@
 import React, { useEffect, useState, useMemo, useCallback } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useFormContext } from "react-hook-form";
 import { CustomOrderFormData } from "@/lib/validation/customOrderSchema";
 import { Loader2 } from "lucide-react";
+import LoadingSpinner from "../ui/Spinner";
 
 import DiameterSelector, { DiameterOption } from "@/components/ui/DiameterSelector";
 import FlavorSelector from "@/components/ui/FlavorSelector";
@@ -28,9 +30,9 @@ const getIllustrationForSize = (sizeValue: number) => {
 };
 
 const BOX_SIZES = [
-  { value: "6", label: "Box of 6", Icon: BoxIconSix },
-  { value: "12", label: "Box of 12", Icon: BoxIconTwelve },
-  { value: "24", label: "Box of 24", Icon: BoxIconTwentyFour },
+  { value: "6", label: "Box of", Icon: BoxIconSix },
+  { value: "12", label: "Box of", Icon: BoxIconTwelve },
+  { value: "24", label: "Box of", Icon: BoxIconTwentyFour },
 ];
 
 export default function Step3SizeFlavor({ onNext }: { onNext: () => void }) {
@@ -59,8 +61,8 @@ export default function Step3SizeFlavor({ onNext }: { onNext: () => void }) {
   const [standardDiameterId, setStandardDiameterId] = useState<string | null>(null);
   const [standardFlavorId, setStandardFlavorId] = useState<string | null>(null);
   
-  // If isDiscrete (Cupcakes)
-  const [discreteQuantity, setDiscreteQuantity] = useState<string>("");
+  // If isDiscrete (Cupcakes) — default to smallest box
+  const [discreteQuantity, setDiscreteQuantity] = useState<string>(BOX_SIZES[0].value);
   const [discreteFlavorIds, setDiscreteFlavorIds] = useState<string[]>([]);
 
   // If isCombo (Sets)
@@ -91,20 +93,22 @@ export default function Step3SizeFlavor({ onNext }: { onNext: () => void }) {
     fetchDBDocs();
   }, []);
 
-  const activeCategoryId = useMemo(() => {
+  const activeCategoryObj = useMemo(() => {
     if (!categoryName) return null;
-    const cat = categories.find(c => {
+    return categories.find(c => {
        const displayName = c.name.endsWith('s') || c.name.endsWith('S') ? c.name.slice(0, -1) : c.name;
        return displayName === categoryName || c.name === categoryName;
-    });
-    return cat?._id || null;
+    }) || null;
   }, [categoryName, categories]);
 
+  const activeCategoryId = activeCategoryObj?._id || null;
+
+  // Sorted ascending by sizeValue so index 0 = smallest = base price, no multiplier
   const filteredDiameters = useMemo(() => {
     if (!activeCategoryId) return [];
-    return allDiameters.filter((d: any) => 
-       Array.isArray(d.categoryIds) && d.categoryIds.includes(activeCategoryId)
-    );
+    return allDiameters
+      .filter((d: any) => Array.isArray(d.categoryIds) && d.categoryIds.includes(activeCategoryId))
+      .sort((a: any, b: any) => (a.sizeValue || 0) - (b.sizeValue || 0));
   }, [allDiameters, activeCategoryId]);
 
   const filteredFlavors = useMemo(() => {
@@ -149,9 +153,41 @@ export default function Step3SizeFlavor({ onNext }: { onNext: () => void }) {
     }));
   }, [filteredDiameters]);
 
+  // ── Price computation ──────────────────────────────────────────────────────
+  // Formula: basePrice × (1 + diameterIndex × 0.30)
+  // Index 0 (smallest diameter) = no markup; each subsequent size adds 30%.
+  const basePrice: number = activeCategoryObj?.basePrice || 0;
+
+  const approximatePrice = useMemo(() => {
+    if (!isStandard || basePrice <= 0) return 0;
+    if (!standardDiameterId) return basePrice; // show base price before selection
+    const idx = filteredDiameters.findIndex((d: any) => d._id === standardDiameterId);
+    if (idx < 0) return basePrice;
+    if (idx <= 0) return basePrice; // smallest size — keep exact base price
+    return Math.ceil(basePrice * (1 + idx * 0.30) / 10) * 10;
+  }, [isStandard, basePrice, standardDiameterId, filteredDiameters]);
+
+  // Discrete: basePrice × quantity — smallest box exact, larger ceil-to-10
+  const discretePrice = useMemo(() => {
+    if (!isDiscrete || basePrice <= 0) return 0;
+    const qty = Number(discreteQuantity) || Number(BOX_SIZES[0].value);
+    const raw = basePrice * qty;
+    return discreteQuantity === BOX_SIZES[0].value
+      ? raw           // smallest box — exact price
+      : Math.ceil(raw / 10) * 10;
+  }, [isDiscrete, basePrice, discreteQuantity]);
+
+  // Sync computed price into form state so it's submitted with the order
+  useEffect(() => {
+    if (isStandard) {
+      setValue("approximatePrice", approximatePrice > 0 ? approximatePrice : undefined);
+    } else if (isDiscrete) {
+      setValue("approximatePrice", discretePrice > 0 ? discretePrice : undefined);
+    }
+  }, [approximatePrice, discretePrice, isStandard, isDiscrete, setValue]);
+
 
   // --- COMPILATION LOGIC ---
-  // Whenever local state changes, compile it dynamically into the single details.size & details.flavor string
   const compilePayload = useCallback(() => {
       let finalSize = "";
       let finalFlavor = "";
@@ -200,198 +236,383 @@ export default function Step3SizeFlavor({ onNext }: { onNext: () => void }) {
 
   if (isLoading) {
       return (
-        <div className="flex flex-col items-center justify-center min-h-[300px] text-primary/50 gap-4">
-           <Loader2 className="w-8 h-8 animate-spin text-accent" />
-           <p className="font-semibold animate-pulse">Loading customizable options...</p>
-        </div>
+           <LoadingSpinner />
       );
   }
 
   return (
     <div className="space-y-10 animate-in fade-in duration-500">
       <div className="text-center">
-        <h2 className="text-2xl font-bold font-heading text-primary">Customize your {categoryName || "Treat"}</h2>
+        <h2 className="text-2xl font-bold font-heading text-primary">
+          Customize your {categoryName || "Treat"}
+        </h2>
+
+        
       </div>
 
       <div className="space-y-10">
-        
         {/* ========================================= */}
         {/* CONDITION B: COMBO SETS UI                */}
         {/* ========================================= */}
         {isCombo && (
-           <div className="space-y-10">
-              
-              <div className="border-b border-primary/10 pb-8">
-                 <h3 className="font-heading text-xl text-primary mb-2">1. Choose Box Size</h3>
-                 <p className="text-sm text-primary/60 mb-4">How many treats should be included alongside the mini cake?</p>
-                 <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
-                    {BOX_SIZES.map((box) => (
-                      <button
-                        key={box.value}
-                        type="button"
-                        onClick={() => setComboPieceQuantity(box.value)}
-                        className={`flex w-40 shrink-0 flex-col items-center gap-2 rounded-2xl border p-4 text-center transition-all duration-200 ${
-                          comboPieceQuantity === box.value
-                            ? "border-accent bg-accent/5 shadow-md shadow-accent/10"
-                            : "border-primary/10 bg-white hover:border-accent/50 hover:bg-subtleBackground hover:shadow-sm"
-                        }`}
-                      >
-                        <div className="flex h-24 w-24 items-center justify-center pointer-events-none">
-                           <box.Icon className={`h-full w-full ${comboPieceQuantity === box.value ? 'text-accent' : 'text-primary'}`} />
-                        </div>
-                        <p className="font-body text-body font-bold text-primary">
-                          {box.label}
-                        </p>
-                      </button>
-                    ))}
-                 </div>
-              </div>
-
-              <div className="border-b border-primary/10 pb-8">
-                 <h3 className="font-heading text-xl text-primary mb-2">2. Treats Flavors</h3>
-                 <p className="text-sm text-primary/60 mb-4">Choose up to 3 flavors for the treats in your box.</p>
-                 <div className="bg-background rounded-2xl shadow-sm border p-4">
-                   <FlavorSelector
-                     mode="multiple"
-                     flavors={treatFlavors}
-                     selectedIds={comboTreatFlavorIds}
-                     onToggleId={handleToggleComboTreatFlavor}
-                     maxSelection={3}
-                     hidePrice={true} 
-                   />
-                 </div>
-              </div>
-
-              <div>
-                 <h3 className="font-heading text-xl text-primary mb-4">3. Cake Flavor</h3>
-                 <div className="mb-6 flex gap-4 items-center bg-accent/5 p-4 rounded-xl border border-accent/20">
-                    <div className="w-16 h-16 shrink-0 bg-white rounded-lg shadow-sm flex items-center justify-center">
-                       <FourInchBentoIcon className="w-10 h-10 text-primary" />
+          <div className="space-y-10">
+            <div className="border-b border-primary/10 pb-8">
+              <h3 className="font-heading text-xl text-primary mb-2">
+                1. Choose Box Size
+              </h3>
+              <p className="text-sm text-primary/60 mb-4">
+                How many treats should be included alongside the mini cake?
+              </p>
+              <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
+                {BOX_SIZES.map((box) => (
+                  <button
+                    key={box.value}
+                    type="button"
+                    onClick={() =>
+                      setComboPieceQuantity(String(Number(box.value) - 1))
+                    }
+                    className={`flex w-40 shrink-0 flex-col items-center gap-2 rounded-2xl border p-4 text-center transition-all duration-200 ${
+                      comboPieceQuantity === String(Number(box.value) - 1)
+                        ? "border-accent bg-accent/5 shadow-md shadow-accent/10"
+                        : "border-primary/10 bg-white hover:border-accent/50 hover:bg-subtleBackground hover:shadow-sm"
+                    }`}
+                  >
+                    <div className="flex h-24 w-24 items-center justify-center pointer-events-none">
+                      <box.Icon
+                        className={`h-full w-full ${comboPieceQuantity === box.value ? "text-accent" : "text-primary"}`}
+                      />
                     </div>
-                    <div>
-                       <p className="font-bold text-primary">Includes 4-inch Custom Cake</p>
-                       <p className="text-sm text-primary/70">Pick the core flavor below.</p>
-                    </div>
-                 </div>
-                 <div className="bg-background rounded-2xl shadow-sm border p-4">
-                   <FlavorSelector
-                     mode="single"
-                     flavors={bentoFlavors}
-                     selectedId={comboCakeFlavorId}
-                     onSelectId={setComboCakeFlavorId}
-                     hidePrice={true} 
-                   />
-                 </div>
+                    <p className="font-body text-body font-bold text-primary">
+                      {box.label + " " + String(Number(box.value) - 1)}
+                    </p>
+                  </button>
+                ))}
               </div>
+            </div>
 
-           </div>
+            <div className="border-b border-primary/10 pb-8">
+              <h3 className="font-heading text-xl text-primary mb-2">
+                2. Treats Flavors
+              </h3>
+              <p className="text-sm text-primary/60 mb-4">
+                Choose up to 3 flavors for the treats in your box.
+              </p>
+              <div className="bg-background rounded-2xl shadow-sm border p-4">
+                <FlavorSelector
+                  mode="multiple"
+                  flavors={treatFlavors}
+                  selectedIds={comboTreatFlavorIds}
+                  onToggleId={handleToggleComboTreatFlavor}
+                  maxSelection={3}
+                  hidePrice={true}
+                />
+              </div>
+            </div>
+
+            <div>
+              <h3 className="font-heading text-xl text-primary mb-4">
+                3. Cake Flavor
+              </h3>
+              <div className="mb-6 flex gap-4 items-center bg-accent/5 p-4 rounded-xl border border-accent/20">
+                <div className="w-16 h-16 shrink-0 bg-white rounded-lg shadow-sm flex items-center justify-center">
+                  <FourInchBentoIcon className="w-10 h-10 text-primary" />
+                </div>
+                <div>
+                  <p className="font-bold text-primary">
+                    Includes 4-inch Custom Cake
+                  </p>
+                  <p className="text-sm text-primary/70">
+                    Pick the core flavor below.
+                  </p>
+                </div>
+              </div>
+              <div className="bg-background rounded-2xl shadow-sm border p-4">
+                <FlavorSelector
+                  mode="single"
+                  flavors={bentoFlavors}
+                  selectedId={comboCakeFlavorId}
+                  onSelectId={setComboCakeFlavorId}
+                  hidePrice={true}
+                />
+              </div>
+            </div>
+          </div>
         )}
-
 
         {/* ========================================= */}
         {/* CONDITION A: DISCRETE (Cupcakes)          */}
         {/* ========================================= */}
         {isDiscrete && (
-            <div className="space-y-10">
-              
-              <div className="border-b border-primary/10 pb-8">
-                 <h3 className="font-heading text-xl text-primary mb-2">How many do you need?</h3>
-                 <p className="text-sm text-primary/60 mb-4">Select the quantity bundle for your treats.</p>
-                 <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
-                    {BOX_SIZES.map((box) => (
-                      <button
-                        key={box.value}
-                        type="button"
-                        onClick={() => setDiscreteQuantity(box.value)}
-                        className={`flex w-40 shrink-0 flex-col items-center gap-2 rounded-2xl border p-4 text-center transition-all duration-200 ${
-                          discreteQuantity === box.value
-                            ? "border-accent bg-accent/5 shadow-md shadow-accent/10"
-                            : "border-primary/10 bg-white hover:border-accent/50 hover:bg-subtleBackground hover:shadow-sm"
-                        }`}
-                      >
-                        <div className="flex h-24 w-24 items-center justify-center pointer-events-none">
-                           <box.Icon className={`h-full w-full ${discreteQuantity === box.value ? 'text-accent' : 'text-primary'}`} />
-                        </div>
-                        <p className="font-body text-body font-bold text-primary">
-                          {box.label}
-                        </p>
-                      </button>
-                    ))}
-                 </div>
-              </div>
+          <div className="space-y-10">
+            <div className="border-b border-primary/10 pb-8">
+              <h3 className="font-heading text-xl text-primary mb-2">
+                How many do you need?
+              </h3>
+              <p className="text-sm text-primary/60 mb-4">
+                Select the quantity bundle for your treats.
+              </p>
 
-              <div>
-                 <h3 className="font-heading text-xl text-primary mb-2">Choose your flavors</h3>
-                 <p className="text-sm text-primary/60 mb-4">Select multiple profiles for a mixed set, or pick one.</p>
-                 <div className="bg-background rounded-2xl shadow-sm border p-4">
-                   <FlavorSelector
-                     mode="multiple"
-                     flavors={filteredFlavors}
-                     selectedIds={discreteFlavorIds}
-                     onToggleId={handleToggleDiscreteFlavor}
-                     hidePrice={true} 
-                   />
-                 </div>
+              {/* ── Live price badge ── */}
+              {basePrice > 0 && (
+                <div className="flex items-center justify-between mb-6 px-4 py-3 rounded-2xl bg-gradient-to-r from-accent/5 to-accent/10 border border-accent/20">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-primary/40">Estimate, not final</p>
+                    <p className="text-sm text-primary/60 mt-0.5">
+                      Final after review
+                    </p>
+                    <p className="text-sm text-primary/60 mt-0.5">
+                      {discreteQuantity
+                        ? `${discreteQuantity} pieces × $${basePrice} each`
+                        : "Select a quantity to see your price"}
+                    </p>
+                  </div>
+                  <p className="text-2xl font-extrabold text-accent tabular-nums">
+                    ${discretePrice > 0 ? discretePrice : basePrice * Number(BOX_SIZES[0].value)}
+                  </p>
+                </div>
+              )}
+              <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
+                {BOX_SIZES.map((box) => (
+                  <button
+                    key={box.value}
+                    type="button"
+                    onClick={() => setDiscreteQuantity(box.value)}
+                    className={`flex w-40 shrink-0 flex-col items-center gap-2 rounded-2xl border p-4 text-center transition-all duration-200 ${
+                      discreteQuantity === box.value
+                        ? "border-accent bg-accent/5 shadow-md shadow-accent/10"
+                        : "border-primary/10 bg-white hover:border-accent/50 hover:bg-subtleBackground hover:shadow-sm"
+                    }`}
+                  >
+                    <div className="flex h-24 w-24 items-center justify-center pointer-events-none">
+                      <box.Icon
+                        className={`h-full w-full ${discreteQuantity === box.value ? "text-accent" : "text-primary"}`}
+                      />
+                    </div>
+                    <p className="font-body text-body font-bold text-primary">
+                      {box.label + " " + box.value}
+                    </p>
+                  </button>
+                ))}
               </div>
-
             </div>
-        )}
 
+            <div>
+              <h3 className="font-heading text-xl text-primary mb-2">
+                Choose your flavors
+              </h3>
+              <p className="text-sm text-primary/60 mb-4">
+                Select multiple profiles for a mixed set, or pick one.
+              </p>
+              <div className="bg-background rounded-2xl shadow-sm border p-4">
+                <FlavorSelector
+                  mode="multiple"
+                  flavors={filteredFlavors}
+                  selectedIds={discreteFlavorIds}
+                  onToggleId={handleToggleDiscreteFlavor}
+                  hidePrice={true}
+                />
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ========================================= */}
         {/* CONDITION C: STANDARD UI (Cakes)          */}
         {/* ========================================= */}
         {isStandard && (
-           <div className="space-y-10">
-              
-              <div className="border-b border-primary/10 pb-8">
-                {filteredDiameters.length > 0 ? (
-                  <DiameterSelector
-                    diameters={displayableDiameters}
-                    selectedDiameterId={standardDiameterId}
-                    onSelectDiameter={setStandardDiameterId}
-                  />
-                ) : (
-                  <div>
-                    <h3 className="font-heading text-xl text-primary mb-2">Custom Yield / Size</h3>
-                    <p className="text-sm text-primary/60 mb-4">Describe the dimensional requirements or guest count.</p>
-                    <Input 
-                      placeholder="e.g. 15 guests, 3-tiers" 
-                      value={currentSize || ""} // Fallback if no DB configs exist
-                      onChange={(e) => setValue("details.size", e.target.value, { shouldValidate: true })}
-                      className="w-full max-w-sm bg-white"
-                    />
-                  </div>
-                )}
-                {errors.details?.size && <p className="text-primary/60 text-sm mt-3 flex items-center font-medium"> {errors.details.size.message}</p>}
-              </div>
+          <div className="space-y-10">
+            <div className="border-b border-primary/10 pb-8">
 
-              <div>
-                <h3 className="font-heading text-xl text-primary mb-4">Flavor Profile</h3>
-                {filteredFlavors.length > 0 ? (
-                  <div className="bg-background rounded-2xl shadow-sm border p-4">
-                    <FlavorSelector
-                      mode="single"
-                      flavors={filteredFlavors}
-                      selectedId={standardFlavorId}
-                      onSelectId={setStandardFlavorId}
-                      hidePrice={true} 
-                    />
+              {/* ── Live price badge ── */}
+              {basePrice > 0 && (
+                <div className="flex items-center justify-between mb-6 px-4 py-3 rounded-2xl bg-gradient-to-r from-accent/5 to-accent/10 border border-accent/20">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-primary/40">Estimate, not final</p>
+                    <p className="text-sm text-primary/60 mt-0.5">
+                      Final after review
+                    </p>
                   </div>
-                ) : (
-                  <Input 
-                    placeholder="e.g. Vanilla Bean with Jam" 
-                    value={currentFlavor || ""} 
-                    onChange={(e) => setValue("details.flavor", e.target.value, { shouldValidate: true })}
+                  <div className="text-right">
+                    <p className="text-2xl font-extrabold text-accent tabular-nums">
+                      ${approximatePrice}
+                    </p>
+                    {/* {standardDiameterId && (() => {
+                      const idx = filteredDiameters.findIndex((d: any) => d._id === standardDiameterId);
+                      return idx > 0 ? (
+                        <p className="text-xs text-primary/40 mt-0.5">+{(idx * 30)}% size markup</p>
+                      ) : (
+                        <p className="text-xs text-primary/40 mt-0.5">Base price</p>
+                      );
+                    })()} */}
+                  </div>
+                </div>
+              )}
+
+              {filteredDiameters.length > 0 ? (
+                <DiameterSelector
+                  diameters={displayableDiameters}
+                  selectedDiameterId={standardDiameterId}
+                  onSelectDiameter={setStandardDiameterId}
+                />
+              ) : (
+                <div>
+                  <h3 className="font-heading text-xl text-primary mb-2">
+                    Custom Yield / Size
+                  </h3>
+                  <p className="text-sm text-primary/60 mb-4">
+                    Describe the dimensional requirements or guest count.
+                  </p>
+                  <Input
+                    placeholder="e.g. 15 guests, 3-tiers"
+                    value={currentSize || ""} // Fallback if no DB configs exist
+                    onChange={(e) =>
+                      setValue("details.size", e.target.value, {
+                        shouldValidate: true,
+                      })
+                    }
                     className="w-full max-w-sm bg-white"
                   />
-                )}
-                {errors.details?.flavor && <p className="text-primary/60 text-sm mt-3 flex items-center font-medium"> {errors.details.flavor.message}</p>}
-              </div>
+                </div>
+              )}
+              {errors.details?.size && (
+                <p className="text-primary/60 text-sm mt-3 flex items-center font-medium">
+                  {" "}
+                  {errors.details.size.message}
+                </p>
+              )}
+            </div>
 
-           </div>
+            <div>
+              <h3 className="font-heading text-xl text-primary mb-4">
+                Flavor Profile
+              </h3>
+              {filteredFlavors.length > 0 ? (
+                <div className="bg-background rounded-2xl shadow-sm border p-4">
+                  <FlavorSelector
+                    mode="single"
+                    flavors={filteredFlavors}
+                    selectedId={standardFlavorId}
+                    onSelectId={setStandardFlavorId}
+                    hidePrice={true}
+                  />
+                </div>
+              ) : (
+                <Input
+                  placeholder="e.g. Vanilla Bean with Jam"
+                  value={currentFlavor || ""}
+                  onChange={(e) =>
+                    setValue("details.flavor", e.target.value, {
+                      shouldValidate: true,
+                    })
+                  }
+                  className="w-full max-w-sm bg-white"
+                />
+              )}
+              {errors.details?.flavor && (
+                <p className="text-primary/60 text-sm mt-3 flex items-center font-medium">
+                  {" "}
+                  {errors.details.flavor.message}
+                </p>
+              )}
+            </div>
+          </div>
         )}
-        
+
+        <AllergySection />
+      </div>
+    </div>
+  );
+}
+
+
+function AllergySection() {
+  const { setValue, watch, formState: { errors } } = useFormContext<CustomOrderFormData>();
+  const currentAllergies = watch("allergies");
+
+  const handleNo = () => {
+    setValue("allergies", "No", { shouldValidate: true });
+  };
+
+  const handleYes = () => {
+    // Switch to YES mode — clear "No" so the input shows and user must type
+    if (currentAllergies === "No" || currentAllergies === undefined) {
+      setValue("allergies", "", { shouldValidate: false });
+    }
+  };
+
+  const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setValue("allergies", e.target.value, { shouldValidate: true });
+  };
+
+  // Determine active button
+  const noActive  = currentAllergies === "No";
+  const yesActive = currentAllergies !== undefined && currentAllergies !== "No";
+
+  return (
+    <div className="border-t border-primary/10 pt-8 space-y-4">
+      <div>
+        <h3 className="font-heading text-xl text-primary mb-1">Do you have any allergies?</h3>
+        <p className="text-sm text-primary/60 mb-4">
+          This helps us make your order safely
+        </p>
+
+        <div className="flex gap-3">
+          <Button
+            type="button"
+            onClick={handleNo}
+            className={`w-32 h-12 text-lg rounded-xl shadow-lg transition-all active:scale-95 ${
+              noActive
+                ? "shadow-primary/20 hover:shadow-primary/40"
+                : "bg-white border border-primary/20 text-primary/70 shadow-primary/10 hover:shadow-primary/20 hover:bg-subtleBackground"
+            }`}
+            variant={noActive ? "primary" : "outline"}
+          >
+            No
+          </Button>
+
+          <Button
+            type="button"
+            onClick={handleYes}
+            className={`w-32 h-12 text-lg rounded-xl shadow-lg transition-all active:scale-95 ${
+              yesActive
+                ? "shadow-primary/20 hover:shadow-primary/40"
+                : "bg-white border border-primary/20 text-primary/70 shadow-primary/10 hover:shadow-primary/20 hover:bg-subtleBackground"
+            }`}
+            variant={yesActive ? "primary" : "outline"}
+          >
+            Yes
+          </Button>
+        </div>
+
+
+        {/* Conditional text input — framer-motion for smooth spring entrance */}
+        <AnimatePresence>
+          {yesActive && (
+            <motion.div
+              key="allergy-input"
+              initial={{ opacity: 0, height: 0, y: -6, filter: "blur(4px)" }}
+              animate={{ opacity: 1, height: "auto", y: 0, filter: "blur(0px)" }}
+              exit={{ opacity: 0, height: 0, y: -6, filter: "blur(4px)" }}
+              transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
+              className="overflow-hidden mt-4"
+            >
+              <Input
+                placeholder="Please list your allergies (e.g. nuts, dairy, gluten...)"
+                value={currentAllergies === "No" ? "" : (currentAllergies || "")}
+                onChange={handleTextChange}
+                className="w-full bg-white"
+                autoFocus
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Validation error */}
+        {errors.allergies && (
+          <p className="text-primary/60 text-sm mt-3 flex items-center font-medium">
+            {errors.allergies.message}
+          </p>
+        )}
       </div>
     </div>
   );

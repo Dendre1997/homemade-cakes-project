@@ -1,5 +1,5 @@
 import { CustomOrderFormData } from "@/lib/validation/customOrderSchema";
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useMemo } from "react";
 import { toPng } from "html-to-image";
 import { CheckCircle2, Download, Cake, Info } from "lucide-react";
 import { format } from "date-fns";
@@ -12,20 +12,6 @@ interface Step6Props {
 export default function Step6Success({ orderData }: Step6Props) {
   const receiptRef = useRef<HTMLDivElement>(null);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [pickupAddress, setPickupAddress] = useState<string>("");
-
-  useEffect(() => {
-    if (orderData?.deliveryMethod === "pickup") {
-      fetch("/api/admin/settings")
-        .then((res) => res.json())
-        .then((data) => {
-           // Gracefully handle their variable naming discrepancies (pickupAddress vs deliveryAddress)
-           const address = data?.checkout?.pickupAddress || data?.checkout?.deliveryAddress || "Home Bakery Location will be provided in final quote";
-           setPickupAddress(address);
-        })
-        .catch(console.error);
-    }
-  }, [orderData?.deliveryMethod]);
 
   const handleDownload = async () => {
     if (!receiptRef.current) return;
@@ -52,15 +38,37 @@ export default function Step6Success({ orderData }: Step6Props) {
 
   if (!orderData) return null;
 
+  const { name, socialNickname, socialPlatform } = orderData.contact;
+  const hasSocialPlatform = !!socialPlatform;
+
+  // Build the display name based on what's available
+  const displayName = (() => {
+    const firstName = name?.trim().split(" ")[0] || "";
+    const nickPart = socialNickname?.trim() || "";
+    const platformPart = hasSocialPlatform
+      ? `${socialPlatform!.charAt(0).toUpperCase() + socialPlatform!.slice(1)} `
+      : "";
+
+    if (firstName && nickPart) {
+      return `${firstName} (${platformPart}${nickPart})`;
+    }
+    return firstName || nickPart || "there";
+  })();
+
+  // Contact method adapts to what the customer chose
+  const contactMethod = hasSocialPlatform && socialNickname
+    ? `via ${socialPlatform!.charAt(0).toUpperCase() + socialPlatform!.slice(1)} at ${socialNickname}`
+    : "via phone or email";
+
   return (
     <div className="flex flex-col items-center">
       <h2 className="text-3xl font-heading font-bold text-primary mb-2">Request Received!</h2>
       <p className="text-primary/70 mb-8 max-w-md text-center">
-        Thank you, {orderData.contact.name.split(' ')[0]}! We will review your custom request and contact you via phone or email with a price quote.
+        Thank you, {displayName}! We will review your custom request and contact you {contactMethod} with a price quote.
       </p>
 
       {/* Download Action */}
-      <Button 
+      {/* <Button 
         onClick={handleDownload} 
         disabled={isDownloading}
         variant="outline"
@@ -68,7 +76,7 @@ export default function Step6Success({ orderData }: Step6Props) {
       >
         <Download className="w-4 h-4 mr-2" />
         {isDownloading ? "Generating..." : "Download Receipt"}
-      </Button>
+      </Button> */}
 
       {/* Digital Receipt Card (The element to capture) */}
       <div className="w-full max-w-[400px] rounded-2xl shadow-xl overflow-hidden scale-95 sm:scale-100 mx-auto border-primary/10 border bg-primary/5">
@@ -91,13 +99,19 @@ export default function Step6Success({ orderData }: Step6Props) {
               <p className="text-primary/40 text-xs uppercase font-bold tracking-wider mb-0.5">Order Type</p>
               <p className="font-semibold font-mono text-xs mt-1">CUSTOM</p>
             </div>
-            <div>
-              <p className="text-primary/40 text-xs uppercase font-bold tracking-wider mb-0.5">Req. Date</p>
-              <p className="font-medium">{format(new Date(orderData.date), "MMM d, yyyy")}</p>
-            </div>
+            
             <div className="col-span-2">
               <p className="text-primary/40 text-xs uppercase font-bold tracking-wider mb-0.5">Customer</p>
-              <p className="font-semibold text-base">{orderData.contact.name}</p>
+              {orderData.contact.name ? (
+                <>
+                  <p className="font-semibold text-base">{orderData.contact.name}</p>
+                  {orderData.contact.socialNickname && (
+                    <p className="text-primary/50 text-xs mt-0.5">{orderData.contact.socialPlatform}</p>
+                  )}
+                </>
+              ) : (
+                <p className="font-semibold text-base">{orderData.contact.socialNickname}</p>
+              )}
               <p className="text-primary/60 font-medium">{orderData.contact.phone}</p>
               {orderData.contact.email && (
                  <p className="text-primary/50 text-xs mt-0.5">{orderData.contact.email}</p>
@@ -109,16 +123,17 @@ export default function Step6Success({ orderData }: Step6Props) {
           <div className="px-6 py-4 border-b border-gray-100">
              <h3 className="text-primary/40 text-xs uppercase font-bold tracking-wider mb-3 flex items-center gap-1.5">
                <Info className="w-4 h-4" />
-               Logistic Preferences
+               Requested Date & Time
              </h3>
              <div className="bg-primary/5 p-3 rounded-xl border border-primary/10">
                  <p className="font-semibold text-primary/90 uppercase text-sm mb-1">{orderData.deliveryMethod}</p>
-                 <p className="text-sm font-medium text-primary/70 mb-2">Time Slot: {orderData.timeSlot}</p>
+                 <p className="text-sm font-medium text-primary/70 mb-1">Date: {format(new Date(orderData.date), "MMM d, yyyy")}</p>
+                 <p className="text-sm font-medium text-primary/70">Time Slot: {orderData.timeSlot}</p>
                  
-                 {orderData.deliveryMethod === "pickup" && pickupAddress && (
+                 {orderData.deliveryMethod === "pickup" && (
                     <div className="mt-2 pt-2 border-t border-primary/5">
                         <span className="text-xs font-semibold text-primary/80 block mb-0.5">Location:</span>
-                        <p className="text-xs text-primary/60 leading-relaxed">{pickupAddress}</p>
+                        <p className="text-xs text-primary/60 leading-relaxed">Location will be provided in final quote after confirmation.</p>
                     </div>
                  )}
                  {orderData.deliveryMethod === "delivery" && (
@@ -166,7 +181,7 @@ export default function Step6Success({ orderData }: Step6Props) {
                          <span className="text-primary/40 w-24 shrink-0">Notes:</span>
                          <span className="text-primary/70 text-xs leading-relaxed break-words whitespace-pre-wrap min-w-0 flex-1">{orderData.details.designNotes}</span>
                        </div>
-                     )}
+                )}
                  </div>
              </div>
 
@@ -175,13 +190,20 @@ export default function Step6Success({ orderData }: Step6Props) {
                 <div className="pt-2">
                    <p className="text-[10px] text-primary/40 font-bold uppercase tracking-widest mb-2">Attached References ({orderData.referenceImages.length})</p>
                    <div className="flex gap-2 overflow-hidden">
-                      {orderData.referenceImages.map((img, i) => (
-                         <div key={i} className="w-14 h-14 relative rounded-lg border border-primary/10 shadow-sm shrink-0 bg-primary/5 overflow-hidden">
-                            {/* NOTE: html-to-image requires CORS headers from your image hosts (like Cloudinary) to render images correctly! */}
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={img} alt="Ref" className="w-full h-full object-cover" crossOrigin="anonymous" />
-                         </div>
-                      ))}
+                      {/* Cache-bust each URL once on mount to prevent CORS/browser-cache poisoning.
+                          When the same URL was previously fetched without crossOrigin="anonymous"
+                          (e.g. in the design step), the browser serves the cached no-CORS response
+                          here, causing the image to go blank. Appending ?_cb=<timestamp> forces a
+                          fresh Cloudinary request that includes proper CORS headers. */}
+                      {orderData.referenceImages.map((img, i) => {
+                        const cbImg = img.includes("?") ? `${img}&_cb=${i}` : `${img}?_cb=${i}`;
+                        return (
+                          <div key={i} className="w-14 h-14 relative rounded-lg border border-primary/10 shadow-sm shrink-0 bg-primary/5 overflow-hidden">
+                             {/* eslint-disable-next-line @next/next/no-img-element */}
+                             <img src={cbImg} alt="Ref" className="w-full h-full object-cover" crossOrigin="anonymous" />
+                          </div>
+                        );
+                      })}
                    </div>
                 </div>
              )}
@@ -190,13 +212,13 @@ export default function Step6Success({ orderData }: Step6Props) {
           {/* Financial Breakdown (Mock for Custom Orders) */}
           <div className="bg-primary/5 border-t border-primary/10 px-6 py-5 mt-auto">
              <div className="space-y-2 text-sm font-medium text-primary/40 mb-3">
-                 <p className="text-xs text-center leading-relaxed">
-                   This is a custom request. Our baker will review your design requirements and attached images to calculate a final quote.
+                 <p className="text-xs font-bold text-center leading-relaxed">
+                   This is an estimated price based on the information provided. The final price may change depending on design details and customization. The baker will confirm the final quote after reviewing your request
                  </p>
              </div>
              <div className="flex justify-between items-center mt-3 pt-4 border-t border-gray-300 border-dashed">
                  <span className="font-extrabold text-lg text-primary/40">Est. Total</span>
-                 <span className="font-extrabold text-xl text-amber-600 italic">Pending Quote</span>
+                 <span className="font-extrabold text-xl text-amber-600 italic">${orderData.approximatePrice}</span>
              </div>
           </div>
 

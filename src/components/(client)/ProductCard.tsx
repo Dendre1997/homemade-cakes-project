@@ -35,9 +35,9 @@ const ProductCard = ({ product, validDiscounts = [] }: ProductCardProps) => {
             priority
             className="object-cover transition-transform duration-700 group-hover:scale-110"
           />
-          <div className="absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1 text-xs font-bold uppercase tracking-wider text-text-primary shadow-sm backdrop-blur-md">
+          {/* <div className="absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1 text-xs font-bold uppercase tracking-wider text-text-primary shadow-sm backdrop-blur-md">
             {product.category.name}
-          </div>
+          </div> */}
 
           {hasDiscount && (
             <div className="absolute top-3 right-3 rounded-md bg-error px-2.5 py-1 text-xs font-bold text-white shadow-sm animate-in fade-in zoom-in duration-300">

@@ -143,6 +143,7 @@ export interface ProductCategory {
   slug: string;
   manufacturingTimeInMinutes?: number;
   imageUrl: string;
+  basePrice?: number;
 }
 
 export interface ProductWithCategory extends Product {
@@ -413,14 +414,20 @@ export interface CustomOrder {
     name: string;
     phone: string;
     email: string;
+    socialNickname?: string;
+    socialPlatform?: "instagram" | "facebook";
   };
   
   convertedOrderId?: string;
   createdAt?: string | Date;
   updatedAt?: string | Date;
   
+  // Customer-submitted allergy info
+  allergies?: string;
+
   // Admin fields
   agreedPrice?: number;
+  approximatePrice?: number;
   adminNotes?: string;
 }
 

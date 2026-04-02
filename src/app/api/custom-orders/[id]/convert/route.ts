@@ -92,6 +92,10 @@ export async function POST(
     };
 
     // Create Real Order
+    const allergyNote = customOrder.allergies && customOrder.allergies !== "No"
+      ? `⚠️ ALLERGIES: ${customOrder.allergies}`
+      : null;
+
     const newOrder: any = {
       _id: newOrderId,
       items: [item],
@@ -100,7 +104,10 @@ export async function POST(
         name: customOrder.contact?.name || "Customer",
         email: customOrder.contact?.email || "",
         phone: customOrder.contact?.phone || "",
-        notes: "Converted from Custom Request",
+        notes: [
+          "Converted from Custom Request",
+          allergyNote,
+        ].filter(Boolean).join(" | "),
       },
       deliveryInfo: {
         method: "pickup",

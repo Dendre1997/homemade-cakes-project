@@ -2,7 +2,7 @@
 
 import { CustomOrder } from "@/types";
 import { format } from "date-fns";
-import { Calendar, Phone, Mail, Copy, CheckCircle2, Trash2 } from "lucide-react";
+import { Calendar, Phone, Mail, Copy, CheckCircle2, Trash2, AlertTriangle } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
@@ -148,6 +148,24 @@ export const CustomOrderCard = ({ order }: CustomOrderCardProps) => {
                  <p className="text-gray-700 mt-1 whitespace-pre-wrap leading-relaxed">{order.details?.designNotes || order.description}</p>
               </div>
             )}
+
+            {/* ── Allergies Row ── */}
+            {order.allergies ? (
+              order.allergies === "No" ? (
+                <div className="flex items-center gap-2 text-xs text-gray-400 pt-1 border-t border-gray-200/60 mt-3">
+                  <span className="font-bold uppercase tracking-wider">Allergies:</span>
+                  <span>None declared</span>
+                </div>
+              ) : (
+                <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5 mt-3">
+                  <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
+                  <div>
+                    <span className="text-[10px] text-red-400 font-bold uppercase tracking-wider block mb-0.5">⚠ Allergy Alert</span>
+                    <p className="text-red-700 font-semibold text-sm leading-snug">{order.allergies}</p>
+                  </div>
+                </div>
+              )
+            ) : null}
         </div>
       </div>
 

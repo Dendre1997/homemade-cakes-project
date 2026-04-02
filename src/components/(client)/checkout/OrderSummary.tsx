@@ -131,6 +131,23 @@ const OrderSummary = () => {
           return acc + price;
         }, 0)
       : Math.max(0, subtotal - discountTotal);
+  
+  
+  // useEffect(() => {
+  //   if (orderData?.deliveryMethod === "pickup") {
+  //     fetch("/api/admin/settings")
+  //       .then((res) => res.json())
+  //       .then((data) => {
+  //         // Gracefully handle their variable naming discrepancies (pickupAddress vs deliveryAddress)
+  //         const address =
+  //           data?.checkout?.pickupAddress ||
+  //           data?.checkout?.deliveryAddress ||
+  //           "Home Bakery Location will be provided in final quote";
+  //         setPickupAddress(address);
+  //       })
+  //       .catch(console.error);
+  //   }
+  // }, [orderData?.deliveryMethod]);
 
   return (
     <div className="rounded-medium bg-card-background p-lg shadow-md">

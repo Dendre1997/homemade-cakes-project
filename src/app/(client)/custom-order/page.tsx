@@ -21,7 +21,7 @@ const STEPS = [
   { id: 1, title: "Category", fields: ["category"] },
   { id: 2, title: "Details", fields: ["details.size", "details.flavor"] },
   { id: 3, title: "Design", fields: ["referenceImages", "details.textOnCake", "details.designNotes"] },
-  { id: 4, title: "Contact", fields: ["contact.name", "contact.email", "contact.phone"] },
+  { id: 4, title: "Contact", fields: ["contact.name", "contact.email", "contact.phone", "contact.socialNickname", "contact.socialPlatform"] },
   { id: 5, title: "Success", fields: [] },
 ];
 
@@ -48,7 +48,10 @@ export default function CustomOrderPage() {
         name: "",
         phone: "",
         email: "",
-      }
+        socialNickname: "",
+        socialPlatform: undefined,
+      },
+      approximatePrice: 0,
     },
   });
 

@@ -6,7 +6,6 @@ import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
 import { ImageUploadPreview } from "@/components/admin/ImageUploadPreview";
 import LoadingSpinner from "@/components/ui/Spinner";
-import { useAlert } from "@/contexts/AlertContext";
 
 const FormLabel = ({
   htmlFor,
@@ -45,6 +44,7 @@ const CategoryForm = ({
     slug: "",
     manufacturingTimeInMinutes: 0,
     imageUrl: "",
+    basePrice: 0,
   });
 
   const [isUploading, setIsUploading] = useState(false);
@@ -62,6 +62,7 @@ const CategoryForm = ({
         manufacturingTimeInMinutes:
           existingCategory.manufacturingTimeInMinutes || 0,
         imageUrl: existingCategory.imageUrl || "",
+        basePrice: existingCategory.basePrice || 0,
       });
     } else if (!isSubmitting) {
       setFormData({
@@ -69,6 +70,7 @@ const CategoryForm = ({
         slug: "",
         manufacturingTimeInMinutes: 0,
         imageUrl: "",
+        basePrice: 0,
       });
     }
   }, [existingCategory, isSubmitting]);
@@ -190,6 +192,26 @@ const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
         />
         <p className="mt-1 text-xs text-gray-500">
           Time required to prepare one item from this category.
+        </p>
+      </div>
+      <div>
+        <FormLabel htmlFor="basePrice">Base Price ($)</FormLabel>
+        <Input
+          id="basePrice"
+          type="number"
+          min="0"
+          step="0.01"
+          value={formData.basePrice === 0 ? "" : formData.basePrice}
+          onChange={(e) =>
+            setFormData({
+              ...formData,
+              basePrice: parseFloat(e.target.value) || 0,
+            })
+          }
+          placeholder="e.g., 25.00"
+        />
+        <p className="mt-1 text-xs text-gray-500">
+          Starting price for items in this category.
         </p>
       </div>
 
