@@ -50,27 +50,17 @@ export async function PUT(
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
 
-    // Fields allowed to update during negotiation
-    const updateFields = {
-      agreedPrice: body.agreedPrice,
-      adminSelectedImage: body.adminSelectedImage,
-      adminNotes: body.adminNotes,
-      finalDescription: body.finalDescription,
-      finalFlavor: body.finalFlavor,
-      finalSize: body.finalSize,
-      status: body.status || 'negotiating', // Optional status update
-      referenceImageUrls: body.referenceImageUrls, // Allow updating images
-      updatedAt: new Date()
-    };
-
-    // Filter out undefined values to avoid overwriting with null
-    const cleanUpdate = Object.fromEntries(
-        Object.entries(updateFields).filter(([_, v]) => v !== undefined)
-    );
+    // Filter out _id if it's in the body to avoid MongoDB error
+    const { _id, ...updateData } = body;
 
     const result = await db.collection("custom_orders").updateOne(
       { _id: new ObjectId(id) },
-      { $set: cleanUpdate }
+      { 
+        $set: {
+          ...updateData,
+          updatedAt: new Date()
+        } 
+      }
     );
 
     if (result.matchedCount === 0) {

@@ -17,12 +17,12 @@ import Step5Contact from "@/components/custom-order/Step5Contact";
 import Step6Success from "@/components/custom-order/Step6Success";
 
 const STEPS = [
-  { id: 0, title: "Date", fields: ["date", "timeSlot", "deliveryMethod"] },
-  { id: 1, title: "Category", fields: ["category"] },
-  { id: 2, title: "Details", fields: ["details.size", "details.flavor"] },
-  { id: 3, title: "Design", fields: ["referenceImages", "details.textOnCake", "details.designNotes"] },
-  { id: 4, title: "Contact", fields: ["contact.name", "contact.email", "contact.phone", "contact.socialNickname", "contact.socialPlatform"] },
-  { id: 5, title: "Success", fields: [] },
+  { id: 0, title: "Date", fields: ["date", "timeSlot", "deliveryMethod"], subTitle: "When would you like it ready?"},
+  { id: 1, title: "Category", fields: ["category"], subTitle: "What would you like to order?" },
+  { id: 2, title: "Details", fields: ["details.size", "details.flavor", "allergies"], subTitle: "Choose your preferences" },
+  { id: 3, title: "Design", fields: ["referenceImages", "details.textOnCake", "details.designNotes"], subTitle: "What design do you need?" },
+  { id: 4, title: "Contact", fields: ["contact.name", "contact.email", "contact.phone", "contact.socialNickname", "contact.socialPlatform"], subTitle: "What is your contact information?" },
+  { id: 5, title: "Success", fields: [], subTitle: "Thank you for your order!" },
 ];
 
 export default function CustomOrderPage() {
@@ -51,6 +51,7 @@ export default function CustomOrderPage() {
         socialNickname: "",
         socialPlatform: undefined,
       },
+      allergies: "",
       approximatePrice: 0,
     },
   });
@@ -121,12 +122,9 @@ export default function CustomOrderPage() {
         {/* Header (Hide on Success step) */}
         {currentStep < 5 && (
           <div className="text-center mb-10 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-            <h1 className="text-4xl sm:text-5xl font-heading font-extrabold text-primary mb-4 tracking-tight">
-              Build Your Dream Cake
+            <h1 className="text-2xl sm:text-3xl font-heading font-extrabold text-primary mb-4 tracking-tight">
+              {STEPS[currentStep].subTitle}
             </h1>
-            <p className="text-lg text-primary/70 max-w-xl mx-auto">
-              Tell us about your event and we'll craft something unique, memorable, and delicious.
-            </p>
           </div>
         )}
 

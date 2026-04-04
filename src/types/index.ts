@@ -429,6 +429,8 @@ export interface CustomOrder {
   agreedPrice?: number;
   approximatePrice?: number;
   adminNotes?: string;
+  deliveryMethod?: "pickup" | "delivery" | string;
+  [key: string]: any;
 }
 
 // --- STATUSES AND ROLES ---

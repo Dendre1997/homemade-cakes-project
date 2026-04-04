@@ -1,8 +1,7 @@
-
 import { notFound } from "next/navigation";
 import { ObjectId } from "mongodb";
 import clientPromise from "@/lib/db";
-import CustomOrderDesigner from "@/components/admin/custom-orders/CustomOrderDesigner";
+import CustomOrderDetail from "@/components/admin/custom-orders/CustomOrderDetail";
 
 interface PageProps {
   params: { id: string };
@@ -21,7 +20,7 @@ export default async function CustomOrderPage({ params }: PageProps) {
   const client = await clientPromise;
   const db = client.db(process.env.MONGODB_DB_NAME);
 
-  //Fetch the Custom Order
+  // Fetch the Custom Order
   const customOrder = await db
     .collection("custom_orders")
     .findOne({ _id: new ObjectId(id) });
@@ -30,29 +29,19 @@ export default async function CustomOrderPage({ params }: PageProps) {
     return notFound();
   }
 
-  //Fetch Options (Flavors & Diameters)
-  const [flavors, diameters] = await Promise.all([
-    db.collection("flavors").find({}).sort({ name: 1 }).toArray(),
-    db.collection("diameters").find({}).sort({ sizeValue: 1 }).toArray(),
-  ]);
-
-  // Serialize MongoDB objects (convert _id to string for Client Component)
+  // Serialize MongoDB objects (convert dates and IDs for Client Component)
   const serializedOrder: any = {
     ...customOrder,
     _id: customOrder._id.toString(),
-    createdAt: customOrder.createdAt ? new Date(customOrder.createdAt).toISOString() : undefined,
+    date: customOrder.date ? new Date(customOrder.date).toISOString() : undefined,
     eventDate: customOrder.eventDate ? new Date(customOrder.eventDate).toISOString() : undefined,
+    createdAt: customOrder.createdAt ? new Date(customOrder.createdAt).toISOString() : undefined,
     updatedAt: customOrder.updatedAt ? new Date(customOrder.updatedAt).toISOString() : undefined,
   };
 
-  const serializedFlavors = flavors.map(f => ({ ...f, _id: f._id.toString() }));
-  const serializedDiameters = diameters.map(d => ({ ...d, _id: d._id.toString() }));
-
   return (
-    <CustomOrderDesigner 
-      customOrder={serializedOrder} 
-      flavors={serializedFlavors as any[]} 
-      diameters={serializedDiameters as any[]} 
+    <CustomOrderDetail 
+      initialOrder={serializedOrder} 
     />
   );
 }

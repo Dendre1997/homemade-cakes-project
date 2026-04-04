@@ -110,7 +110,7 @@ const navItems = [
 
 const AdminSidebar = ({ isOpen, onClose }: SidebarProps) => {
   const pathname = usePathname();
-  const [newCustomRequestsCount, setNewCustomRequestsCount] = React.useState(0);
+  const [totalCustomRequestsCount, setTotalCustomRequestsCount] = React.useState(0);
   const [newOrdersCount, setNewOrdersCount] = React.useState(0);
   
   // Real-time Support Chats synchronization
@@ -127,8 +127,7 @@ const AdminSidebar = ({ isOpen, onClose }: SidebarProps) => {
         const customRes = await fetch("/api/custom-orders");
         if (customRes.ok) {
           const customOrders = await customRes.json();
-          const newCustomCount = customOrders.filter((o: any) => o.status === 'new').length;
-          setNewCustomRequestsCount(newCustomCount);
+          setTotalCustomRequestsCount(customOrders.length);
         }
 
         // 2. Regular Orders
@@ -255,9 +254,9 @@ const AdminSidebar = ({ isOpen, onClose }: SidebarProps) => {
 
                     {/* Badges */}
                     {item.label === "Custom Requests" &&
-                      newCustomRequestsCount > 0 && (
+                      totalCustomRequestsCount > 0 && (
                         <span className="bg-accent text-white  text-[15px] font-bold px-2 rounded-full shadow-sm">
-                          {newCustomRequestsCount}
+                          {totalCustomRequestsCount}
                         </span>
                       )}
                     {item.label === "Orders" && newOrdersCount > 0 && (
