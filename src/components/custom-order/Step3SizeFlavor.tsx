@@ -241,13 +241,12 @@ export default function Step3SizeFlavor({ onNext }: { onNext: () => void }) {
   }
 
   return (
-    <div className="space-y-10 animate-in fade-in duration-500">
+    <div className="space-y-2 animate-in fade-in duration-500">
       <div className="text-center">
-        <h2 className="text-2xl font-bold font-heading text-primary">
-          Customize your {categoryName || "Treat"}
-        </h2>
-
-        
+        <p className="text-primary/70 mt-2">
+          Pick {!isDiscrete ? "size" : "quantity"} & flavor of{" "}
+          {categoryName || "Treat"}
+        </p>
       </div>
 
       <div className="space-y-10">
@@ -345,18 +344,13 @@ export default function Step3SizeFlavor({ onNext }: { onNext: () => void }) {
         {isDiscrete && (
           <div className="space-y-10">
             <div className="border-b border-primary/10 pb-8">
-              <h3 className="font-heading text-xl text-primary mb-2">
-                How many do you need?
-              </h3>
-              <p className="text-sm text-primary/60 mb-4">
-                Select the quantity bundle for your treats.
-              </p>
-
               {/* ── Live price badge ── */}
               {basePrice > 0 && (
                 <div className="flex items-center justify-between mb-6 px-4 py-3 rounded-2xl bg-gradient-to-r from-accent/5 to-accent/10 border border-accent/20">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-wider text-primary/40">Estimate, not final</p>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-primary/40">
+                      Estimate, not final
+                    </p>
                     <p className="text-sm text-primary/60 mt-0.5">
                       Final after review
                     </p>
@@ -367,7 +361,10 @@ export default function Step3SizeFlavor({ onNext }: { onNext: () => void }) {
                     </p>
                   </div>
                   <p className="text-2xl font-extrabold text-accent tabular-nums">
-                    ${discretePrice > 0 ? discretePrice : basePrice * Number(BOX_SIZES[0].value)}
+                    $
+                    {discretePrice > 0
+                      ? discretePrice
+                      : basePrice * Number(BOX_SIZES[0].value)}
                   </p>
                 </div>
               )}
@@ -394,15 +391,12 @@ export default function Step3SizeFlavor({ onNext }: { onNext: () => void }) {
                   </button>
                 ))}
               </div>
+              <p className="text-sm text-primary/60 mb-4">
+                Select how many {categoryName + "s"} do you need?
+              </p>
             </div>
 
             <div>
-              <h3 className="font-heading text-xl text-primary mb-2">
-                Choose your flavors
-              </h3>
-              <p className="text-sm text-primary/60 mb-4">
-                Select multiple profiles for a mixed set, or pick one.
-              </p>
               <div className="bg-background rounded-2xl shadow-sm border p-4">
                 <FlavorSelector
                   mode="multiple"
@@ -412,6 +406,9 @@ export default function Step3SizeFlavor({ onNext }: { onNext: () => void }) {
                   hidePrice={true}
                 />
               </div>
+              <p className="text-sm text-primary/60 mb-4">
+                Select multiple flavors for a mixed set, or pick one.
+              </p>
             </div>
           </div>
         )}
@@ -422,12 +419,13 @@ export default function Step3SizeFlavor({ onNext }: { onNext: () => void }) {
         {isStandard && (
           <div className="space-y-10">
             <div className="border-b border-primary/10 pb-8">
-
               {/* ── Live price badge ── */}
               {basePrice > 0 && (
                 <div className="flex items-center justify-between mb-6 px-4 py-3 rounded-2xl bg-gradient-to-r from-accent/5 to-accent/10 border border-accent/20">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-wider text-primary/40">Estimate, not final</p>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-primary/40">
+                      Estimate, not final
+                    </p>
                     <p className="text-sm text-primary/60 mt-0.5">
                       Final after review
                     </p>
@@ -483,9 +481,6 @@ export default function Step3SizeFlavor({ onNext }: { onNext: () => void }) {
             </div>
 
             <div>
-              <h3 className="font-heading text-xl text-primary mb-4">
-                Flavor Profile
-              </h3>
               {filteredFlavors.length > 0 ? (
                 <div className="bg-background rounded-2xl shadow-sm border p-4">
                   <FlavorSelector
@@ -601,7 +596,6 @@ function AllergySection() {
                 value={currentAllergies === "No" ? "" : (currentAllergies || "")}
                 onChange={handleTextChange}
                 className="w-full bg-white"
-                autoFocus
               />
             </motion.div>
           )}

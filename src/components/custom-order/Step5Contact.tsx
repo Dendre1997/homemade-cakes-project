@@ -33,7 +33,6 @@ export default function Step5Contact() {
   return (
     <div className="space-y-8 max-w-sm mx-auto">
       <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold font-heading text-primary">Your Details</h2>
         <p className="text-primary/70 mt-2">How should we reach you for the price quote?</p>
       </div>
 

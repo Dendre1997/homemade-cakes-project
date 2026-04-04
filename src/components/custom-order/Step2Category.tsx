@@ -47,10 +47,11 @@ export default function Step2Category({ onNext }: { onNext: () => void }) {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-2">
       <div className="text-center">
-        <h2 className="text-3xl font-bold font-heading text-primary">What would you like to order?</h2>
-        <p className="text-primary/70 mt-2">Choose a kind of treat you'd like to order.</p>
+        <p className="text-primary/70 mt-2">
+          Select the product you’d like to order
+        </p>
       </div>
 
       {isLoading ? (
@@ -58,9 +59,10 @@ export default function Step2Category({ onNext }: { onNext: () => void }) {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {categories.map((cat) => {
-            const displayName = cat.name.endsWith('s') || cat.name.endsWith('S') 
-              ? cat.name.slice(0, -1) 
-              : cat.name;
+            const displayName =
+              cat.name.endsWith("s") || cat.name.endsWith("S")
+                ? cat.name.slice(0, -1)
+                : cat.name;
 
             return (
               <motion.div
@@ -77,34 +79,37 @@ export default function Step2Category({ onNext }: { onNext: () => void }) {
                 {/* Category Image Avatar */}
                 <div className="relative w-16 h-16 shrink-0 rounded-full overflow-hidden shadow-sm border border-black/5 bg-gray-100">
                   {cat.imageUrl ? (
-                     <Image 
-                       src={cat.imageUrl} 
-                       alt={displayName} 
-                       fill 
-                       className="object-cover" 
-                       crossOrigin="anonymous" 
-                     />
+                    <Image
+                      src={cat.imageUrl}
+                      alt={displayName}
+                      fill
+                      className="object-cover"
+                      crossOrigin="anonymous"
+                    />
                   ) : (
-                     <div className="w-full h-full flex items-center justify-center text-xl bg-gray-200">
-                        🎂
-                     </div>
+                    <div className="w-full h-full flex items-center justify-center text-xl bg-gray-200">
+                      🎂
+                    </div>
                   )}
                 </div>
-                
+
                 {/* Category Details */}
                 <div>
-                  <h3 className="text-lg font-bold font-heading text-primary leading-tight">{displayName}</h3>
+                  <h3 className="text-lg font-bold font-heading text-primary leading-tight">
+                    {displayName}
+                  </h3>
                 </div>
               </motion.div>
             );
           })}
         </div>
       )}
-      
+
       {errors.category && (
         <div className="flex justify-center mt-6">
           <p className="text-red-500 text-sm font-medium bg-red-50 inline-flex items-center gap-2 px-4 py-2 border border-red-100 rounded-xl shadow-sm">
-            <AlertCircle className="w-5 h-5 shrink-0" /> {errors.category.message}
+            <AlertCircle className="w-5 h-5 shrink-0" />{" "}
+            {errors.category.message}
           </p>
         </div>
       )}
