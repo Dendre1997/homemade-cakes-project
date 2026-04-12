@@ -466,3 +466,15 @@ export interface IChat {
   createdAt: Date;
   updatedAt: Date;
 }
+
+export interface IGalleryImage {
+  _id: string | ObjectId;
+  imageUrl: string;
+  title: string;
+  description?: string;
+  categories: string[];      // e.g., ['cake', 'wedding', 'vintage']
+  decorationPrice?: number;  // Optional add-on price for this design
+  isActive: boolean;         // Allows hiding without deleting
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}

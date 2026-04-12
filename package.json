@@ -49,6 +49,7 @@
     "react-dom": "^19.2.1",
     "react-easy-crop": "^5.5.6",
     "react-email": "^4.3.0",
+    "react-error-boundary": "^6.1.1",
     "react-hook-form": "^7.69.0",
     "recharts": "^3.6.0",
     "resend": "^6.1.2",

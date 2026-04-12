@@ -1,4 +1,5 @@
-import { MongoClient } from 'mongodb';
+import { MongoClient, Collection } from 'mongodb';
+import { IGalleryImage } from '@/types';
 
 if (!process.env.MONGODB_URI) {
   throw new Error('Invalid/Missing Enviroment variable: "MONGODB_URL" ');
@@ -23,6 +24,14 @@ if (process.env.NODE_ENV === "development") {
 } else {
   client = new MongoClient(uri, options);
   clientPromise = client.connect();
+}
+
+/**
+ * Type-safe helper to get the gallery_images collection
+ */
+export async function getGalleryCollection(): Promise<Collection<IGalleryImage>> {
+  const client = await clientPromise;
+  return client.db(process.env.MONGODB_DB_NAME).collection<IGalleryImage>("gallery_images");
 }
 
 export default clientPromise;
