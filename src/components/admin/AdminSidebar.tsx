@@ -10,6 +10,7 @@ import {
   Package,
   ShoppingCart,
   PlusCircle,
+  LayoutGrid,
   Home,
   X,
   Calendar,
@@ -78,6 +79,11 @@ const navItems = [
     href: "/bakery-manufacturing-orders/content",
     label: "Content",
     icon: Images,
+  },
+  {
+    href: "/bakery-manufacturing-orders/gallery",
+    label: "Portfolio Gallery",
+    icon: LayoutGrid,
   },
   {
     href: "/bakery-manufacturing-orders/schedule",
