@@ -26,7 +26,7 @@ const Container = ({
 
 async function getInitialProducts() {
   const baseUrl = process.env.NEXT_PUBLIC_API_URL
-  const res = await fetch(`${baseUrl}/api/products?page=1&limit=10`, {
+  const res = await fetch(`${baseUrl}/api/products?page=1&limit=8`, {
     cache: "no-store",
   });
 
@@ -55,7 +55,8 @@ const ProductsPage = async () => {
     .filter(
       (c) =>
         c.name.toLowerCase().includes("cake") &&
-        !c.name.toLowerCase().includes("bento")
+        !c.name.toLowerCase().includes("bento") &&
+        !c.name.toLowerCase().includes("cupcakes")
     )
     .map((c) => c._id);
 
@@ -69,13 +70,13 @@ const ProductsPage = async () => {
 
   return (
     <div className="bg-background min-h-screen">
-      <div className="mx-auto max-w-7xl px-1 py-16 sm:px-6 sm:py-20 lg:px-8">
+      <div className="mx-auto max-w-7xl px-1 py-16 sm:px-6 sm:py-20 lg:px-4">
         <div className="text-center">
           <h2 className="font-heading text-h1 text-text-primary">
-            Our Latest Creations
+            Our Creations
           </h2>
           <p className="mt-4 font-body text-lg text-text-primary/90 max-w-2xl mx-auto">
-            Discover our handcrafted cakes, made with love and the finest
+            Here you can find all our products, made with love and the finest
             ingredients. Perfect for every celebration and every sweet moment.
           </p>
         </div>

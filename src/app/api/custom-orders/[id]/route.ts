@@ -131,7 +131,30 @@ export async function DELETE(
         const { default: cloudinary } = await import("@/lib/cloudinary");
         const { getPublicIdFromUrl } = await import("@/lib/cloudinaryUtils");
 
-        const publicIds = allUrls
+        // SAFETY CHECK: Get all protected URLs currently assigned to active products or gallery
+        const protectedProducts = await db.collection("products").find({
+          imageUrls: { $in: allUrls }
+        }).toArray();
+        const protectedGallery = await db.collection("gallery_images").find({
+          imageUrl: { $in: allUrls }
+        }).toArray();
+        
+        const protectedUrls: string[] = [];
+        protectedProducts.forEach(p => {
+          if (p.imageUrls && Array.isArray(p.imageUrls)) {
+            protectedUrls.push(...p.imageUrls);
+          }
+        });
+        protectedGallery.forEach(g => {
+          if (g.imageUrl) {
+            protectedUrls.push(g.imageUrl);
+          }
+        });
+
+        // Safe URLs are those NOT inside the protectedUrls list
+        const safeUrls = allUrls.filter(url => !protectedUrls.includes(url));
+
+        const publicIds = safeUrls
           .map(getPublicIdFromUrl)
           .filter((pid: string | null) => pid !== null) as string[];
 
@@ -140,7 +163,9 @@ export async function DELETE(
 
         if (uniqueIds.length > 0) {
           await cloudinary.api.delete_resources(uniqueIds, { invalidate: true });
-          console.log(`Deleted Cloudinary images: ${uniqueIds.join(", ")}`);
+          console.log(`Deleted safe Cloudinary images: ${uniqueIds.join(", ")}`);
+        } else {
+          console.log("No images deleted unconditionally: all attached references are active catalog representations.");
         }
       } catch (cloudErr) {
         console.error("Failed to cleanly delete Cloudinary images for deleted order", cloudErr);
