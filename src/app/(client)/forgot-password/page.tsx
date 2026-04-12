@@ -1,8 +1,9 @@
 "use client";
 import { useState } from "react";
-import { auth } from "@/lib/firebase/client";
-import { sendPasswordResetEmail } from "firebase/auth";
 import Link from "next/link";
+import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
+import LoadingSpinner from "@/components/ui/Spinner";
 
 const ForgotPasswordPage = () => {
   const [email, setEmail] = useState("");
@@ -17,7 +18,18 @@ const ForgotPasswordPage = () => {
     setSuccessMessage(null);
 
     try {
-      await sendPasswordResetEmail(auth, email);
+      // We MUST use our custom API route to send the React Email via Resend.
+      // Firebase's built-in client SDK will ALWAYS send the default Google template.
+      const res = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to send custom reset email.");
+      }
 
       setSuccessMessage("Password reset email sent! Please check your inbox.");
     } catch (err) {
@@ -34,7 +46,7 @@ const ForgotPasswordPage = () => {
   return (
     <div className="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-sm">
-        <h2 className="mt-10 text-center text-2xl font-bold">
+        <h2 className="mt-10 text-center text-2xl font-bold leading-9 tracking-tight text-gray-900">
           Forgot your password?
         </h2>
         <p className="mt-2 text-center text-sm text-gray-600">
@@ -45,16 +57,21 @@ const ForgotPasswordPage = () => {
       <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
         <form className="space-y-6" onSubmit={handleResetPassword}>
           <div>
-            <label htmlFor="email">Email address</label>
+            <label
+              htmlFor="email"
+              className="block font-body text-small text-text-primary/80 mb-sm"
+            >
+              Email address
+            </label>
             <div className="mt-2">
-              <input
+              <Input
                 id="email"
                 name="email"
                 type="email"
+                autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300"
               />
             </div>
           </div>
@@ -65,25 +82,24 @@ const ForgotPasswordPage = () => {
           )}
 
           <div>
-            <button
+            <Button
               type="submit"
               disabled={isLoading}
-              className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:bg-indigo-300"
+              variant="primary"
+              className="flex w-full justify-center"
             >
               {isLoading ? "Sending..." : "Send Reset Link"}
-            </button>
+            </Button>
           </div>
         </form>
         <p className="mt-10 text-center text-sm text-gray-500">
           Remembered your password?{" "}
-          <Link
-            href="/login"
-            className="font-semibold text-indigo-600 hover:text-indigo-500"
-          >
-            Back to Sign In
+          <Link href="/login">
+            <Button variant="text">Back to Sign In</Button>
           </Link>
         </p>
       </div>
+      {isLoading && <LoadingSpinner />}
     </div>
   );
 };

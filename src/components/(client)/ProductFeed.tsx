@@ -17,7 +17,7 @@ interface ProductFeedProps {
   seasonalId?: string;
 }
 
-const PRODUCTS_PER_PAGE = 6;
+const PRODUCTS_PER_PAGE = 8;
 
 export default function ProductFeed({
   initialProducts,
