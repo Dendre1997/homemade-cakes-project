@@ -23,7 +23,7 @@ export default function Step4Design() {
   const categoryName = watch("category");
   const referenceImages = watch("referenceImages") || []; // Up to 3
 
-  // Fetch Pipeline: Categories -> Products
+  // Fetch Pipeline: Categories -> Gallery Images
   useEffect(() => {
     async function fetchCatalogInspiration() {
       setIsLoadingCatalog(true);
@@ -33,23 +33,28 @@ export default function Step4Design() {
         const categories = await catRes.json();
 
         const activeCategoryId = categories.find((c: any) => {
-           const displayName = c.name.endsWith('s') || c.name.endsWith('S') ? c.name.slice(0, -1) : c.name;
-           return displayName === categoryName || c.name === categoryName;
+          const displayName =
+            c.name.endsWith("s") || c.name.endsWith("S")
+              ? c.name.slice(0, -1)
+              : c.name;
+          return displayName === categoryName || c.name === categoryName;
         })?._id;
 
         if (activeCategoryId) {
-           const prodRes = await fetch(`/api/products?categoryId=${activeCategoryId}`);
-           if (prodRes.ok) {
-              const products = await prodRes.json();
-              // Extract first image from every active product in this category
-              const images = products
-                .map((p: any) => p.imageUrls?.[0])
-                .filter(Boolean);
-                
-              // Deduplicate strings just in case
-              const uniqueImages = Array.from(new Set(images)) as string[];
-              setCatalogImages(uniqueImages);
-           }
+          const galleryRes = await fetch(
+            `/api/gallery?categoryId=${activeCategoryId}`
+          );
+          if (galleryRes.ok) {
+            const galleryImages = await galleryRes.json();
+            // Extract imageUrl from each active gallery image (already filtered + sorted by API)
+            const images = galleryImages
+              .map((img: any) => img.imageUrl)
+              .filter(Boolean) as string[];
+
+            // Deduplicate just in case
+            const uniqueImages = Array.from(new Set(images)) as string[];
+            setCatalogImages(uniqueImages);
+          }
         }
       } catch (err) {
         console.error("Failed to fetch inspiration catalog", err);
@@ -57,7 +62,7 @@ export default function Step4Design() {
         setIsLoadingCatalog(false);
       }
     }
-    
+
     if (categoryName) fetchCatalogInspiration();
   }, [categoryName]);
 

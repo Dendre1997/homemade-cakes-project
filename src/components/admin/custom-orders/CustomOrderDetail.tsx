@@ -40,7 +40,7 @@ export default function CustomOrderDetail({ initialOrder }: CustomOrderDetailPro
     setIsConvertModalOpen(false);
     setIsConverting(true);
     try {
-      const res = await fetch(`/api/custom-orders/${order._id}/convert`, {
+      const res = await fetch(`/api/admin/custom-orders/${order._id}/convert`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ agreedPrice: Number(order.agreedPrice) }),
@@ -104,7 +104,7 @@ export default function CustomOrderDetail({ initialOrder }: CustomOrderDetailPro
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const res = await fetch(`/api/custom-orders/${order._id}`, {
+      const res = await fetch(`/api/admin/custom-orders/${order._id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(order),
