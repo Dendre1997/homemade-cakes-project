@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       { url: "/favicon-96x96.png", sizes: "96x96", type: "image/png" },
-      { url: "/favicon.svg", type: "image/svg+xml" }, // Залишаємо SVG для нескінченної чіткості
+      { url: "/favicon.svg", type: "image/svg+xml" },
     ],
     shortcut: "/favicon.ico",
     apple: [
@@ -44,6 +44,15 @@ export default function RootLayout({
       className={`${playfair.variable} ${montserrat.variable} bg-background`}
       suppressHydrationWarning
     >
+      <head>
+        {/* Preconnect to critical third-party origins so TCP+TLS handshakes
+            are resolved before the browser encounters image/auth requests.
+            Saves ~300ms on cold mobile connections. */}
+        <link rel="preconnect" href="https://res.cloudinary.com" />
+        <link rel="preconnect" href="https://identitytoolkit.googleapis.com" />
+        <link rel="preconnect" href="https://securetoken.googleapis.com" />
+        <link rel="dns-prefetch" href="https://res.cloudinary.com" />
+      </head>
       <body className="font-body bg-background text-text-main h-full min-h-screen">
         <AuthProvider>
           <AlertProvider>

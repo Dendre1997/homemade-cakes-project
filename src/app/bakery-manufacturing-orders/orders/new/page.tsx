@@ -217,7 +217,7 @@ export default function ManualOrderPage() {
                   className="w-full bg-white"
                   value={customerPhone}
                   onChange={(e) => setCustomerPhone(e.target.value)}
-                  placeholder="+1 234 567 8900"
+                  placeholder=""
                 />
               </div>
               <div>

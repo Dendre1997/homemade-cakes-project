@@ -90,8 +90,8 @@ export async function POST(request: NextRequest) {
         paymentDetails
     } = body;
 
-    if (!customerInfo || !customerInfo.phone || !items || items.length === 0) {
-        return NextResponse.json({ error: "Missing required fields: Customer Phone and Items are mandatory." }, { status: 400 });
+    if (!customerInfo || !items || items.length === 0) {
+        return NextResponse.json({ error: "Missing required fields: Items are mandatory." }, { status: 400 });
     }
 
     let userId: ObjectId | undefined = undefined;

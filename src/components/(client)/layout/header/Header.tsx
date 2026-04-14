@@ -7,6 +7,7 @@ import { useCartStore } from "@/lib/store/cartStore";
 import { useAuthStore } from "@/lib/store/authStore";
 import { auth } from "@/lib/firebase/client";
 import { signOut } from "firebase/auth";
+import dynamic from "next/dynamic";
 import {
   ShoppingBasket,
   User,
@@ -22,15 +23,19 @@ import { cn } from "@/lib/utils";
 import { ProductCategory } from "@/types";
 import HeaderLogo from '@/components/ui/HeaderLogo'
 import SeasonalHeaderBar from "./SeasonalHeaderBar";
-
-
 import OfferBar from "./OfferBar";
 import CategoryNav from "./CategoryNav";
-import MobileMenu from "./MobileMenu";
-import { MiniCart } from "./MiniCart";
 import CollectionNav from "./CollectionNav";
 import SearchInput from "./SearchInput";
 import { CatalogDropdown } from "./CatalogDropdown";
+
+// Lazy-load off-screen components — never visible on initial paint.
+// This removes ~15KB from the critical JS bundle, reducing main thread work.
+const MobileMenu = dynamic(() => import("./MobileMenu"), { ssr: false });
+const MiniCart = dynamic(
+  () => import("./MiniCart").then((m) => ({ default: m.MiniCart })),
+  { ssr: false }
+);
 
 
 interface HeaderProps {
