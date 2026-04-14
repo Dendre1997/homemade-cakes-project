@@ -40,7 +40,7 @@ export const CustomOrderCard = ({ order }: CustomOrderCardProps) => {
     setIsConvertModalOpen(false);
     setIsProcessing(true);
     try {
-      const res = await fetch(`/api/custom-orders/${order._id}/convert`, {
+      const res = await fetch(`/api/admin/custom-orders/${order._id}/convert`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ agreedPrice: Number(agreedPrice) }),
@@ -61,7 +61,7 @@ export const CustomOrderCard = ({ order }: CustomOrderCardProps) => {
     setIsRejectOpen(false);
     setIsRejecting(true);
     try {
-      const res = await fetch(`/api/custom-orders/${order._id}`, {
+      const res = await fetch(`/api/admin/custom-orders/${order._id}`, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Failed to delete the order");

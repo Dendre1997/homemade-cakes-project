@@ -3,28 +3,11 @@ import { NextResponse } from "next/server";
 import clientPromise from "@/lib/db";
 import { customOrderSchema } from "@/lib/validation/customOrderSchema";
 
-// GET: Fetch all custom orders (List View)
-export async function GET() {
-  try {
-    const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB_NAME);
-
-    const orders = await db
-      .collection("custom_orders")
-      .find({})
-      .sort({ date: 1 }) // Ascending: Upcoming events first
-      .toArray();
-
-    return NextResponse.json(orders);
-  } catch (error) {
-    console.error("Fetch Custom Orders Error:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
-  }
-}
-
+/**
+ * POST /api/custom-orders
+ * Public endpoint — clients submit new custom order requests via the wizard.
+ * Admin management (list/update/delete) is handled by /api/admin/custom-orders.
+ */
 export async function POST(req: Request) {
   try {
     const body = await req.json();

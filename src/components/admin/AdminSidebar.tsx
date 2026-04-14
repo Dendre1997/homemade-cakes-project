@@ -130,7 +130,7 @@ const AdminSidebar = ({ isOpen, onClose }: SidebarProps) => {
     const fetchCounts = async () => {
       try {
         // 1. Custom Orders
-        const customRes = await fetch("/api/custom-orders");
+        const customRes = await fetch("/api/admin/custom-orders");
         if (customRes.ok) {
           const customOrders = await customRes.json();
           setTotalCustomRequestsCount(customOrders.length);

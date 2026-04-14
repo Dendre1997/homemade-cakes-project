@@ -3,8 +3,13 @@ import { cookies } from "next/headers";
 import { adminAuth } from "@/lib/firebase/adminApp";
 import clientPromise from "@/lib/db";
 import { ObjectId } from "mongodb";
-import { OrderStatus } from "@/types";
+import { OrderStatus, User } from "@/types";
 
+/**
+ * POST /api/admin/custom-orders/[id]/convert
+ * Converts a custom order request into a production order.
+ * Admin only.
+ */
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -27,7 +32,7 @@ export async function POST(
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
     const user = await db
-      .collection("users")
+      .collection<User>("users")
       .findOne({ firebaseUid: decodedToken.uid });
     if (!user || user.role !== "admin") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -66,7 +71,7 @@ export async function POST(
     }
 
     const newOrderId = new ObjectId();
-    
+
     // Generate a mocked Payment Link
     const paymentLink = `https://mock-payment-gateway.com/checkout/${newOrderId.toString()}`;
 
@@ -92,9 +97,10 @@ export async function POST(
     };
 
     // Create Real Order
-    const allergyNote = customOrder.allergies && customOrder.allergies !== "No"
-      ? `⚠️ ALLERGIES: ${customOrder.allergies}`
-      : null;
+    const allergyNote =
+      customOrder.allergies && customOrder.allergies !== "No"
+        ? `⚠️ ALLERGIES: ${customOrder.allergies}`
+        : null;
 
     const newOrder: any = {
       _id: newOrderId,
@@ -104,10 +110,9 @@ export async function POST(
         name: customOrder.contact?.name || "Customer",
         email: customOrder.contact?.email || "",
         phone: customOrder.contact?.phone || "",
-        notes: [
-          "Converted from Custom Request",
-          allergyNote,
-        ].filter(Boolean).join(" | "),
+        notes: ["Converted from Custom Request", allergyNote]
+          .filter(Boolean)
+          .join(" | "),
       },
       deliveryInfo: {
         method: "pickup",
@@ -139,22 +144,17 @@ export async function POST(
         : [],
     };
 
-    // Transaction
+    // Transaction: insert order, then delete the custom order request
     await ordersColl.insertOne(newOrder);
-
-    // Delete Original Custom Order per user request
     await customOrdersColl.deleteOne({ _id: new ObjectId(id) });
 
-    return NextResponse.json({ 
-        success: true, 
-        newOrderId: newOrderId.toString(),
-        paymentLink 
+    return NextResponse.json({
+      success: true,
+      newOrderId: newOrderId.toString(),
+      paymentLink,
     });
   } catch (error) {
     console.error("Convert Custom Order Error:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

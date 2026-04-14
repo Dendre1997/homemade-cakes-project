@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { ObjectId } from "mongodb";
 import clientPromise from "@/lib/db";
-import CustomOrderDetail from "@/components/admin/custom-orders/CustomOrderDetail";
+import CustomOrderDetailClient from "@/components/admin/custom-orders/CustomOrderDetailClient";
 
 interface PageProps {
   params: { id: string };
@@ -40,7 +40,7 @@ export default async function CustomOrderPage({ params }: PageProps) {
   };
 
   return (
-    <CustomOrderDetail 
+    <CustomOrderDetailClient 
       initialOrder={serializedOrder} 
     />
   );

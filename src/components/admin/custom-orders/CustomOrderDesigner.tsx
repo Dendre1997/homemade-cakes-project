@@ -196,7 +196,7 @@ export default function CustomOrderDesigner({
              const newUrls = oldImageUrls.filter(u => u !== urlToRemove);
              const payload = { referenceImages: newUrls };
              
-             await fetch(`/api/custom-orders/${customOrder._id}`, {
+             await fetch(`/api/admin/custom-orders/${customOrder._id}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
@@ -237,7 +237,7 @@ export default function CustomOrderDesigner({
         referenceImages: imageUrls,
       };
 
-      const res = await fetch(`/api/custom-orders/${customOrder._id}`, {
+      const res = await fetch(`/api/admin/custom-orders/${customOrder._id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -272,7 +272,7 @@ export default function CustomOrderDesigner({
             flavorConfig: flavorIsId ? { id: flavorValue } : { text: flavorValue },
         };
 
-        const res = await fetch(`/api/custom-orders/${customOrder._id}/convert`, {
+        const res = await fetch(`/api/admin/custom-orders/${customOrder._id}/convert`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload),
@@ -296,7 +296,7 @@ export default function CustomOrderDesigner({
     setIsCanceling(true);
     setShowCancelModal(false);
     try {
-      const res = await fetch(`/api/custom-orders/${customOrder._id}`, {
+      const res = await fetch(`/api/admin/custom-orders/${customOrder._id}`, {
         method: "DELETE",
       });
 
