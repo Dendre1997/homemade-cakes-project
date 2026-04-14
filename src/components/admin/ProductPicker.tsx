@@ -61,53 +61,79 @@ export const ProductPicker = ({
           const isSelected = selectedIds.includes(product._id.toString());
 
           return (
-            <div
-              key={product._id.toString()}
-              onClick={() => toggleSelection(product._id.toString())}
-              className={cn(
-                "group relative cursor-pointer rounded-medium overflow-hidden border-2 transition-all duration-200",
-                isSelected
-                  ? "border-current shadow-md scale-[1.02]" // Використовуємо колір теми через style
-                  : "border-transparent hover:border-border bg-neutral-50"
-              )}
-              style={isSelected ? { borderColor: themeColor } : {}}
-            >
-              <div className="relative aspect-square w-full">
-                <Image
-                  src={product.imageUrls[0] || "/placeholder.png"}
-                  alt={product.name}
-                  fill
-                  className={cn(
-                    "object-cover transition-opacity",
-                    isSelected
-                      ? "opacity-100"
-                      : "opacity-70 group-hover:opacity-100"
-                  )}
-                  sizes="150px"
-                />
-
-                {isSelected && (
-                  <div
-                    className="absolute top-2 right-2 bg-white rounded-full p-1 shadow-sm"
-                    style={{ color: themeColor }}
-                  >
-                    <CheckCircle className="h-5 w-5 fill-current" />
-                  </div>
-                )}
-              </div>
-
-              <div className="p-xs text-center">
-                <p className="text-xs font-bold text-primary truncate">
-                  {product.name}
-                </p>
-                <p className="text-[10px] text-primary/60 truncate">
-                  {product.category.name}
-                </p>
-              </div>
-            </div>
+            <ProductPickerCard 
+               key={product._id.toString()}
+               product={product}
+               isSelected={isSelected}
+               themeColor={themeColor}
+               onToggle={() => toggleSelection(product._id.toString())}
+            />
           );
         })}
       </div>
     </div>
   );
 };
+
+interface ProductPickerCardProps {
+    product: ProductWithCategory;
+    isSelected: boolean;
+    themeColor: string;
+    onToggle: () => void;
+}
+
+function ProductPickerCard({ product, isSelected, themeColor, onToggle }: ProductPickerCardProps) {
+    const [isImageLoaded, setIsImageLoaded] = useState(false);
+
+    return (
+        <div
+            onClick={onToggle}
+            className={cn(
+            "group relative cursor-pointer rounded-medium overflow-hidden border-2 transition-all duration-200",
+            isSelected
+                ? "border-current shadow-md scale-[1.02]"
+                : "border-transparent hover:border-border bg-neutral-50"
+            )}
+            style={isSelected ? { borderColor: themeColor } : {}}
+        >
+            <div className="relative aspect-square w-full bg-primary/5">
+                {/* SKELETON PLACEHOLDER */}
+                {!isImageLoaded && (
+                    <div className="absolute inset-0 animate-pulse bg-primary/10" />
+                )}
+                <Image
+                    src={product.imageUrls?.[0] || "/placeholder.png"}
+                    alt={product.name}
+                    fill
+                    className={cn(
+                        "object-cover transition-all duration-300",
+                        !isImageLoaded ? "opacity-0 scale-95" : "opacity-100 scale-100",
+                        !isSelected && "opacity-70 group-hover:opacity-100"
+                    )}
+                    sizes="(max-width: 768px) 150px, 200px"
+                    onLoad={() => setIsImageLoaded(true)}
+                    // Fallback to loaded if the image errors out (e.g. placeholder missing) so we don't end up with a permanent blank box
+                    onError={() => setIsImageLoaded(true)} 
+                />
+
+                {isSelected && (
+                    <div
+                    className="absolute top-2 right-2 bg-white rounded-full p-1 shadow-sm transition-transform animate-in zoom-in duration-200"
+                    style={{ color: themeColor }}
+                    >
+                    <CheckCircle className="h-5 w-5 fill-current" />
+                    </div>
+                )}
+            </div>
+
+            <div className="p-xs text-center border-t border-primary/5">
+                <p className="text-xs font-bold text-primary truncate">
+                    {product.name}
+                </p>
+                <p className="text-[10px] text-primary/60 truncate">
+                    {product?.category?.name || "Uncategorized"}
+                </p>
+            </div>
+        </div>
+    );
+}

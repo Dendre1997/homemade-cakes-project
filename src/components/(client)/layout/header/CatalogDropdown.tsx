@@ -15,10 +15,17 @@ interface CatalogDropdownProps {
 
 export const CatalogDropdown = ({ categories }: CatalogDropdownProps) => {
   const [isOpen, setIsOpen] = React.useState(false);
+  const [mounted, setMounted] = React.useState(false);
   const { activeEvent } = useActiveSeasonal();
   const [collections, setCollections] = React.useState<Collection[]>([]);
   const { user } = useAuthStore();
   const isAdmin = user?.role === 'admin';
+
+  // Only render Radix Popover after client hydration.
+  // Radix generates sequential aria-controls IDs internally. Without this
+  // guard, the server and client generate different IDs, causing a hydration
+  // mismatch. By deferring to the client we ensure IDs are consistent.
+  React.useEffect(() => setMounted(true), []);
 
   React.useEffect(() => {
     const fetchCollections = async () => {
@@ -44,6 +51,16 @@ export const CatalogDropdown = ({ categories }: CatalogDropdownProps) => {
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, [isOpen]);
+
+  // Render a stable placeholder on the server with same dimensions as the
+  // trigger button, preventing layout shift while eliminating hydration mismatch.
+  if (!mounted) {
+    return (
+      <span className="flex items-center gap-1 font-body text-body text-primary opacity-0 pointer-events-none select-none">
+        Catalog
+      </span>
+    );
+  }
 
   return (
     <PopoverPrimitive.Root open={isOpen} onOpenChange={setIsOpen}>

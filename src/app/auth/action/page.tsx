@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { auth } from "@/lib/firebase/client";
 import { confirmPasswordReset, verifyPasswordResetCode } from "firebase/auth";
@@ -10,7 +10,8 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import LoadingSpinner from "@/components/ui/Spinner";
 
-const AuthActionPage = () => {
+// Inner component that safely uses useSearchParams inside a Suspense boundary
+const AuthActionContent = () => {
   const searchParams = useSearchParams();
   const mode = searchParams.get("mode");
   const oobCode = searchParams.get("oobCode");
@@ -127,5 +128,17 @@ const AuthActionPage = () => {
     </div>
   );
 };
+
+const AuthActionPage = () => (
+  <Suspense
+    fallback={
+      <div className="flex h-screen items-center justify-center">
+        <LoadingSpinner />
+      </div>
+    }
+  >
+    <AuthActionContent />
+  </Suspense>
+);
 
 export default AuthActionPage;

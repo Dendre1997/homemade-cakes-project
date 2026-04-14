@@ -72,3 +72,25 @@ export const generateCroppedUrl = (
   // 3. Inject it directly after "/upload/"
   return cleanUrl.replace("/upload/", `/upload/${transformation}/`);
 };
+
+/**
+ * Injects Cloudinary transformation params (format, quality, width) into an
+ * existing upload URL. Safe to call with non-Cloudinary URLs — returns as-is.
+ *
+ * @param url   The full Cloudinary image URL from your DB.
+ * @param width Target width in pixels. Browser will receive a WebP/AVIF at
+ *              this width instead of the full 1500px+ original. Default 800.
+ *
+ * @example
+ *   cloudinaryOptimize(slide.imageUrl, 600)
+ *   // => ".../upload/f_auto,q_auto,w_600,c_limit/v123/image.jpg"
+ */
+export const cloudinaryOptimize = (
+  url: string,
+  width: number = 800
+): string => {
+  if (!url || !url.includes("/upload/")) return url;
+  // Strip any existing transforms first so we don't stack duplicates
+  const clean = getOriginalCloudinaryUrl(url);
+  return clean.replace("/upload/", `/upload/f_auto,q_auto,w_${width},c_limit/`);
+};
