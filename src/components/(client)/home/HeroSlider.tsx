@@ -76,6 +76,7 @@ const HeroSlider = ({ slides }: HeroSliderProps) => {
           sizes="(max-width: 768px) 100vw, 80vw"
           className="object-cover"
           priority
+          fetchPriority="high"
         />
         <div className="absolute inset-0 " />
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white p-lg">
@@ -121,6 +122,7 @@ const HeroSlider = ({ slides }: HeroSliderProps) => {
                   sizes="(max-width: 768px) 100vw, 80vw"
                   className="object-cover"
                   priority={isActive}
+                  fetchPriority={isActive ? "high" : "low"}
                 />
                 <div className="absolute inset-0  transition-opacity duration-700" />
 
