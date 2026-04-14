@@ -1,6 +1,6 @@
 "use client";
 
-import  { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, ReactNode, useCallback, useMemo } from "react";
 
 type AlertType = "success" | "error" | "warning" | "info";
 
@@ -25,16 +25,22 @@ export const AlertProvider = ({ children }: { children: ReactNode }) => {
     type: "info",
   });
 
-  const showAlert = (message: string, type: AlertType) => {
+  const showAlert = useCallback((message: string, type: AlertType) => {
     setAlertState({ isOpen: true, message, type });
-  };
+  }, []);
 
-  const hideAlert = () => {
+  const hideAlert = useCallback(() => {
     setAlertState({ isOpen: false, message: null, type: "info" });
-  };
+  }, []);
+
+  const contextValue = useMemo(() => ({
+    alertState,
+    showAlert,
+    hideAlert
+  }), [alertState, showAlert, hideAlert]);
 
   return (
-    <AlertContext.Provider value={{ alertState, showAlert, hideAlert }}>
+    <AlertContext.Provider value={contextValue}>
       {children}
     </AlertContext.Provider>
   );

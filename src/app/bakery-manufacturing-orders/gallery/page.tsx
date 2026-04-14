@@ -7,10 +7,8 @@ import {
   Plus, 
   ChevronLeft, 
   ChevronRight, 
-  X, 
   Trash2, 
-  Save, 
-  Eye, 
+  Save,  
   EyeOff,
   Image as ImageIcon
 } from "lucide-react";
@@ -245,11 +243,11 @@ export default function GalleryAdminPage() {
     <div className="p-md md:p-lg">
       <div className="flex items-center justify-between mb-lg">
         <h1 className="font-heading text-h2 text-primary">Portfolio Gallery</h1>
-        <div className="text-sm text-muted-foreground">{images.length} Items</div>
+        <div className="text-sm text-muted-foreground">{images.length} Photos</div>
       </div>
 
       {/* INSTAGRAM GRID */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         {/* ADD NEW TILE */}
         <button
           onClick={() => handleOpenModal(null)}

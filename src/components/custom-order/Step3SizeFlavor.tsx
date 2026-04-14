@@ -50,11 +50,20 @@ export default function Step3SizeFlavor({ onNext }: { onNext: () => void }) {
   const [allDiameters, setAllDiameters] = useState<any[]>([]);
   const [allFlavors, setAllFlavors] = useState<any[]>([]);
 
+  const activeCategoryObj = useMemo(() => {
+    if (!categoryName) return null;
+    return categories.find(c => {
+       const displayName = c.name.endsWith('s') || c.name.endsWith('S') ? c.name.slice(0, -1) : c.name;
+       return displayName === categoryName || c.name === categoryName;
+    }) || null;
+  }, [categoryName, categories]);
+
+  const activeCategoryId = activeCategoryObj?._id || null;
+
   // INTELLIGENT INFERENCE
-  const categoryStr = categoryName?.toLowerCase() || "";
-  const isCombo = categoryStr.includes("combo") || categoryStr.includes("set");
-  const isDiscrete = categoryStr.includes("cupcake") || categoryStr.includes("macaron");
-  const isStandard = !isCombo && !isDiscrete;
+  const isCombo = activeCategoryObj?.categoryType === "combo";
+  const isDiscrete = activeCategoryObj?.categoryType === "set";
+  const isStandard = activeCategoryObj?.categoryType === "single" || !activeCategoryObj?.categoryType;
 
   // --- LOCAL STATE FOR COMPLEX RUNDOWNS ---
   // If isStandard
@@ -93,15 +102,7 @@ export default function Step3SizeFlavor({ onNext }: { onNext: () => void }) {
     fetchDBDocs();
   }, []);
 
-  const activeCategoryObj = useMemo(() => {
-    if (!categoryName) return null;
-    return categories.find(c => {
-       const displayName = c.name.endsWith('s') || c.name.endsWith('S') ? c.name.slice(0, -1) : c.name;
-       return displayName === categoryName || c.name === categoryName;
-    }) || null;
-  }, [categoryName, categories]);
 
-  const activeCategoryId = activeCategoryObj?._id || null;
 
   // Sorted ascending by sizeValue so index 0 = smallest = base price, no multiplier
   const filteredDiameters = useMemo(() => {
