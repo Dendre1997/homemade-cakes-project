@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useAlert } from "@/contexts/AlertContext";
 import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 import LoadingSpinner from "@/components/ui/Spinner";
 import { Trash2, Calendar as CalendarIcon, X } from "lucide-react";
 import { ProductPicker } from "@/components/admin/ProductPicker";
@@ -123,8 +124,8 @@ export default function ManualOrderPage() {
   }
 
   const handleSubmit = async () => {
-      if (!customerPhone || items.length === 0) {
-          showAlert("Customer Phone and at least 1 Item are required.", "warning");
+      if (items.length === 0) {
+          showAlert("At least 1 Item is required.", "warning");
           return;
       }
       if (!deliveryDate) {
@@ -177,12 +178,9 @@ export default function ManualOrderPage() {
   };
 
   if (isLoadingData) return (
-     <div className="flex justify-center items-center h-screen">
-          <svg className="animate-spin h-8 w-8 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-     </div>
+      <div className="flex justify-center items-center h-screen">
+          <LoadingSpinner />
+      </div>
   );
 
   return (
@@ -213,10 +211,10 @@ export default function ManualOrderPage() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1">
-                  Phone Number *
+                  Phone Number
                 </label>
-                <input
-                  className="w-full p-2 border rounded-md focus:ring-2 focus:ring-accent outline-none"
+                <Input
+                  className="w-full bg-white"
                   value={customerPhone}
                   onChange={(e) => setCustomerPhone(e.target.value)}
                   placeholder="+1 234 567 8900"
@@ -226,8 +224,8 @@ export default function ManualOrderPage() {
                 <label className="block text-sm font-medium mb-1">
                   Customer Name
                 </label>
-                <input
-                  className="w-full p-2 border rounded-md focus:ring-2 focus:ring-primary outline-none"
+                <Input
+                  className="w-full bg-white"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
                   placeholder="John Doe"
@@ -237,8 +235,9 @@ export default function ManualOrderPage() {
                 <label className="block text-sm font-medium mb-1">
                   Email (Optional)
                 </label>
-                <input
-                  className="w-full p-2 border rounded-md focus:ring-2 focus:ring-primary outline-none"
+                <Input
+                  className="w-full bg-white"
+                  type="email"
                   value={customerEmail}
                   onChange={(e) => setCustomerEmail(e.target.value)}
                   placeholder="email@example.com"

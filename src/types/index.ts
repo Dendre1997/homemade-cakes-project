@@ -144,6 +144,7 @@ export interface ProductCategory {
   manufacturingTimeInMinutes?: number;
   imageUrl: string;
   basePrice?: number;
+  categoryType?: 'single' | 'set' | 'combo';
 }
 
 export interface ProductWithCategory extends Product {

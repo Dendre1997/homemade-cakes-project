@@ -45,6 +45,7 @@ const CategoryForm = ({
     manufacturingTimeInMinutes: 0,
     imageUrl: "",
     basePrice: 0,
+    categoryType: "single" as "single" | "set" | "combo",
   });
 
   const [isUploading, setIsUploading] = useState(false);
@@ -63,6 +64,7 @@ const CategoryForm = ({
           existingCategory.manufacturingTimeInMinutes || 0,
         imageUrl: existingCategory.imageUrl || "",
         basePrice: existingCategory.basePrice || 0,
+        categoryType: existingCategory.categoryType || "single",
       });
     } else if (!isSubmitting) {
       setFormData({
@@ -71,6 +73,7 @@ const CategoryForm = ({
         manufacturingTimeInMinutes: 0,
         imageUrl: "",
         basePrice: 0,
+        categoryType: "single" as "single" | "set" | "combo",
       });
     }
   }, [existingCategory, isSubmitting]);
@@ -255,6 +258,37 @@ const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
         )}
       </div>
 
+
+      <div className="space-y-sm">
+        <FormLabel htmlFor="categoryType">Category Type</FormLabel>
+        <div className="flex flex-col sm:flex-col gap-2">
+          <Button
+            type="button"
+            variant={formData.categoryType === "single" ? "primary" : "secondary"}
+            onClick={() => setFormData({ ...formData, categoryType: "single" })}
+            className="flex-1"
+          >
+            Single
+          </Button>
+          <Button
+            type="button"
+            variant={formData.categoryType === "set" ? "primary" : "secondary"}
+            onClick={() => setFormData({ ...formData, categoryType: "set" })}
+            className="flex-1"
+          >
+            Set
+          </Button>
+          <Button
+            type="button"
+            variant={formData.categoryType === "combo" ? "primary" : "secondary"}
+            onClick={() => setFormData({ ...formData, categoryType: "combo" })}
+            className="flex-1"
+          >
+            Combo
+          </Button>
+        </div>
+      </div>
+
       <div>
         <Button
           type="submit"
@@ -265,6 +299,8 @@ const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
           {isSubmitting ? "Saving..." : existingCategory ? "Update" : "Create"}
         </Button>
       </div>
+
+      
     </form>
   );
 };
