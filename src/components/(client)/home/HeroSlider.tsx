@@ -73,9 +73,9 @@ const HeroSlider = ({ slides }: HeroSliderProps) => {
           src={slide.imageUrl}
           alt={slide.title}
           fill
+          sizes="(max-width: 768px) 100vw, 80vw"
           className="object-cover"
           priority
-          unoptimized
         />
         <div className="absolute inset-0 " />
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white p-lg">
@@ -118,9 +118,9 @@ const HeroSlider = ({ slides }: HeroSliderProps) => {
                   src={slide.imageUrl}
                   alt={slide.title}
                   fill
+                  sizes="(max-width: 768px) 100vw, 80vw"
                   className="object-cover"
                   priority={isActive}
-                  unoptimized
                 />
                 <div className="absolute inset-0  transition-opacity duration-700" />
 
