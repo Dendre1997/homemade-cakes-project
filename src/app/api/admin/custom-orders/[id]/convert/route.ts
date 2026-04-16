@@ -107,7 +107,7 @@ export async function POST(
       items: [item],
       totalAmount: Number(agreedPrice),
       customerInfo: {
-        name: customOrder.contact?.name || "Customer",
+        name: customOrder.contact?.name || customOrder.contact?.socialNickname || "Customer",
         email: customOrder.contact?.email || "",
         phone: customOrder.contact?.phone || "",
         notes: ["Converted from Custom Request", allergyNote]

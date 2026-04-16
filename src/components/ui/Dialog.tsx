@@ -48,7 +48,7 @@ const DialogContent = React.forwardRef<
         <Button
           variant="secondary"
           size="sm"
-          className="absolute right-4 top-4 h-8 px-3"
+          className="absolute right-4 top-4 h-8 px-3 z-50 bg-primary/80"
         >
           Close
         </Button>
