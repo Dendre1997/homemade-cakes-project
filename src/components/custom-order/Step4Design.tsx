@@ -1,6 +1,6 @@
 import { useFormContext, Controller } from "react-hook-form";
 import { CustomOrderFormData } from "@/lib/validation/customOrderSchema";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Check, AlertCircle } from "lucide-react";
 import Spinner from "@/components/ui/Spinner";
 import Image from "next/image";
@@ -22,6 +22,10 @@ export default function Step4Design() {
   // Wizard Data
   const categoryName = watch("category");
   const referenceImages = watch("referenceImages") || []; // Up to 3
+
+  // Refs for Auto-Scroll
+  const carouselRef = useRef<HTMLDivElement>(null);
+  const hasAutoScrolled = useRef(false);
 
   // Fetch Pipeline: Categories -> Gallery Images
   useEffect(() => {
@@ -65,6 +69,26 @@ export default function Step4Design() {
 
     if (categoryName) fetchCatalogInspiration();
   }, [categoryName]);
+
+  // -- Auto-Scroll Performance --
+  useEffect(() => {
+    // Only scroll once catalog images are loaded and we haven't scrolled yet in this mount
+    if (!isLoadingCatalog && catalogImages.length > 0 && referenceImages.length > 0 && !hasAutoScrolled.current) {
+      // Small timeout to ensure DOM has rendered the buttons
+      const timeoutId = setTimeout(() => {
+        const firstReference = referenceImages[0];
+        if (catalogImages.includes(firstReference)) {
+          const targetElement = carouselRef.current?.querySelector(`[data-image-url="${CSS.escape(firstReference)}"]`);
+          if (targetElement) {
+            targetElement.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+            hasAutoScrolled.current = true;
+          }
+        }
+      }, 100);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [isLoadingCatalog, catalogImages, referenceImages]);
 
   // Derived Limitations
   const maxImages = 3;
@@ -113,7 +137,10 @@ export default function Step4Design() {
               <Spinner />
             </div>
           ) : catalogImages.length > 0 ? (
-            <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar snap-x snap-mandatory">
+            <div 
+              ref={carouselRef}
+              className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar snap-x snap-mandatory"
+            >
               {catalogImages.map((imgUrl, idx) => {
                 const isSelected = referenceImages.includes(imgUrl);
                 // Can't click unselected if at capacity
@@ -123,6 +150,7 @@ export default function Step4Design() {
                   <button
                     key={idx}
                     type="button"
+                    data-image-url={imgUrl}
                     onClick={() => handleToggleCarouselImage(imgUrl)}
                     disabled={isDisabled}
                     className={`relative w-40 h-40 shrink-0 snap-center rounded-2xl overflow-hidden shadow-sm transition-all duration-300 ${

@@ -21,10 +21,6 @@ export const CatalogDropdown = ({ categories }: CatalogDropdownProps) => {
   const { user } = useAuthStore();
   const isAdmin = user?.role === 'admin';
 
-  // Only render Radix Popover after client hydration.
-  // Radix generates sequential aria-controls IDs internally. Without this
-  // guard, the server and client generate different IDs, causing a hydration
-  // mismatch. By deferring to the client we ensure IDs are consistent.
   React.useEffect(() => setMounted(true), []);
 
   React.useEffect(() => {
@@ -52,8 +48,6 @@ export const CatalogDropdown = ({ categories }: CatalogDropdownProps) => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [isOpen]);
 
-  // Render a stable placeholder on the server with same dimensions as the
-  // trigger button, preventing layout shift while eliminating hydration mismatch.
   if (!mounted) {
     return (
       <span className="flex items-center gap-1 font-body text-body text-primary opacity-0 pointer-events-none select-none">
@@ -103,6 +97,13 @@ export const CatalogDropdown = ({ categories }: CatalogDropdownProps) => {
               className="text-md text-primary hover:text-accent hover:bg-subtleBackground text-center rounded p-2 transition-colors truncate font-bold"
             >
               Full Menu
+            </Link>
+            <Link
+              href={`/gallery`}
+              onClick={() => setIsOpen(false)}
+              className="text-md text-primary hover:text-accent hover:bg-subtleBackground text-center rounded p-2 transition-colors truncate font-bold"
+            >
+              Design Gallery
             </Link>
             {/* Seasonal Event Section */}
             {activeEvent && (

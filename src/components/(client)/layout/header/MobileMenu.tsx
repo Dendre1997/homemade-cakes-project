@@ -258,6 +258,14 @@ const MobileMenu = ({
               </Button>
             </Link>
           </div>
+          <div className="my-md">
+            <Link href="/gallery" onClick={onClose}>
+              <Button variant="secondary" className="w-full">
+                <PencilRuler className="h-4 w-4 mr-sm" />
+                Design Gallery
+              </Button>
+            </Link>
+          </div>
         </nav>
       </div>
     </>

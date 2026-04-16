@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { useForm, FormProvider } from "react-hook-form";
+import { useState, useEffect, Suspense } from "react";
+import { useForm, FormProvider, useFormContext } from "react-hook-form";
+import { useSearchParams } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { customOrderSchema, CustomOrderFormData } from "@/lib/validation/customOrderSchema";
 import { Button } from "@/components/ui/Button";
 import { Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import LoadingSpinner from "@/components/ui/Spinner";
 
 // Steps
 import Step1Availability from "@/components/custom-order/Step1Availability";
@@ -25,7 +27,33 @@ const STEPS = [
   { id: 5, title: "Success", fields: [], subTitle: "Thank you for your order!" },
 ];
 
-export default function CustomOrderPage() {
+/**
+ * Silent Hydrator Component
+ * Reads URL params and injects them into the form state on mount.
+ */
+function WizardHydrator() {
+  const { setValue } = useFormContext<CustomOrderFormData>();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const category = searchParams.get("category");
+    const image = searchParams.get("image");
+
+    if (category) {
+      setValue("category", category, { shouldValidate: true });
+    }
+    if (image) {
+      setValue("referenceImages", [image], { shouldValidate: true });
+    }
+  }, [searchParams, setValue]);
+
+  return null;
+}
+
+function CustomOrderContent() {
+  const searchParams = useSearchParams();
+  const hasInspiration = !!searchParams.get("image");
+
   const [currentStep, setCurrentStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedData, setSubmittedData] = useState<CustomOrderFormData | null>(null);
@@ -58,18 +86,29 @@ export default function CustomOrderPage() {
 
   const { trigger, handleSubmit } = methods;
 
+  // -- 'Magic Jump' Navigation Logic --
   const handleNext = async () => {
     const fieldsToValidate = STEPS[currentStep].fields as any[];
     const isValid = await trigger(fieldsToValidate);
 
     if (isValid) {
-      setCurrentStep((prev) => Math.min(prev + 1, STEPS.length - 1));
+      // Logic: If on Step 1 (Date) and we have an inspiration, skip Step 2 (Category) and go to Step 3 (Details/SizeFlavor)
+      if (currentStep === 0 && hasInspiration) {
+        setCurrentStep(2);
+      } else {
+        setCurrentStep((prev) => Math.min(prev + 1, STEPS.length - 1));
+      }
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
 
   const handleBack = () => {
-    setCurrentStep((prev) => Math.max(prev - 1, 0));
+    // Logic: If on Step 3 (Details) and we have an inspiration, jump back to Step 1 (Date), skipping Step 2 (Category)
+    if (currentStep === 2 && hasInspiration) {
+      setCurrentStep(0);
+    } else {
+      setCurrentStep((prev) => Math.max(prev - 1, 0));
+    }
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -159,6 +198,9 @@ export default function CustomOrderPage() {
           <FormProvider {...methods}>
             <form onSubmit={handleSubmit(onSubmit)}>
               
+              {/* Silent Param Hydration */}
+              <WizardHydrator />
+
               {/* Animated Step Rendering */}
               <AnimatePresence mode="wait">
                 <motion.div
@@ -213,5 +255,17 @@ export default function CustomOrderPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CustomOrderPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-screen items-center justify-center">
+        <LoadingSpinner />
+      </div>
+    }>
+      <CustomOrderContent />
+    </Suspense>
   );
 }
