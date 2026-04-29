@@ -265,13 +265,13 @@ export default function OrderPrintPage() {
                                 <div className="border-4 border-black border-dashed p-4 bg-white min-h-[100px]">
                                     <span className="block text-xs font-bold uppercase text-gray-500 mb-1">Design / Inscription details</span>
                                     <div className="text-lg font-medium whitespace-pre-wrap leading-snug">
-                                        {item.inscription || item.adminNotes || "No details provided."}
+                                        {item.inscription || "No details provided."}
                                     </div>
                                 </div>
                                 
-                                {item.adminNotes && item.adminNotes !== item.inscription && (
+                                {item.designInstructions && (
                                     <div className="bg-gray-100 p-2 border border-gray-300 text-sm">
-                                        <span className="font-bold">INTERNAL NOTE:</span> {item.adminNotes}
+                                        <span className="font-bold">INTERNAL NOTE:</span> {item.designInstructions || "No details provided."} 
                                     </div>
                                 )}
                             </div>
