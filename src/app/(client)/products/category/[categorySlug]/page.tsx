@@ -28,7 +28,8 @@ async function getProductsByCategory(categoryId: string) {
     console.error("Failed to fetch products for category");
     return [];
   }
-  return res.json();
+  const data = await res.json();
+  return data.products || [];
 }
 
 

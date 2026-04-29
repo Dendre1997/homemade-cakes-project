@@ -54,8 +54,11 @@ export const AdminOrderItem = ({
   // -- IMAGES SETUP --
   const allImages = [
     ...(item.imageUrl ? [{ src: item.imageUrl, isMain: true }] : []),
-    ...(referenceImages || [])
+    ...(item.imageUrls || [])
       .filter((img) => img !== item.imageUrl)
+      .map((img) => ({ src: img, isMain: false })),
+    ...(referenceImages || [])
+      .filter((img) => img !== item.imageUrl && !(item.imageUrls || []).includes(img))
       .map((img) => ({ src: img, isMain: false })),
   ];
 
@@ -110,9 +113,6 @@ export const AdminOrderItem = ({
                             <h4 className="text-lg font-bold text-primary leading-tight">
                                 {item.name}
                             </h4>
-                            <span className="bg-accent text-primary text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider border border-accent">
-                                Custom Order
-                            </span>
                         </div>
                         
                         <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-primary">
@@ -140,24 +140,24 @@ export const AdminOrderItem = ({
 
                     {onEdit && (
                         <Button
-                        variant="ghost"
+                        variant="secondary"
                         size="sm"
                         onClick={() => onEdit(item)}
                         className="transition-opacity  text-accent"
                         >
-                        <Edit2 className="w-4 h-4" />
+                        Edit
                         </Button>
                     )}
                 </div>
 
-                {/* Admin Notes Box */}
-                {item.adminNotes && (
+                {/* Design Instructions Box */}
+                {item.designInstructions && (
                     <div className="mt-2 bg-amber-50 border border-amber-200 rounded-md p-3 relative">
                         <h5 className="text-amber-800 text-xs font-bold uppercase tracking-wide mb-1 flex items-center gap-1">
-                            <AlertTriangle className="w-3 h-3" /> Admin Notes
+                            <AlertTriangle className="w-3 h-3" /> Design Instructions
                         </h5>
                         <p className="text-amber-900 text-sm whitespace-pre-wrap">
-                            {item.adminNotes}
+                            {item.designInstructions}
                         </p>
                     </div>
                 )}

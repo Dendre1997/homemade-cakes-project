@@ -50,7 +50,8 @@ interface CustomOrderItemFormProps {
       selectedImage: string;
       sizeValue: string;
       flavorValue: string;
-      description: string;
+      designInstructions?: string;
+      inscription?: string;
       price: number;
       quantity?: number;
   };
@@ -93,7 +94,8 @@ export default function CustomOrderItemForm({
   const [selectedImage, setSelectedImage] = useState<string>(initialValues?.selectedImage || "");
   const [sizeValue, setSizeValue] = useState<string>(initialValues?.sizeValue || "");
   const [flavorValue, setFlavorValue] = useState<string>(initialValues?.flavorValue || "");
-  const [description, setDescription] = useState<string>(initialValues?.description || "");
+  const [designInstructions, setDesignInstructions] = useState<string>(initialValues?.designInstructions || "");
+  const [inscription, setInscription] = useState<string>(initialValues?.inscription || "");
   const [price, setPrice] = useState<number>(initialValues?.price || 0);
   const [quantity, setQuantity] = useState<number>(initialValues?.quantity || 1);
   
@@ -251,10 +253,12 @@ export default function CustomOrderItemForm({
           quantity: quantity,
           rowTotal: price * quantity,
           imageUrl: selectedImage || images[0] || "",
+          imageUrls: images,
           
           isManualPrice: true,
           isCustom: true,
-          adminNotes: description,
+          designInstructions: designInstructions,
+          inscription: inscription,
           
           // Hybrid Logic
           customSize: isCustomSize ? sizeValue : undefined,
@@ -279,7 +283,8 @@ export default function CustomOrderItemForm({
           setSelectedImage("");
           setSizeValue("");
           setFlavorValue("");
-          setDescription("");
+          setDesignInstructions("");
+          setInscription("");
           setPrice(0);
           setQuantity(1);
           setSelectedCategoryId("");
@@ -316,9 +321,9 @@ export default function CustomOrderItemForm({
        </div>
 
        {selectedCategoryId && (
-         <div className="flex flex-col gap-12 mt-6 border-t border-primary/10 pt-8">
-             {/* TOP: Images & Description */}
-             <div className="space-y-8">
+         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 mt-6 border-t border-primary/10 pt-8">
+             {/* LEFT: Images & Description */}
+             <div className="space-y-8 min-w-0">
                  
                  {/* GALLERY REFERENCES */}
                  <div className="space-y-3">
@@ -365,20 +370,31 @@ export default function CustomOrderItemForm({
                      {isUploading && <p className="text-xs text-primary mt-1 animate-pulse">Uploading...</p>}
                  </div>
 
-                 <div>
-                     <Label className="mb-2 block">Admin Notes / Custom Specs</Label>
-                     <Textarea 
-                         placeholder="Detailed requirements, colors, theme, etc..."
-                         rows={5}
-                         value={description}
-                         onChange={(e) => setDescription(e.target.value)}
-                         className="bg-yellow-50 border-yellow-200 focus:border-yellow-400"
-                     />
+                 <div className="space-y-4">
+                     <div>
+                         <Label className="mb-2 block">Inscription (Text on Cake)</Label>
+                         <Input 
+                             placeholder="e.g., Happy Birthday John"
+                             value={inscription}
+                             onChange={(e) => setInscription(e.target.value)}
+                             className="bg-white"
+                         />
+                     </div>
+                     <div>
+                         <Label className="mb-2 block">Design Instructions</Label>
+                         <Textarea 
+                             placeholder="Internal notes on how to build/decorate the item..."
+                             rows={4}
+                             value={designInstructions}
+                             onChange={(e) => setDesignInstructions(e.target.value)}
+                             className="bg-yellow-50 border-yellow-200 focus:border-yellow-400"
+                         />
+                     </div>
                  </div>
              </div>
 
-             {/* BOTTOM: Specs & Price */}
-             <div className="space-y-6">
+             {/* RIGHT: Specs & Price */}
+             <div className="space-y-6 min-w-0 flex flex-col">
                  
                  {/* SIZE SELECTION UI */}
                  <div className="space-y-3">
@@ -483,19 +499,26 @@ export default function CustomOrderItemForm({
                      </div>
                  </div>
 
-                 <div className="flex flex-col gap-3 pt-6 mt-4 border-t border-primary/20 bg-primary/5 p-4 rounded-xl w-full">
-                     <Button onClick={handleSubmit} disabled={isUploading} className="w-full shadow-md py-6 text-lg">
-                         <Plus className="w-5 h-5 mr-2" />
-                         {submitLabel}
-                     </Button>
+                 <div className="mt-auto pt-4 border-t border-primary/10">
+                     {/* Pushes to bottom if right column is shorter */}
+                 </div>
+             </div>
+
+             {/* BOTTOM: Action Buttons */}
+             <div className="lg:col-span-2 flex flex-col sm:flex-row items-center gap-4 pt-6 mt-4 border-t border-primary/20 bg-primary/5 p-4 rounded-xl w-full">
+                 <div className="font-bold text-2xl text-primary shrink-0 sm:w-1/3 text-center sm:text-left">
+                     Total: ${(price * quantity).toFixed(2)}
+                 </div>
+                 <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-2/3 justify-end">
                      {onCancel && (
-                         <Button onClick={onCancel} className="w-full bg-red-50 hover:bg-red-100 text-red-500 border border-red-200 py-6 text-lg" variant="outline">
+                         <Button onClick={onCancel} className="w-full sm:w-auto bg-red-50 hover:bg-red-100 text-red-500 border border-red-200 py-6 text-lg" variant="outline">
                              Cancel
                          </Button>
                      )}
-                     <div className="font-bold text-2xl text-primary mt-2 text-center">
-                         Total: ${(price * quantity).toFixed(2)}
-                     </div>
+                     <Button onClick={handleSubmit} disabled={isUploading} className="w-full sm:w-auto shadow-md py-6 text-lg">
+                         <Plus className="w-5 h-5 mr-2" />
+                         {submitLabel}
+                     </Button>
                  </div>
              </div>
          </div>

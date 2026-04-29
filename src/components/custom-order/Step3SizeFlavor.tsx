@@ -9,6 +9,7 @@ import DiameterSelector, { DiameterOption } from "@/components/ui/DiameterSelect
 import FlavorSelector from "@/components/ui/FlavorSelector";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { cn } from "@/lib/utils";
 
 import { FourInchBentoIcon } from "@/components/icons/cake-sizes/FourInchBentoIcon";
 import { FiveInchBentoIcon } from "@/components/icons/cake-sizes/FiveInchBentoIcon";
@@ -581,26 +582,24 @@ function AllergySection() {
         </div>
 
 
-        {/* Conditional text input — framer-motion for smooth spring entrance */}
-        <AnimatePresence>
-          {yesActive && (
-            <motion.div
-              key="allergy-input"
-              initial={{ opacity: 0, height: 0, y: -6, filter: "blur(4px)" }}
-              animate={{ opacity: 1, height: "auto", y: 0, filter: "blur(0px)" }}
-              exit={{ opacity: 0, height: 0, y: -6, filter: "blur(4px)" }}
-              transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
-              className="overflow-hidden mt-4"
-            >
-              <Input
-                placeholder="Please list your allergies (e.g. nuts, dairy, gluten...)"
-                value={currentAllergies === "No" ? "" : (currentAllergies || "")}
-                onChange={handleTextChange}
-                className="w-full bg-white"
-              />
-            </motion.div>
+        {/* Conditional text input — CSS grid transition */}
+        <div
+          className={cn(
+            "grid transition-all duration-300 ease-in-out overflow-hidden",
+            yesActive
+              ? "grid-rows-[1fr] opacity-100 mt-4"
+              : "grid-rows-[0fr] opacity-0 mt-0",
           )}
-        </AnimatePresence>
+        >
+          <div className="min-h-0">
+            <Input
+              placeholder="Please list your allergies (e.g. nuts, dairy, gluten...)"
+              value={currentAllergies === "No" ? "" : (currentAllergies || "")}
+              onChange={handleTextChange}
+              className="w-full bg-white"
+            />
+          </div>
+        </div>
 
         {/* Validation error */}
         {errors.allergies && (

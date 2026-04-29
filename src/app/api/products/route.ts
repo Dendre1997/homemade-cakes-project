@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
 
-    const products = await db
+    const result = await db
       .collection("products")
       .aggregate([
         {
@@ -75,12 +75,20 @@ export async function GET(request: NextRequest) {
             ]
           : []),
         {
-          $sort: { createdAt: -1, _id: -1 },
+          $facet: {
+            metadata: [{ $count: "totalCount" }],
+            data: [
+              { $sort: { createdAt: -1, _id: -1 } },
+              { $skip: skip },
+              { $limit: limit },
+            ],
+          },
         },
-        { $skip: skip },
-        { $limit: limit },
       ])
       .toArray();
+
+    const products = result[0]?.data || [];
+    const totalCount = result[0]?.metadata[0]?.totalCount || 0;
 
     const productsWithStrings = products.map((product: any) => ({
       ...product,
@@ -110,7 +118,7 @@ export async function GET(request: NextRequest) {
       },
     }));
 
-    return NextResponse.json(productsWithStrings, { status: 200 });
+    return NextResponse.json({ products: productsWithStrings, totalCount }, { status: 200 });
   } catch (error) {
     console.error("Error fetching products:", error);
     return NextResponse.json(

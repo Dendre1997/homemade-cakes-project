@@ -44,9 +44,9 @@ const CollectionNav = () => {
   const isAllActive = pathname === "/products";
 
   return (
-    <nav className=" hidden md:flex justify-center border-t border-border bg-white py-5">
-      <div className="mx-auto max-w-7xl px-lg">
-        <div className="flex w-full space-x-lg overflow-x-auto py-md custom-scrollbar">
+    <nav className="flex w-full justify-center border-t border-border">
+      <div className="w-full mx-auto max-w-7xl px-4 md:px-lg">
+        <div className="flex w-full space-x-6 md:space-x-lg overflow-x-auto py-5 custom-scrollbar">
           {collections.map((collection) => {
             if (!collection.slug) {
               return null;
@@ -63,7 +63,7 @@ const CollectionNav = () => {
               >
                 <div
                   className={cn(
-                    "w-16 h-16 rounded-full overflow-hidden transition-all group-hover:shadow-md",
+                    "w-40 h-20 md:w-24 md:h-24 rounded-xl overflow-hidden transition-all group-hover:shadow-md shrink-0",
                     isActive
                       ? "border-2 border-accent"
                       : "border border-border group-hover:border-accent/50"
@@ -72,8 +72,8 @@ const CollectionNav = () => {
                   <Image
                     src={collection.imageUrl || "/placeholder.png"}
                     alt={collection.name}
-                    width={64}
-                    height={64}
+                    width={96}
+                    height={96}
                     className="object-cover w-full h-full"
                   />
                 </div>

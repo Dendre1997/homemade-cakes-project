@@ -10,6 +10,7 @@ import { Discount } from "@/types";
 
 interface ProductFeedProps {
   initialProducts: ProductWithCategory[];
+  initialTotalCount: number;
   gridClassName?: string;
   validDiscounts?: Discount[];
   categoryId?: string;
@@ -21,6 +22,7 @@ const PRODUCTS_PER_PAGE = 8;
 
 export default function ProductFeed({
   initialProducts,
+  initialTotalCount,
   gridClassName,
   validDiscounts,
   categoryId,
@@ -31,7 +33,7 @@ export default function ProductFeed({
   const [page, setPage] = useState(1);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(
-    initialProducts.length >= PRODUCTS_PER_PAGE
+    initialProducts.length < initialTotalCount
   );
 
   const loadMore = async () => {
@@ -52,20 +54,19 @@ export default function ProductFeed({
 
       if (!res.ok) throw new Error("Failed to fetch");
 
-      const newProducts: ProductWithCategory[] = await res.json();
+      const { products: newProducts, totalCount } = await res.json();
 
       setProducts((prev) => {
         const existingIds = new Set(prev.map((p) => p._id.toString()));
         const uniqueNewProducts = newProducts.filter(
-          (p) => !existingIds.has(p._id.toString())
+          (p: ProductWithCategory) => !existingIds.has(p._id.toString())
         );
-        return [...prev, ...uniqueNewProducts];
+        const nextProducts = [...prev, ...uniqueNewProducts];
+        setHasMore(nextProducts.length < totalCount);
+        return nextProducts;
       });
       
       setPage(nextPage);
-      if (newProducts.length < PRODUCTS_PER_PAGE) {
-        setHasMore(false);
-      }
     } catch (error) {
       console.error("Error loading more products:", error);
     } finally {
@@ -77,7 +78,7 @@ export default function ProductFeed({
     <>
       <div
         className={cn(
-          "mt-10 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4 auto-rows-fr",
+          "grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4 auto-rows-fr",
           gridClassName
         )}
       >
@@ -102,9 +103,9 @@ export default function ProductFeed({
             {isLoadingMore ? (
               <>
                 <span className="mr-2">
-                  <LoadingSpinner />
-                </span>{" "}
+                  {/* <LoadingSpinner /> */}
                 Loading...
+                </span>{" "}
               </>
             ) : (
               "View More Cakes"
@@ -115,7 +116,7 @@ export default function ProductFeed({
 
       {!hasMore && products.length > 0 && (
         <p className="mt-10 text-center text-primary/60 font-body animate-in fade-in slide-in-from-bottom-2">
-          You've viewed all our sweet creations! 🍰
+          You've viewed all our sweet creations!
         </p>
       )}
     </>

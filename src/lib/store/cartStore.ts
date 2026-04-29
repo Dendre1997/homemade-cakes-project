@@ -12,6 +12,7 @@ export interface CartItem {
   price: number;
   quantity: number;
   imageUrl: string;
+  imageUrls?: string[];
   inscription?: string;
   originalPrice?: number;
   discountName?: string;

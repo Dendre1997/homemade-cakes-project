@@ -32,19 +32,22 @@ async function getInitialProducts() {
 
   if (!res.ok) {
     console.error("Failed to fetch initial products");
-    return [];
+    return { products: [], totalCount: 0 };
   }
 
   return res.json();
 }
 
 const ProductsPage = async () => {
-  const [initialProducts, discounts, categories, activeFlavors] = await Promise.all([
+  const [initialData, discounts, categories, activeFlavors] = await Promise.all([
     getInitialProducts(),
     getActiveDiscounts(),
     getActiveCategories(),
     getDbActiveFlavors(),
   ]);
+
+  const initialProducts = initialData.products || [];
+  const initialTotalCount = initialData.totalCount || 0;
 
   // Filter Flavors
   const bentoCategoryIds = categories
@@ -71,17 +74,8 @@ const ProductsPage = async () => {
   return (
     <div className="bg-background min-h-screen">
       <div className="mx-auto max-w-7xl px-1 py-16 sm:px-6 sm:py-20 lg:px-4">
-        <div className="text-center">
-          <h2 className="font-heading text-h1 text-text-primary">
-            Our Creations
-          </h2>
-          <p className="mt-4 font-body text-lg text-text-primary/90 max-w-2xl mx-auto">
-            Here you can find all our products, made with love and the finest
-            ingredients. Perfect for every celebration and every sweet moment.
-          </p>
-        </div>
 
-        <ProductFeed initialProducts={initialProducts} validDiscounts={discounts} />
+        <ProductFeed initialProducts={initialProducts} initialTotalCount={initialTotalCount} validDiscounts={discounts} />
       </div>
 
        {/* Bento Flavors */}

@@ -7,6 +7,7 @@ import Image from "next/image";
 import { Textarea } from "@/components/ui/Textarea";
 import { Switch } from "@/components/ui/Switch";
 import { Label } from "@/components/ui/Label";
+import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 import { MultiImageUpload } from "@/components/custom-order/MultiImageUpload";
 
@@ -14,6 +15,11 @@ export default function Step4Design() {
   const { control, watch, setValue, formState: { errors } } = useFormContext<CustomOrderFormData>();
   const textOnCakeWatcher = watch("details.textOnCake");
   const [showInscriptionInput, setShowInscriptionInput] = useState(!!textOnCakeWatcher);
+
+  const designNotesWatcher = watch("details.designNotes");
+  const [designNotesSelection, setDesignNotesSelection] = useState<"yes" | "no" | null>(
+    designNotesWatcher ? (designNotesWatcher === "Same as on reference" ? "no" : "yes") : null
+  );
   
   // Carousel Data State
   const [isLoadingCatalog, setIsLoadingCatalog] = useState(true);
@@ -300,26 +306,74 @@ export default function Step4Design() {
             <label className="font-heading font-semibold text-lg mb-2 block text-primary">
               Your Design Ideas
             </label>
-            <p className="text-xs text-primary/60 mb-3">
-              Tell us about colors, themes, or any special ideas you have.
+            <p className="text-xs text-primary/60 mb-4">
+              Do you have any specific design instructions? Tell us about colors, themes, or any special ideas.
             </p>
-            <Controller
-              control={control}
-              name="details.designNotes"
-              render={({ field }) => (
-                <Textarea
-                  {...field}
-                  placeholder="I want a vintage heart style with heavy piping, mainly baby pink with white borders..."
-                  className={`h-32 bg-subtleBackground ${errors.details?.designNotes ? "border-red-500 ring-1 ring-red-500" : ""}`}
-                />
+
+            <div className="flex gap-3">
+              <Button
+                type="button"
+                onClick={() => {
+                  setDesignNotesSelection("no");
+                  setValue("details.designNotes", "Same as on reference", { shouldValidate: true });
+                }}
+                className={`w-32 h-12 text-lg rounded-xl shadow-lg transition-all active:scale-95 ${
+                  designNotesSelection === "no"
+                    ? "shadow-primary/20 hover:shadow-primary/40"
+                    : "bg-white border border-primary/20 text-primary/70 shadow-primary/10 hover:shadow-primary/20 hover:bg-subtleBackground"
+                }`}
+                variant={designNotesSelection === "no" ? "primary" : "outline"}
+              >
+                No
+              </Button>
+
+              <Button
+                type="button"
+                onClick={() => {
+                  setDesignNotesSelection("yes");
+                  if (designNotesWatcher === "Same as on reference") {
+                    setValue("details.designNotes", "", { shouldValidate: false });
+                  }
+                }}
+                className={`w-32 h-12 text-lg rounded-xl shadow-lg transition-all active:scale-95 ${
+                  designNotesSelection === "yes"
+                    ? "shadow-primary/20 hover:shadow-primary/40"
+                    : "bg-white border border-primary/20 text-primary/70 shadow-primary/10 hover:shadow-primary/20 hover:bg-subtleBackground"
+                }`}
+                variant={designNotesSelection === "yes" ? "primary" : "outline"}
+              >
+                Yes
+              </Button>
+            </div>
+
+            <div
+              className={cn(
+                "grid transition-all duration-300 ease-in-out overflow-hidden",
+                designNotesSelection === "yes"
+                  ? "grid-rows-[1fr] opacity-100 mt-4"
+                  : "grid-rows-[0fr] opacity-0 mt-0",
               )}
-            />
-            {errors.details?.designNotes && (
-              <p className="text-red-500 text-sm mt-3 flex items-center gap-1 font-medium">
-                <AlertCircle className="w-4 h-4 shrink-0" />{" "}
-                {errors.details.designNotes.message}
-              </p>
-            )}
+            >
+              <div className="min-h-0">
+                <Controller
+                  control={control}
+                  name="details.designNotes"
+                  render={({ field }) => (
+                    <Textarea
+                      {...field}
+                      placeholder="I want a vintage heart style with heavy piping, mainly baby pink with white borders..."
+                      className={`h-32 bg-subtleBackground ${errors.details?.designNotes ? "border-red-500 ring-1 ring-red-500" : ""}`}
+                    />
+                  )}
+                />
+                {errors.details?.designNotes && (
+                  <p className="text-red-500 text-sm mt-3 flex items-center gap-1 font-medium">
+                    <AlertCircle className="w-4 h-4 shrink-0" />{" "}
+                    {errors.details.designNotes.message}
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>
