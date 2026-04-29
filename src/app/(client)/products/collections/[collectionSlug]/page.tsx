@@ -29,7 +29,8 @@ async function getProductsByCollection(collectionId: string) {
     console.error("Failed to fetch products for collection");
     return [];
   }
-  return res.json();
+  const data = await res.json();
+  return data.products || [];
 }
 
 const CollectionPage = async ({

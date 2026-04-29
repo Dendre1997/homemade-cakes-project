@@ -172,10 +172,17 @@ export const ClientReceiptCard = ({
 
           const fallbackIdx = order.referenceImages ? Math.min(idx, Math.max(0, order.referenceImages.length - 1)) : 0;
           const effectiveImageUrl = item.imageUrl || (order.referenceImages && order.referenceImages.length > 0 ? order.referenceImages[fallbackIdx] : undefined);
+          const itemImages = item.imageUrls?.length ? item.imageUrls : (effectiveImageUrl ? [effectiveImageUrl] : []);
 
           return (
             <div key={idx} className="flex items-start gap-4 pb-4 border-b border-gray-50 last:border-0 last:pb-0">
-               <ReceiptItemImage effectiveImageUrl={effectiveImageUrl} alt={item.name} />
+               <div className="flex flex-wrap gap-1.5 shrink-0 max-w-[120px]">
+                 {itemImages.length > 0 ? itemImages.map((img, i) => (
+                    <ReceiptItemImage key={i} effectiveImageUrl={img} alt={`${item.name} ${i}`} />
+                 )) : (
+                    <ReceiptItemImage effectiveImageUrl={undefined} alt={item.name} />
+                 )}
+               </div>
                <div className="flex-1 min-w-0 pt-0.5">
                  <div className="flex justify-between items-start gap-2">
                     <p className="font-bold text-sm text-primary/60 leading-snug">{item.name}</p>
@@ -187,6 +194,8 @@ export const ClientReceiptCard = ({
                     {displaySize && <p>Size: {displaySize}</p>}
                     {displayFlavor && <p>Flavor: {displayFlavor}</p>}
                     <p className="text-primary/40">Qty: {item.quantity}</p>
+                    {item.inscription && <p>Inscription: {item.inscription}</p>}
+                    {item.designInstructions && <p className="whitespace-pre-wrap">Instructions: {item.designInstructions}</p>}
                  </div>
                </div>
             </div>

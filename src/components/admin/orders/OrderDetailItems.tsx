@@ -346,11 +346,12 @@ const OrderDetailItems = ({
                             id: editingItem.id,
                             price: editingItem.price,
                             quantity: editingItem.quantity,
-                            images: editingItem.imageUrl ? [editingItem.imageUrl] : [],
+                            images: editingItem.imageUrls?.length ? editingItem.imageUrls : (editingItem.imageUrl ? [editingItem.imageUrl] : []),
                             selectedImage: editingItem.imageUrl || "",
                             sizeValue: editingItem.customSize || (editingItem.diameterId ? editingItem.diameterId.toString() : "") || "",
                             flavorValue: editingItem.customFlavor || (editingItem.selectedConfig?.cake?.flavorId) || editingItem.flavor || "", 
-                            description: editingItem.adminNotes || ""
+                            designInstructions: editingItem.designInstructions || "",
+                            inscription: editingItem.inscription || ""
                         }}
                         onSubmit={(newItem) => {
                              const updatedItem = {
@@ -533,8 +534,6 @@ const OrderDetailItems = ({
                         <Input 
                             value={draftInscription} 
                             onChange={e => setDraftInscription(e.target.value)}
-                            // Standard cakes use inscriptionSettings, Sets usually use global notes? 
-                            // Or allow it anyway for flexibility.
                             placeholder="Optional notes or inscription..."
                         />
                     </div>

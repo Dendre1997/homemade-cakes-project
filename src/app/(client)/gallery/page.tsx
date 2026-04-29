@@ -131,9 +131,6 @@ export default function GalleryPage() {
       {/* Header */}
       <header className="mb-lg text-center md:text-left">
         <h1 className="font-heading text-h2 md:text-h1 text-primary mb-xs">Portfolio Gallery</h1>
-        {/* <p className="text-muted-foreground font-body max-w-2xl">
-          Explore our collection of custom creations, from elegant wedding cakes to whimsical bento sets.
-        </p> */}
       </header>
 
       {/* Category Tabs/Pills */}

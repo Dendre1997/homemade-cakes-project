@@ -79,7 +79,7 @@ export default function SearchInput({
         );
         if (res.ok) {
           const data = await res.json();
-          setResults(data);
+          setResults(data.products || []);
         }
       } catch (error) {
         console.error("Error searching products:", error);

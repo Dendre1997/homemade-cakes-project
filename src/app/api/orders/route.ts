@@ -154,6 +154,7 @@ export async function POST(request: NextRequest) {
                return {
                   ...item,
                   quantity: Number(item.quantity),
+                  imageUrls: item.imageUrls?.length ? item.imageUrls : (product.imageUrls?.length ? product.imageUrls : (item.imageUrl ? [item.imageUrl] : [])),
                   productId: new ObjectId(item.productId),
                   categoryId: new ObjectId(item.categoryId),
                   
@@ -174,6 +175,7 @@ export async function POST(request: NextRequest) {
                return {
                   ...item,
                   quantity: Number(item.quantity),
+                  imageUrls: item.imageUrls?.length ? item.imageUrls : (product.imageUrls?.length ? product.imageUrls : (item.imageUrl ? [item.imageUrl] : [])),
                   productId: new ObjectId(item.productId),
                   categoryId: new ObjectId(item.categoryId),
                   
@@ -405,6 +407,7 @@ export async function POST(request: NextRequest) {
                return {
                   ...item,
                   quantity: Number(item.quantity),
+                  imageUrls: item.imageUrls?.length ? item.imageUrls : (product.imageUrls?.length ? product.imageUrls : (item.imageUrl ? [item.imageUrl] : [])),
                   productId: new ObjectId(item.productId),
                   categoryId: new ObjectId(item.categoryId),
                   
@@ -427,6 +430,7 @@ export async function POST(request: NextRequest) {
                return {
                   ...item,
                   quantity: Number(item.quantity),
+                  imageUrls: item.imageUrls?.length ? item.imageUrls : (product.imageUrls?.length ? product.imageUrls : (item.imageUrl ? [item.imageUrl] : [])),
                   productId: new ObjectId(item.productId),
                   categoryId: new ObjectId(item.categoryId),
                   

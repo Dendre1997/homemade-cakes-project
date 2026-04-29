@@ -462,13 +462,18 @@ export default function ManualOrderPage() {
                   >
                     <div className="flex gap-4">
                       {/* Image Logic */}
-                      <div className="relative w-16 h-16 rounded-md overflow-hidden bg-gray-200 shrink-0">
+                      <div className="relative w-16 h-16 rounded-md overflow-hidden bg-gray-200 shrink-0 border border-gray-300">
                         <Image
                           src={item.imageUrl || "/placeholder.png"}
                           alt={item.name}
                           fill
                           className="object-cover"
                         />
+                        {(item.imageUrls?.length || 0) > 1 && (
+                           <div className="absolute bottom-0 right-0 bg-black/60 text-white text-[10px] px-1 py-0.5 rounded-tl-md font-bold">
+                              +{item.imageUrls.length - 1}
+                           </div>
+                        )}
                       </div>
                       <div>
                         <p className="font-bold text-primary text-lg">

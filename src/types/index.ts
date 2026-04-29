@@ -183,6 +183,7 @@ export interface CartItem {
   price: number;
   quantity: number;
   imageUrl?: string;
+  imageUrls?: string[];
   inscription?: string;
   originalPrice?: number;
   discountName?: string | null;
@@ -206,7 +207,7 @@ export interface CartItem {
   customSize?: string;
   customFlavor?: string;
   isManualPrice?: boolean;
-  adminNotes?: string;
+  designInstructions?: string;
 }
 export type UniqueCartItem = CartItem & {
   uniqueId: string;
@@ -271,6 +272,7 @@ export interface OrderItem {
   price: number;
   quantity: number;
   imageUrl?: string;
+  imageUrls?: string[];
   inscription?: string;
   originalPrice?: number;
   discountName?: string | null;
@@ -294,7 +296,7 @@ export interface OrderItem {
   customSize?: string;
   customFlavor?: string;
   isManualPrice?: boolean;
-  adminNotes?: string;
+  designInstructions?: string;
 }
 
 export interface Address {

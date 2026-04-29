@@ -3,12 +3,6 @@ import { NextResponse } from "next/server";
 import clientPromise from "@/lib/db";
 import { ObjectId } from "mongodb";
 
-/**
- * GET /api/custom-orders/[id]
- * Public read — allows a client to retrieve their submitted custom order
- * (e.g. for confirmation/receipt display after submission).
- * Admin management is handled by /api/admin/custom-orders/[id].
- */
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> }

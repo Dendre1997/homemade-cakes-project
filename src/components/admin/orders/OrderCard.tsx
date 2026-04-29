@@ -110,11 +110,11 @@ export const OrderCard = ({ order, onStatusChange, diametersMap, flavorMap }: Or
   };
 
   return (
-    <Link
-      href={`/bakery-manufacturing-orders/orders/${order._id.toString()}`}
-      className="block h-full"
-    >
-      <div className="flex flex-col h-full bg-white rounded-[16px] shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden border-none group">
+    <div className="flex flex-col h-full bg-white rounded-[16px] shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden border-none group">
+        <Link
+          href={`/bakery-manufacturing-orders/orders/${order._id.toString()}`}
+          className="block h-full"
+        >
         {/* Header: Urgency & Meta */}
         <div className="px-5 pt-4 flex justify-between items-start">
           <div className="flex items-center gap-2">
@@ -215,6 +215,7 @@ export const OrderCard = ({ order, onStatusChange, diametersMap, flavorMap }: Or
             })}
           </div>
         </div>
+        </Link>
 
         {/* Footer Actions */}
         <div className="px-5 pb-4 mt-auto flex flex-col gap-2 pt-2">
@@ -241,6 +242,5 @@ export const OrderCard = ({ order, onStatusChange, diametersMap, flavorMap }: Or
           </Select>
         </div>
       </div>
-    </Link>
   );
 };
