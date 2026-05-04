@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 
 import { notFound, useParams, useRouter } from "next/navigation";
-import { ProductWithCategory, Flavor, AvailableDiameterConfig, Discount } from "@/types";
+import { ProductWithCategory, Flavor, AvailableDiameterConfig, Discount, SelectedDecoration } from "@/types";
 import Link from "next/link";
 import { useCartStore } from "@/lib/store/cartStore";
 import { useAlert } from "@/contexts/AlertContext";
@@ -11,6 +11,7 @@ import { cn, isValidObjectId } from "../../../../lib/utils";
 import QuantityStepper from "@/components/ui/QuantityStepper";
 import FlavorSelector from "@/components/ui/FlavorSelector";
 import QuantitySelector from "@/components/ui/QuantitySelector";
+import { DecorationSelector } from "@/components/shared/DecorationSelector";
 
 import LoadingSpinner from "@/components/ui/Spinner";
 import { Button } from "@/components/ui/Button";
@@ -112,6 +113,7 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
   const [activeTab, setActiveTab] = useState("description");
   const [inscription, setInscription] = useState("");
   const [showInscriptionInput, setShowInscriptionInput] = useState(false);
+  const [selectedDecorations, setSelectedDecorations] = useState<SelectedDecoration[]>([]);
   const openMiniCart = useCartStore((state) => state.openMiniCart);
 
   const [discounts, setDiscounts] = useState<Discount[]>([]);
@@ -336,6 +338,10 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
     }
   }
 
+  const decorationsTotal = selectedDecorations.reduce((sum, d) => sum + d.price, 0);
+  const displayFinalPrice = finalPrice + decorationsTotal;
+  const displayOriginalPrice = calculatedPrice + decorationsTotal;
+
   const handleSelectDiameter = (diameterId: string) => {
     const config = product?.availableDiameterConfigs.find(
       (c) => c.diameterId === diameterId
@@ -406,6 +412,7 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
           // SET SPECIFIC
           flavor: `Mix: ${flavorNames}`, 
           diameterId: isCombo ? comboSelection.diameterId : undefined,
+          decorations: selectedDecorations,
           selectedConfig: {
              items,
              quantityConfigId: selectedQtyConfigId,
@@ -450,6 +457,7 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
           quantity: quantity,
           imageUrl: product.imageUrls[0] || "/placeholder.png",
           inscription: inscription,
+          decorations: selectedDecorations,
           originalPrice: appliedDiscountName ? calculatedPrice : undefined,
           discountName: appliedDiscountName,
         };
@@ -555,6 +563,14 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
                 </div>
               </div>
             )}
+
+            <div className="mt-6 pt-6 border-t border-border">
+              <DecorationSelector 
+                categoryId={product.categoryId}
+                selectedDecorations={selectedDecorations}
+                onChange={setSelectedDecorations}
+              />
+            </div>
           </div>
 
           <div>
@@ -712,10 +728,10 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
                   {appliedDiscountName ? (
                     <>
                       <p className="font-body text-body text-gray-400 line-through">
-                        ${(calculatedPrice * quantity).toFixed(2)}
+                        ${(displayOriginalPrice * quantity).toFixed(2)}
                       </p>
                       <p className="font-body text-h3 font-bold text-error">
-                        ${(finalPrice * quantity).toFixed(2)}
+                        ${(displayFinalPrice * quantity).toFixed(2)}
                       </p>
                       <div className="text-xs bg-error/10 text-error px-2 py-0.5 rounded-full inline-block mt-1 font-medium">
                         {appliedDiscountName}
@@ -723,7 +739,7 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
                     </>
                   ) : (
                     <p className="font-body text-h3 font-bold text-primary">
-                      ${(finalPrice * quantity).toFixed(2)}
+                      ${(displayFinalPrice * quantity).toFixed(2)}
                     </p>
                   )}
                 </div>

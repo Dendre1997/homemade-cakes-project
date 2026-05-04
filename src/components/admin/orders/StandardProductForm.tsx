@@ -7,6 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { calculateUnitPrice, calculateItemPrice } from "@/utils/priceCalculator";
 import { Plus } from "lucide-react";
 import { useAlert } from "@/contexts/AlertContext";
+import { DecorationAdminSelector } from "@/components/admin/decorations/DecorationAdminSelector";
+import { SelectedDecoration } from "@/types";
 
 interface StandardProductFormProps {
   product: ProductWithCategory;
@@ -31,6 +33,7 @@ export const StandardProductForm = ({
   const [qty, setQty] = useState(1);
   const [priceOverride, setPriceOverride] = useState("");
   const [inscription, setInscription] = useState("");
+  const [selectedDecorations, setSelectedDecorations] = useState<SelectedDecoration[]>([]);
 
   // --- Derived Lists ---
   const availableFlavors = product.availableFlavors && Array.isArray(product.availableFlavors) && product.availableFlavors.length > 0
@@ -62,6 +65,9 @@ export const StandardProductForm = ({
             hasInscription: !!(inscription && product.inscriptionSettings?.isAvailable)
          });
 
+      const decorationsTotal = selectedDecorations.reduce((sum, d) => sum + d.price, 0);
+      const finalUnitPrice = priceOverride ? unitPrice : unitPrice + decorationsTotal;
+
       const flavName = availableFlavors.find(f => f._id === selectedFlavorId)?.name || "Standard";
 
       // Construct Payload
@@ -73,11 +79,12 @@ export const StandardProductForm = ({
           diameterId: selectedDiameterId,
           name: product.name,
           flavor: flavName,
-          price: unitPrice,
+          price: finalUnitPrice,
           quantity: qty,
           imageUrl: product.imageUrls?.[0] || "",
           inscription: inscription,
           isCustom: false,
+          decorations: selectedDecorations,
           // Explicit nulls for strict typing
           selectedConfig: null
       };
@@ -158,6 +165,15 @@ export const StandardProductForm = ({
                     disabled={!product.inscriptionSettings?.isAvailable}
                     placeholder={product.inscriptionSettings?.isAvailable ? "Happy Birthday..." : "Not available"}
                     className="w-full p-2 border rounded-md disabled:bg-gray-100"
+                 />
+             </div>
+             
+             {/* Decorations */}
+             <div className="md:col-span-2">
+                 <DecorationAdminSelector 
+                     categoryId={product.categoryId}
+                     selectedDecorations={selectedDecorations}
+                     onChange={setSelectedDecorations}
                  />
              </div>
         </div>

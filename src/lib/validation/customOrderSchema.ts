@@ -58,6 +58,13 @@ export const customOrderSchema = z.object({
   agreedPrice: z.number().optional(),
   approximatePrice: z.number().optional(),
   adminNotes: z.string().optional(),
+  decorations: z.array(z.object({
+    decorationId: z.string(),
+    name: z.string(),
+    variantName: z.string(),
+    price: z.number(),
+    imageUrl: z.string().optional(),
+  })).optional(),
 });
 
 export type CustomOrderFormData = z.infer<typeof customOrderSchema>;

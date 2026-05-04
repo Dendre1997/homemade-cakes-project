@@ -95,6 +95,7 @@ export async function POST(
       rowTotal: Number(agreedPrice),
       inscription: customOrder.details?.textOnCake,
       designInstructions: customOrder.details?.designNotes,
+      decorations: customOrder.decorations || [],
     };
 
     // Create Real Order

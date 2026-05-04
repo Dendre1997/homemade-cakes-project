@@ -25,6 +25,8 @@ import { AdminOrderItem } from "@/components/admin/orders/AdminOrderItem";
 import { useAlert } from "@/contexts/AlertContext";
 import { useParams } from "next/navigation";
 import CustomOrderItemForm from "./CustomOrderItemForm";
+import { DecorationAdminSelector } from "@/components/admin/decorations/DecorationAdminSelector";
+import { SelectedDecoration } from "@/types";
 
 interface OrderDetailItemsProps {
   items: Order["items"];
@@ -58,6 +60,7 @@ const OrderDetailItems = ({
   const [draftInscription, setDraftInscription] = useState("");
   const [draftPriceOverride, setDraftPriceOverride] = useState(""); 
   const [draftSelectedConfig, setDraftSelectedConfig] = useState<any>(null); 
+  const [draftDecorations, setDraftDecorations] = useState<SelectedDecoration[]>([]);
   
   // Edit Context Data
   const [products, setProducts] = useState<ProductWithCategory[]>([]);
@@ -84,6 +87,7 @@ const OrderDetailItems = ({
     setDraftQuantity(item.quantity);
     setDraftInscription(item.inscription || "");
     setDraftPriceOverride(""); 
+    setDraftDecorations(item.decorations || []);
     
     if (item.selectedConfig) {
         setDraftSelectedConfig(JSON.parse(JSON.stringify(item.selectedConfig)));
@@ -171,6 +175,9 @@ const OrderDetailItems = ({
             hasInscription: !!draftInscription,
           })
     : 0;
+
+  const currentDecorationsTotal = draftDecorations.reduce((sum, d) => sum + d.price, 0);
+  const currentTotalUnitCost = currentUnitCost + currentDecorationsTotal;
     
   const handleSaveChanges = async () => {
     if (!editingItem) return;
@@ -196,7 +203,8 @@ const OrderDetailItems = ({
                 flavor: availableFlavors.find(f => f._id === draftFlavorId)?.name || (draftProduct ? "Standard" : editingItem.flavor),
                 diameterId: draftDiameterId,
                 selectedConfig: undefined // Strict undefined for Standard
-            })
+            }),
+            decorations: draftDecorations
         };
         
         const newItems = items.map(i => i.id === editingItem.id ? updatedItem : i);
@@ -351,7 +359,8 @@ const OrderDetailItems = ({
                             sizeValue: editingItem.customSize || (editingItem.diameterId ? editingItem.diameterId.toString() : "") || "",
                             flavorValue: editingItem.customFlavor || (editingItem.selectedConfig?.cake?.flavorId) || editingItem.flavor || "", 
                             designInstructions: editingItem.designInstructions || "",
-                            inscription: editingItem.inscription || ""
+                            inscription: editingItem.inscription || "",
+                            decorations: editingItem.decorations || [],
                         }}
                         onSubmit={(newItem) => {
                              const updatedItem = {
@@ -521,11 +530,11 @@ const OrderDetailItems = ({
                              <Label>Unit Price Override ($)</Label>
                              <Input 
                                 type="number" 
-                                placeholder={`Calc: $${currentUnitCost.toFixed(2)}`}
+                                placeholder={`Calc: $${currentTotalUnitCost.toFixed(2)}`}
                                 value={draftPriceOverride} 
                                 onChange={e => setDraftPriceOverride(e.target.value)} 
                              />
-                             <p className="text-xs text-muted-foreground">Standard: ${currentUnitCost.toFixed(2)}</p>
+                             <p className="text-xs text-muted-foreground">Standard: ${currentTotalUnitCost.toFixed(2)} (incl. decorations)</p>
                          </div>
                     </div>
 
@@ -537,13 +546,21 @@ const OrderDetailItems = ({
                             placeholder="Optional notes or inscription..."
                         />
                     </div>
+
+                    <div className="space-y-2">
+                        <DecorationAdminSelector 
+                            categoryId={draftProduct?.categoryId}
+                            selectedDecorations={draftDecorations}
+                            onChange={setDraftDecorations}
+                        />
+                    </div>
                 </div>
             )}
 
             {!isCustomMode && (
             <DialogFooter>
                 <div className="flex justify-between w-full items-center">
-                    <p className="font-bold text-lg">New Total: ${(draftQuantity * (draftPriceOverride ? parseFloat(draftPriceOverride) : currentUnitCost)).toFixed(2)}</p>
+                    <p className="font-bold text-lg">New Total: ${(draftQuantity * (draftPriceOverride ? parseFloat(draftPriceOverride) : currentTotalUnitCost)).toFixed(2)}</p>
                     <div className="flex gap-2">
                         <Button variant="outline" onClick={() => setEditingItem(null)}>Cancel</Button>
                         <Button onClick={handleSaveChanges} disabled={isSaving}>

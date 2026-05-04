@@ -44,10 +44,10 @@ const OrderSummary = () => {
   }, [])
 
   // Basic client-side subtotal (for initial render)
-  const subtotal = items.reduce(
-    (acc, item) => acc + item.price * item.quantity,
-    0
-  );
+  const subtotal = items.reduce((acc, item) => {
+    const itemDecos = item.decorations?.reduce((sum, d) => sum + d.price, 0) || 0;
+    return acc + ((item.price + itemDecos) * item.quantity);
+  }, 0);
 
   // Function to call the calculation API
   const calculateTotal = async (code?: string) => {
@@ -123,11 +123,12 @@ const OrderSummary = () => {
   const total =
     Object.keys(itemPricing).length > 0
       ? items.reduce((acc: number, item: any) => {
-          // If server data exists for this item, use it. Otherwise, use base price.
+          // If server data exists for this item, use it. Otherwise, use base price + decos.
           const pricing = itemPricing[item.id];
+          const itemDecos = item.decorations?.reduce((sum: number, d: any) => sum + d.price, 0) || 0;
           const price = pricing
             ? pricing.finalPrice
-            : item.price * item.quantity;
+            : (item.price + itemDecos) * item.quantity;
           return acc + price;
         }, 0)
       : Math.max(0, subtotal - discountTotal);
@@ -163,6 +164,9 @@ const OrderSummary = () => {
           const comboCakeFlavor = item.selectedConfig?.cake?.flavorId 
              ? flavors.find(f => f._id.toString() === item.selectedConfig!.cake!.flavorId) 
              : null;
+
+          const itemDecos = item.decorations?.reduce((sum: number, d: any) => sum + d.price, 0) || 0;
+          const itemDisplayPrice = item.price + itemDecos;
 
           return (
             <li key={item.id} className="flex flex-col py-md gap-2">
@@ -229,6 +233,29 @@ const OrderSummary = () => {
                         </div>
                     )}
 
+                    {/* SCENARIO C: Decorations */}
+                    {item.decorations && item.decorations.length > 0 && (
+                        <div className="mt-1 text-xs text-muted-foreground border-t border-primary/10 pt-1">
+                          <p className="font-semibold text-[10px] uppercase tracking-wider mb-0.5">
+                            Decorations
+                          </p>
+                          <ul className="list-none pl-0 space-y-0.5">
+                            {item.decorations.map((deco: any, idx: number) => (
+                              <li key={idx} className="flex justify-between items-start text-[10px]">
+                                <span>
+                                  {deco.name} - {deco.variantName}
+                                </span>
+                                {deco.price > 0 && (
+                                  <span className="text-primary/70 ml-1 font-semibold">
+                                    +${deco.price.toFixed(2)}
+                                  </span>
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                    )}
+
                   </div>
     
                   {/* --- ITEM PRICE COLUMN --- */}
@@ -246,7 +273,7 @@ const OrderSummary = () => {
                       </div>
                     ) : (
                       <p className="font-body font-semibold text-primary">
-                        ${(item.price * item.quantity).toFixed(2)}
+                        ${(pricing ? pricing.finalPrice : itemDisplayPrice * item.quantity).toFixed(2)}
                       </p>
                     )}
                   </div>

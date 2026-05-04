@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/Label";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 import { MultiImageUpload } from "@/components/custom-order/MultiImageUpload";
+import { DecorationSelector } from "@/components/shared/DecorationSelector";
 
 export default function Step4Design() {
   const { control, watch, setValue, formState: { errors } } = useFormContext<CustomOrderFormData>();
@@ -21,13 +22,16 @@ export default function Step4Design() {
     designNotesWatcher ? (designNotesWatcher === "Same as on reference" ? "no" : "yes") : null
   );
   
-  // Carousel Data State
   const [isLoadingCatalog, setIsLoadingCatalog] = useState(true);
   const [catalogImages, setCatalogImages] = useState<string[]>([]);
+  
+  // Category ID State for Selector
+  const [activeCategoryId, setActiveCategoryId] = useState<string | undefined>(undefined);
 
   // Wizard Data
   const categoryName = watch("category");
   const referenceImages = watch("referenceImages") || []; // Up to 3
+  const selectedDecorations = watch("decorations") || [];
 
   // Refs for Auto-Scroll
   const carouselRef = useRef<HTMLDivElement>(null);
@@ -51,20 +55,21 @@ export default function Step4Design() {
         })?._id;
 
         if (activeCategoryId) {
-          const galleryRes = await fetch(
-            `/api/gallery?categoryId=${activeCategoryId}`
-          );
+          setActiveCategoryId(activeCategoryId);
+          const [galleryRes] = await Promise.all([
+            fetch(`/api/gallery?categoryId=${activeCategoryId}`)
+          ]);
+          
           if (galleryRes.ok) {
             const galleryImages = await galleryRes.json();
-            // Extract imageUrl from each active gallery image (already filtered + sorted by API)
             const images = galleryImages
               .map((img: any) => img.imageUrl)
               .filter(Boolean) as string[];
-
-            // Deduplicate just in case
             const uniqueImages = Array.from(new Set(images)) as string[];
             setCatalogImages(uniqueImages);
           }
+        } else {
+          setActiveCategoryId(undefined);
         }
       } catch (err) {
         console.error("Failed to fetch inspiration catalog", err);
@@ -115,6 +120,8 @@ export default function Step4Design() {
        setValue("referenceImages", [...referenceImages, url], { shouldValidate: true });
     }
   };
+
+
 
   // Split images for visual grouping (Uploaded vs Catalog)
   const uploadedSelectedImages = referenceImages.filter(url => !catalogImages.includes(url));
@@ -243,6 +250,15 @@ export default function Step4Design() {
           )}
         </div>
 
+        {/* ROW 2.5: DECORATIONS ZONE */}
+        <div className="border-b border-primary/10 pb-10">
+          <DecorationSelector 
+            categoryId={activeCategoryId}
+            selectedDecorations={selectedDecorations}
+            onChange={(decos) => setValue("decorations", decos, { shouldValidate: true })}
+          />
+        </div>
+        
         {/* ROW 3: TEXT INPUTS */}
         <div className="space-y-6">
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-border">

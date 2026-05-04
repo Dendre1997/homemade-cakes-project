@@ -40,11 +40,11 @@ export async function PUT(
 ) {
   try {
     const { id } = await params;
-    const { name, price, imageUrl, categoryIds, type } = await request.json();
+    const { name, description, imageUrl, categoryIds, isActive, variants } = await request.json();
 
-    if (!name || typeof price !== "number" || !type) {
+    if (!name || !variants || variants.length === 0) {
       return NextResponse.json(
-        { error: "Name, a valid price, and type are required" },
+        { error: "Name and at least one variant are required" },
         { status: 400 }
       );
     }
@@ -85,10 +85,11 @@ export async function PUT(
       {
         $set: {
           name,
-          price,
+          description: description || "",
           imageUrl: finalImageUrl,
           categoryIds: categoryIds || [],
-          type,
+          isActive: isActive !== undefined ? isActive : true,
+          variants,
         },
       }
     );
@@ -133,6 +134,31 @@ export async function DELETE(
       );
     }
 
+    // 1. Gather all image URLs
+    const imageUrlsToClean = [existingDecoration.imageUrl];
+    if (existingDecoration.variants && Array.isArray(existingDecoration.variants)) {
+      existingDecoration.variants.forEach((v: any) => {
+        if (v.imageUrl) {
+          imageUrlsToClean.push(v.imageUrl);
+        }
+      });
+    }
+
+    // Filter out falsy URLs
+    const validUrls = imageUrlsToClean.filter(Boolean);
+
+    // 2. Extract public IDs and trigger Cloudinary deletions
+    const publicIds = validUrls
+      .map(url => getPublicIdFromUrl(url))
+      .filter(Boolean) as string[];
+
+    if (publicIds.length > 0) {
+      await Promise.allSettled(
+        publicIds.map(publicId => cloudinary.uploader.destroy(publicId, { invalidate: true }))
+      );
+    }
+
+    // 3. Delete from database
     const result = await collection.deleteOne({ _id: new ObjectId(id) });
 
     if (result.deletedCount === 0) {
@@ -140,13 +166,6 @@ export async function DELETE(
         { error: "Decoration not found" },
         { status: 404 }
       );
-    }
-
-    if (existingDecoration.imageUrl) {
-      const publicId = getPublicIdFromUrl(existingDecoration.imageUrl);
-      if (publicId) {
-        cloudinary.uploader.destroy(publicId, { invalidate: true });
-      }
     }
 
     return NextResponse.json(

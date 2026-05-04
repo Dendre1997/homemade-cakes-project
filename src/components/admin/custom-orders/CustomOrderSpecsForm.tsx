@@ -9,6 +9,7 @@ import {
 import { AlertTriangle, Image as ImageIcon, Trash2, Plus, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { useRef } from "react";
+import { DecorationAdminSelector } from "@/components/admin/decorations/DecorationAdminSelector";
 
 interface CustomOrderSpecsFormProps {
   order: any;
@@ -102,6 +103,14 @@ export const CustomOrderSpecsForm = ({
              onChange={(e) => onChange("details", { ...order.details, textOnCake: e.target.value })}
              className="h-11"
              placeholder="Optional inscription..."
+          />
+       </div>
+
+       <div className="space-y-sm">
+          <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Decorations</Label>
+          <DecorationAdminSelector 
+             selectedDecorations={order.decorations || []}
+             onChange={(newDecorations) => onChange("decorations", newDecorations)}
           />
        </div>
 
