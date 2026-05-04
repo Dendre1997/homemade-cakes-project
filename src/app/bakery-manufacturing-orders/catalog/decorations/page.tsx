@@ -191,26 +191,33 @@ const ManageDecorationsPage = () => {
                 No decorations found matching your search.
               </p>
             ) : (
-              filteredDecorations.map((deco) => (
-                <AdminListItem
-                  key={deco._id.toString()}
-                  title={deco.name}
-                  description={`$${deco.price.toFixed(2)} (${deco.type})`}
-                  imageUrl={deco.imageUrl}
-                  details={{
-                    ...deco,
-                    price: `$${deco.price.toFixed(2)}`,
-                    categories:
-                      (deco.categoryIds || [])
-                        .map((id) => categories.find((c) => c._id === id)?.name)
-                        .filter(Boolean)
-                        .join(", ") || "None",
-                    categoryIds: '',
-                  }}
-                  onEdit={() => setEditingDecoration(deco)}
-                  onDelete={() => handleDelete(deco._id.toString(), deco.name)}
-                />
-              ))
+              filteredDecorations.map((deco) => {
+                const minPrice = deco.variants?.length
+                  ? Math.min(...deco.variants.map((v) => v.price))
+                  : 0;
+
+                return (
+                  <AdminListItem
+                    key={deco._id.toString()}
+                    title={deco.name}
+                    description={`From $${minPrice.toFixed(2)}`}
+                    imageUrl={deco.imageUrl}
+                    details={{
+                      ...deco,
+                      price: `From $${minPrice.toFixed(2)}`,
+                      categories:
+                        (deco.categoryIds || [])
+                          .map((id) => categories.find((c) => c._id === id)?.name)
+                          .filter(Boolean)
+                          .join(", ") || "None",
+                      categoryIds: '',
+                      variants: undefined, // Hide raw variants object from details view
+                    }}
+                    onEdit={() => setEditingDecoration(deco)}
+                    onDelete={() => handleDelete(deco._id.toString(), deco.name)}
+                  />
+                );
+              })
             )}
           </div>
         </div>

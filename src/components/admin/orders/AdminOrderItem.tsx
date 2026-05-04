@@ -170,7 +170,25 @@ export const AdminOrderItem = ({
                             &ldquo;{item.inscription}&rdquo;
                         </span>
                     </div>
-                )}
+                 )}
+
+                 {/* Decorations */}
+                 {item.decorations && item.decorations.length > 0 && (
+                     <div className="mt-2 bg-purple-50 border border-purple-100 rounded-md p-2">
+                        <div className="text-xs font-bold text-purple-800 uppercase mb-1">Decorations</div>
+                        <div className="flex flex-col gap-1">
+                           {item.decorations.map((dec, idx) => (
+                               <div key={idx} className="flex justify-between items-center text-sm">
+                                   <div className="flex items-center gap-2">
+                                       {dec.imageUrl && <Image src={dec.imageUrl} width={20} height={20} className="rounded object-cover" alt="" />}
+                                       <span className="text-gray-800 font-medium">{dec.name} <span className="text-gray-500 font-normal">({dec.variantName})</span></span>
+                                   </div>
+                                   <span className="font-mono text-xs text-gray-600">+${dec.price.toFixed(2)}</span>
+                               </div>
+                           ))}
+                        </div>
+                     </div>
+                 )}
             </div>
             
             {/* Image Modal */}
@@ -332,6 +350,24 @@ export const AdminOrderItem = ({
                      </div>
                 )}
             </div>
+        )}
+
+        {/* Decorations for Standard / Set */}
+        {!isCustom && item.decorations && item.decorations.length > 0 && (
+             <div className="mt-2 bg-purple-50 border border-purple-100 rounded-md p-2 max-w-md">
+                <div className="text-xs font-bold text-purple-800 uppercase mb-1">Decorations</div>
+                <div className="flex flex-col gap-1">
+                   {item.decorations.map((dec, idx) => (
+                       <div key={idx} className="flex justify-between items-center text-sm">
+                           <div className="flex items-center gap-2">
+                               {dec.imageUrl && <Image src={dec.imageUrl} width={20} height={20} className="rounded object-cover" alt="" />}
+                               <span className="text-gray-800 font-medium">{dec.name} <span className="text-gray-500 font-normal">({dec.variantName})</span></span>
+                           </div>
+                           <span className="font-mono text-xs text-gray-600">+${dec.price.toFixed(2)}</span>
+                       </div>
+                   ))}
+                </div>
+             </div>
         )}
       </div>
 

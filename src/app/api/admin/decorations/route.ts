@@ -6,12 +6,12 @@ import { Decoration } from "@/types";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, price, imageUrl, categoryIds, type }: Partial<Decoration> =
+    const { name, description, imageUrl, categoryIds, isActive, variants }: Partial<Decoration> =
       body;
 
-    if (!name || typeof price !== "number" || !type) {
+    if (!name || !variants || variants.length === 0) {
       return NextResponse.json(
-        { error: "Name, a valid price, and type are required" },
+        { error: "Name and at least one variant are required" },
         { status: 400 }
       );
     }
@@ -21,10 +21,11 @@ export async function POST(request: NextRequest) {
 
     const newDecorationData = {
       name,
-      price,
+      description: description || "",
       imageUrl: imageUrl || "",
       categoryIds: categoryIds || [],
-      type,
+      isActive: isActive !== undefined ? isActive : true,
+      variants,
     };
 
     const result = await db

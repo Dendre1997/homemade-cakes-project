@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/Button";
 import { Plus, Minus } from "lucide-react";
 import { useAlert } from "@/contexts/AlertContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/Select";
+import { DecorationAdminSelector } from "@/components/admin/decorations/DecorationAdminSelector";
+import { SelectedDecoration } from "@/types";
 
 interface SetProductFormProps {
   product: ProductWithCategory;
@@ -39,6 +41,7 @@ export const SetProductForm = ({
   // 4. General
   const [qty, setQty] = useState(1); // How many SETS
   const [priceOverride, setPriceOverride] = useState("");
+  const [selectedDecorations, setSelectedDecorations] = useState<SelectedDecoration[]>([]);
 
   // Helpers
   const selectedConfig = product.availableQuantityConfigs?.find(c => c.label === selectedQtyConfigId || c._id === selectedQtyConfigId);
@@ -88,7 +91,8 @@ export const SetProductForm = ({
 
       let calculatedPrice = selectedConfig.price;
       
-       const finalPrice = priceOverride ? parseFloat(priceOverride) : calculatedPrice;
+       const decorationsTotal = selectedDecorations.reduce((sum, d) => sum + d.price, 0);
+       const finalPrice = priceOverride ? parseFloat(priceOverride) : calculatedPrice + decorationsTotal;
 
        // Construct `items` array
        const selectedItemsArray = Object.entries(flavorCounts).map(([fId, count]) => ({
@@ -109,6 +113,7 @@ export const SetProductForm = ({
            quantity: qty,
            imageUrl: product.imageUrls?.[0] || "",
            isCustom: false,
+           decorations: selectedDecorations,
            
            // POLYMORPHIC DATA
            selectedConfig: {
@@ -225,6 +230,15 @@ export const SetProductForm = ({
                 </div>
             </div>
         )}
+
+        {/* Decorations */}
+        <div className="pt-2">
+            <DecorationAdminSelector 
+                categoryId={product.categoryId}
+                selectedDecorations={selectedDecorations}
+                onChange={setSelectedDecorations}
+            />
+        </div>
 
         {/* 4. Quantity & Price */}
         <div className="grid grid-cols-2 gap-4 pt-2 border-t">

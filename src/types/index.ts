@@ -8,13 +8,26 @@ export interface Flavor {
   imageUrl?: string;
 }
 
+export interface SelectedDecoration {
+  decorationId: string;
+  name: string;
+  variantName: string;
+  price: number;
+  imageUrl?: string;
+}
+
 export interface Decoration {
   _id: string;
   name: string;
-  price: number;
+  description?: string;
   imageUrl?: string;
   categoryIds?: string[];
-  type: string;
+  isActive: boolean;
+  variants: {
+    name: string;
+    price: number;
+    imageUrl?: string;
+  }[];
 }
 
 export interface Allergen {
@@ -208,6 +221,7 @@ export interface CartItem {
   customFlavor?: string;
   isManualPrice?: boolean;
   designInstructions?: string;
+  decorations?: SelectedDecoration[];
 }
 export type UniqueCartItem = CartItem & {
   uniqueId: string;
@@ -297,6 +311,7 @@ export interface OrderItem {
   customFlavor?: string;
   isManualPrice?: boolean;
   designInstructions?: string;
+  decorations?: SelectedDecoration[];
 }
 
 export interface Address {
@@ -433,6 +448,7 @@ export interface CustomOrder {
   approximatePrice?: number;
   adminNotes?: string;
   deliveryMethod?: "pickup" | "delivery" | string;
+  decorations?: SelectedDecoration[];
   [key: string]: any;
 }
 

@@ -4,20 +4,11 @@ import { Decoration, ProductCategory } from "@/types";
 import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
 import { ChipCheckbox } from "../ui/ChipCheckbox";
-import {
-  Select,
-  SelectTrigger,
-  SelectContent,
-  SelectItem,
-  SelectValue,
-} from "@/components/ui/Select";
 import { ImageUploadPreview } from "@/components/admin/ImageUploadPreview";
 import LoadingSpinner from "@/components/ui/Spinner";
 import { useAlert } from "@/contexts/AlertContext";
-import { X } from "lucide-react";
-
-// Update in Future
-const DECORATION_TYPES = ["Chocolate", "Fruit", "Figurine", "Flowers", "Other"];
+import { X, Trash2, Plus } from "lucide-react";
+import { Switch } from "@/components/ui/Switch";
 
 const FormLabel = ({
   htmlFor,
@@ -54,13 +45,15 @@ const DecorationsForm = ({
 
   const [formData, setFormData] = useState<DecorationFormData>({
     name: "",
-    price: 0,
+    description: "",
     imageUrl: "",
-    type: "",
+    isActive: true,
     categoryIds: [],
+    variants: [{ name: "", price: 0, imageUrl: "" }],
   });
 
   const [isUploading, setIsUploading] = useState<boolean>(false);
+  const [uploadingVariantIndex, setUploadingVariantIndex] = useState<number | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [orphanedImageUrl, setOrphanedImageUrl] = useState<string | null>(null);
   const [imagePos, setImagePos] = useState({ x: 50, y: 50 });
@@ -70,18 +63,20 @@ const DecorationsForm = ({
     if (existingDecoration) {
       setFormData({
         name: existingDecoration.name || "",
-        price: existingDecoration.price || 0,
+        description: existingDecoration.description || "",
         imageUrl: existingDecoration.imageUrl || "",
-        type: existingDecoration.type || "",
+        isActive: existingDecoration.isActive ?? true,
         categoryIds: existingDecoration.categoryIds || [],
+        variants: existingDecoration.variants?.length ? existingDecoration.variants : [{ name: "", price: 0, imageUrl: "" }],
       });
     } else if (!isSubmitting) {
       setFormData({
         name: "",
-        price: 0,
+        description: "",
         imageUrl: "",
-        type: "",
+        isActive: true,
         categoryIds: [],
+        variants: [{ name: "", price: 0, imageUrl: "" }],
       });
     }
 
@@ -100,6 +95,68 @@ const DecorationsForm = ({
       ...prev,
       [id]: type === "number" ? parseFloat(value) || 0 : value,
     }));
+  };
+
+  const handleVariantChange = (index: number, field: "name" | "price", value: string | number) => {
+    setFormData((prev) => {
+      const newVariants = [...prev.variants];
+      newVariants[index] = { ...newVariants[index], [field]: value };
+      return { ...prev, variants: newVariants };
+    });
+  };
+
+  const addVariant = () => {
+    setFormData((prev) => ({
+      ...prev,
+      variants: [...prev.variants, { name: "", price: 0, imageUrl: "" }],
+    }));
+  };
+
+  const removeVariant = (index: number) => {
+    if (formData.variants.length <= 1) return;
+    setFormData((prev) => ({
+      ...prev,
+      variants: prev.variants.filter((_, i) => i !== index),
+    }));
+  };
+
+  const handleVariantImageUpload = async (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingVariantIndex(index);
+    setUploadError(null);
+
+    const uploadData = new FormData();
+    uploadData.append("file", file);
+    uploadData.append("upload_preset", "homemade_cakes_preset");
+
+    try {
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+        { method: "POST", body: uploadData }
+      );
+      if (!response.ok) throw new Error("Image upload failed.");
+      const result = await response.json();
+
+      setFormData((prev) => {
+        const newVariants = [...prev.variants];
+        newVariants[index] = { ...newVariants[index], imageUrl: result.secure_url };
+        return { ...prev, variants: newVariants };
+      });
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "Upload failed.");
+    } finally {
+      setUploadingVariantIndex(null);
+    }
+  };
+
+  const handleVariantImageRemove = (index: number) => {
+    setFormData((prev) => {
+      const newVariants = [...prev.variants];
+      newVariants[index] = { ...newVariants[index], imageUrl: "" };
+      return { ...prev, variants: newVariants };
+    });
   };
 
   const handleCategoryChange = (categoryId: string) => {
@@ -167,8 +224,8 @@ const DecorationsForm = ({
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!formData.type) {
-      showAlert("Please select a decoration type.", "error");
+    if (formData.variants.some((v) => !v.name || v.price < 0)) {
+      showAlert("All variants must have a name and a valid price.", "error");
       return;
     }
     setOrphanedImageUrl(null);
@@ -196,38 +253,110 @@ const DecorationsForm = ({
           />
         </div>
         <div>
-          <FormLabel htmlFor="price">Price</FormLabel>
-          <Input
-            type="number"
-            id="price"
-            value={formData.price === 0 ? "" : formData.price}
-            onChange={handleChange}
-            placeholder="0.00"
-            required
-            step="0.01"
-          />
+          <FormLabel htmlFor="isActive">Active Status</FormLabel>
+          <div className="flex items-center space-x-2 mt-2">
+            <Switch
+              id="isActive"
+              checked={formData.isActive}
+              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isActive: checked }))}
+            />
+            <span className="font-body text-small text-primary/80">
+              {formData.isActive ? "Active (Visible)" : "Inactive (Hidden)"}
+            </span>
+          </div>
         </div>
       </div>
 
       <div>
-        <FormLabel htmlFor="type">Decoration Type</FormLabel>
-        <Select
-          value={formData.type}
-          onValueChange={(value) =>
-            setFormData((prev) => ({ ...prev, type: value }))
-          }
-        >
-          <SelectTrigger id="type">
-            <SelectValue placeholder="Select a type..." />
-          </SelectTrigger>
-          <SelectContent>
-            {DECORATION_TYPES.map((type) => (
-              <SelectItem key={type} value={type}>
-                {type}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <FormLabel htmlFor="description">Description (Optional)</FormLabel>
+        <Input
+          type="text"
+          id="description"
+          value={formData.description || ""}
+          onChange={handleChange}
+        />
+      </div>
+
+      <div className="space-y-sm">
+        <h3 className="font-body text-body font-bold text-primary">Variants</h3>
+        <div className="space-y-sm">
+          {formData.variants.map((variant, index) => (
+            <div key={index} className="flex flex-col gap-sm w-full p-sm border border-border rounded-medium bg-background/50">
+              <div className="flex flex-col w-full gap-2">
+                <FormLabel htmlFor={`variant-image-upload-${index}`}>Variant Image</FormLabel>
+                <div className="">
+                  <ImageUploadPreview
+                    imagePreview={variant.imageUrl || null}
+                    isUploading={uploadingVariantIndex === index}
+                    onRemove={() => handleVariantImageRemove(index)}
+                    containerClassName="h-48 w-full"
+                  />
+                  <div className="flex flex-col gap-sm">
+                    <Input
+                      id={`variant-image-upload-${index}`}
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleVariantImageUpload(index, e)}
+                      disabled={uploadingVariantIndex === index}
+                      className="hidden"
+                    />
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => document.getElementById(`variant-image-upload-${index}`)?.click()}
+                      className="h-8 px-3 text-small"
+                      disabled={uploadingVariantIndex === index}
+                    >
+                      {variant.imageUrl ? "Change Image" : "Upload Image"}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              <div className="w-full">
+                <FormLabel htmlFor={`variant-name-${index}`}>Variant Name</FormLabel>
+                <Input
+                  type="text"
+                  id={`variant-name-${index}`}
+                  value={variant.name}
+                  onChange={(e) => handleVariantChange(index, "name", e.target.value)}
+                  placeholder="e.g. Standard, 3 pcs"
+                  required
+                />
+              </div>
+              <div className="w-full">
+                <FormLabel htmlFor={`variant-price-${index}`}>Price</FormLabel>
+                <Input
+                  type="number"
+                  id={`variant-price-${index}`}
+                  value={variant.price === 0 ? "" : variant.price}
+                  onChange={(e) => handleVariantChange(index, "price", parseFloat(e.target.value) || 0)}
+                  placeholder="0.00"
+                  step="0.01"
+                  required
+                />
+              </div>
+              <div className="w-full flex justify-end border-t border-border pt-sm mt-sm">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => removeVariant(index)}
+                  disabled={formData.variants.length <= 1}
+                  className="px-3 text-error hover:text-error hover:bg-error/10 flex gap-2 items-center"
+                >
+                  <Trash2 className="w-4 h-4" /> Remove Variant
+                </Button>
+              </div>
+            </div>
+          ))}
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={addVariant}
+            className="w-full mt-sm gap-2"
+          >
+            <Plus className="w-4 h-4" /> Add another option
+          </Button>
+        </div>
       </div>
 
       <div>

@@ -46,10 +46,10 @@ const CartPage = () => {
     fetchFlavors();
   }, []);
 
-  const subtotal = items.reduce(
-    (acc, item) => acc + item.price * item.quantity,
-    0
-  );
+  const subtotal = items.reduce((acc, item) => {
+    const itemDecos = item.decorations?.reduce((sum, d) => sum + d.price, 0) || 0;
+    return acc + ((item.price + itemDecos) * item.quantity);
+  }, 0);
 
   if (!isMounted) {
     return <LoadingSpinner />;
@@ -91,6 +91,10 @@ const CartPage = () => {
                   const comboCakeFlavor = item.selectedConfig?.cake?.flavorId
                     ? flavors.find(f => f._id.toString() === item.selectedConfig!.cake!.flavorId.toString())
                     : null;
+
+                  const itemDecos = item.decorations?.reduce((sum, d) => sum + d.price, 0) || 0;
+                  const itemDisplayPrice = item.price + itemDecos;
+                  const itemDisplayOriginal = item.originalPrice ? item.originalPrice + itemDecos : undefined;
 
                   return (
                     <li
@@ -173,15 +177,38 @@ const CartPage = () => {
                                  </div>
                             )}
 
+                            {/* SCENARIO C: Decorations (Applies to both) */}
+                            {item.decorations && item.decorations.length > 0 && (
+                                <div className="mt-2 text-sm text-primary/90 border-t border-primary/10 pt-2">
+                                  <p className="font-semibold text-xs text-muted-foreground uppercase tracking-wider mb-1">
+                                    Decorations
+                                  </p>
+                                  <ul className="list-none pl-0 space-y-1">
+                                    {item.decorations.map((deco, idx) => (
+                                      <li key={idx} className="flex justify-between items-start">
+                                        <span className="font-medium text-xs">
+                                          {deco.name} - {deco.variantName}
+                                        </span>
+                                        {deco.price > 0 && (
+                                          <span className="text-xs text-primary/70 ml-2 font-semibold">
+                                            +${deco.price.toFixed(2)}
+                                          </span>
+                                        )}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                            )}
+
                           </div>
                           <div className="text-right">
-                            {item.originalPrice ? (
+                            {itemDisplayOriginal ? (
                               <>
                                 <p className="font-body text-body text-gray-400 line-through">
-                                  ${(item.originalPrice * item.quantity).toFixed(2)}
+                                  ${(itemDisplayOriginal * item.quantity).toFixed(2)}
                                 </p>
                                 <p className="font-body text-lg font-semibold text-error">
-                                  ${(item.price * item.quantity).toFixed(2)}
+                                  ${(itemDisplayPrice * item.quantity).toFixed(2)}
                                 </p>
                                 {item.discountName && (
                                   <p className="text-xs text-error font-medium">{item.discountName}</p>
@@ -189,7 +216,7 @@ const CartPage = () => {
                               </>
                             ) : (
                                 <p className="font-body text-lg font-semibold text-primary">
-                                  ${(item.price * item.quantity).toFixed(2)}
+                                  ${(itemDisplayPrice * item.quantity).toFixed(2)}
                                 </p>
                             )}
                           </div>

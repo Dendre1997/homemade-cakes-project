@@ -12,6 +12,8 @@ import ImageSelector from "@/components/admin/custom-orders/ImageSelector";
 import { getPublicIdFromUrl } from "@/lib/cloudinaryUtils";
 import { Plus } from "lucide-react";
 import { useAlert } from "@/contexts/AlertContext";
+import { DecorationAdminSelector } from "@/components/admin/decorations/DecorationAdminSelector";
+import { SelectedDecoration } from "@/types";
 
 // Icons Imports
 import { FourInchBentoIcon } from "@/components/icons/cake-sizes/FourInchBentoIcon";
@@ -52,6 +54,7 @@ interface CustomOrderItemFormProps {
       flavorValue: string;
       designInstructions?: string;
       inscription?: string;
+      decorations?: SelectedDecoration[];
       price: number;
       quantity?: number;
   };
@@ -98,6 +101,7 @@ export default function CustomOrderItemForm({
   const [inscription, setInscription] = useState<string>(initialValues?.inscription || "");
   const [price, setPrice] = useState<number>(initialValues?.price || 0);
   const [quantity, setQuantity] = useState<number>(initialValues?.quantity || 1);
+  const [selectedDecorations, setSelectedDecorations] = useState<SelectedDecoration[]>(initialValues?.decorations || []);
   
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -259,6 +263,7 @@ export default function CustomOrderItemForm({
           isCustom: true,
           designInstructions: designInstructions,
           inscription: inscription,
+          decorations: selectedDecorations,
           
           // Hybrid Logic
           customSize: isCustomSize ? sizeValue : undefined,
@@ -288,6 +293,7 @@ export default function CustomOrderItemForm({
           setPrice(0);
           setQuantity(1);
           setSelectedCategoryId("");
+          setSelectedDecorations([]);
       }
   };
 
@@ -473,6 +479,13 @@ export default function CustomOrderItemForm({
                  </div>
 
                  <div className="pt-4 border-t mt-4">
+                     <DecorationAdminSelector 
+                         selectedDecorations={selectedDecorations}
+                         onChange={setSelectedDecorations}
+                     />
+                 </div>
+
+                 <div className="pt-4 border-t mt-4">
                      <div className="flex flex-col sm:flex-row gap-4">
                          <div>
                              <Label className="mb-2 block">Quantity Multiplier</Label>
@@ -506,8 +519,13 @@ export default function CustomOrderItemForm({
 
              {/* BOTTOM: Action Buttons */}
              <div className="lg:col-span-2 flex flex-col sm:flex-row items-center gap-4 pt-6 mt-4 border-t border-primary/20 bg-primary/5 p-4 rounded-xl w-full">
-                 <div className="font-bold text-2xl text-primary shrink-0 sm:w-1/3 text-center sm:text-left">
-                     Total: ${(price * quantity).toFixed(2)}
+                 <div className="font-bold text-2xl text-primary shrink-0 sm:w-1/3 text-center sm:text-left flex flex-col">
+                     <span>Total: ${(price * quantity).toFixed(2)}</span>
+                     {selectedDecorations.length > 0 && (
+                         <span className="text-xs font-normal text-muted-foreground">
+                             Decorations total: +${selectedDecorations.reduce((sum, d) => sum + d.price, 0).toFixed(2)} (Must be manually added to Fixed Price if desired)
+                         </span>
+                     )}
                  </div>
                  <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-2/3 justify-end">
                      {onCancel && (

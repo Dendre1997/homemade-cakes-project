@@ -70,42 +70,58 @@ export const MiniCart = ({ isOpen, onClose }: MiniCartProps) => {
 
         {lastItemAdded ? (
           <div className="mt-md">
-            <div className="flex items-start gap-md">
-              <Image
-                src={lastItemAdded.imageUrl}
-                alt={lastItemAdded.name}
-                width={64}
-                height={64}
-                className="h-16 w-16 rounded-medium border border-border object-cover"
-              />
-              <div className="flex-1">
-                <p className="font-body font-bold text-primary">
-                  {lastItemAdded.name}
-                </p>
-                <p className="font-body text-small text-primary/80">
-                  {lastItemAdded.flavor}
-                </p>
-                <p className="font-body text-small text-primary/80">
-                  Qty: {lastItemAdded.quantity}
-                </p>
-              </div>
-              <div className="text-right">
-                {lastItemAdded.originalPrice ? (
-                  <>
-                    <p className="text-xs text-gray-400 line-through">
-                      ${(lastItemAdded.originalPrice * lastItemAdded.quantity).toFixed(2)}
+            {(() => {
+              const itemDecos = lastItemAdded.decorations?.reduce((sum, d) => sum + d.price, 0) || 0;
+              const displayPrice = lastItemAdded.price + itemDecos;
+              const displayOriginal = lastItemAdded.originalPrice ? lastItemAdded.originalPrice + itemDecos : undefined;
+              return (
+                <div className="flex items-start gap-md">
+                  <Image
+                    src={lastItemAdded.imageUrl}
+                    alt={lastItemAdded.name}
+                    width={64}
+                    height={64}
+                    className="h-16 w-16 rounded-medium border border-border object-cover"
+                  />
+                  <div className="flex-1">
+                    <p className="font-body font-bold text-primary">
+                      {lastItemAdded.name}
                     </p>
-                    <p className="font-body font-semibold text-error">
-                      ${(lastItemAdded.price * lastItemAdded.quantity).toFixed(2)}
+                    <p className="font-body text-small text-primary/80">
+                      {lastItemAdded.flavor}
                     </p>
-                  </>
-                ) : (
-                  <p className="font-body font-semibold text-primary">
-                    ${(lastItemAdded.price * lastItemAdded.quantity).toFixed(2)}
-                  </p>
-                )}
-              </div>
-            </div>
+                    {lastItemAdded.decorations && lastItemAdded.decorations.length > 0 && (
+                      <ul className="mt-0.5 space-y-0">
+                        {lastItemAdded.decorations.map((d, i) => (
+                          <li key={i} className="text-[10px] text-primary/60">
+                            + {d.variantName} ${d.price.toFixed(2)}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    <p className="font-body text-small text-primary/80">
+                      Qty: {lastItemAdded.quantity}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    {displayOriginal ? (
+                      <>
+                        <p className="text-xs text-gray-400 line-through">
+                          ${(displayOriginal * lastItemAdded.quantity).toFixed(2)}
+                        </p>
+                        <p className="font-body font-semibold text-error">
+                          ${(displayPrice * lastItemAdded.quantity).toFixed(2)}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="font-body font-semibold text-primary">
+                        ${(displayPrice * lastItemAdded.quantity).toFixed(2)}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
 
             <div className="mt-md flex gap-sm">
               <Link href="/cart" onClick={onClose} className="flex-1">

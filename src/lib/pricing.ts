@@ -1,5 +1,5 @@
 import { Db, ObjectId } from "mongodb";
-import { CartItem, Discount, Product, Flavor } from "@/types";
+import { CartItem, Discount, Product, Flavor, Decoration } from "@/types";
 
 interface PriceResult {
   subtotal: number;
@@ -61,6 +61,28 @@ export async function calculateOrderPricing(
       )
     : null;
 
+  // 3.5 Fetch Active Decorations Data
+  const decorationIds = items
+    .flatMap((i) =>
+      i.decorations?.map((d) => {
+        try {
+          return new ObjectId(d.decorationId);
+        } catch {
+          return null;
+        }
+      }) || []
+    )
+    .filter(Boolean);
+
+  let decorationMap = new Map<string, Decoration>();
+  if (decorationIds.length > 0) {
+    const dbDecorations = await db
+      .collection<Decoration>("decorations")
+      .find({ _id: { $in: decorationIds } as any })
+      .toArray();
+    decorationMap = new Map(dbDecorations.map((d) => [d._id.toString(), d]));
+  }
+
   // 4. Per-Item Calculation Loop
   let totalSubtotal = 0;
   let totalDiscount = 0;
@@ -90,6 +112,22 @@ export async function calculateOrderPricing(
       const num = Number(val);
       return isNaN(num) ? 0 : Number(num.toFixed(2));
     };
+
+    // --- DECORATION COST VALIDATION ---
+    let decorationCost = 0;
+    if (item.decorations && item.decorations.length > 0) {
+      for (const deco of item.decorations) {
+        const dbDeco = decorationMap.get(deco.decorationId);
+        if (dbDeco) {
+          const variant = dbDeco.variants.find(
+            (v) => v.name === deco.variantName
+          );
+          if (variant) {
+            decorationCost += safePrice(variant.price);
+          }
+        }
+      }
+    }
 
     let unitPrice = 0;
 
@@ -142,7 +180,7 @@ export async function calculateOrderPricing(
              }
         }
         
-        unitPrice = finalCalculatedPrice;
+        unitPrice = finalCalculatedPrice + decorationCost;
 
     } else {
         // --- SCENARIO B: STANDARD CAKE ---
@@ -167,8 +205,8 @@ export async function calculateOrderPricing(
 
         // D. Formula
         unitPrice =
-        (dbProduct.structureBasePrice + flavorPrice + inscriptionPrice) *
-        multiplier;
+        ((dbProduct.structureBasePrice + flavorPrice + inscriptionPrice) *
+        multiplier) + decorationCost;
     }
 
     const lineItemOriginalTotal = unitPrice * item.quantity;
