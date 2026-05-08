@@ -3,42 +3,42 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { Check, ChevronDown, ChevronUp } from "lucide-react";
-import { Decoration, SelectedDecoration } from "@/types";
+import { Addon, SelectedAddon } from "@/types";
 
-interface DecorationAdminSelectorProps {
+interface AddonAdminSelectorProps {
   categoryId?: string;
-  selectedDecorations: SelectedDecoration[];
-  onChange: (newDecorations: SelectedDecoration[]) => void;
+  selectedAddons: SelectedAddon[];
+  onChange: (newaddons: SelectedAddon[]) => void;
 }
 
-export function DecorationAdminSelector({
+export function AddonAdminSelector({
   categoryId,
-  selectedDecorations,
+  selectedAddons,
   onChange,
-}: DecorationAdminSelectorProps) {
-  const [allDecorations, setAllDecorations] = useState<Decoration[]>([]);
-  const [activeDecorationId, setActiveDecorationId] = useState<string | null>(null);
+}: AddonAdminSelectorProps) {
+  const [allAddons, setAllAddons] = useState<Addon[]>([]);
+  const [activeaddonId, setActiveaddonId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchDecorations() {
+    async function fetchAddons() {
       try {
-        // We use the admin route or public route. Assuming /api/decorations works based on the previous task.
-        const res = await fetch("/api/decorations");
+        // We use the admin route or public route. Assuming /api/addons works based on the previous task.
+        const res = await fetch("/api/addons");
         if (res.ok) {
-          const data: Decoration[] = await res.json();
-          setAllDecorations(data);
+          const data: Addon[] = await res.json();
+          setAllAddons(data);
         }
       } catch (err) {
-        console.error("Failed to fetch decorations", err);
+        console.error("Failed to fetch Addons", err);
       } finally {
         setIsLoading(false);
       }
     }
-    fetchDecorations();
+    fetchAddons();
   }, []);
 
-  const availableDecorations = allDecorations.filter((d) => {
+  const availableAddons = allAddons.filter((d) => {
     if (!d.isActive) return false;
     if (categoryId && d.categoryIds && d.categoryIds.length > 0) {
       return d.categoryIds.includes(categoryId);
@@ -46,23 +46,23 @@ export function DecorationAdminSelector({
     return true;
   });
 
-  const handleToggleVariant = (deco: Decoration, variant: any) => {
-    const isAlreadySelected = selectedDecorations.some(
-      (d) => d.decorationId === deco._id && d.variantName === variant.name
+  const handleToggleVariant = (deco: Addon, variant: any) => {
+    const isAlreadySelected = selectedAddons.some(
+      (d) => d.addonId === deco._id && d.variantName === variant.name
     );
 
     if (isAlreadySelected) {
       onChange(
-        selectedDecorations.filter(
-          (d) => !(d.decorationId === deco._id && d.variantName === variant.name)
+        selectedAddons.filter(
+          (d) => !(d.addonId === deco._id && d.variantName === variant.name)
         )
       );
     } else {
-      const filtered = selectedDecorations.filter((d) => d.decorationId !== deco._id);
+      const filtered = selectedAddons.filter((d) => d.addonId !== deco._id);
       onChange([
         ...filtered,
         {
-          decorationId: deco._id,
+          addonId: deco._id,
           name: deco.name,
           variantName: variant.name,
           price: variant.price,
@@ -73,27 +73,27 @@ export function DecorationAdminSelector({
   };
 
   if (isLoading) {
-    return <p className="text-sm text-gray-500 animate-pulse">Loading decorations...</p>;
+    return <p className="text-sm text-gray-500 animate-pulse">Loading Addons...</p>;
   }
 
-  if (availableDecorations.length === 0) {
+  if (availableAddons.length === 0) {
     return null;
   }
 
   return (
     <div className="bg-white p-4 rounded-xl border border-border">
-      <h3 className="font-bold text-sm text-primary mb-2">Decorations</h3>
+      <h3 className="font-bold text-sm text-primary mb-2">Addons</h3>
       
       <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar snap-x snap-mandatory">
-        {availableDecorations.map((deco) => {
-          const isSelected = selectedDecorations.some((d) => d.decorationId === deco._id);
-          const isActive = activeDecorationId === deco._id;
+        {availableAddons.map((deco) => {
+          const isSelected = selectedAddons.some((d) => d.addonId === deco._id);
+          const isActive = activeaddonId === deco._id;
 
           return (
             <button
               key={deco._id}
               type="button"
-              onClick={() => setActiveDecorationId(isActive ? null : deco._id)}
+              onClick={() => setActiveaddonId(isActive ? null : deco._id)}
               className={`relative w-24 h-24 shrink-0 snap-center rounded-xl overflow-hidden shadow-sm transition-all duration-300 ${
                 isActive
                   ? "ring-2 ring-accent scale-95"
@@ -132,10 +132,10 @@ export function DecorationAdminSelector({
         })}
       </div>
 
-      {activeDecorationId && (
+      {activeaddonId && (
         <div className="mt-2 bg-subtleBackground p-3 rounded-lg border border-primary/10 animate-in fade-in slide-in-from-top-2 duration-300">
           {(() => {
-            const activeDeco = availableDecorations.find((d) => d._id === activeDecorationId);
+            const activeDeco = availableAddons.find((d) => d._id === activeaddonId);
             if (!activeDeco) return null;
 
             return (
@@ -146,9 +146,9 @@ export function DecorationAdminSelector({
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {activeDeco.variants.map((variant, idx) => {
-                    const isSelected = selectedDecorations.some(
+                    const isSelected = selectedAddons.some(
                       (d) =>
-                        d.decorationId === activeDeco._id && d.variantName === variant.name
+                        d.addonId === activeDeco._id && d.variantName === variant.name
                     );
 
                     return (

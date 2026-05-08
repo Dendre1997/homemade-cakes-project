@@ -1,5 +1,5 @@
 import { Db, ObjectId } from "mongodb";
-import { CartItem, Discount, Product, Flavor, Decoration } from "@/types";
+import { CartItem, Discount, Product, Flavor, Addon } from "@/types";
 
 interface PriceResult {
   subtotal: number;
@@ -61,12 +61,12 @@ export async function calculateOrderPricing(
       )
     : null;
 
-  // 3.5 Fetch Active Decorations Data
-  const decorationIds = items
+  // 3.5 Fetch Active Addons Data
+  const addonIds = items
     .flatMap((i) =>
-      i.decorations?.map((d) => {
+      i.addons?.map((d) => {
         try {
-          return new ObjectId(d.decorationId);
+          return new ObjectId(d.addonId);
         } catch {
           return null;
         }
@@ -74,13 +74,13 @@ export async function calculateOrderPricing(
     )
     .filter(Boolean);
 
-  let decorationMap = new Map<string, Decoration>();
-  if (decorationIds.length > 0) {
-    const dbDecorations = await db
-      .collection<Decoration>("decorations")
-      .find({ _id: { $in: decorationIds } as any })
+  let addonMap = new Map<string, Addon>();
+  if (addonIds.length > 0) {
+    const dbAddons = await db
+      .collection<Addon>("addons")
+      .find({ _id: { $in: addonIds } as any })
       .toArray();
-    decorationMap = new Map(dbDecorations.map((d) => [d._id.toString(), d]));
+    addonMap = new Map(dbAddons.map((d) => [d._id.toString(), d]));
   }
 
   // 4. Per-Item Calculation Loop
@@ -113,17 +113,17 @@ export async function calculateOrderPricing(
       return isNaN(num) ? 0 : Number(num.toFixed(2));
     };
 
-    // --- DECORATION COST VALIDATION ---
-    let decorationCost = 0;
-    if (item.decorations && item.decorations.length > 0) {
-      for (const deco of item.decorations) {
-        const dbDeco = decorationMap.get(deco.decorationId);
-        if (dbDeco) {
-          const variant = dbDeco.variants.find(
-            (v) => v.name === deco.variantName
+    // --- ADDON COST VALIDATION ---
+    let addonCost = 0;
+    if (item.addons && item.addons.length > 0) {
+      for (const add of item.addons) {
+        const dbAdd = addonMap.get(add.addonId);
+        if (dbAdd) {
+          const variant = dbAdd.variants.find(
+            (v) => v.name === add.variantName
           );
           if (variant) {
-            decorationCost += safePrice(variant.price);
+            addonCost += safePrice(variant.price);
           }
         }
       }
@@ -180,7 +180,7 @@ export async function calculateOrderPricing(
              }
         }
         
-        unitPrice = finalCalculatedPrice + decorationCost;
+        unitPrice = finalCalculatedPrice + addonCost;
 
     } else {
         // --- SCENARIO B: STANDARD CAKE ---
@@ -206,7 +206,7 @@ export async function calculateOrderPricing(
         // D. Formula
         unitPrice =
         ((dbProduct.structureBasePrice + flavorPrice + inscriptionPrice) *
-        multiplier) + decorationCost;
+        multiplier) + addonCost;
     }
 
     const lineItemOriginalTotal = unitPrice * item.quantity;

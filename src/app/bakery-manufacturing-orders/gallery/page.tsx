@@ -19,6 +19,7 @@ import { Textarea } from "@/components/ui/Textarea";
 import { Switch } from "@/components/ui/Switch";
 import { Label } from "@/components/ui/Label";
 import { ChipCheckbox } from "@/components/ui/ChipCheckbox";
+import { AddonSelector } from "@/components/shared/AddonSelector";
 import { useAlert } from "@/contexts/AlertContext";
 import { useConfirmation } from "@/contexts/ConfirmationContext";
 import { IGalleryImage, ProductCategory } from "@/types";
@@ -49,6 +50,7 @@ export default function GalleryAdminPage() {
     categories: [],
     decorationPrice: 0,
     isActive: true,
+    defaultAddons: [],
   };
 
   const fetchData = useCallback(async () => {
@@ -427,6 +429,21 @@ export default function GalleryAdminPage() {
                      id="status" 
                      checked={editingItem?.isActive ?? true} 
                      onCheckedChange={(checked) => setEditingItem(prev => ({ ...prev!, isActive: checked }))}
+                   />
+                </div>
+
+                {/* DEFAULT ADDONS */}
+                <div className="pt-4 border-t mt-4">
+                  <Label className="font-bold">Add Default Addons For This Design</Label>
+                   <AddonSelector 
+                     categoryId={editingItem?.categories}
+                     selectedAddons={editingItem?.defaultAddons?.map(da => ({ addonId: da.addonId, variantId: da.variantId, name: "", variantName: "", price: 0 })) || []}
+                     onChange={(newaddons) => {
+                         setEditingItem(prev => ({ 
+                             ...prev!, 
+                             defaultAddons: newaddons.map(na => ({ addonId: na.addonId, variantId: na.variantId || "" })) 
+                         }));
+                     }}
                    />
                 </div>
 

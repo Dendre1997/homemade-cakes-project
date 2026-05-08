@@ -47,7 +47,7 @@ const CartPage = () => {
   }, []);
 
   const subtotal = items.reduce((acc, item) => {
-    const itemDecos = item.decorations?.reduce((sum, d) => sum + d.price, 0) || 0;
+    const itemDecos = item.addons?.reduce((sum, d) => sum + d.price, 0) || 0;
     return acc + ((item.price + itemDecos) * item.quantity);
   }, 0);
 
@@ -92,7 +92,7 @@ const CartPage = () => {
                     ? flavors.find(f => f._id.toString() === item.selectedConfig!.cake!.flavorId.toString())
                     : null;
 
-                  const itemDecos = item.decorations?.reduce((sum, d) => sum + d.price, 0) || 0;
+                  const itemDecos = item.addons?.reduce((sum, d) => sum + d.price, 0) || 0;
                   const itemDisplayPrice = item.price + itemDecos;
                   const itemDisplayOriginal = item.originalPrice ? item.originalPrice + itemDecos : undefined;
 
@@ -177,14 +177,14 @@ const CartPage = () => {
                                  </div>
                             )}
 
-                            {/* SCENARIO C: Decorations (Applies to both) */}
-                            {item.decorations && item.decorations.length > 0 && (
+                            {/* SCENARIO C: Addons (Applies to both) */}
+                            {item.addons && item.addons.length > 0 && (
                                 <div className="mt-2 text-sm text-primary/90 border-t border-primary/10 pt-2">
                                   <p className="font-semibold text-xs text-muted-foreground uppercase tracking-wider mb-1">
-                                    Decorations
+                                    Addons
                                   </p>
                                   <ul className="list-none pl-0 space-y-1">
-                                    {item.decorations.map((deco, idx) => (
+                                    {item.addons.map((deco, idx) => (
                                       <li key={idx} className="flex justify-between items-start">
                                         <span className="font-medium text-xs">
                                           {deco.name} - {deco.variantName}

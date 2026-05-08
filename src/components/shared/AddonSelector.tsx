@@ -1,69 +1,93 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { Check, ChevronDown, ChevronUp } from "lucide-react";
-import { Decoration, SelectedDecoration } from "@/types";
+import { Addon, SelectedAddon } from "@/types";
 
-interface DecorationSelectorProps {
-  categoryId?: string;
-  selectedDecorations: SelectedDecoration[];
-  onChange: (newDecorations: SelectedDecoration[]) => void;
+interface AddonSelectorProps {
+  categoryId?: string | string[];
+  selectedAddons: SelectedAddon[];
+  onChange: (newaddons: SelectedAddon[]) => void;
+  availableAddons?: Addon[];
 }
 
-export function DecorationSelector({
+export function AddonSelector({
   categoryId,
-  selectedDecorations,
+  selectedAddons,
   onChange,
-}: DecorationSelectorProps) {
-  const [allDecorations, setAllDecorations] = useState<Decoration[]>([]);
-  const [activeDecorationId, setActiveDecorationId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  availableAddons: initialAvailableAddons,
+}: AddonSelectorProps) {
+  const [allAddons, setAllAddons] = useState<Addon[]>(initialAvailableAddons || []);
+  const [activeaddonId, setActiveaddonId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(!initialAvailableAddons);
+  const variantScrollRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to selected variant when a panel opens
+  useEffect(() => {
+    if (!activeaddonId || !variantScrollRef.current) return;
+    const container = variantScrollRef.current;
+    const selectedBtn = container.querySelector('[data-selected="true"]') as HTMLElement | null;
+    if (selectedBtn) {
+      setTimeout(() => {
+        selectedBtn.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+      }, 50);
+    }
+  }, [activeaddonId]);
 
   useEffect(() => {
-    async function fetchDecorations() {
+    if (initialAvailableAddons) {
+      setAllAddons(initialAvailableAddons);
+      setIsLoading(false);
+      return;
+    }
+    async function fetchAddons() {
       setIsLoading(true);
       try {
-        const res = await fetch("/api/decorations");
+        const res = await fetch("/api/addons");
         if (res.ok) {
-          const data: Decoration[] = await res.json();
-          setAllDecorations(data);
+          const data: Addon[] = await res.json();
+          setAllAddons(data);
         }
       } catch (err) {
-        console.error("Failed to fetch decorations", err);
+        console.error("Failed to fetch Addons", err);
       } finally {
         setIsLoading(false);
       }
     }
-    fetchDecorations();
-  }, []);
+    fetchAddons();
+  }, [initialAvailableAddons]);
 
-  const availableDecorations = allDecorations.filter((d) => {
+  const availableAddons = allAddons.filter((d) => {
     if (!d.isActive) return false;
     if (categoryId && d.categoryIds && d.categoryIds.length > 0) {
+      if (Array.isArray(categoryId)) {
+        return categoryId.some(c => d.categoryIds?.includes(c));
+      }
       return d.categoryIds.includes(categoryId);
     }
     return true;
   });
 
-  const handleToggleVariant = (deco: Decoration, variant: any) => {
-    const isAlreadySelected = selectedDecorations.some(
-      (d) => d.decorationId === deco._id && d.variantName === variant.name
+  const handleToggleVariant = (deco: Addon, variant: any) => {
+    const isAlreadySelected = selectedAddons.some(
+      (d) => d.addonId === deco._id && (d.variantId ? d.variantId === variant._id : d.variantName === variant.name)
     );
 
     if (isAlreadySelected) {
       onChange(
-        selectedDecorations.filter(
-          (d) => !(d.decorationId === deco._id && d.variantName === variant.name)
+        selectedAddons.filter(
+          (d) => !(d.addonId === deco._id && (d.variantId ? d.variantId === variant._id : d.variantName === variant.name))
         )
       );
     } else {
-      const filtered = selectedDecorations.filter((d) => d.decorationId !== deco._id);
+      const filtered = selectedAddons.filter((d) => d.addonId !== deco._id);
       onChange([
         ...filtered,
         {
-          decorationId: deco._id,
+          addonId: deco._id,
           name: deco.name,
+          variantId: variant._id,
           variantName: variant.name,
           price: variant.price,
           imageUrl: variant.imageUrl || deco.imageUrl,
@@ -76,10 +100,10 @@ export function DecorationSelector({
     return (
       <div className="animate-pulse">
         <h3 className="font-heading text-xl text-primary mb-2">
-          Add Decorations
+          Add Addons
         </h3>
         <p className="text-sm text-primary/60 mb-4">
-          Loading available decorations...
+          Loading available Addons...
         </p>
         <div className="flex gap-4 overflow-x-auto pb-4">
             <div className="w-32 h-32 md:w-40 md:h-40 shrink-0 bg-subtleBackground rounded-2xl" />
@@ -90,30 +114,23 @@ export function DecorationSelector({
     );
   }
 
-  if (availableDecorations.length === 0) {
-    return null; // Return null if no active decorations for this category
+  if (availableAddons.length === 0) {
+    return null; // Return null if no active Addons for this category
   }
 
   return (
     <div className="animate-in fade-in duration-500">
-      <h3 className="font-heading text-xl text-primary mb-2">
-        Add Decorations
-      </h3>
-      <p className="text-sm text-primary/60 mb-4">
-        Select any additional decorations you'd like to add to your order.
-      </p>
-
       <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar snap-x snap-mandatory">
-        {availableDecorations.map((deco) => {
-          const isSelected = selectedDecorations.some((d: any) => d.decorationId === deco._id);
-          const isActive = activeDecorationId === deco._id;
+        {availableAddons.map((deco) => {
+          const isSelected = selectedAddons.some((d: any) => d.addonId === deco._id);
+          const isActive = activeaddonId === deco._id;
           
           return (
             <button
               key={deco._id}
               type="button"
-              onClick={() => setActiveDecorationId(isActive ? null : deco._id)}
-              className={`relative w-32 h-32 md:w-40 md:h-40 shrink-0 snap-center rounded-2xl overflow-hidden shadow-sm transition-all duration-300 ${
+              onClick={() => setActiveaddonId(isActive ? null : deco._id)}
+              className={`relative w-40 h-40 shrink-0 snap-center rounded-2xl overflow-hidden shadow-sm transition-all duration-300 ${
                 isActive
                   ? "ring-4 ring-accent scale-95"
                   : "border border-border hover:brightness-110"
@@ -147,17 +164,17 @@ export function DecorationSelector({
         })}
       </div>
 
-      {activeDecorationId && (
-        <div className="mt-2 bg-subtleBackground p-4 md:p-6 rounded-2xl border border-primary/10 animate-in fade-in slide-in-from-top-2 duration-300">
+      {activeaddonId && (
+        <div className="mt-2 p-4 md:p-6 rounded-2xl border border-primary/10 animate-in fade-in slide-in-from-top-2 duration-300">
           {(() => {
-            const activeDeco = availableDecorations.find(d => d._id === activeDecorationId);
+            const activeDeco = availableAddons.find(d => d._id === activeaddonId);
             if (!activeDeco) return null;
             
             return (
               <div>
                 <div className="flex justify-between items-center mb-4">
                   <h4 className="font-heading font-bold text-lg text-primary">{activeDeco.name} Options</h4>
-                  {selectedDecorations.some((d: any) => d.decorationId === activeDeco._id) && (
+                  {selectedAddons.some((d: any) => d.addonId === activeDeco._id) && (
                     <span className="text-xs bg-accent/10 text-accent px-2 py-1 rounded-full font-medium">
                       1 option selected
                     </span>
@@ -168,25 +185,26 @@ export function DecorationSelector({
                   <p className="text-sm text-primary/70 mb-4">{activeDeco.description}</p>
                 )}
                 
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                <div ref={variantScrollRef} className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar snap-x snap-mandatory">
                   {activeDeco.variants.map((variant, idx) => {
-                    const isSelected = selectedDecorations.some(
-                      (d: any) => d.decorationId === activeDeco._id && d.variantName === variant.name
+                    const isSelected = selectedAddons.some(
+                      (d: any) => d.addonId === activeDeco._id && (d.variantId ? d.variantId === variant._id : d.variantName === variant.name)
                     );
                     
                     return (
                       <button
                         key={idx}
                         type="button"
+                        data-selected={isSelected ? "true" : undefined}
                         onClick={() => handleToggleVariant(activeDeco, variant)}
-                        className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
+                        className={`flex items-center gap-4 p-4 w-[280px] sm:w-[320px] shrink-0 snap-center rounded-2xl border text-left transition-all duration-300 ${
                           isSelected 
-                            ? "bg-accent/5 border-accent ring-1 ring-accent" 
+                            ? "bg-accent/5 border-accent ring-2 ring-accent scale-[0.98]" 
                             : "bg-white border-border hover:border-primary/30"
                         }`}
                       >
                         {(variant.imageUrl || activeDeco.imageUrl) && (
-                          <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 relative bg-subtleBackground">
+                          <div className="w-24 h-24 rounded-xl overflow-hidden shrink-0 relative bg-subtleBackground shadow-sm">
                             <Image 
                               src={variant.imageUrl || activeDeco.imageUrl!} 
                               alt={variant.name}
@@ -196,13 +214,13 @@ export function DecorationSelector({
                           </div>
                         )}
                         <div className="flex-1 min-w-0">
-                          <p className="font-bold text-sm text-primary truncate">{variant.name}</p>
-                          <p className="text-xs text-primary/70">${variant.price.toFixed(2)}</p>
+                          <p className="font-bold text-base text-primary line-clamp-2 leading-tight mb-1">{variant.name}</p>
+                          <p className="text-sm font-medium text-accent">+${variant.price.toFixed(2)}</p>
                         </div>
-                        <div className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ${
+                        <div className={`w-6 h-6 rounded-full border flex items-center justify-center shrink-0 ${
                           isSelected ? "bg-accent border-accent text-white" : "border-primary/30"
                         }`}>
-                          {isSelected && <Check className="w-3 h-3" />}
+                          {isSelected && <Check className="w-4 h-4" />}
                         </div>
                       </button>
                     );

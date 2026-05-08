@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 
 import { notFound, useParams, useRouter } from "next/navigation";
-import { ProductWithCategory, Flavor, AvailableDiameterConfig, Discount, SelectedDecoration } from "@/types";
+import { ProductWithCategory, Flavor, AvailableDiameterConfig, Discount, SelectedAddon, Addon } from "@/types";
 import Link from "next/link";
 import { useCartStore } from "@/lib/store/cartStore";
 import { useAlert } from "@/contexts/AlertContext";
@@ -11,7 +11,7 @@ import { cn, isValidObjectId } from "../../../../lib/utils";
 import QuantityStepper from "@/components/ui/QuantityStepper";
 import FlavorSelector from "@/components/ui/FlavorSelector";
 import QuantitySelector from "@/components/ui/QuantitySelector";
-import { DecorationSelector } from "@/components/shared/DecorationSelector";
+import { AddonSelector } from "@/components/shared/AddonSelector";
 
 import LoadingSpinner from "@/components/ui/Spinner";
 import { Button } from "@/components/ui/Button";
@@ -102,6 +102,8 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
   
   const [allDiameters, setAllDiameters] = useState<any[]>([]); 
   const [relatedFlavors, setRelatedFlavors] = useState<Flavor[]>([]); 
+  const [allAddons, setAllAddons] = useState<Addon[]>([]);
+  const hasHydratedAddons = useRef(false);
 
   const toggleAccordion = (id: string) => {
     setActiveAccordion(prev => (prev === id ? null : id));
@@ -113,7 +115,7 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
   const [activeTab, setActiveTab] = useState("description");
   const [inscription, setInscription] = useState("");
   const [showInscriptionInput, setShowInscriptionInput] = useState(false);
-  const [selectedDecorations, setSelectedDecorations] = useState<SelectedDecoration[]>([]);
+  const [selectedAddons, setSelectedAddons] = useState<SelectedAddon[]>([]);
   const openMiniCart = useCartStore((state) => state.openMiniCart);
 
   const [discounts, setDiscounts] = useState<Discount[]>([]);
@@ -134,21 +136,28 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
     fetchDiscounts();
   }, []);
 
-  // Fetch all diameters
+  // Fetch all diameters and addons
   useEffect(() => {
-     const fetchDiameters = async () => {
+     const fetchData = async () => {
          try {
-             const res = await fetch("/api/diameters");
-             if(res.ok) {
-                 const data = await res.json();
+             const [diamRes, addonsRes] = await Promise.all([
+                 fetch("/api/diameters"),
+                 fetch("/api/addons")
+             ]);
+             if(diamRes.ok) {
+                 const data = await diamRes.json();
                  setAllDiameters(data);
              }
+             if(addonsRes.ok) {
+                 const data = await addonsRes.json();
+                 setAllAddons(data);
+             }
          } catch(e) {
-             console.error("Failed to fetch diameters", e);
+             console.error("Failed to fetch reference data", e);
          }
      }
-     fetchDiameters();
-  }, [])
+     fetchData();
+  }, []);
 
   // Initial Logic when product loads/changes
   useEffect(() => {
@@ -202,6 +211,33 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
         };
       })
       .filter((d): d is DiameterOption => d !== null) || [];
+
+  // Hydrate Addons
+  useEffect(() => {
+      if (product && allAddons.length > 0 && !hasHydratedAddons.current) {
+          if (product.defaultAddons && product.defaultAddons.length > 0) {
+              const hydrated: SelectedAddon[] = [];
+              for (const da of product.defaultAddons) {
+                  const addon = allAddons.find((a) => a._id === da.addonId);
+                  if (addon) {
+                      const variant = addon.variants.find((v) => v._id === da.variantId);
+                      if (variant) {
+                          hydrated.push({
+                              addonId: addon._id,
+                              variantId: variant._id,
+                              name: addon.name,
+                              variantName: variant.name,
+                              price: variant.price,
+                              imageUrl: variant.imageUrl || addon.imageUrl,
+                          });
+                      }
+                  }
+              }
+              setSelectedAddons(hydrated);
+          }
+          hasHydratedAddons.current = true;
+      }
+  }, [product, allAddons]);
 
   // --- Combo Set Helpers ---
   const isSet = product?.productType === 'set';
@@ -338,9 +374,9 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
     }
   }
 
-  const decorationsTotal = selectedDecorations.reduce((sum, d) => sum + d.price, 0);
-  const displayFinalPrice = finalPrice + decorationsTotal;
-  const displayOriginalPrice = calculatedPrice + decorationsTotal;
+  const AddonsTotal = selectedAddons.reduce((sum, d) => sum + d.price, 0);
+  const displayFinalPrice = finalPrice + AddonsTotal;
+  const displayOriginalPrice = calculatedPrice + AddonsTotal;
 
   const handleSelectDiameter = (diameterId: string) => {
     const config = product?.availableDiameterConfigs.find(
@@ -412,7 +448,7 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
           // SET SPECIFIC
           flavor: `Mix: ${flavorNames}`, 
           diameterId: isCombo ? comboSelection.diameterId : undefined,
-          decorations: selectedDecorations,
+          addons: selectedAddons,
           selectedConfig: {
              items,
              quantityConfigId: selectedQtyConfigId,
@@ -457,7 +493,7 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
           quantity: quantity,
           imageUrl: product.imageUrls[0] || "/placeholder.png",
           inscription: inscription,
-          decorations: selectedDecorations,
+          addons: selectedAddons,
           originalPrice: appliedDiscountName ? calculatedPrice : undefined,
           discountName: appliedDiscountName,
         };
@@ -565,10 +601,11 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
             )}
 
             <div className="mt-6 pt-6 border-t border-border">
-              <DecorationSelector 
+              <AddonSelector 
                 categoryId={product.categoryId}
-                selectedDecorations={selectedDecorations}
-                onChange={setSelectedDecorations}
+                selectedAddons={selectedAddons}
+                onChange={setSelectedAddons}
+                availableAddons={allAddons}
               />
             </div>
           </div>

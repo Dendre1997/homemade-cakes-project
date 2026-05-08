@@ -1,3 +1,4 @@
+import { verifyAdminAPI } from "@/lib/auth/adminOnly";
 import { NextRequest, NextResponse } from "next/server";
 import clientPromise from "@/lib/db";
 import { AppSettings } from "@/types";
@@ -5,6 +6,9 @@ import { revalidatePath } from "next/cache";
 import { getAppSettings } from "@/lib/api/settings";
 
 export async function GET() {
+  const auth = await verifyAdminAPI();
+  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
   try {
     const settings = await getAppSettings();
     return NextResponse.json(settings);
@@ -15,6 +19,9 @@ export async function GET() {
 }
 
 export async function PUT(req: NextRequest) {
+  const auth = await verifyAdminAPI();
+  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
   try {
     const body = await req.json();
     const client = await clientPromise;

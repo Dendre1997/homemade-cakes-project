@@ -1,3 +1,4 @@
+import { verifyAdminAPI } from "@/lib/auth/adminOnly";
 import { NextRequest, NextResponse } from "next/server";
 import clientPromise from "@/lib/db";
 import { ObjectId } from "mongodb";
@@ -19,6 +20,9 @@ interface UpdateBody {
 }
 
 export async function GET(_request: Request, { params }: Context) {
+  const auth = await verifyAdminAPI();
+  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
   try {
     const { id } = await params;
     const client = await clientPromise;
@@ -41,11 +45,10 @@ export async function GET(_request: Request, { params }: Context) {
   }
 }
 
-
-
-
-
 export async function PUT(request: NextRequest, { params }: Context) {
+  const auth = await verifyAdminAPI();
+  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
   try {
     const { id } = await params;
     const body: UpdateBody = await request.json();
@@ -87,7 +90,7 @@ export async function PUT(request: NextRequest, { params }: Context) {
       }
     }
 
-    const updateFields: { $set: Partial<any> } = { $set: {} }; // Initialize $set
+    const updateFields: { $set: Partial<any> } = { $set: {} };
 
     if (status) {
       updateFields.$set.status = status;
@@ -96,16 +99,23 @@ export async function PUT(request: NextRequest, { params }: Context) {
     if (deliveryDates) {
       const deliveryDatesForDb = deliveryDates.map((d) => ({
         ...d,
-        date: new Date(d.date), // Convert to BSON Date
+        date: new Date(d.date),
       }));
       updateFields.$set["deliveryInfo.deliveryDates"] = deliveryDatesForDb;
     }
 
     if (items) {
-      updateFields.$set.items = items;
+      // Cast all reference IDs to ObjectId to ensure consistent storage
+      const itemsForDb = items.map((item: any) => ({
+        ...item,
+        productId: item.productId ? new ObjectId(String(item.productId)) : undefined,
+        categoryId: item.categoryId ? new ObjectId(String(item.categoryId)) : undefined,
+        diameterId: item.diameterId ? new ObjectId(String(item.diameterId)) : undefined,
+      }));
+      updateFields.$set.items = itemsForDb;
     }
 
-    if (typeof totalAmount === 'number') {
+    if (typeof totalAmount === "number") {
       updateFields.$set.totalAmount = totalAmount;
     }
 
@@ -114,7 +124,7 @@ export async function PUT(request: NextRequest, { params }: Context) {
     const db = client.db(process.env.MONGODB_DB_NAME);
     const result = await db.collection("orders").updateOne(
       { _id: new ObjectId(id) },
-      updateFields 
+      updateFields
     );
 
     // --- Handle Result ---
@@ -129,7 +139,7 @@ export async function PUT(request: NextRequest, { params }: Context) {
 
     return NextResponse.json({ message: "Order updated successfully" });
   } catch (error) {
-    console.error("Error updating order:", error); // Log the specific error
+    console.error("Error updating order:", error);
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error occurred";
     return NextResponse.json(

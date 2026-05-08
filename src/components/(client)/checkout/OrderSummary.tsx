@@ -45,7 +45,7 @@ const OrderSummary = () => {
 
   // Basic client-side subtotal (for initial render)
   const subtotal = items.reduce((acc, item) => {
-    const itemDecos = item.decorations?.reduce((sum, d) => sum + d.price, 0) || 0;
+    const itemDecos = item.addons?.reduce((sum, d) => sum + d.price, 0) || 0;
     return acc + ((item.price + itemDecos) * item.quantity);
   }, 0);
 
@@ -125,7 +125,7 @@ const OrderSummary = () => {
       ? items.reduce((acc: number, item: any) => {
           // If server data exists for this item, use it. Otherwise, use base price + decos.
           const pricing = itemPricing[item.id];
-          const itemDecos = item.decorations?.reduce((sum: number, d: any) => sum + d.price, 0) || 0;
+          const itemDecos = item.addons?.reduce((sum: number, d: any) => sum + d.price, 0) || 0;
           const price = pricing
             ? pricing.finalPrice
             : (item.price + itemDecos) * item.quantity;
@@ -165,7 +165,7 @@ const OrderSummary = () => {
              ? flavors.find(f => f._id.toString() === item.selectedConfig!.cake!.flavorId) 
              : null;
 
-          const itemDecos = item.decorations?.reduce((sum: number, d: any) => sum + d.price, 0) || 0;
+          const itemDecos = item.addons?.reduce((sum: number, d: any) => sum + d.price, 0) || 0;
           const itemDisplayPrice = item.price + itemDecos;
 
           return (
@@ -233,14 +233,14 @@ const OrderSummary = () => {
                         </div>
                     )}
 
-                    {/* SCENARIO C: Decorations */}
-                    {item.decorations && item.decorations.length > 0 && (
+                    {/* SCENARIO C: Addons */}
+                    {item.addons && item.addons.length > 0 && (
                         <div className="mt-1 text-xs text-muted-foreground border-t border-primary/10 pt-1">
                           <p className="font-semibold text-[10px] uppercase tracking-wider mb-0.5">
-                            Decorations
+                            Addons
                           </p>
                           <ul className="list-none pl-0 space-y-0.5">
-                            {item.decorations.map((deco: any, idx: number) => (
+                            {item.addons.map((deco: any, idx: number) => (
                               <li key={idx} className="flex justify-between items-start text-[10px]">
                                 <span>
                                   {deco.name} - {deco.variantName}

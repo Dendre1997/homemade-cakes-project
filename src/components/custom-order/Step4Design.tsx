@@ -10,7 +10,8 @@ import { Label } from "@/components/ui/Label";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 import { MultiImageUpload } from "@/components/custom-order/MultiImageUpload";
-import { DecorationSelector } from "@/components/shared/DecorationSelector";
+import { AddonSelector } from "@/components/shared/AddonSelector";
+import { Addon, IGalleryImage, SelectedAddon } from "@/types";
 
 export default function Step4Design() {
   const { control, watch, setValue, formState: { errors } } = useFormContext<CustomOrderFormData>();
@@ -24,6 +25,8 @@ export default function Step4Design() {
   
   const [isLoadingCatalog, setIsLoadingCatalog] = useState(true);
   const [catalogImages, setCatalogImages] = useState<string[]>([]);
+  const [galleryData, setGalleryData] = useState<IGalleryImage[]>([]);
+  const [allAddons, setAllAddons] = useState<Addon[]>([]);
   
   // Category ID State for Selector
   const [activeCategoryId, setActiveCategoryId] = useState<string | undefined>(undefined);
@@ -31,7 +34,7 @@ export default function Step4Design() {
   // Wizard Data
   const categoryName = watch("category");
   const referenceImages = watch("referenceImages") || []; // Up to 3
-  const selectedDecorations = watch("decorations") || [];
+  const selectedAddons = watch("addons") || [];
 
   // Refs for Auto-Scroll
   const carouselRef = useRef<HTMLDivElement>(null);
@@ -42,9 +45,15 @@ export default function Step4Design() {
     async function fetchCatalogInspiration() {
       setIsLoadingCatalog(true);
       try {
-        const catRes = await fetch("/api/categories");
+        const [catRes, addonsRes] = await Promise.all([
+            fetch("/api/categories"),
+            fetch("/api/addons")
+        ]);
         if (!catRes.ok) throw new Error("Failed to load categories");
         const categories = await catRes.json();
+        if (addonsRes.ok) {
+            setAllAddons(await addonsRes.json());
+        }
 
         const activeCategoryId = categories.find((c: any) => {
           const displayName =
@@ -61,7 +70,8 @@ export default function Step4Design() {
           ]);
           
           if (galleryRes.ok) {
-            const galleryImages = await galleryRes.json();
+            const galleryImages: IGalleryImage[] = await galleryRes.json();
+            setGalleryData(galleryImages);
             const images = galleryImages
               .map((img: any) => img.imageUrl)
               .filter(Boolean) as string[];
@@ -109,15 +119,59 @@ export default function Step4Design() {
 
   const handleToggleCarouselImage = (url: string) => {
     const isAlreadySelected = referenceImages.includes(url);
+    const galleryImage = galleryData.find(g => g.imageUrl === url);
+    const addonsToToggle = galleryImage?.defaultAddons || [];
     
     if (isAlreadySelected) {
-       setValue("referenceImages", referenceImages.filter((u) => u !== url), { shouldValidate: true });
+       setValue("referenceImages", referenceImages.filter((u: string) => u !== url), { shouldValidate: true });
+       // Deselection Hydration: Remove these default addons if no other selected image requires them
+       if (addonsToToggle.length > 0) {
+           const otherSelectedUrls = referenceImages.filter((u: string) => u !== url);
+           const otherRequiredVariants = new Set<string>();
+           otherSelectedUrls.forEach((u: string) => {
+               const g = galleryData.find(x => x.imageUrl === u);
+               g?.defaultAddons?.forEach((da: any) => otherRequiredVariants.add(da.variantId.toString()));
+           });
+           
+           const newAddons = selectedAddons.filter((sa: SelectedAddon) => {
+               // If this selected addon was part of the removed image's defaults
+               const wasInjected = addonsToToggle.some((da: any) => da.variantId.toString() === sa.variantId?.toString());
+               // Keep it if another image requires it
+               if (wasInjected && sa.variantId) {
+                   return otherRequiredVariants.has(sa.variantId.toString());
+               }
+               return true;
+           });
+           setValue("addons", newAddons, { shouldValidate: true });
+       }
     } else {
        if (isAtCapacity) {
           alert("Maximum of 3 images reached. Deselect an image to add a different one.");
           return;
        }
        setValue("referenceImages", [...referenceImages, url], { shouldValidate: true });
+       // Selection Hydration: Inject default addons
+       if (addonsToToggle.length > 0 && allAddons.length > 0) {
+           const newAddons = [...selectedAddons];
+           for (const da of addonsToToggle as any[]) {
+               const alreadySelected = newAddons.some((sa: SelectedAddon) => sa.variantId?.toString() === da.variantId.toString());
+               if (!alreadySelected) {
+                   const addonObj = allAddons.find(a => a._id.toString() === da.addonId.toString());
+                   const variantObj = addonObj?.variants.find(v => v._id?.toString() === da.variantId.toString());
+                   if (addonObj && variantObj) {
+                       newAddons.push({
+                           addonId: addonObj._id.toString(),
+                           variantId: variantObj._id?.toString(),
+                           name: addonObj.name,
+                           variantName: variantObj.name,
+                           price: variantObj.price,
+                           imageUrl: variantObj.imageUrl || addonObj.imageUrl
+                       });
+                   }
+               }
+           }
+           setValue("addons", newAddons, { shouldValidate: true });
+       }
     }
   };
 
@@ -133,14 +187,14 @@ export default function Step4Design() {
         <p className="text-primary/70 mt-2">
           Pick from our catalog or upload your own references.
         </p>
+        <p className="text-primary/70 mt-2">
+          Pick from our catalog or upload your own references.
+        </p>
       </div>
 
       <div className="space-y-10">
         {/* ROW 1: INSPIRATION CAROUSEL */}
         <div className="border-b border-primary/10 pb-10">
-          <h3 className="font-heading text-xl text-primary mb-2">
-            Our Creations
-          </h3>
           <p className="text-sm text-primary/60 mb-4">
             Tap any design to use it as inspiration for your order
           </p>
@@ -166,7 +220,7 @@ export default function Step4Design() {
                     data-image-url={imgUrl}
                     onClick={() => handleToggleCarouselImage(imgUrl)}
                     disabled={isDisabled}
-                    className={`relative w-40 h-40 shrink-0 snap-center rounded-2xl overflow-hidden shadow-sm transition-all duration-300 ${
+                    className={`relative w-60 h-60 shrink-0 snap-center rounded-2xl overflow-hidden shadow-sm transition-all duration-300 ${
                       isSelected
                         ? "ring-4 ring-accent scale-95"
                         : "border border-border hover:brightness-110"
@@ -250,12 +304,16 @@ export default function Step4Design() {
           )}
         </div>
 
-        {/* ROW 2.5: DECORATIONS ZONE */}
+        {/* ROW 2.5: Addons ZONE */}
         <div className="border-b border-primary/10 pb-10">
-          <DecorationSelector 
+          <h3 className="font-heading text-xl text-primary mb-2">
+            Customize Your Creation
+          </h3>
+          <AddonSelector 
             categoryId={activeCategoryId}
-            selectedDecorations={selectedDecorations}
-            onChange={(decos) => setValue("decorations", decos, { shouldValidate: true })}
+            selectedAddons={selectedAddons}
+            onChange={(decos) => setValue("addons", decos, { shouldValidate: true })}
+            availableAddons={allAddons}
           />
         </div>
         

@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/Button";
 import { Plus, Minus } from "lucide-react";
 import { useAlert } from "@/contexts/AlertContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/Select";
-import { DecorationAdminSelector } from "@/components/admin/decorations/DecorationAdminSelector";
-import { SelectedDecoration } from "@/types";
+import { AddonAdminSelector } from "@/components/admin/addons/AddonAdminSelector";
+import { SelectedAddon } from "@/types";
 
 interface SetProductFormProps {
   product: ProductWithCategory;
@@ -41,7 +41,7 @@ export const SetProductForm = ({
   // 4. General
   const [qty, setQty] = useState(1); // How many SETS
   const [priceOverride, setPriceOverride] = useState("");
-  const [selectedDecorations, setSelectedDecorations] = useState<SelectedDecoration[]>([]);
+  const [selectedAddons, setSelectedAddons] = useState<SelectedAddon[]>([]);
 
   // Helpers
   const selectedConfig = product.availableQuantityConfigs?.find(c => c.label === selectedQtyConfigId || c._id === selectedQtyConfigId);
@@ -91,8 +91,8 @@ export const SetProductForm = ({
 
       let calculatedPrice = selectedConfig.price;
       
-       const decorationsTotal = selectedDecorations.reduce((sum, d) => sum + d.price, 0);
-       const finalPrice = priceOverride ? parseFloat(priceOverride) : calculatedPrice + decorationsTotal;
+       const AddonsTotal = selectedAddons.reduce((sum, d) => sum + d.price, 0);
+       const finalPrice = priceOverride ? parseFloat(priceOverride) : calculatedPrice + AddonsTotal;
 
        // Construct `items` array
        const selectedItemsArray = Object.entries(flavorCounts).map(([fId, count]) => ({
@@ -113,7 +113,7 @@ export const SetProductForm = ({
            quantity: qty,
            imageUrl: product.imageUrls?.[0] || "",
            isCustom: false,
-           decorations: selectedDecorations,
+           addons: selectedAddons,
            
            // POLYMORPHIC DATA
            selectedConfig: {
@@ -231,12 +231,12 @@ export const SetProductForm = ({
             </div>
         )}
 
-        {/* Decorations */}
+        {/* Addons */}
         <div className="pt-2">
-            <DecorationAdminSelector 
+            <AddonAdminSelector 
                 categoryId={product.categoryId}
-                selectedDecorations={selectedDecorations}
-                onChange={setSelectedDecorations}
+                selectedAddons={selectedAddons}
+                onChange={setSelectedAddons}
             />
         </div>
 

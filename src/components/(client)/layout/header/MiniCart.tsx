@@ -71,7 +71,7 @@ export const MiniCart = ({ isOpen, onClose }: MiniCartProps) => {
         {lastItemAdded ? (
           <div className="mt-md">
             {(() => {
-              const itemDecos = lastItemAdded.decorations?.reduce((sum, d) => sum + d.price, 0) || 0;
+              const itemDecos = lastItemAdded.addons?.reduce((sum, d) => sum + d.price, 0) || 0;
               const displayPrice = lastItemAdded.price + itemDecos;
               const displayOriginal = lastItemAdded.originalPrice ? lastItemAdded.originalPrice + itemDecos : undefined;
               return (
@@ -90,9 +90,9 @@ export const MiniCart = ({ isOpen, onClose }: MiniCartProps) => {
                     <p className="font-body text-small text-primary/80">
                       {lastItemAdded.flavor}
                     </p>
-                    {lastItemAdded.decorations && lastItemAdded.decorations.length > 0 && (
+                    {lastItemAdded.addons && lastItemAdded.addons.length > 0 && (
                       <ul className="mt-0.5 space-y-0">
-                        {lastItemAdded.decorations.map((d, i) => (
+                        {lastItemAdded.addons.map((d, i) => (
                           <li key={i} className="text-[10px] text-primary/60">
                             + {d.variantName} ${d.price.toFixed(2)}
                           </li>

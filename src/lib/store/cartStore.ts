@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { SelectedDecoration } from "@/types";
+import { SelectedAddon } from "@/types";
 
 export interface CartItem {
   id: string;
@@ -25,7 +25,7 @@ export interface CartItem {
       inscription?: string;
     };
   };
-  decorations?: SelectedDecoration[];
+  addons?: SelectedAddon[];
 }
 
 interface CartState {

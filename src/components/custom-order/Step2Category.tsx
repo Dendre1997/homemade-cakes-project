@@ -10,6 +10,7 @@ interface CategoryDoc {
   _id: string;
   name: string;
   slug: string;
+  categoryType?: string;
   manufacturingTimeInMinutes?: number;
   imageUrl: string;
 }
@@ -58,7 +59,7 @@ export default function Step2Category({ onNext }: { onNext: () => void }) {
         <Spinner />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {categories.map((cat) => {
+          {categories.filter(cat => cat.categoryType !== "combo").map((cat) => {
             const displayName =
               cat.name.endsWith("s") || cat.name.endsWith("S")
                 ? cat.name.slice(0, -1)

@@ -10,7 +10,7 @@ import { User } from "@/types";
  */
 async function getAdminDb() {
   const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get("session")?.value;
+  const sessionCookie = cookieStore.get("admin_session")?.value;
 
   if (!sessionCookie) {
     return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };

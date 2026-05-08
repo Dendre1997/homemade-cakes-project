@@ -3,7 +3,18 @@
 import * as React from "react";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
 import Link from "next/link";
-import { ChevronDown, Sparkles, Layers, Tag, ShieldCheck } from "lucide-react";
+import {
+  ChevronDown,
+  Sparkles,
+  ShieldCheck,
+  Menu,
+  Palette, 
+  CakeSlice,
+  BookImage,
+  Crown,
+  GalleryHorizontalEnd,
+  LayoutGrid,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import {  Collection } from "@/types";
 import { useActiveSeasonal } from "@/hooks/useActiveSeasonal";
@@ -12,6 +23,42 @@ import { useAuthStore } from "@/lib/store/authStore";
 interface CatalogDropdownProps {
   categories: { name: string; href: string }[];
 }
+
+const MenuItem = ({ href, icon: Icon, label, badge, onClick, highlight = false }: any) => (
+  <Link
+    href={href}
+    onClick={onClick}
+    className={cn(
+      "group flex items-center justify-between p-2.5 rounded-[16px] transition-all duration-300",
+      highlight ? "hover:bg-accent/5" : "hover:bg-primary/5"
+    )}
+  >
+    <div className="flex items-center gap-3.5">
+      <div className={cn(
+        "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all duration-300",
+        highlight 
+          ? "bg-accent/10 text-accent group-hover:bg-accent group-hover:text-white group-hover:shadow-sm" 
+          : "bg-subtleBackground text-primary/70 group-hover:bg-white group-hover:shadow-sm group-hover:text-primary"
+      )}>
+        <Icon className="h-5 w-5 stroke-[1.5]" />
+      </div>
+      <span className={cn(
+        "font-body text-[15px] font-medium transition-colors",
+        highlight ? "text-accent" : "text-primary group-hover:text-primary"
+      )}>
+        {label}
+      </span>
+    </div>
+    {badge && (
+      <span className={cn(
+        "rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider",
+        highlight ? "bg-accent/20 text-accent" : "bg-primary/10 text-primary/70"
+      )}>
+        {badge}
+      </span>
+    )}
+  </Link>
+);
 
 export const CatalogDropdown = ({ categories }: CatalogDropdownProps) => {
   const [isOpen, setIsOpen] = React.useState(false);
@@ -61,112 +108,108 @@ export const CatalogDropdown = ({ categories }: CatalogDropdownProps) => {
       <PopoverPrimitive.Trigger
         className={cn(
           "flex items-center gap-1 font-body text-body text-primary hover:text-accent focus:outline-none transition-colors",
-          isOpen && "text-accent"
+          isOpen && "text-accent",
         )}
       >
         <span>Catalog</span>
         <ChevronDown
           className={cn(
             "h-4 w-4 transition-transform duration-200",
-            isOpen && "rotate-180"
+            isOpen && "rotate-180",
           )}
         />
       </PopoverPrimitive.Trigger>
       <PopoverPrimitive.Portal>
         <PopoverPrimitive.Content
-          className="z-50 min-w-[320px] max-h-[80vh] overflow-y-auto rounded-md border border-border bg-white p-4 shadow-xl animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2"
-          sideOffset={5}
+          className="z-50 min-w-[340px] max-h-[85vh] overflow-y-auto rounded-[28px] border border-border/60 bg-white/95 backdrop-blur-xl p-3 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1),0_10px_30px_-10px_rgba(0,0,0,0.05)] origin-top-right animate-in fade-in-0 zoom-in-[0.95] duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-[0.95] data-[side=bottom]:slide-in-from-top-2"
+          sideOffset={8}
           align="end"
         >
-          <div className="flex flex-col gap-6">
-            {isAdmin && (
-              <div className="-mb-2 border-b border-border pb-4">
-                <Link
-                  href="/bakery-manufacturing-orders/"
-                  onClick={() => setIsOpen(false)}
-                  className="flex items-center justify-center gap-2 text-md text-accent font-bold bg-accent/5 hover:bg-accent/10 border border-accent/20 rounded-md p-2 transition-all"
-                >
-                  <ShieldCheck className="h-4 w-4" />
-                  /Dashboard
-                </Link>
-              </div>
-            )}
-            <Link
-              href={`/products`}
-              onClick={() => setIsOpen(false)}
-              className="text-md text-primary hover:text-accent hover:bg-subtleBackground text-center rounded p-2 transition-colors truncate font-bold"
-            >
-              Full Menu
-            </Link>
-            <Link
-              href={`/gallery`}
-              onClick={() => setIsOpen(false)}
-              className="text-md text-primary hover:text-accent hover:bg-subtleBackground text-center rounded p-2 transition-colors truncate font-bold"
-            >
-              Design Gallery
-            </Link>
-            {/* Seasonal Event Section */}
-            {activeEvent && (
-              <div className="border-b border-border pb-4">
-                <Link
-                  href={`/specials/${activeEvent.slug}`}
-                  onClick={() => setIsOpen(false)}
-                  className="group block rounded-md bg-gradient-to-r from-accent/10 to-transparent p-3 hover:from-accent/20 transition-all"
-                >
-                  <div className="flex items-center gap-2 text-accent font-bold mb-1">
-                    <Sparkles className="h-4 w-4 animate-pulse" />
-                    <span>{activeEvent.name}</span>
-                  </div>
-                  <p className="text-sm text-primary/80 group-hover:text-primary">
-                    Shop our limited time specials!
-                  </p>
-                </Link>
-              </div>
-            )}
+          <div className="flex flex-col gap-2">
+            {/* Main Functional Groups */}
+            <div className="flex flex-col gap-1">
+              <MenuItem
+                href="/products"
+                icon={Menu}
+                label="Full Menu"
+                onClick={() => setIsOpen(false)}
+                badge="All products"
+              />
+              <MenuItem
+                href="/gallery"
+                icon={GalleryHorizontalEnd}
+                label="Design Gallery"
+                onClick={() => setIsOpen(false)}
+                badge="Refereces"
+              />
 
-            {/* Collections Section */}
-            {collections.length > 0 && (
-              <div>
-                <h3 className="flex items-center gap-2 font-heading text-sm text-primary/50 uppercase tracking-wider mb-2">
-                  <Layers className="h-4 w-4" />
-                  Collections
-                </h3>
-                <div className="grid grid-cols-2 gap-2">
+              {activeEvent && (
+                <MenuItem
+                  href={`/specials/${activeEvent.slug}`}
+                  icon={Sparkles}
+                  label={activeEvent.name}
+                  onClick={() => setIsOpen(false)}
+                  badge="Limited"
+                  highlight={true}
+                />
+              )}
+            </div>
+
+            <div className="h-px w-full bg-border/50 my-2" />
+
+            {/* Secondary Actions (Categories & Collections) */}
+            <div className="flex flex-col gap-1">
+              <div className="px-3 pb-1 pt-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-primary/40">
+                  Categories
+                </span>
+              </div>
+              {categories.map((cat) => (
+                <MenuItem
+                  key={cat.href}
+                  href={cat.href}
+                  icon={LayoutGrid}
+                  label={cat.name}
+                  onClick={() => setIsOpen(false)}
+                />
+              ))}
+
+              {collections.length > 0 && (
+                <>
+                  <div className="px-3 pb-1 pt-4">
+                    <span className="text-xs font-bold uppercase tracking-wider text-primary/40">
+                      Collections
+                    </span>
+                  </div>
                   {collections.map((col) => (
-                    <Link
+                    <MenuItem
                       key={col._id.toString()}
                       href={`/products/collections/${col.slug}`}
+                      icon={Crown}
+                      label={col.name}
                       onClick={() => setIsOpen(false)}
-                      className="text-sm text-primary hover:text-accent hover:bg-subtleBackground rounded p-2 transition-colors truncate"
-                    >
-                      {col.name}
-                    </Link>
+                    />
                   ))}
-                </div>
-              </div>
-            )}
-
-            {/* Categories Section */}
-            <div>
-              <h3 className="flex items-center gap-2 font-heading text-sm text-primary/50 uppercase tracking-wider mb-2">
-                <Tag className="h-4 w-4" />
-                Categories
-              </h3>
-              <div className="flex flex-col gap-1">
-                {categories.map((cat) => (
-                  <Link
-                    key={cat.href}
-                    href={cat.href}
-                    onClick={() => setIsOpen(false)}
-                    className="text-sm text-primary hover:text-accent hover:bg-subtleBackground rounded px-2 py-1.5 transition-colors"
-                  >
-                    {cat.name}
-                  </Link>
-                ))}
-              </div>
+                </>
+              )}
             </div>
+
+            {isAdmin && (
+              <>
+                <div className="h-px w-full bg-border/50 my-2" />
+                <div className="flex flex-col gap-1">
+                  <MenuItem
+                    href="/bakery-manufacturing-orders/"
+                    icon={ShieldCheck}
+                    label="Dashboard"
+                    onClick={() => setIsOpen(false)}
+                    badge="Admin"
+                    highlight={true}
+                  />
+                </div>
+              </>
+            )}
           </div>
-          <PopoverPrimitive.Arrow className="fill-white" />
         </PopoverPrimitive.Content>
       </PopoverPrimitive.Portal>
     </PopoverPrimitive.Root>

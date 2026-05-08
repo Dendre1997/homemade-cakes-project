@@ -1,3 +1,4 @@
+import { verifyAdminAPI } from "@/lib/auth/adminOnly";
 import { NextRequest, NextResponse } from "next/server";
 import clientPromise from "@/lib/db";
 import { ObjectId } from "mongodb";
@@ -8,25 +9,28 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = await verifyAdminAPI();
+  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
   try {
     const { id } = await params;
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
 
-    const decoration = await db.collection("decorations").findOne({
+    const addon = await db.collection("addons").findOne({
       _id: new ObjectId(id),
     });
 
-    if (!decoration) {
+    if (!addon) {
       return NextResponse.json(
-        { error: "Decoration not found" },
+        { error: "addon not found" },
         { status: 404 }
       );
     }
 
-    return NextResponse.json(decoration, { status: 200 });
+    return NextResponse.json(addon, { status: 200 });
   } catch (error) {
-    console.error("Error fetching decorations:", error);
+    console.error("Error fetching addons:", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 }
@@ -38,6 +42,9 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = await verifyAdminAPI();
+  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
   try {
     const { id } = await params;
     const { name, description, imageUrl, categoryIds, isActive, variants } = await request.json();
@@ -51,18 +58,18 @@ export async function PUT(
 
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
-    const collection = db.collection("decorations");
-    const existingDecoration = await collection.findOne({
+    const collection = db.collection("addons");
+    const existingAddon = await collection.findOne({
       _id: new ObjectId(id),
     });
-    if (!existingDecoration) {
+    if (!existingAddon) {
       return NextResponse.json(
-        { error: "Decoration not found" },
+        { error: "addon not found" },
         { status: 404 }
       );
     }
 
-    const oldImageUrl = existingDecoration.imageUrl;
+    const oldImageUrl = existingAddon.imageUrl;
     let finalImageUrl = oldImageUrl;
     if (imageUrl === "") {
       if (oldImageUrl) {
@@ -89,24 +96,27 @@ export async function PUT(
           imageUrl: finalImageUrl,
           categoryIds: categoryIds || [],
           isActive: isActive !== undefined ? isActive : true,
-          variants,
+          variants: variants.map((v: any) => ({
+            ...v,
+            _id: v._id || new ObjectId().toString()
+          })),
         },
       }
     );
 
     if (result.matchedCount === 0) {
       return NextResponse.json(
-        { error: "Decoration not found" },
+        { error: "Addon not found" },
         { status: 404 }
       );
     }
 
     return NextResponse.json(
-      { message: "Decoration updated successfully" },
+      { message: "Addon updated successfully" },
       { status: 200 }
     );
   } catch (err) {
-    console.error("Error updating decoration:", err);
+    console.error("Error updating addon:", err);
     return NextResponse.json(
       { error: "Internal Server Error", details: (err as Error).message },
       { status: 500 }
@@ -118,26 +128,29 @@ export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = await verifyAdminAPI();
+  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
   try {
     const { id } = await params;
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
-    const collection = db.collection("decorations");
+    const collection = db.collection("addons");
 
-    const existingDecoration = await collection.findOne({
+    const existingAddon = await collection.findOne({
       _id: new ObjectId(id),
     });
-    if (!existingDecoration) {
+    if (!existingAddon) {
       return NextResponse.json(
-        { error: "Decoration not found" },
+        { error: "addon not found" },
         { status: 404 }
       );
     }
 
     // 1. Gather all image URLs
-    const imageUrlsToClean = [existingDecoration.imageUrl];
-    if (existingDecoration.variants && Array.isArray(existingDecoration.variants)) {
-      existingDecoration.variants.forEach((v: any) => {
+    const imageUrlsToClean = [existingAddon.imageUrl];
+    if (existingAddon.variants && Array.isArray(existingAddon.variants)) {
+      existingAddon.variants.forEach((v: any) => {
         if (v.imageUrl) {
           imageUrlsToClean.push(v.imageUrl);
         }
@@ -163,17 +176,17 @@ export async function DELETE(
 
     if (result.deletedCount === 0) {
       return NextResponse.json(
-        { error: "Decoration not found" },
+        { error: "addon not found" },
         { status: 404 }
       );
     }
 
     return NextResponse.json(
-      { message: "Decoration deleted successfully" },
+      { message: "Addon deleted successfully" },
       { status: 200 }
     );
   } catch (error) {
-    console.error("Error deleting decoration:", error);
+    console.error("Error deleting addon:", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 }

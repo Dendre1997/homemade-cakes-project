@@ -1,8 +1,12 @@
+import { verifyAdminAPI } from "@/lib/auth/adminOnly";
 import { NextRequest, NextResponse } from "next/server";
 import { Allergen } from "@/types";
 import clientPromise from "@/lib/db";
 
 export async function GET() {
+  const auth = await verifyAdminAPI();
+  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
   try {
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
@@ -20,6 +24,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const auth = await verifyAdminAPI();
+  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
   try {
     const body = await request.json();
 
@@ -44,7 +51,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         message: "New allergen created successfully",
-        decorationId: result.insertedId,
+        allergenId: result.insertedId,
       },
       { status: 201 } 
     );

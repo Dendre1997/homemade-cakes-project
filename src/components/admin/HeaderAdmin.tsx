@@ -22,13 +22,13 @@ const AdminHeader = ({ onToggleSidebar, title }: AdminHeaderProps) => {
 
       await signOut(auth);
 
-      await fetch("/api/auth/logout", {
+      await fetch("/api/admin/auth/logout", {
         method: "POST",
       });
 
       router.refresh();
 
-      router.push("/login");
+      router.push("/bakery-manufacturing-orders/login");
     } catch (error) {
       console.error("Logout failed", error);
     }
@@ -72,7 +72,7 @@ const AdminHeader = ({ onToggleSidebar, title }: AdminHeaderProps) => {
               </button>
             </div>
           ) : (
-            <Link href="/login">
+            <Link href="/bakery-manufacturing-orders/login">
               <Button>Login</Button>
             </Link>
           )}

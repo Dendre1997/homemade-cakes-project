@@ -17,7 +17,7 @@ export async function POST(
   try {
     // -- 1. Security Check --
     const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get("session")?.value;
+    const sessionCookie = cookieStore.get("admin_session")?.value;
     if (!sessionCookie) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -95,7 +95,7 @@ export async function POST(
       rowTotal: Number(agreedPrice),
       inscription: customOrder.details?.textOnCake,
       designInstructions: customOrder.details?.designNotes,
-      decorations: customOrder.decorations || [],
+      addons: customOrder.addons || [],
     };
 
     // Create Real Order

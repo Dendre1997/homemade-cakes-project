@@ -141,7 +141,7 @@ const button = {
   fontFamily: '"Existence Light", "Helvetica Neue", Helvetica, Arial, sans-serif',
   fontSize: "16px",
   fontWeight: "bold",
-  textDecoration: "none",
+  textAddon: "none",
   textAlign: "center" as const,
   display: "inline-block",
   padding: "14px 24px",

@@ -12,7 +12,7 @@ import { getPublicIdFromUrl } from "@/lib/cloudinaryUtils";
  */
 async function isAdmin() {
   const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get("session")?.value;
+  const sessionCookie = cookieStore.get("admin_session")?.value;
 
   if (!sessionCookie) return false;
 
@@ -56,6 +56,12 @@ export async function PATCH(
     if (body.categories !== undefined) updateData.categories = body.categories;
     if (body.decorationPrice !== undefined) updateData.decorationPrice = Number(body.decorationPrice);
     if (body.isActive !== undefined) updateData.isActive = !!body.isActive;
+    if (body.defaultAddons !== undefined) {
+      updateData.defaultAddons = body.defaultAddons.map((da: any) => ({
+          addonId: new ObjectId(String(da.addonId)),
+          variantId: new ObjectId(String(da.variantId))
+      }));
+    }
 
     const result = await collection.updateOne(
       { _id: new ObjectId(id) },

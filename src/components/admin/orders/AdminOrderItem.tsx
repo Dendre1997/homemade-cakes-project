@@ -172,12 +172,12 @@ export const AdminOrderItem = ({
                     </div>
                  )}
 
-                 {/* Decorations */}
-                 {item.decorations && item.decorations.length > 0 && (
+                 {/* Addons */}
+                 {item.addons && item.addons.length > 0 && (
                      <div className="mt-2 bg-purple-50 border border-purple-100 rounded-md p-2">
-                        <div className="text-xs font-bold text-purple-800 uppercase mb-1">Decorations</div>
+                        <div className="text-xs font-bold text-purple-800 uppercase mb-1">Addons</div>
                         <div className="flex flex-col gap-1">
-                           {item.decorations.map((dec, idx) => (
+                           {item.addons.map((dec, idx) => (
                                <div key={idx} className="flex justify-between items-center text-sm">
                                    <div className="flex items-center gap-2">
                                        {dec.imageUrl && <Image src={dec.imageUrl} width={20} height={20} className="rounded object-cover" alt="" />}
@@ -352,12 +352,12 @@ export const AdminOrderItem = ({
             </div>
         )}
 
-        {/* Decorations for Standard / Set */}
-        {!isCustom && item.decorations && item.decorations.length > 0 && (
+        {/* Addons for Standard / Set */}
+        {!isCustom && item.addons && item.addons.length > 0 && (
              <div className="mt-2 bg-purple-50 border border-purple-100 rounded-md p-2 max-w-md">
-                <div className="text-xs font-bold text-purple-800 uppercase mb-1">Decorations</div>
+                <div className="text-xs font-bold text-purple-800 uppercase mb-1">Addons</div>
                 <div className="flex flex-col gap-1">
-                   {item.decorations.map((dec, idx) => (
+                   {item.addons.map((dec, idx) => (
                        <div key={idx} className="flex justify-between items-center text-sm">
                            <div className="flex items-center gap-2">
                                {dec.imageUrl && <Image src={dec.imageUrl} width={20} height={20} className="rounded object-cover" alt="" />}

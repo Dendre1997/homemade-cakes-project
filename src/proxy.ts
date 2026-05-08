@@ -4,16 +4,17 @@ import type { NextRequest } from "next/server";
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  const sessionCookie =
-    request.cookies.get("session")?.value ||
-    request.cookies.get("__session")?.value;
+  const adminSessionCookie = request.cookies.get("admin_session")?.value;
 
   const isProtectedAdminPath = 
     pathname.startsWith("/bakery-manufacturing-orders") || 
     pathname.startsWith("/api/admin");
 
+  const isLoginPage = pathname.startsWith("/bakery-manufacturing-orders/login");
+  const isAuthEndpoint = pathname.startsWith("/api/admin/auth/sessionLogin");
+
   // 1. Check if path is protected
-  if (isProtectedAdminPath) {
+  if (isProtectedAdminPath && !isLoginPage && !isAuthEndpoint) {
     
     // 2. EXCEPTION: Allow 2FA APIs to pass through (Chicken & Egg)
     if (pathname.startsWith("/api/admin/2fa")) {
@@ -21,11 +22,11 @@ export function proxy(request: NextRequest) {
     }
 
     // 3. Check Session (Layer 1)
-    if (!sessionCookie) {
+    if (!adminSessionCookie) {
       if (pathname.startsWith("/api/")) {
-         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+         return NextResponse.json({ error: "Unauthorized: Missing admin session." }, { status: 401 });
       }
-      const loginUrl = new URL("/login", request.url);
+      const loginUrl = new URL("/bakery-manufacturing-orders/login", request.url);
       loginUrl.searchParams.set("callbackUrl", pathname);
       return NextResponse.redirect(loginUrl);
     }
@@ -46,12 +47,21 @@ export function proxy(request: NextRequest) {
   // Auto-skip verify page if already verified
   if (pathname === "/verify-access") {
      const isDeviceVerified = request.cookies.get("admin_device_verified")?.value === "true";
-     if (sessionCookie && isDeviceVerified) {
+     if (adminSessionCookie && isDeviceVerified) {
         return NextResponse.redirect(new URL("/bakery-manufacturing-orders", request.url));
      }
   }
 
-  return NextResponse.next();
+  const requestHeaders = new Headers(request.headers);
+  if (isLoginPage) {
+      requestHeaders.set('x-is-login-page', 'true');
+  }
+
+  return NextResponse.next({
+      request: {
+          headers: requestHeaders,
+      }
+  });
 }
 
 

@@ -76,6 +76,8 @@ import { EightInchCakeIcon } from "@/components/icons/cake-sizes/EightInchCakeIc
 
 import { X } from "lucide-react";
 import { useAlert } from "@/contexts/AlertContext";
+import { AddonSelector } from "@/components/shared/AddonSelector";
+import { SelectedAddon } from "@/types";
 
 const ProductForm = ({
   existingProduct,
@@ -99,6 +101,7 @@ const ProductForm = ({
   const [allergenIds, setAllergenIds] = useState<string[]>([]);
   const [availableDiameterConfigs, setAvailableDiameterConfigs] = useState<AvailableDiameterConfig[]>([]);
   const [collectionIds, setCollectionIds] = useState<string[]>([]);
+  const [defaultAddons, setDefaultAddons] = useState<SelectedAddon[]>([]);
   
   // Sets & Combo State
   const [productType, setProductType] = useState<'cake' | 'set' | 'custom'>('cake');
@@ -223,6 +226,7 @@ const ProductForm = ({
       setCollectionIds(
         existingProduct.collectionIds?.map((id) => id.toString()) || []
       );
+      setDefaultAddons(existingProduct.defaultAddons?.map((da: any) => ({ addonId: da.addonId.toString(), variantId: da.variantId?.toString() || "", name: "", variantName: "", price: 0 })) || []);
       
       // Populate Sets & Combo Data
       if (existingProduct.productType) {
@@ -349,6 +353,7 @@ const ProductForm = ({
         maxLength: parseInt(inscriptionMaxLength) || 0,
       },
       collectionIds: collectionIds,
+      defaultAddons: defaultAddons.map(da => ({ addonId: da.addonId, variantId: da.variantId || "" })),
       
       // New Fields
       productType,
@@ -562,6 +567,23 @@ const ProductForm = ({
               </div>
             </CardContent>
           </Card>
+
+          {/* DEFAULT ADDONS */}
+          {categoryId && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Default Addons</CardTitle>
+                <CardDescription>Select default addons (e.g. decorations) pre-assigned to this product.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <AddonSelector 
+                   categoryId={categoryId}
+                   selectedAddons={defaultAddons}
+                   onChange={setDefaultAddons}
+                />
+              </CardContent>
+            </Card>
+          )}
 
           {/* SET CONFIGURATION */}
           {productType === 'set' && (

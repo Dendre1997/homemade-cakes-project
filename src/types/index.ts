@@ -8,15 +8,16 @@ export interface Flavor {
   imageUrl?: string;
 }
 
-export interface SelectedDecoration {
-  decorationId: string;
+export interface SelectedAddon {
+  addonId: string;
   name: string;
+  variantId?: string;
   variantName: string;
   price: number;
   imageUrl?: string;
 }
 
-export interface Decoration {
+export interface Addon {
   _id: string;
   name: string;
   description?: string;
@@ -24,6 +25,7 @@ export interface Decoration {
   categoryIds?: string[];
   isActive: boolean;
   variants: {
+    _id?: string;
     name: string;
     price: number;
     imageUrl?: string;
@@ -113,6 +115,7 @@ export interface Product {
     cakeDiameterIds: string[];
     allowInscription: boolean;
   };
+  defaultAddons?: { addonId: string; variantId: string }[];
 }
 
 export interface ProductFormData {
@@ -148,6 +151,7 @@ export interface ProductFormData {
     cakeDiameterIds: string[];
     allowInscription: boolean;
   };
+  defaultAddons?: { addonId: string; variantId: string }[];
 }
 
 export interface ProductCategory {
@@ -221,7 +225,7 @@ export interface CartItem {
   customFlavor?: string;
   isManualPrice?: boolean;
   designInstructions?: string;
-  decorations?: SelectedDecoration[];
+  addons?: SelectedAddon[];
 }
 export type UniqueCartItem = CartItem & {
   uniqueId: string;
@@ -311,7 +315,7 @@ export interface OrderItem {
   customFlavor?: string;
   isManualPrice?: boolean;
   designInstructions?: string;
-  decorations?: SelectedDecoration[];
+  addons?: SelectedAddon[];
 }
 
 export interface Address {
@@ -448,7 +452,7 @@ export interface CustomOrder {
   approximatePrice?: number;
   adminNotes?: string;
   deliveryMethod?: "pickup" | "delivery" | string;
-  decorations?: SelectedDecoration[];
+  addons?: SelectedAddon[];
   [key: string]: any;
 }
 
@@ -496,4 +500,5 @@ export interface IGalleryImage {
   isActive: boolean;         // Allows hiding without deleting
   createdAt: Date | string;
   updatedAt: Date | string;
+  defaultAddons?: { addonId: string; variantId: string }[];
 }

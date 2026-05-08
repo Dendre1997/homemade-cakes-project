@@ -1,8 +1,12 @@
+import { verifyAdminAPI } from "@/lib/auth/adminOnly";
 import { NextRequest, NextResponse } from "next/server";
 import clientPromise from "@/lib/db";
 import { ScheduleSettings } from "@/types";
 
 export async function GET() {
+  const auth = await verifyAdminAPI();
+  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
   try {
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
@@ -30,6 +34,9 @@ export async function GET() {
 
 
 export async function PUT(request: NextRequest) {
+  const auth = await verifyAdminAPI();
+  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
   try {
     const body: Partial<ScheduleSettings> = await request.json();
     const {

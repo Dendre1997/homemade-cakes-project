@@ -21,7 +21,7 @@ export async function PATCH(
 
     // Auth Check
     const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get("session")?.value;
+    const sessionCookie = cookieStore.get("admin_session")?.value;
     if (!sessionCookie) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const decodedToken = await adminAuth.verifySessionCookie(sessionCookie, true).catch(() => null);

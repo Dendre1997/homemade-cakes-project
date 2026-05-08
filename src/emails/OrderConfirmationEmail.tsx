@@ -248,7 +248,7 @@ const secondaryButton = {
   color: "#C58C5F",
   fontSize: "16px",
   fontWeight: "bold",
-  textDecoration: "none",
+  textAddon: "none",
   padding: "12px 24px",
 };
 
