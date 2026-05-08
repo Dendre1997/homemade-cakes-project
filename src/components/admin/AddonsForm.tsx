@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
-import { Decoration, ProductCategory } from "@/types";
+import { Addon, ProductCategory } from "@/types";
 import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
 import { ChipCheckbox } from "../ui/ChipCheckbox";
@@ -26,24 +26,24 @@ const FormLabel = ({
 );
 
 
-type DecorationFormData = Omit<Decoration, "_id">;
+type AddonFormData = Omit<Addon, "_id">;
 
-interface DecorationsFormProps {
-  existingDecoration?: Decoration | null;
-  onSubmit: (formData: DecorationFormData) => void;
+interface AddonsFormProps {
+  existingAddon?: Addon | null;
+  onSubmit: (formData: AddonFormData) => void;
   isSubmitting: boolean;
   categories: ProductCategory[];
 }
 
-const DecorationsForm = ({
-  existingDecoration,
+const AddonsForm = ({
+  existingAddon,
   onSubmit,
   isSubmitting,
   categories,
-}: DecorationsFormProps) => {
+}: AddonsFormProps) => {
   const { showAlert } = useAlert();
 
-  const [formData, setFormData] = useState<DecorationFormData>({
+  const [formData, setFormData] = useState<AddonFormData>({
     name: "",
     description: "",
     imageUrl: "",
@@ -60,14 +60,14 @@ const DecorationsForm = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (existingDecoration) {
+    if (existingAddon) {
       setFormData({
-        name: existingDecoration.name || "",
-        description: existingDecoration.description || "",
-        imageUrl: existingDecoration.imageUrl || "",
-        isActive: existingDecoration.isActive ?? true,
-        categoryIds: existingDecoration.categoryIds || [],
-        variants: existingDecoration.variants?.length ? existingDecoration.variants : [{ name: "", price: 0, imageUrl: "" }],
+        name: existingAddon.name || "",
+        description: existingAddon.description || "",
+        imageUrl: existingAddon.imageUrl || "",
+        isActive: existingAddon.isActive ?? true,
+        categoryIds: existingAddon.categoryIds || [],
+        variants: existingAddon.variants?.length ? existingAddon.variants : [{ name: "", price: 0, imageUrl: "" }],
       });
     } else if (!isSubmitting) {
       setFormData({
@@ -85,7 +85,7 @@ const DecorationsForm = ({
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
-  }, [existingDecoration, isSubmitting]);
+  }, [existingAddon, isSubmitting]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -238,7 +238,7 @@ const DecorationsForm = ({
       className="p-lg bg-card-background rounded-large shadow-md max-w-lg space-y-md"
     >
       <h2 className="font-heading text-h3 text-primary">
-        {existingDecoration ? "Update Decoration" : "Add New Decoration"}
+        {existingAddon ? "Update Addon" : "Add New Addon"}
       </h2>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-md">
@@ -331,8 +331,6 @@ const DecorationsForm = ({
                   value={variant.price === 0 ? "" : variant.price}
                   onChange={(e) => handleVariantChange(index, "price", parseFloat(e.target.value) || 0)}
                   placeholder="0.00"
-                  step="0.01"
-                  required
                 />
               </div>
               <div className="w-full flex justify-end border-t border-border pt-sm mt-sm">
@@ -429,13 +427,13 @@ const DecorationsForm = ({
         >
           {isSubmitting
             ? "Saving..."
-            : existingDecoration
-              ? "Update Decoration"
-              : "Add Decoration"}
+            : existingAddon
+              ? "Update Addon"
+              : "Add Addon"}
         </Button>
       </div>
     </form>
   );
 };
 
-export default DecorationsForm;
+export default AddonsForm;

@@ -30,7 +30,7 @@ const COLORS = [
 
 export default function FlavorChart({ data }: FlavorChartProps) {
   return (
-    <div className="bg-white p-6 rounded-xl shadow-sm border border-border">
+    <div className="bg-white p-6 pb-14 rounded-xl shadow-sm border border-border">
       <h3 className="text-lg font-bold mb-4 font-heading">Top 5 Flavors</h3>
       <div className="h-[300px]">
         <ResponsiveContainer width="100%" height="100%">

@@ -1,3 +1,4 @@
+import { verifyAdminAPI } from "@/lib/auth/adminOnly";
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import clientPromise from "@/lib/db";
@@ -9,6 +10,9 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = await verifyAdminAPI();
+  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
   try {
     const { id } = await params;
     const body = await request.json();
@@ -64,6 +68,9 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = await verifyAdminAPI();
+  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
   try {
     const { id } = await params;
     const client = await clientPromise;

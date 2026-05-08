@@ -191,7 +191,7 @@ export const OrderCard = ({ order, onStatusChange, diametersMap, flavorMap }: Or
                           ${item.price}
                         </span>
                         {!!isDiscounted && (
-                          <span className="text-[10px] text-gray-400 line-through decoration-red-400">
+                          <span className="text-[10px] text-gray-400 line-through Addon-red-400">
                             ${originalTotal}
                           </span>
                         )}

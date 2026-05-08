@@ -145,7 +145,7 @@ const Homepage = async () => {
 
       {/* Bento Flavors */}
       {bentoFlavors.length > 0 && (
-        <Section className="bg-subtleBackground/30">
+        <Section>
           <Container>
             <h2 className="text-center font-heading text-h2 mb-lg">
               Bento Flavors
@@ -157,7 +157,7 @@ const Homepage = async () => {
 
       {/* Cake Flavors */}
       {cakeFlavors.length > 0 && (
-        <Section className="bg-subtleBackground/30 border-t border-border/50">
+        <Section>
           <Container>
             <h2 className="text-center font-heading text-h2 mb-lg">
               Cake Flavors

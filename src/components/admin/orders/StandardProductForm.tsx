@@ -7,8 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { calculateUnitPrice, calculateItemPrice } from "@/utils/priceCalculator";
 import { Plus } from "lucide-react";
 import { useAlert } from "@/contexts/AlertContext";
-import { DecorationAdminSelector } from "@/components/admin/decorations/DecorationAdminSelector";
-import { SelectedDecoration } from "@/types";
+import { AddonAdminSelector } from "@/components/admin/addons/AddonAdminSelector";
+import { SelectedAddon } from "@/types";
 
 interface StandardProductFormProps {
   product: ProductWithCategory;
@@ -33,7 +33,7 @@ export const StandardProductForm = ({
   const [qty, setQty] = useState(1);
   const [priceOverride, setPriceOverride] = useState("");
   const [inscription, setInscription] = useState("");
-  const [selectedDecorations, setSelectedDecorations] = useState<SelectedDecoration[]>([]);
+  const [selectedAddons, setSelectedAddons] = useState<SelectedAddon[]>([]);
 
   // --- Derived Lists ---
   const availableFlavors = product.availableFlavors && Array.isArray(product.availableFlavors) && product.availableFlavors.length > 0
@@ -65,8 +65,8 @@ export const StandardProductForm = ({
             hasInscription: !!(inscription && product.inscriptionSettings?.isAvailable)
          });
 
-      const decorationsTotal = selectedDecorations.reduce((sum, d) => sum + d.price, 0);
-      const finalUnitPrice = priceOverride ? unitPrice : unitPrice + decorationsTotal;
+      const AddonsTotal = selectedAddons.reduce((sum, d) => sum + d.price, 0);
+      const finalUnitPrice = priceOverride ? unitPrice : unitPrice + AddonsTotal;
 
       const flavName = availableFlavors.find(f => f._id === selectedFlavorId)?.name || "Standard";
 
@@ -84,7 +84,7 @@ export const StandardProductForm = ({
           imageUrl: product.imageUrls?.[0] || "",
           inscription: inscription,
           isCustom: false,
-          decorations: selectedDecorations,
+          addons: selectedAddons,
           // Explicit nulls for strict typing
           selectedConfig: null
       };
@@ -168,12 +168,12 @@ export const StandardProductForm = ({
                  />
              </div>
              
-             {/* Decorations */}
+             {/* Addons */}
              <div className="md:col-span-2">
-                 <DecorationAdminSelector 
+                 <AddonAdminSelector 
                      categoryId={product.categoryId}
-                     selectedDecorations={selectedDecorations}
-                     onChange={setSelectedDecorations}
+                     selectedAddons={selectedAddons}
+                     onChange={setSelectedAddons}
                  />
              </div>
         </div>

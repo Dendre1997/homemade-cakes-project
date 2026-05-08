@@ -84,7 +84,7 @@ export default async function BlogListingPage() {
 
                   <div className="mt-auto">
                     <Link href={`/blog/${blog.slug}`}>
-                      <span className="font-bold text-accent hover:underline decoration-2 underline-offset-4 text-sm uppercase tracking-wide">
+                      <span className="font-bold text-accent hover:underline Addon-2 underline-offset-4 text-sm uppercase tracking-wide">
                         Read Blog
                       </span>
                     </Link>

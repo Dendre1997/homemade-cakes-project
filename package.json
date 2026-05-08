@@ -28,6 +28,7 @@
     "@tiptap/starter-kit": "^3.13.0",
     "@types/mongodb": "^4.0.6",
     "class-variance-authority": "^0.7.1",
+    "client-only": "^0.0.1",
     "cloudinary": "^2.7.0",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
@@ -53,6 +54,7 @@
     "react-hook-form": "^7.69.0",
     "recharts": "^3.6.0",
     "resend": "^6.1.2",
+    "server-only": "^0.0.1",
     "tailwind-merge": "^3.3.1",
     "zod": "^4.2.1",
     "zustand": "^5.0.7"

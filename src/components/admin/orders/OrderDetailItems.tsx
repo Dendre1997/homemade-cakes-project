@@ -25,8 +25,8 @@ import { AdminOrderItem } from "@/components/admin/orders/AdminOrderItem";
 import { useAlert } from "@/contexts/AlertContext";
 import { useParams } from "next/navigation";
 import CustomOrderItemForm from "./CustomOrderItemForm";
-import { DecorationAdminSelector } from "@/components/admin/decorations/DecorationAdminSelector";
-import { SelectedDecoration } from "@/types";
+import { AddonAdminSelector } from "@/components/admin/addons/AddonAdminSelector";
+import { SelectedAddon } from "@/types";
 
 interface OrderDetailItemsProps {
   items: Order["items"];
@@ -60,7 +60,7 @@ const OrderDetailItems = ({
   const [draftInscription, setDraftInscription] = useState("");
   const [draftPriceOverride, setDraftPriceOverride] = useState(""); 
   const [draftSelectedConfig, setDraftSelectedConfig] = useState<any>(null); 
-  const [draftDecorations, setDraftDecorations] = useState<SelectedDecoration[]>([]);
+  const [draftAddons, setDraftAddons] = useState<SelectedAddon[]>([]);
   
   // Edit Context Data
   const [products, setProducts] = useState<ProductWithCategory[]>([]);
@@ -87,7 +87,7 @@ const OrderDetailItems = ({
     setDraftQuantity(item.quantity);
     setDraftInscription(item.inscription || "");
     setDraftPriceOverride(""); 
-    setDraftDecorations(item.decorations || []);
+    setDraftAddons(item.addons || []);
     
     if (item.selectedConfig) {
         setDraftSelectedConfig(JSON.parse(JSON.stringify(item.selectedConfig)));
@@ -176,8 +176,8 @@ const OrderDetailItems = ({
           })
     : 0;
 
-  const currentDecorationsTotal = draftDecorations.reduce((sum, d) => sum + d.price, 0);
-  const currentTotalUnitCost = currentUnitCost + currentDecorationsTotal;
+  const currentAddonsTotal = draftAddons.reduce((sum, d) => sum + d.price, 0);
+  const currentTotalUnitCost = currentUnitCost + currentAddonsTotal;
     
   const handleSaveChanges = async () => {
     if (!editingItem) return;
@@ -204,7 +204,7 @@ const OrderDetailItems = ({
                 diameterId: draftDiameterId,
                 selectedConfig: undefined // Strict undefined for Standard
             }),
-            decorations: draftDecorations
+            addons: draftAddons
         };
         
         const newItems = items.map(i => i.id === editingItem.id ? updatedItem : i);
@@ -360,7 +360,8 @@ const OrderDetailItems = ({
                             flavorValue: editingItem.customFlavor || (editingItem.selectedConfig?.cake?.flavorId) || editingItem.flavor || "", 
                             designInstructions: editingItem.designInstructions || "",
                             inscription: editingItem.inscription || "",
-                            decorations: editingItem.decorations || [],
+                            addons: editingItem.addons || [],
+                            categoryId: editingItem.categoryId || "",
                         }}
                         onSubmit={(newItem) => {
                              const updatedItem = {
@@ -534,7 +535,7 @@ const OrderDetailItems = ({
                                 value={draftPriceOverride} 
                                 onChange={e => setDraftPriceOverride(e.target.value)} 
                              />
-                             <p className="text-xs text-muted-foreground">Standard: ${currentTotalUnitCost.toFixed(2)} (incl. decorations)</p>
+                             <p className="text-xs text-muted-foreground">Standard: ${currentTotalUnitCost.toFixed(2)} (incl. Addons)</p>
                          </div>
                     </div>
 
@@ -548,10 +549,10 @@ const OrderDetailItems = ({
                     </div>
 
                     <div className="space-y-2">
-                        <DecorationAdminSelector 
+                        <AddonAdminSelector 
                             categoryId={draftProduct?.categoryId}
-                            selectedDecorations={draftDecorations}
-                            onChange={setDraftDecorations}
+                            selectedAddons={draftAddons}
+                            onChange={setDraftAddons}
                         />
                     </div>
                 </div>

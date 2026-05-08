@@ -1,3 +1,4 @@
+import { verifyAdminAPI } from "@/lib/auth/adminOnly";
 import { NextRequest, NextResponse } from 'next/server';
 import clientPromise from '@/lib/db';
 import { ObjectId } from 'mongodb';
@@ -9,6 +10,9 @@ interface Context {
 
 
 export async function GET(_request: Request, { params }: Context) {
+  const auth = await verifyAdminAPI();
+  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
   try {
     const { id } = await params;
     const client = await clientPromise;
@@ -31,6 +35,9 @@ export async function GET(_request: Request, { params }: Context) {
 
 // PUT
 export async function PUT(request: NextRequest, { params }: Context) {
+  const auth = await verifyAdminAPI();
+  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
   try {
     const { id } = await params;
     const { name, price, description, categoryIds, imageUrl } =
@@ -70,6 +77,9 @@ export async function PUT(request: NextRequest, { params }: Context) {
 
 
 export async function DELETE(_request: Request, { params }: Context) {
+  const auth = await verifyAdminAPI();
+  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
   try {
     const { id } = await params;
     const client = await clientPromise;

@@ -1,8 +1,12 @@
+import { verifyAdminAPI } from "@/lib/auth/adminOnly";
 import { NextRequest, NextResponse } from "next/server";
 import cloudinary from "@/lib/cloudinary";
 import { getPublicIdFromUrl } from "@/lib/cloudinaryUtils";
 
 export async function POST(request: NextRequest) {
+  const auth = await verifyAdminAPI();
+  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
   try {
     const body = await request.json();
     const { urls, public_id } = body;

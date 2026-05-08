@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import clientPromise from '@/lib/db';
-import { Decoration } from '@/types';
+import { Addon } from '@/types';
 
 
 export async function GET() {
@@ -8,13 +8,13 @@ export async function GET() {
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
 
-    const decorations = await db.collection('decorations').find({}).toArray();
+    const addons = await db.collection('addons').find({}).toArray();
 
-    return NextResponse.json(decorations, { status: 200 });
+    return NextResponse.json(addons, { status: 200 });
   } catch (error) {
-    console.error('Error fetching decorations:', error);
+    console.error('Error fetching addons:', error);
     return NextResponse.json(
-      { error: 'An error occurred while fetching decorations.' },
+      { error: 'An error occurred while fetching addons.' },
       { status: 500 }
     );
   }

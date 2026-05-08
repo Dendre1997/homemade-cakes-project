@@ -71,7 +71,7 @@ const ProductCard = ({ product, validDiscounts = [] }: ProductCardProps) => {
                       ${finalPrice.toFixed(2)}
                     </span>
                     {/* Old Price (Small & Crossed Out) */}
-                    <span className="text-sm text-gray-400 line-through decoration-gray-400">
+                    <span className="text-sm text-gray-400 line-through Addon-gray-400">
                       ${originalPrice.toFixed(2)}
                     </span>
                   </div>

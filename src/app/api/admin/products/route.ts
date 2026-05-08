@@ -1,3 +1,4 @@
+import { verifyAdminAPI } from "@/lib/auth/adminOnly";
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from "next/cache";
 import clientPromise from '@/lib/db';
@@ -7,6 +8,9 @@ import { generateSlug } from '../../../../lib/utils';
 
 // GET
 export async function GET(request: NextRequest) {
+  const auth = await verifyAdminAPI();
+  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
   try {
     const searchParams = request.nextUrl.searchParams;
     const context = searchParams.get('context')
@@ -57,6 +61,9 @@ export async function GET(request: NextRequest) {
 
 // POST
 export async function POST(request: NextRequest) {
+  const auth = await verifyAdminAPI();
+  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
   try {
     const body: Partial<Product> = await request.json();
 
@@ -75,7 +82,8 @@ export async function POST(request: NextRequest) {
       // New Fields
       productType,
       availableQuantityConfigs,
-      comboConfig
+      comboConfig,
+      defaultAddons
     } = body;
 
     // RULE: Auto-set Base Price for Sets
@@ -139,6 +147,10 @@ export async function POST(request: NextRequest) {
       productType: productType || 'cake',
       availableQuantityConfigs: availableQuantityConfigs || [],
       comboConfig: processedComboConfig,
+      defaultAddons: defaultAddons?.map((da) => ({
+          addonId: new ObjectId(String(da.addonId)),
+          variantId: new ObjectId(String(da.variantId))
+      })) || [],
     };
     
     // SLUG GENERATION

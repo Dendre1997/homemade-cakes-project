@@ -1,3 +1,4 @@
+import { verifyAdminAPI } from "@/lib/auth/adminOnly";
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import clientPromise from "@/lib/db";
@@ -13,6 +14,9 @@ interface Context {
 
 
 export async function PUT(request: NextRequest, { params }: Context) {
+  const auth = await verifyAdminAPI();
+  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
   try {
     const { id } = await params;
     const { name, description, imageUrl }: Partial<Collection> =
@@ -84,6 +88,9 @@ export async function PUT(request: NextRequest, { params }: Context) {
 }
 
 export async function DELETE(_request: Request, { params }: Context) {
+  const auth = await verifyAdminAPI();
+  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
   try {
     const { id } = await params;
     const client = await clientPromise;

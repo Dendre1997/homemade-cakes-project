@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { MessageCircle, Send, Loader2, Bot, Cat, ChevronLeft, PlusCircle, Mail, Phone } from "lucide-react";
 import { AppSettings, IChat, IMessage, Flavor, Diameter } from "@/types";
-import { pusherClient } from "@/lib/pusher";
+import { pusherClient } from "@/lib/pusher-client";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card, CardContent } from "@/components/ui/Card";
@@ -602,7 +602,7 @@ export default function ContactClient({ initialSettings, isAuthenticated = false
                         disabled={isCreating}
                     >
                         {isCreating ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <MessageCircle className="mr-2 h-5 w-5" />}
-                        Yes, I have a question
+                        Start Chat
                     </Button>
                 </div>
             </div>

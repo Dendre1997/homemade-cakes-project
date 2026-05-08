@@ -7,7 +7,7 @@ import { getChatCollection } from "@/lib/api/chat";
 export async function GET(req: NextRequest) {
   try {
     const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get("session")?.value;
+    const sessionCookie = cookieStore.get("admin_session")?.value;
 
     if (!sessionCookie) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

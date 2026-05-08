@@ -1,8 +1,12 @@
+import { verifyAdminAPI } from "@/lib/auth/adminOnly";
 import { NextRequest, NextResponse } from "next/server";
 import clientPromise from "@/lib/db";
 import { ObjectId } from "mongodb";
 
 export async function GET(request: NextRequest) {
+  const auth = await verifyAdminAPI();
+  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
   try {
     const searchParams = request.nextUrl.searchParams;
     const startDateParam = searchParams.get("startDate");
@@ -64,7 +68,9 @@ export async function GET(request: NextRequest) {
           salesOverTime: [
             {
               $group: {
-                _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+                _id: {
+                  $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+                },
                 revenue: { $sum: "$totalAmount" },
                 orders: { $count: {} },
               },
@@ -75,12 +81,48 @@ export async function GET(request: NextRequest) {
           // Flavor Stats (Pie Chart)
           flavorStats: [
             { $unwind: "$items" },
+            // Extract flavorId from the nested selectedConfig or top-level field
+            {
+              $addFields: {
+                resolvedFlavorId: {
+                  $ifNull: [
+                    "$items.selectedConfig.cake.flavorId",
+                    "$items.flavorId",
+                  ],
+                },
+              },
+            },
+            // Pipeline $lookup: compare string representations of both IDs
+            {
+              $lookup: {
+                from: "flavors",
+                let: { fid: "$resolvedFlavorId" },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $eq: [{ $toString: "$_id" }, { $toString: "$$fid" }],
+                      },
+                    },
+                  },
+                  { $project: { name: 1 } },
+                ],
+                as: "flavorDoc",
+              },
+            },
             {
               $group: {
-                _id: "$items.flavor",
+                _id: {
+                  $cond: {
+                    if: { $gt: [{ $size: "$flavorDoc" }, 0] },
+                    then: { $arrayElemAt: ["$flavorDoc.name", 0] },
+                    else: "Unknown",
+                  },
+                },
                 count: { $sum: "$items.quantity" },
               },
             },
+            { $match: { _id: { $ne: "Unknown" } } },
             { $sort: { count: -1 } },
             { $limit: 5 }, // Top 5 flavors
           ],
@@ -90,40 +132,37 @@ export async function GET(request: NextRequest) {
             { $unwind: "$items" },
             {
               $addFields: {
-                productObjectId: { $toObjectId: "$items.productId" }
-              }
-            },
-            {
-              $lookup: {
-                from: "products",
-                localField: "productObjectId",
-                foreignField: "_id",
-                as: "productInfo"
-              }
-            },
-            { $unwind: "$productInfo" },
-            {
-              $addFields: {
-                categoryObjectId: { $toObjectId: "$productInfo.categoryId" }
-              }
+                // Look directly at the item's categoryId instead of the product
+                categoryObjectId: { $toObjectId: "$items.categoryId" },
+              },
             },
             {
               $lookup: {
                 from: "categories",
                 localField: "categoryObjectId",
                 foreignField: "_id",
-                as: "categoryInfo"
-              }
+                as: "categoryInfo",
+              },
             },
-            { $unwind: "$categoryInfo" },
+            // preserveNullAndEmptyArrays prevents the pipeline from crashing
+            // if an item somehow has a deleted or missing category
+            {
+              $unwind: {
+                path: "$categoryInfo",
+                preserveNullAndEmptyArrays: true,
+              },
+            },
             {
               $group: {
-                _id: "$categoryInfo.name",
+                // Fallback to "Custom / Other" if the category was deleted
+                _id: { $ifNull: ["$categoryInfo.name", "Custom / Other"] },
                 count: { $sum: "$items.quantity" },
-                revenue: { $sum: { $multiply: ["$items.price", "$items.quantity"] } }
-              }
+                revenue: {
+                  $sum: { $multiply: ["$items.price", "$items.quantity"] },
+                },
+              },
             },
-            { $sort: { revenue: -1 } }
+            { $sort: { revenue: -1 } },
           ],
 
           // Diameter Stats (Bar Chart) - WITH LOOKUP
@@ -159,8 +198,10 @@ export async function GET(request: NextRequest) {
             {
               $group: {
                 _id: { $toObjectId: "$items.productId" },
-                totalSold: { $sum: "$items.quantity" }, 
-                revenue: { $sum: { $multiply: ["$items.price", "$items.quantity"] } },
+                totalSold: { $sum: "$items.quantity" },
+                revenue: {
+                  $sum: { $multiply: ["$items.price", "$items.quantity"] },
+                },
               },
             },
             {
@@ -204,10 +245,12 @@ export async function GET(request: NextRequest) {
                 _id: {
                   productId: { $toObjectId: "$items.productId" },
                   flavor: "$items.flavor",
-                  diameterId: { $toObjectId: "$items.diameterId" }
+                  diameterId: { $toObjectId: "$items.diameterId" },
                 },
                 quantity: { $sum: "$items.quantity" },
-                revenue: { $sum: { $multiply: ["$items.price", "$items.quantity"] } },
+                revenue: {
+                  $sum: { $multiply: ["$items.price", "$items.quantity"] },
+                },
               },
             },
             {
@@ -247,8 +290,8 @@ export async function GET(request: NextRequest) {
             {
               $addFields: {
                 productObjectId: { $toObjectId: "$items.productId" },
-                diameterObjectId: { $toObjectId: "$items.diameterId" }
-              }
+                diameterObjectId: { $toObjectId: "$items.diameterId" },
+              },
             },
             {
               $lookup: {
@@ -266,20 +309,32 @@ export async function GET(request: NextRequest) {
                 as: "diameterInfo",
               },
             },
-            { $unwind: { path: "$productInfo", preserveNullAndEmptyArrays: true } },
-            { $unwind: { path: "$diameterInfo", preserveNullAndEmptyArrays: true } },
+            {
+              $unwind: {
+                path: "$productInfo",
+                preserveNullAndEmptyArrays: true,
+              },
+            },
+            {
+              $unwind: {
+                path: "$diameterInfo",
+                preserveNullAndEmptyArrays: true,
+              },
+            },
             {
               $project: {
                 _id: 0,
                 date: "$createdAt",
-                productName: { $ifNull: ["$productInfo.name", "Unknown Product"] },
+                productName: {
+                  $ifNull: ["$productInfo.name", "Unknown Product"],
+                },
                 flavor: "$items.flavor",
                 size: { $ifNull: ["$diameterInfo.name", "Unknown Size"] },
                 price: "$items.price",
-                quantity: "$items.quantity"
-              }
+                quantity: "$items.quantity",
+              },
             },
-            { $sort: { date: -1 } }
+            { $sort: { date: -1 } },
           ],
 
           // Discount Stats (Granular - Per Item - Promo Codes)
@@ -290,7 +345,9 @@ export async function GET(request: NextRequest) {
               $group: {
                 _id: "$discountInfo.code",
                 totalItemsSold: { $sum: "$items.quantity" },
-                totalRevenue: { $sum: { $multiply: ["$items.price", "$items.quantity"] } }
+                totalRevenue: {
+                  $sum: { $multiply: ["$items.price", "$items.quantity"] },
+                },
               },
             },
             { $sort: { totalItemsSold: -1 } },
@@ -302,26 +359,28 @@ export async function GET(request: NextRequest) {
             { $match: { "items.discountId": { $exists: true, $ne: null } } },
             {
               $addFields: {
-                discountObjectId: { $toObjectId: "$items.discountId" }
-              }
+                discountObjectId: { $toObjectId: "$items.discountId" },
+              },
             },
             {
               $lookup: {
                 from: "discounts",
                 localField: "discountObjectId",
                 foreignField: "_id",
-                as: "discountDoc"
-              }
+                as: "discountDoc",
+              },
             },
             { $unwind: "$discountDoc" },
             {
               $group: {
                 _id: "$discountDoc.name",
                 totalItemsSold: { $sum: "$items.quantity" },
-                totalRevenue: { $sum: { $multiply: ["$items.price", "$items.quantity"] } }
-              }
+                totalRevenue: {
+                  $sum: { $multiply: ["$items.price", "$items.quantity"] },
+                },
+              },
             },
-            { $sort: { totalItemsSold: -1 } }
+            { $sort: { totalItemsSold: -1 } },
           ],
 
           // Source Stats (Pie Chart)

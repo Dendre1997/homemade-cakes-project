@@ -9,7 +9,7 @@ import {
 import { AlertTriangle, Image as ImageIcon, Trash2, Plus, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { useRef } from "react";
-import { DecorationAdminSelector } from "@/components/admin/decorations/DecorationAdminSelector";
+import { AddonAdminSelector } from "@/components/admin/addons/AddonAdminSelector";
 
 interface CustomOrderSpecsFormProps {
   order: any;
@@ -107,10 +107,10 @@ export const CustomOrderSpecsForm = ({
        </div>
 
        <div className="space-y-sm">
-          <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Decorations</Label>
-          <DecorationAdminSelector 
-             selectedDecorations={order.decorations || []}
-             onChange={(newDecorations) => onChange("decorations", newDecorations)}
+          <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Addons</Label>
+          <AddonAdminSelector 
+             selectedAddons={order.addons || []}
+             onChange={(newAddons) => onChange("Addons", newAddons)}
           />
        </div>
 

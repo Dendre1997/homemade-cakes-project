@@ -23,7 +23,7 @@ const SeasonalHeaderBar = () => {
 
         <Link
           href={`/specials/${activeEvent.slug}`}
-          className="group flex items-center gap-1 text-sm font-bold text-white underline decoration-white/50 underline-offset-4 hover:decoration-white transition-all"
+          className="group flex items-center gap-1 text-sm font-bold text-white underline Addon-white/50 underline-offset-4 hover:Addon-white transition-all"
         >
           Shop Collection
           <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />

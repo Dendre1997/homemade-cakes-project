@@ -1,9 +1,13 @@
+import { verifyAdminAPI } from "@/lib/auth/adminOnly";
 import { NextRequest, NextResponse } from 'next/server';
 import clientPromise from '@/lib/db';
 import { Flavor } from '@/types';
 
 // POST
 export async function POST(request: NextRequest) {
+  const auth = await verifyAdminAPI();
+  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
   try {
     const body = await request.json();
 
@@ -45,6 +49,9 @@ export async function POST(request: NextRequest) {
 
 
 export async function GET(request: NextRequest) {
+  const auth = await verifyAdminAPI();
+  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
   try {
     const searchParams = request.nextUrl.searchParams;
     const categoryId = searchParams.get('categoryId')

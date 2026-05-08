@@ -1,3 +1,4 @@
+import { verifyAdminAPI } from "@/lib/auth/adminOnly";
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from "next/cache";
 import clientPromise from '@/lib/db';
@@ -11,6 +12,9 @@ interface Context {
 
 
 export async function GET(_request: Request, { params }: Context) {
+  const auth = await verifyAdminAPI();
+  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
   try {
     const { id } = await params;
     const client = await clientPromise;
@@ -82,6 +86,9 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = await verifyAdminAPI();
+  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
   const client = await clientPromise;
   const db = client.db(process.env.MONGODB_DB_NAME);
 
@@ -165,6 +172,12 @@ export async function PUT(
         (id: string) => new ObjectId(id)
       );
     }
+    if (body.defaultAddons) {
+      body.defaultAddons = body.defaultAddons.map((da: any) => ({
+          addonId: new ObjectId(String(da.addonId)),
+          variantId: new ObjectId(String(da.variantId))
+      }));
+    }
     
     // Convert Combo Config IDs if present
     if (body.comboConfig) {
@@ -222,6 +235,9 @@ export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = await verifyAdminAPI();
+  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
   try {
     const { id } = await params;
     const client = await clientPromise;

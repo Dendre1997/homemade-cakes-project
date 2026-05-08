@@ -5,8 +5,8 @@ import clientPromise from "@/lib/db";
 
 export async function verifyAdmin() {
   const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get("session")?.value;
-  if (!sessionCookie) redirect("/login");
+  const sessionCookie = cookieStore.get("admin_session")?.value;
+  if (!sessionCookie) redirect("/bakery-manufacturing-orders/login");
 
   try {
     const decodedToken = await adminAuth.verifySessionCookie(
@@ -14,17 +14,35 @@ export async function verifyAdmin() {
       true
     );
 
-    const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB_NAME);
-    const user = await db
-      .collection("users")
-      .findOne({ firebaseUid: decodedToken.uid });
-      
-    if (!user || user.role !== "admin") {
-      throw new Error("Not an admin");
+    if (decodedToken.admin === true) {
+      return { user: { role: "admin", firebaseUid: decodedToken.uid } };
     }
-    return { user };
+
+    throw new Error("Not an admin");
   } catch (error) {
-    redirect("/");
+    redirect("/bakery-manufacturing-orders/login");
+  }
+}
+
+export async function verifyAdminAPI() {
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get("admin_session")?.value;
+  if (!sessionCookie) {
+    return { error: "Unauthorized", status: 401 };
+  }
+
+  try {
+    const decodedToken = await adminAuth.verifySessionCookie(
+      sessionCookie,
+      true
+    );
+
+    if (decodedToken.admin === true) {
+      return { user: { role: "admin", firebaseUid: decodedToken.uid } };
+    }
+
+    return { error: "Forbidden", status: 403 };
+  } catch (error) {
+    return { error: "Unauthorized", status: 401 };
   }
 }

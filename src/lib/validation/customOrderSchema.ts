@@ -58,9 +58,10 @@ export const customOrderSchema = z.object({
   agreedPrice: z.number().optional(),
   approximatePrice: z.number().optional(),
   adminNotes: z.string().optional(),
-  decorations: z.array(z.object({
-    decorationId: z.string(),
+  addons: z.array(z.object({
+    addonId: z.string(),
     name: z.string(),
+    variantId: z.string().optional(),
     variantName: z.string(),
     price: z.number(),
     imageUrl: z.string().optional(),

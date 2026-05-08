@@ -30,10 +30,10 @@ const catalogSections = [
     href: "/bakery-manufacturing-orders/catalog/flavors",
   },
   {
-    title: "Decorations",
-    description: "Set up decoration options and pricing.",
+    title: "Addons",
+    description: "Set up Addon options and pricing.",
     icon: <PartyPopper className="h-8 w-8" />,
-    href: "/bakery-manufacturing-orders/catalog/decorations",
+    href: "/bakery-manufacturing-orders/catalog/addons",
   },
   {
     title: "Diameters",

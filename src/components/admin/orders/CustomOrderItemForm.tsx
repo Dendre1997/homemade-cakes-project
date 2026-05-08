@@ -12,8 +12,8 @@ import ImageSelector from "@/components/admin/custom-orders/ImageSelector";
 import { getPublicIdFromUrl } from "@/lib/cloudinaryUtils";
 import { Plus } from "lucide-react";
 import { useAlert } from "@/contexts/AlertContext";
-import { DecorationAdminSelector } from "@/components/admin/decorations/DecorationAdminSelector";
-import { SelectedDecoration } from "@/types";
+import { AddonAdminSelector } from "@/components/admin/addons/AddonAdminSelector";
+import { SelectedAddon } from "@/types";
 
 // Icons Imports
 import { FourInchBentoIcon } from "@/components/icons/cake-sizes/FourInchBentoIcon";
@@ -54,9 +54,10 @@ interface CustomOrderItemFormProps {
       flavorValue: string;
       designInstructions?: string;
       inscription?: string;
-      decorations?: SelectedDecoration[];
+      addons?: SelectedAddon[];
       price: number;
       quantity?: number;
+      categoryId?: string;
   };
   submitLabel?: string;
 }
@@ -92,7 +93,7 @@ export default function CustomOrderItemForm({
   }, []);
 
   // -- State --
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>(initialValues?.categoryId || "");
   const [images, setImages] = useState<string[]>(initialValues?.images || []);
   const [selectedImage, setSelectedImage] = useState<string>(initialValues?.selectedImage || "");
   const [sizeValue, setSizeValue] = useState<string>(initialValues?.sizeValue || "");
@@ -101,7 +102,7 @@ export default function CustomOrderItemForm({
   const [inscription, setInscription] = useState<string>(initialValues?.inscription || "");
   const [price, setPrice] = useState<number>(initialValues?.price || 0);
   const [quantity, setQuantity] = useState<number>(initialValues?.quantity || 1);
-  const [selectedDecorations, setSelectedDecorations] = useState<SelectedDecoration[]>(initialValues?.decorations || []);
+  const [selectedAddons, setSelectedAddons] = useState<SelectedAddon[]>(initialValues?.addons || []);
   
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -263,7 +264,8 @@ export default function CustomOrderItemForm({
           isCustom: true,
           designInstructions: designInstructions,
           inscription: inscription,
-          decorations: selectedDecorations,
+          addons: selectedAddons,
+          categoryId: selectedCategoryId,
           
           // Hybrid Logic
           customSize: isCustomSize ? sizeValue : undefined,
@@ -293,7 +295,7 @@ export default function CustomOrderItemForm({
           setPrice(0);
           setQuantity(1);
           setSelectedCategoryId("");
-          setSelectedDecorations([]);
+          setSelectedAddons([]);
       }
   };
 
@@ -479,20 +481,20 @@ export default function CustomOrderItemForm({
                  </div>
 
                  <div className="pt-4 border-t mt-4">
-                     <DecorationAdminSelector 
-                         selectedDecorations={selectedDecorations}
-                         onChange={setSelectedDecorations}
+                     <AddonAdminSelector 
+                         selectedAddons={selectedAddons}
+                         onChange={setSelectedAddons}
                      />
                  </div>
 
                  <div className="pt-4 border-t mt-4">
-                     <div className="flex flex-col sm:flex-row gap-4">
+                     <div className="gap-4">
                          <div>
                              <Label className="mb-2 block">Quantity Multiplier</Label>
                              <Input 
                                  type="number"
                                  min="1"
-                                 className="text-2xl font-bold w-full sm:w-24 bg-white"
+                                 className="text-2xl font-bold w-full"
                                  value={quantity}
                                  onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
                              />
@@ -503,7 +505,7 @@ export default function CustomOrderItemForm({
                                  type="number" 
                                  min="0"
                                  step="0.01"
-                                 className="text-2xl font-bold w-full sm:w-36 bg-white"
+                                 className="text-2xl font-bold w-full"
                                  placeholder="0.00"
                                  value={price || ""}
                                  onChange={(e) => setPrice(parseFloat(e.target.value))}
@@ -521,9 +523,9 @@ export default function CustomOrderItemForm({
              <div className="lg:col-span-2 flex flex-col sm:flex-row items-center gap-4 pt-6 mt-4 border-t border-primary/20 bg-primary/5 p-4 rounded-xl w-full">
                  <div className="font-bold text-2xl text-primary shrink-0 sm:w-1/3 text-center sm:text-left flex flex-col">
                      <span>Total: ${(price * quantity).toFixed(2)}</span>
-                     {selectedDecorations.length > 0 && (
+                     {selectedAddons.length > 0 && (
                          <span className="text-xs font-normal text-muted-foreground">
-                             Decorations total: +${selectedDecorations.reduce((sum, d) => sum + d.price, 0).toFixed(2)} (Must be manually added to Fixed Price if desired)
+                             Addons total: +${selectedAddons.reduce((sum, d) => sum + d.price, 0).toFixed(2)} (Must be manually added to Fixed Price if desired)
                          </span>
                      )}
                  </div>

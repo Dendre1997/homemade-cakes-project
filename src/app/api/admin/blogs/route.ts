@@ -1,9 +1,13 @@
+import { verifyAdminAPI } from "@/lib/auth/adminOnly";
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import clientPromise from "@/lib/db";
 import { Blog } from "@/types";
 
 export async function POST(request: NextRequest) {
+  const auth = await verifyAdminAPI();
+  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
   try {
     const data = await request.json();
     const { title, slug, content, imageUrl, isActive, publishedAt } = data;

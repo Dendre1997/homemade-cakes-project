@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { adminAuth } from "@/lib/firebase/adminApp";
 import clientPromise from "@/lib/db";
 import { getChatCollection } from "@/lib/api/chat";
-import { pusherServer } from "@/lib/pusher";
+import { pusherServer } from "@/lib/pusher-server";
 import { ObjectId } from "mongodb";
 import { IMessage } from "@/types";
 

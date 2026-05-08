@@ -473,7 +473,7 @@ export default function CustomOrderDesigner({
                     </div>
 
                     <div className="space-y-2">
-                        <Label>Final Decoration Description</Label>
+                        <Label>Final Addon Description</Label>
                         <Textarea 
                             rows={5}
                             value={finalDescription}

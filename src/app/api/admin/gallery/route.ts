@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { adminAuth } from "@/lib/firebase/adminApp";
 import clientPromise, { getGalleryCollection } from "@/lib/db";
+import { ObjectId } from "mongodb";
 import { User, IGalleryImage } from "@/types";
 
 /**
@@ -9,7 +10,7 @@ import { User, IGalleryImage } from "@/types";
  */
 async function isAdmin() {
   const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get("session")?.value;
+  const sessionCookie = cookieStore.get("admin_session")?.value;
 
   if (!sessionCookie) return false;
 
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { imageUrl, title, description, categories, decorationPrice, isActive } = body;
+    const { imageUrl, title, description, categories, decorationPrice, isActive, defaultAddons } = body;
 
     // Basic validation
     if (!imageUrl || !title) {
@@ -68,6 +69,10 @@ export async function POST(request: NextRequest) {
       isActive: isActive !== undefined ? !!isActive : true,
       createdAt: new Date(),
       updatedAt: new Date(),
+      defaultAddons: defaultAddons?.map((da: any) => ({
+          addonId: new ObjectId(String(da.addonId)),
+          variantId: new ObjectId(String(da.variantId))
+      })) || [],
     };
 
     const result = await collection.insertOne(newImage as any);

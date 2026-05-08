@@ -278,7 +278,7 @@ const button = {
   color: "#FFFFFF",
   fontSize: "16px",
   fontWeight: "bold",
-  textDecoration: "none",
+  textAddon: "none",
   textAlign: "center" as const,
   display: "inline-block",
   padding: "12px 24px",
