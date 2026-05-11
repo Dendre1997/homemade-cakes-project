@@ -79,6 +79,18 @@ export async function POST(
     const primaryImage =
       customOrder.referenceImages?.length > 0 ? customOrder.referenceImages[0] : "";
 
+    // Resolve category name -> ObjectId
+    // The customOrder.category may have trailing 's' stripped (e.g. "Cake" instead of "Cakes")
+    const categoryName = customOrder.category || "";
+    const categoryDoc = await db.collection("categories").findOne({
+      $or: [
+        { name: categoryName },
+        { name: categoryName + "s" },
+        { name: categoryName + "S" },
+      ],
+    });
+    const resolvedCategoryId = categoryDoc ? new ObjectId(categoryDoc._id) : null;
+
     const item = {
       id: `${newOrderId.toString()}-custom-1`,
       name: `Custom ${customOrder.category}`,
@@ -95,6 +107,7 @@ export async function POST(
       rowTotal: Number(agreedPrice),
       inscription: customOrder.details?.textOnCake,
       designInstructions: customOrder.details?.designNotes,
+      categoryId: resolvedCategoryId,
       addons: customOrder.addons || [],
     };
 

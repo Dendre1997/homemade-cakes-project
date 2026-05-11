@@ -187,9 +187,6 @@ export default function Step4Design() {
         <p className="text-primary/70 mt-2">
           Pick from our catalog or upload your own references.
         </p>
-        <p className="text-primary/70 mt-2">
-          Pick from our catalog or upload your own references.
-        </p>
       </div>
 
       <div className="space-y-10">
