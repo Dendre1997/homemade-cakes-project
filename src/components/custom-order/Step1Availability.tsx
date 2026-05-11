@@ -10,11 +10,11 @@ import Spinner from "@/components/ui/Spinner";
 export default function Step1Availability({ onNext }: { onNext: () => void }) {
   const { control, watch, setValue, formState: { errors } } = useFormContext<CustomOrderFormData>();
   
-  const [availability, setAvailability] = useState<{ 
-    unavailableDates: string[], 
-    leadTimeDays: number,
-    defaultAvailableHours: string[],
-    dateOverrides: any[]
+  const [availability, setAvailability] = useState<{
+    unavailableDates: string[];
+    leadTimeDays: number;
+    defaultAvailableHours: string[];
+    dateOverrides: any[];
   } | null>(null);
   const [checkoutSettings, setCheckoutSettings] = useState<any>(null);
   
@@ -46,32 +46,36 @@ export default function Step1Availability({ onNext }: { onNext: () => void }) {
   useEffect(() => {
     async function fetchAvailability() {
       try {
-        const [availRes, settingsRes] = await Promise.all([
-           fetch("/api/availability"),
-           fetch("/api/admin/settings")
+        // Two public, unauthenticated endpoints — safe for any client.
+        // /api/shop/calendar-blocks  → blocked dates + lead time + time slots
+        // /api/shop/availability-settings → delivery toggle state
+        const [blocksRes, settingsRes] = await Promise.all([
+          fetch("/api/shop/calendar-blocks"),
+          fetch("/api/shop/availability-settings"),
         ]);
 
-        if (availRes.ok) {
-          const data = await availRes.json();
-          // Map to the format CustomDatePicker accepts
-          const unavailableArray = [
-            ...(data.adminBlockedDates || []),
-            ...Object.keys(data.availableMinutesPerDay || {}).filter(date => data.availableMinutesPerDay[date] <= 0)
-          ];
+        if (blocksRes.ok) {
+          const data = await blocksRes.json();
           setAvailability({
-            unavailableDates: unavailableArray,
-            leadTimeDays: data.leadTimeDays || 7, // Default 7 days
-            defaultAvailableHours: data.defaultAvailableHours || ["10:00 AM", "12:00 PM", "2:00 PM", "4:00 PM"],
-            dateOverrides: data.dateOverrides || []
+            // The server already returns a pre-computed blocked-date array.
+            // No capacity math needed on the client side.
+            unavailableDates: data.blockedDates ?? [],
+            leadTimeDays: data.leadTimeDays ?? 7,
+            defaultAvailableHours: data.defaultAvailableHours?.length
+              ? data.defaultAvailableHours
+              : ["10:00 AM", "12:00 PM", "2:00 PM", "4:00 PM"],
+            // calendar-blocks does not expose per-date overrides (intentional);
+            // time slots default to defaultAvailableHours for all days.
+            dateOverrides: [],
           });
         }
 
         if (settingsRes.ok) {
-           const settingsData = await settingsRes.json();
-           setCheckoutSettings(settingsData.checkout || null);
+          const settingsData = await settingsRes.json();
+          setCheckoutSettings(settingsData.checkout ?? null);
         }
       } catch (e) {
-        console.error("Failed to load availability or settings", e);
+        console.error("Failed to load calendar data", e);
       } finally {
         setIsLoading(false);
       }
