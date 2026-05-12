@@ -1,9 +1,12 @@
+"use client";
+
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { Order, CartItem, Diameter } from "@/types";
 import { format } from "date-fns";
 import { Truck, Store } from "lucide-react";
 import HeaderLogo from "@/components/ui/HeaderLogo";
+import { SocialHandleAnchor } from "@/components/ui/SocialHandleAnchor";
 
 interface ClientReceiptCardProps {
   order: Order;
@@ -134,6 +137,18 @@ export const ClientReceiptCard = ({
           {order.customerInfo.email && !order.customerInfo.email.includes("placeholder.com") && (
             <p className="text-primary/40">{order.customerInfo.email}</p>
           )}
+          {order.customerInfo.socialPlatform &&
+            order.customerInfo.socialNickname?.trim() && (
+              <p className="text-primary/50 mt-1 text-sm">
+                <span className="font-semibold text-primary/60">Social: </span>
+                <SocialHandleAnchor
+                  platform={order.customerInfo.socialPlatform}
+                  nickname={order.customerInfo.socialNickname}
+                  showPlatform
+                  className="text-primary/80 font-medium hover:underline"
+                />
+              </p>
+            )}
         </div>
       </div>
 

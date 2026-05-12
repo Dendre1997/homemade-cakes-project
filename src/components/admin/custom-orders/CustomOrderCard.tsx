@@ -4,7 +4,7 @@ import { CustomOrder } from "@/types";
 import { format } from "date-fns";
 import { 
   Calendar, Phone, Mail, Copy, CheckCircle2, 
-  Trash2, AlertTriangle, Instagram, Globe, 
+  Trash2, AlertTriangle, Instagram, Facebook, Globe, 
   ScrollText, Layers, Box, Cake
 } from "lucide-react";
 import Image from "next/image";
@@ -16,6 +16,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
 import { useAlert } from "@/contexts/AlertContext";
+import { SocialHandleAnchor } from "@/components/ui/SocialHandleAnchor";
 
 interface CustomOrderCardProps {
   order: CustomOrder & Record<string, any>;
@@ -92,6 +93,11 @@ export const CustomOrderCard = ({ order }: CustomOrderCardProps) => {
   const displayPhone = order.contact?.phone || order.customerPhone;
   const orderDate = order.date || order.eventDate;
 
+  const hasSocialProfileLink =
+    !!order.contact?.socialNickname?.trim() &&
+    (order.contact?.socialPlatform === "instagram" ||
+      order.contact?.socialPlatform === "facebook");
+
   return (
     <div className="flex flex-col h-full bg-white rounded-[16px] shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border-none relative">
         <Link 
@@ -117,14 +123,21 @@ export const CustomOrderCard = ({ order }: CustomOrderCardProps) => {
           </span>
         </div>
 
-        {/* Customer Info */}
-        <div className="px-5 py-2 mt-1 border-b border-dashed border-[#f0f0f0]">
+        {/* Customer Info (must not contain <a> — outer wrapper is Next.js <Link> = <a>) */}
+        <div
+          className={cn(
+            "px-5 py-2 mt-1 border-dashed border-[#f0f0f0]",
+            hasSocialProfileLink ? "border-b-0 pb-1" : "border-b"
+          )}
+        >
           <div className="flex justify-between items-center">
             <h3 className="font-heading text-lg text-[#231416] leading-tight line-clamp-1">
               {displayName}
             </h3>
             {order.contact?.socialPlatform === "instagram" ? (
                <Instagram className="w-3.5 h-3.5 text-[#764a4d]" />
+            ) : order.contact?.socialPlatform === "facebook" ? (
+               <Facebook className="w-3.5 h-3.5 text-[#764a4d]" />
             ) : (
                <Globe className="w-3.5 h-3.5 text-[#764a4d]" />
             )}
@@ -197,6 +210,22 @@ export const CustomOrderCard = ({ order }: CustomOrderCardProps) => {
         </div>
 
         </Link>
+
+        {/* Outside <Link>: real <a> for social — avoids invalid nested anchors + hydration errors */}
+        {hasSocialProfileLink && (
+          <div className="px-5 pb-2 pt-0 border-b border-dashed border-[#f0f0f0]">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-[#A39E9A] mb-1">
+              Open profile
+            </p>
+            <SocialHandleAnchor
+              platform={order.contact?.socialPlatform}
+              nickname={order.contact?.socialNickname}
+              showPlatform
+              className="text-[#764a4d] font-semibold hover:underline text-sm break-all"
+            />
+          </div>
+        )}
+
         {/* Footer: Conversion / Actions */}
         <div className="px-5 pb-4 pt-2 mt-auto border-t border-gray-50 bg-gray-50/30">
            {!paymentLink ? (

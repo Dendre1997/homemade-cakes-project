@@ -47,7 +47,8 @@ interface OrderDetailActionsProps {
   handleSaveSplitDates: () => void;
   handleAdminAllocateItem: (item: CartItem) => void;
   handleAdminUnallocateItem: (unitId: string, date: Date) => void;
-  setAdminPopupDate: (date: Date | null) => void;
+  setAdminPopupDate: (date: Date | null) => void
+  onSourceUpdate: (source: string) => void;
 }
 
 export const OrderDetailActions = ({
@@ -79,6 +80,7 @@ export const OrderDetailActions = ({
   handleAdminAllocateItem,
   handleAdminUnallocateItem,
   setAdminPopupDate,
+  onSourceUpdate,
 }: OrderDetailActionsProps) => {
   const getItemDetails = (unitId: string) => {
     const originalItemId = extractOriginalItemId(unitId);
@@ -149,7 +151,27 @@ export const OrderDetailActions = ({
           <h2 className="font-heading text-h3 text-primary mb-md">
             Order Status & Actions
           </h2>
-
+          {/* ── Order Source ───────────────────────────────────── */}
+          <div>
+            <label className="block font-body text-small text-primary/80 mb-sm">
+              Order Source
+            </label>
+            <Select
+              value={order.source ?? ""}
+              onValueChange={(value) => onSourceUpdate(value)}
+            >
+              <SelectTrigger className="w-full bg-white">
+                <SelectValue placeholder="Select Source" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="web">Website</SelectItem>
+                <SelectItem value="instagram">Instagram Direct</SelectItem>
+                <SelectItem value="facebook">Facebook</SelectItem>
+                <SelectItem value="phone">Phone Call</SelectItem>
+                <SelectItem value="other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           {isEditingDates ? (
             <>
               {editMode === null && (

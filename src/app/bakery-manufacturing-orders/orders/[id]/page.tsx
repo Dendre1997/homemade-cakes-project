@@ -202,6 +202,23 @@ const OrderDetailsPage = () => {
     }
   };
 
+  const handleSourceUpdate = async (source: string) => {
+    try {
+      const res = await fetch(`/api/admin/orders/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ source }),
+      });
+      if (!res.ok) throw new Error("Failed to update source");
+      showAlert("Order source updated!", "success");
+      fetchOrderAndDiameters();
+    } catch (error) {
+      console.error(error);
+      showAlert("Error updating source", "error");
+    }
+  };
+
+
   const handleToggleEditDates = () => {
     const enteringEditMode = !isEditingDates;
     setIsEditingDates(enteringEditMode);
@@ -696,6 +713,8 @@ const OrderDetailsPage = () => {
           <OrderDetailCustomer
             customerInfo={order.customerInfo}
             deliveryInfo={order.deliveryInfo}
+            orderId={order._id.toString()}
+            onUpdate={fetchOrderAndDiameters}
           />
 
           <OrderDetailActions
@@ -727,6 +746,7 @@ const OrderDetailsPage = () => {
             handleAdminAllocateItem={handleAdminAllocateItem}
             handleAdminUnallocateItem={handleAdminUnallocateItem}
             setAdminPopupDate={setAdminPopupDate}
+            onSourceUpdate={handleSourceUpdate}
           />
         </div>
       </div>

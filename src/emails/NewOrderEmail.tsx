@@ -62,6 +62,13 @@ export const NewOrderEmail = ({ order }: NewOrderEmailProps) => (
           <Text style={details}>
             <strong>Phone:</strong> {order.customerInfo.phone}
           </Text>
+          {order.customerInfo.socialPlatform &&
+            order.customerInfo.socialNickname?.trim() && (
+              <Text style={details}>
+                <strong>Social ({order.customerInfo.socialPlatform}):</strong> @
+                {order.customerInfo.socialNickname.replace(/^@+/, "").replace(/\s+/g, "")}
+              </Text>
+            )}
 
           <Hr style={hr} />
 

@@ -40,7 +40,7 @@ export async function POST(
 
     const { id } = await params;
     const body = await req.json();
-    const { agreedPrice, adminNotes } = body;
+    const { agreedPrice, adminNotes, date, timeSlot, deliveryMethod } = body;
 
     if (!agreedPrice || agreedPrice <= 0) {
       return NextResponse.json(
@@ -117,25 +117,35 @@ export async function POST(
         ? `⚠️ ALLERGIES: ${customOrder.allergies}`
         : null;
 
+    const contact = customOrder.contact || {};
+    const legalName = (contact.name as string | undefined)?.trim?.() || "";
+    const socialNick = (contact.socialNickname as string | undefined)?.trim?.() || "";
+    const socialPlat = contact.socialPlatform as "instagram" | "facebook" | undefined;
+
     const newOrder: any = {
       _id: newOrderId,
       items: [item],
       totalAmount: Number(agreedPrice),
       customerInfo: {
-        name: customOrder.contact?.name || customOrder.contact?.socialNickname || "Customer",
-        email: customOrder.contact?.email || "",
-        phone: customOrder.contact?.phone || "",
+        // Keep display name separate from social handle so ops data is not lost
+        name: legalName || "Customer",
+        email: contact.email || "",
+        phone: contact.phone || "",
+        socialNickname: socialNick || undefined,
+        socialPlatform: socialPlat,
         notes: ["Converted from Custom Request", allergyNote]
           .filter(Boolean)
           .join(" | "),
       },
       deliveryInfo: {
-        method: "pickup",
+        method: (deliveryMethod ?? customOrder.deliveryMethod) || "pickup",
         deliveryDates: [
           {
-            date: new Date(customOrder.date),
+            // Prefer the date sent from the UI (admin may have changed it)
+            // Fall back to the stored DB value if not provided
+            date: new Date(date ?? customOrder.date),
             itemIds: [item.id],
-            timeSlot: customOrder.timeSlot || "12:00 PM",
+            timeSlot: (timeSlot ?? customOrder.timeSlot) || "12:00 PM",
           },
         ],
       },

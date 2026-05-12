@@ -39,7 +39,7 @@ export async function POST(req: Request) {
     const result = await db.collection("custom_orders").insertOne(orderData);
 
     return NextResponse.json(
-      { success: true, orderId: result.insertedId },
+      { success: true, orderId: result.insertedId.toString() },
       { status: 201 }
     );
   } catch (error) {

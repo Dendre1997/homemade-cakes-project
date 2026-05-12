@@ -12,11 +12,21 @@ interface DeliveryDateUpdate {
   itemIds: string[];
 }
 
+interface CustomerInfoUpdate {
+  name?: string;
+  email?: string;
+  phone?: string;
+  socialNickname?: string;
+  socialPlatform?: "instagram" | "facebook" | "";
+}
+
 interface UpdateBody {
   status?: OrderStatus;
   deliveryDates?: DeliveryDateUpdate[];
   items?: CartItem[];
   totalAmount?: number;
+  customerInfo?: CustomerInfoUpdate;
+  source?: string;
 }
 
 export async function GET(_request: Request, { params }: Context) {
@@ -52,7 +62,6 @@ export async function PUT(request: NextRequest, { params }: Context) {
   try {
     const { id } = await params;
     const body: UpdateBody = await request.json();
-    const { status, deliveryDates, items, totalAmount } = body;
 
     if (!ObjectId.isValid(id)) {
       return NextResponse.json(
@@ -60,9 +69,11 @@ export async function PUT(request: NextRequest, { params }: Context) {
         { status: 400 }
       );
     }
-    if (!status && !deliveryDates && !items && typeof totalAmount === "undefined") {
+    const { status, deliveryDates, items, totalAmount, customerInfo, source } = body;
+
+    if (!status && !deliveryDates && !items && typeof totalAmount === "undefined" && !customerInfo && source === undefined) {
       return NextResponse.json(
-        { error: "At least status or deliveryDates is required for update" },
+        { error: "At least one field is required for update" },
         { status: 400 }
       );
     }
@@ -117,6 +128,25 @@ export async function PUT(request: NextRequest, { params }: Context) {
 
     if (typeof totalAmount === "number") {
       updateFields.$set.totalAmount = totalAmount;
+    }
+
+    if (customerInfo) {
+      // Use dot-notation keys so we only touch the fields the admin edited
+      const allowed: (keyof CustomerInfoUpdate)[] = ["name", "email", "phone", "socialNickname", "socialPlatform"];
+      for (const key of allowed) {
+        if (key in customerInfo) {
+          const val = customerInfo[key];
+          // Allow empty string to clear optional social fields; skip undefined
+          if (val !== undefined) {
+            // Store empty socialPlatform as unset (remove field)
+            updateFields.$set[`customerInfo.${key}`] = val === "" ? undefined : val;
+          }
+        }
+      }
+    }
+
+    if (source !== undefined) {
+      updateFields.$set.source = source || null;
     }
 
     // --- Perform Update ---

@@ -68,6 +68,7 @@ export const OrdersCalendar = ({
     const dateStr = format(date, "yyyy-MM-dd");
 
     const dailyOrders = orders.filter(o => 
+        o.status !== "cancelled" &&
         o.deliveryInfo.deliveryDates.some(d => format(new Date(d.date), "yyyy-MM-dd") === dateStr)
     );
 

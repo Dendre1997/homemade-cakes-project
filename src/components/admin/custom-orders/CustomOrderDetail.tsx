@@ -43,7 +43,13 @@ export default function CustomOrderDetail({ initialOrder }: CustomOrderDetailPro
       const res = await fetch(`/api/admin/custom-orders/${order._id}/convert`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ agreedPrice: Number(order.agreedPrice) }),
+        body: JSON.stringify({
+          agreedPrice: Number(order.agreedPrice),
+          // Forward any logistics edits the admin made before converting
+          date: order.date,
+          timeSlot: order.timeSlot,
+          deliveryMethod: order.deliveryMethod,
+        }),
       });
 
       const data = await res.json();

@@ -6,6 +6,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue 
 } from "@/components/ui/Select";
 import { User, Phone, Mail, Globe, Instagram, Facebook } from "lucide-react";
+import { SocialHandleAnchor } from "@/components/ui/SocialHandleAnchor";
 
 interface CustomOrderContactFormProps {
   contact: any;
@@ -95,6 +96,24 @@ export const CustomOrderContactForm = ({
                 placeholder="e.g. delicious_cakes_2024"
              />
           </div>
+
+          {contact.socialNickname?.trim() &&
+            (contact.socialPlatform === "instagram" ||
+              contact.socialPlatform === "facebook") && (
+              <div className="rounded-medium border border-border/50 bg-background/80 px-3 py-2 text-sm">
+                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Open profile
+                </span>
+                <div className="mt-1">
+                  <SocialHandleAnchor
+                    platform={contact.socialPlatform}
+                    nickname={contact.socialNickname}
+                    showPlatform
+                    className="text-primary font-semibold hover:underline break-all"
+                  />
+                </div>
+              </div>
+            )}
        </div>
     </div>
   );

@@ -312,6 +312,13 @@ export default function OrderPrintPage() {
                   <h3 className="font-bold uppercase text-sm text-gray-500 mb-1">Customer</h3>
                   <div className="text-xl font-bold">{order.customerInfo.name}</div>
                   <div className="text-lg">{order.customerInfo.phone}</div>
+                  {order.customerInfo.socialPlatform &&
+                    order.customerInfo.socialNickname?.trim() && (
+                      <div className="text-base mt-1 text-gray-700">
+                        Social ({order.customerInfo.socialPlatform}): @
+                        {order.customerInfo.socialNickname.replace(/^@+/, "").replace(/\s+/g, "")}
+                      </div>
+                    )}
               </div>
               {(order.deliveryInfo.method === 'delivery') && (
                   <div>

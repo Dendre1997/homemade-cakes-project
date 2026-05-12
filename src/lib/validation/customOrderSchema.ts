@@ -66,6 +66,16 @@ export const customOrderSchema = z.object({
     price: z.number(),
     imageUrl: z.string().optional(),
   })).optional(),
+
+  // Explicit itemized price breakdown — populated by Step 3 alongside approximatePrice.
+  // Allows the receipt and admin panel to show transparent line-item pricing
+  // rather than one opaque total figure.
+  priceBreakdown: z.object({
+    baseCakePrice: z.number(),   // Cake structure price after diameter multiplier
+    flavorUpcharge: z.number(),  // Extra cost from premium flavor selection (0 if standard)
+    addonsCost: z.number(),      // Sum of all addon prices (mirrors addons[].price)
+    grandTotal: z.number(),      // baseCakePrice + flavorUpcharge + addonsCost
+  }).optional(),
 });
 
 export type CustomOrderFormData = z.infer<typeof customOrderSchema>;

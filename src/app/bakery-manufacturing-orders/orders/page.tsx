@@ -238,7 +238,9 @@ const ManageOrdersPage = () => {
          result = result.filter(order => 
              order._id.toLowerCase().includes(lowerQ) ||
              order.customerInfo.name.toLowerCase().includes(lowerQ) ||
-             order.customerInfo.phone.includes(lowerQ)
+             order.customerInfo.phone.includes(lowerQ) ||
+             (order.customerInfo.email || "").toLowerCase().includes(lowerQ) ||
+             (order.customerInfo.socialNickname || "").toLowerCase().includes(lowerQ)
          );
     }
 
