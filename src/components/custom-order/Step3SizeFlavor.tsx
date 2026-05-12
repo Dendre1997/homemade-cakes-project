@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useFormContext } from "react-hook-form";
 import { CustomOrderFormData } from "@/lib/validation/customOrderSchema";
+import { calculateCustomOrderTotal } from "@/lib/pricing/customOrderPricing";
 import { Loader2 } from "lucide-react";
 import LoadingSpinner from "../ui/Spinner";
 
@@ -37,7 +38,7 @@ const BOX_SIZES = [
 ];
 
 export default function Step3SizeFlavor({ onNext }: { onNext: () => void }) {
-  const { setValue, watch, formState: { errors } } = useFormContext<CustomOrderFormData>();
+  const { setValue, watch, getValues, formState: { errors } } = useFormContext<CustomOrderFormData>();
   const categoryName = watch("category");
   
   // What the final output to the database will be
@@ -179,14 +180,44 @@ export default function Step3SizeFlavor({ onNext }: { onNext: () => void }) {
       : Math.ceil(raw / 10) * 10;
   }, [isDiscrete, basePrice, discreteQuantity]);
 
-  // Sync computed price into form state so it's submitted with the order
+  // ── Price Sync: Forward Math Engine ────────────────────────────────────────────
+  // Called whenever size, flavor, or step-3-visible state changes.
+  // Addons (Step 4) are read via getValues() — non-reactive — so they are
+  // included if the user navigates back to Step 3, without creating a circular dep.
+  // Step 4 has its OWN effect that re-runs the engine when addons change.
   useEffect(() => {
     if (isStandard) {
-      setValue("approximatePrice", approximatePrice > 0 ? approximatePrice : undefined);
+      // cakeSizePrice = the size-multiplied cake price (the existing useMemo formula)
+      const cakeSizePrice = approximatePrice > 0 ? approximatePrice : (basePrice || 0);
+      const flavorPrice = standardFlavorId
+        ? (filteredFlavors.find((f: any) => f._id === standardFlavorId)?.price ?? 0)
+        : 0;
+      // Read existing addons non-reactively so they're included in the grand total
+      const existingAddons = (getValues("addons") as any[]) ?? [];
+
+      const result = calculateCustomOrderTotal({
+        cakeSizePrice,
+        flavorPrice,
+        addons: existingAddons,
+      });
+
+      setValue("approximatePrice", result.grandTotal > 0 ? result.grandTotal : undefined);
+      setValue("priceBreakdown", result);
+
     } else if (isDiscrete) {
-      setValue("approximatePrice", discretePrice > 0 ? discretePrice : undefined);
+      const cakeSizePrice = discretePrice > 0 ? discretePrice : 0;
+      const existingAddons = (getValues("addons") as any[]) ?? [];
+
+      const result = calculateCustomOrderTotal({
+        cakeSizePrice,
+        flavorPrice: 0,  // Discrete (cupcakes/sets) don't have per-flavor upcharges
+        addons: existingAddons,
+      });
+
+      setValue("approximatePrice", result.grandTotal > 0 ? result.grandTotal : undefined);
+      setValue("priceBreakdown", result);
     }
-  }, [approximatePrice, discretePrice, isStandard, isDiscrete, setValue]);
+  }, [approximatePrice, discretePrice, isStandard, isDiscrete, standardFlavorId, filteredFlavors, basePrice, getValues, setValue]);
 
 
   // --- COMPILATION LOGIC ---
@@ -449,13 +480,15 @@ export default function Step3SizeFlavor({ onNext }: { onNext: () => void }) {
               )}
 
               {filteredDiameters.length > 0 ? (
-                <DiameterSelector
-                  diameters={displayableDiameters}
-                  selectedDiameterId={standardDiameterId}
-                  onSelectDiameter={setStandardDiameterId}
-                />
+                <div data-field-name="details.size">
+                  <DiameterSelector
+                    diameters={displayableDiameters}
+                    selectedDiameterId={standardDiameterId}
+                    onSelectDiameter={setStandardDiameterId}
+                  />
+                </div>
               ) : (
-                <div>
+                <div data-field-name="details.size">
                   <h3 className="font-heading text-xl text-primary mb-2">
                     Custom Yield / Size
                   </h3>
@@ -482,7 +515,7 @@ export default function Step3SizeFlavor({ onNext }: { onNext: () => void }) {
               )}
             </div>
 
-            <div>
+            <div data-field-name="details.flavor">
               {filteredFlavors.length > 0 ? (
                 <div className="bg-background rounded-2xl shadow-sm border p-4">
                   <FlavorSelector

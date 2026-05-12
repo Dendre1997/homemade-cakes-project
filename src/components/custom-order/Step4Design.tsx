@@ -12,9 +12,10 @@ import { cn } from "@/lib/utils";
 import { MultiImageUpload } from "@/components/custom-order/MultiImageUpload";
 import { AddonSelector } from "@/components/shared/AddonSelector";
 import { Addon, IGalleryImage, SelectedAddon } from "@/types";
+import { calculateCustomOrderTotal } from "@/lib/pricing/customOrderPricing";
 
 export default function Step4Design() {
-  const { control, watch, setValue, formState: { errors } } = useFormContext<CustomOrderFormData>();
+  const { control, watch, setValue, getValues, formState: { errors } } = useFormContext<CustomOrderFormData>();
   const textOnCakeWatcher = watch("details.textOnCake");
   const [showInscriptionInput, setShowInscriptionInput] = useState(!!textOnCakeWatcher);
 
@@ -28,8 +29,9 @@ export default function Step4Design() {
   const [galleryData, setGalleryData] = useState<IGalleryImage[]>([]);
   const [allAddons, setAllAddons] = useState<Addon[]>([]);
   
-  // Category ID State for Selector
+  // Category ID & Type State
   const [activeCategoryId, setActiveCategoryId] = useState<string | undefined>(undefined);
+  const [activeCategoryType, setActiveCategoryType] = useState<string | undefined>(undefined);
 
   // Wizard Data
   const categoryName = watch("category");
@@ -39,6 +41,27 @@ export default function Step4Design() {
   // Refs for Auto-Scroll
   const carouselRef = useRef<HTMLDivElement>(null);
   const hasAutoScrolled = useRef(false);
+
+  // ── Addon Price Sync: Forward Math Engine ───────────────────────────────────────
+  // Whenever addons change in Step 4, we re-run the pricing engine.
+  // priceBreakdown.baseCakePrice and .flavorUpcharge come from Step 3 and are
+  // read via getValues() (NON-reactive) to avoid a circular dependency —
+  // we only want this effect to re-fire when ADDONS change, not when we write
+  // the new breakdown back to the form.
+  useEffect(() => {
+    const pb = getValues("priceBreakdown");
+    if (!pb) return; // Step 3 hasn't run yet; nothing to update
+
+    const result = calculateCustomOrderTotal({
+      cakeSizePrice: pb.baseCakePrice,
+      flavorPrice: pb.flavorUpcharge,
+      addons: selectedAddons,
+    });
+
+    setValue("approximatePrice", result.grandTotal > 0 ? result.grandTotal : undefined);
+    setValue("priceBreakdown", result);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedAddons]); // Only addons as dep — getValues/setValue are stable refs
 
   // Fetch Pipeline: Categories -> Gallery Images
   useEffect(() => {
@@ -55,16 +78,18 @@ export default function Step4Design() {
             setAllAddons(await addonsRes.json());
         }
 
-        const activeCategoryId = categories.find((c: any) => {
+        const activeCategoryObj = categories.find((c: any) => {
           const displayName =
             c.name.endsWith("s") || c.name.endsWith("S")
               ? c.name.slice(0, -1)
               : c.name;
           return displayName === categoryName || c.name === categoryName;
-        })?._id;
+        });
+        const activeCategoryId = activeCategoryObj?._id;
 
         if (activeCategoryId) {
           setActiveCategoryId(activeCategoryId);
+          setActiveCategoryType(activeCategoryObj?.categoryType);
           const [galleryRes] = await Promise.all([
             fetch(`/api/gallery?categoryId=${activeCategoryId}`)
           ]);
@@ -80,6 +105,7 @@ export default function Step4Design() {
           }
         } else {
           setActiveCategoryId(undefined);
+          setActiveCategoryType(undefined);
         }
       } catch (err) {
         console.error("Failed to fetch inspiration catalog", err);
@@ -271,7 +297,7 @@ export default function Step4Design() {
         </div>
 
         {/* ROW 2: UPLOAD ZONE */}
-        <div className="border-b border-primary/10 pb-10">
+        <div className="border-b border-primary/10 pb-10" data-field-name="referenceImages">
           <h3 className="font-heading text-xl text-primary mb-2">
             Upload Your Idea
           </h3>
@@ -301,7 +327,8 @@ export default function Step4Design() {
           )}
         </div>
 
-        {/* ROW 2.5: Addons ZONE */}
+        {/* ROW 2.5: Addons ZONE — hidden when no addons are configured for this category */}
+        {activeCategoryId && allAddons.some((a: any) => Array.isArray(a.categoryIds) && a.categoryIds.includes(activeCategoryId)) && (
         <div className="border-b border-primary/10 pb-10">
           <h3 className="font-heading text-xl text-primary mb-2">
             Customize Your Creation
@@ -313,65 +340,68 @@ export default function Step4Design() {
             availableAddons={allAddons}
           />
         </div>
+        )}
         
-        {/* ROW 3: TEXT INPUTS */}
+        {/* ROW 3: TEXT INPUTS — hidden for set/combo categories (no single cake surface to write on) */}
         <div className="space-y-6">
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-border">
-            <div className="flex items-center space-x-3">
-              <Switch
-                id="inscription-toggle"
-                checked={showInscriptionInput}
-                onCheckedChange={(checked) => {
-                  setShowInscriptionInput(checked);
-                  if (!checked)
-                    setValue("details.textOnCake", "", {
-                      shouldValidate: true,
-                    });
-                }}
-              />
-              <Label
-                htmlFor="inscription-toggle"
-                className="font-heading font-semibold text-lg cursor-pointer text-primary"
-              >
-                Add Cake writing / Inscription{" "}
-                <span className="text-primary/50 text-base font-normal tracking-wide">
-                  (Optional)
-                </span>
-              </Label>
-            </div>
-
-            <div
-              className={cn(
-                "grid transition-all duration-300 ease-in-out overflow-hidden",
-                showInscriptionInput
-                  ? "grid-rows-[1fr] opacity-100 mt-4"
-                  : "grid-rows-[0fr] opacity-0 mt-0",
-              )}
-            >
-              <div className="min-h-0">
-                <p className="text-xs text-primary/60 mb-3 block">
-                  Max 35 characters. Type exactly as you want it written.
-                </p>
-                <Controller
-                  control={control}
-                  name="details.textOnCake"
-                  render={({ field }) => (
-                    <div className="relative">
-                      <Textarea
-                        {...field}
-                        maxLength={35}
-                        placeholder="e.g. Happy 3rd Birthday Mia!"
-                        className="resize-none h-20 text-primary bg-subtleBackground"
-                      />
-                      <span className="absolute bottom-2 right-2 text-xs text-primary/40 font-medium">
-                        {field.value?.length || 0} / 35
-                      </span>
-                    </div>
-                  )}
+          {activeCategoryType !== "set" && activeCategoryType !== "combo" && (
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-border">
+              <div className="flex items-center space-x-3">
+                <Switch
+                  id="inscription-toggle"
+                  checked={showInscriptionInput}
+                  onCheckedChange={(checked) => {
+                    setShowInscriptionInput(checked);
+                    if (!checked)
+                      setValue("details.textOnCake", "", {
+                        shouldValidate: true,
+                      });
+                  }}
                 />
+                <Label
+                  htmlFor="inscription-toggle"
+                  className="font-heading font-semibold text-lg cursor-pointer text-primary"
+                >
+                  Add Cake writing / Inscription{" "}
+                  <span className="text-primary/50 text-base font-normal tracking-wide">
+                    (Optional)
+                  </span>
+                </Label>
+              </div>
+
+              <div
+                className={cn(
+                  "grid transition-all duration-300 ease-in-out overflow-hidden",
+                  showInscriptionInput
+                    ? "grid-rows-[1fr] opacity-100 mt-4"
+                    : "grid-rows-[0fr] opacity-0 mt-0",
+                )}
+              >
+                <div className="min-h-0">
+                  <p className="text-xs text-primary/60 mb-3 block">
+                    Max 35 characters. Type exactly as you want it written.
+                  </p>
+                  <Controller
+                    control={control}
+                    name="details.textOnCake"
+                    render={({ field }) => (
+                      <div className="relative">
+                        <Textarea
+                          {...field}
+                          maxLength={35}
+                          placeholder="e.g. Happy 3rd Birthday Mia!"
+                          className="resize-none h-20 text-primary bg-subtleBackground"
+                        />
+                        <span className="absolute bottom-2 right-2 text-xs text-primary/40 font-medium">
+                          {field.value?.length || 0} / 35
+                        </span>
+                      </div>
+                    )}
+                  />
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-border">
             <label className="font-heading font-semibold text-lg mb-2 block text-primary">
@@ -425,7 +455,7 @@ export default function Step4Design() {
                   : "grid-rows-[0fr] opacity-0 mt-0",
               )}
             >
-              <div className="min-h-0">
+              <div className="min-h-0" data-field-name="details.designNotes">
                 <Controller
                   control={control}
                   name="details.designNotes"
@@ -447,7 +477,7 @@ export default function Step4Design() {
             </div>
           </div>
         </div>
-      </div>
+      </div>  {/* end space-y-10 */}
     </div>
   );
 }

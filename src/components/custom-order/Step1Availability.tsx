@@ -46,9 +46,6 @@ export default function Step1Availability({ onNext }: { onNext: () => void }) {
   useEffect(() => {
     async function fetchAvailability() {
       try {
-        // Two public, unauthenticated endpoints — safe for any client.
-        // /api/shop/calendar-blocks  → blocked dates + lead time + time slots
-        // /api/shop/availability-settings → delivery toggle state
         const [blocksRes, settingsRes] = await Promise.all([
           fetch("/api/shop/calendar-blocks"),
           fetch("/api/shop/availability-settings"),
@@ -57,15 +54,11 @@ export default function Step1Availability({ onNext }: { onNext: () => void }) {
         if (blocksRes.ok) {
           const data = await blocksRes.json();
           setAvailability({
-            // The server already returns a pre-computed blocked-date array.
-            // No capacity math needed on the client side.
             unavailableDates: data.blockedDates ?? [],
-            leadTimeDays: data.leadTimeDays ?? 7,
+            leadTimeDays: data.leadTimeDays ?? "",
             defaultAvailableHours: data.defaultAvailableHours?.length
               ? data.defaultAvailableHours
               : ["10:00 AM", "12:00 PM", "2:00 PM", "4:00 PM"],
-            // calendar-blocks does not expose per-date overrides (intentional);
-            // time slots default to defaultAvailableHours for all days.
             dateOverrides: [],
           });
         }
@@ -125,7 +118,7 @@ export default function Step1Availability({ onNext }: { onNext: () => void }) {
               control={control}
               name="date"
               render={({ field }) => (
-                <div className="w-full relative">
+                <div className="w-full relative" data-field-name="date">
                   <CustomDatePicker
                     selected={field.value}
                     onSelect={(date) => {
@@ -149,7 +142,10 @@ export default function Step1Availability({ onNext }: { onNext: () => void }) {
                 control={control}
                 name="timeSlot"
                 render={({ field }) => (
-                  <div className="w-full bg-white/50 backdrop-blur-sm p-4 rounded-xl border shadow-sm animate-in fade-in slide-in-from-top-4 duration-500">
+                  <div
+                    data-field-name="timeSlot"
+                    className="w-full bg-white/50 backdrop-blur-sm p-4 rounded-xl border shadow-sm animate-in fade-in slide-in-from-top-4 duration-500"
+                  >
                     <h3 className="text-sm font-bold text-primary mb-3 flex items-center gap-2">
                       <Clock className="w-4 h-4 text-accent" /> Available Time
                       Slots

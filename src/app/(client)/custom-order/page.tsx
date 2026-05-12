@@ -57,6 +57,8 @@ function CustomOrderContent() {
   const [currentStep, setCurrentStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedData, setSubmittedData] = useState<CustomOrderFormData | null>(null);
+  /** MongoDB custom_orders._id — returned by POST /api/custom-orders for DM / ops reference */
+  const [submittedCustomOrderId, setSubmittedCustomOrderId] = useState<string | null>(null);
 
   const methods = useForm<CustomOrderFormData>({
     resolver: zodResolver(customOrderSchema) as any,
@@ -81,10 +83,39 @@ function CustomOrderContent() {
       },
       allergies: "",
       approximatePrice: 0,
+      priceBreakdown: undefined,
     },
   });
 
   const { trigger, handleSubmit } = methods;
+
+  /**
+   * After a failed trigger(), walks the ordered field list for the current step,
+   * finds the first field that has an error in formState.errors, then:
+   *   1. scrollIntoView({ behavior:'smooth', block:'center' }) on its wrapper div
+   *   2. .focus() on the first focusable element inside it
+   * Uses data-field-name attributes placed on each field's wrapper in the step components.
+   */
+  const focusFirstError = (errors: Record<string, any>, fields: string[]) => {
+    for (const fieldPath of fields) {
+      // Resolve nested paths like "contact.name" → errors.contact?.name
+      const err = fieldPath.split(".").reduce((obj: any, key) => obj?.[key], errors);
+      if (!err) continue;
+
+      const wrapper = document.querySelector<HTMLElement>(`[data-field-name="${CSS.escape(fieldPath)}"]`);
+      if (!wrapper) continue;
+
+      wrapper.scrollIntoView({ behavior: "smooth", block: "center" });
+
+      // Try to focus a real input/textarea/button inside the wrapper
+      const focusable = wrapper.querySelector<HTMLElement>("input, textarea, button:not([disabled]), [tabindex]");
+      if (focusable) {
+        // Small delay so scroll completes before focus steals position
+        setTimeout(() => focusable.focus({ preventScroll: true }), 300);
+      }
+      return; // stop at first error
+    }
+  };
 
   // -- 'Magic Jump' Navigation Logic --
   const handleNext = async () => {
@@ -99,8 +130,11 @@ function CustomOrderContent() {
         setCurrentStep((prev) => Math.min(prev + 1, STEPS.length - 1));
       }
       window.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      focusFirstError(methods.formState.errors as any, STEPS[currentStep].fields);
     }
   };
+
 
   const handleBack = () => {
     // Logic: If on Step 3 (Details) and we have an inspiration, jump back to Step 1 (Date), skipping Step 2 (Category)
@@ -122,6 +156,10 @@ function CustomOrderContent() {
       });
 
       if (!res.ok) throw new Error("Failed to submit");
+      const created = await res.json().catch(() => ({}));
+      setSubmittedCustomOrderId(
+        typeof created?.orderId === "string" ? created.orderId : null
+      );
       setSubmittedData(data);
       setCurrentStep(5); // Go to success step
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -140,7 +178,12 @@ function CustomOrderContent() {
       case 2: return <Step3SizeFlavor onNext={handleNext} />;
       case 3: return <Step4Design />;
       case 4: return <Step5Contact />;
-      case 5: return <Step6Success orderData={submittedData} />;
+      case 5: return (
+          <Step6Success
+            orderData={submittedData}
+            customOrderId={submittedCustomOrderId}
+          />
+        );
       default: return null;
     }
   };

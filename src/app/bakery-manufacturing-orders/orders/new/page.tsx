@@ -36,6 +36,8 @@ export default function ManualOrderPage() {
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerName, setCustomerName] = useState("");
+  const [socialPlatform, setSocialPlatform] = useState<"instagram" | "facebook" | "">("instagram");
+  const [socialNickname, setSocialNickname] = useState("");
   
   // Meta
   const [source, setSource] = useState("instagram");
@@ -139,7 +141,8 @@ export default function ManualOrderPage() {
           customerInfo: {
               name: customerName || "Guest",
               email: customerEmail || `no-email-${Date.now()}@placeholder.com`,
-              phone: customerPhone
+              phone: customerPhone,
+              ...(socialPlatform ? { socialPlatform, socialNickname: socialNickname.trim() || undefined } : {}),
           },
           deliveryInfo: {
               method: deliveryMethod,
@@ -243,6 +246,39 @@ export default function ManualOrderPage() {
                   placeholder="email@example.com"
                 />
               </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Social Platform
+                </label>
+                <Select
+                  value={socialPlatform || "none"}
+                  onValueChange={(v) =>
+                    setSocialPlatform(v === "none" ? "" : (v as "instagram" | "facebook"))
+                  }
+                >
+                  <SelectTrigger className="w-full bg-white">
+                    <SelectValue placeholder="None" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">— None —</SelectItem>
+                    <SelectItem value="instagram">Instagram</SelectItem>
+                    <SelectItem value="facebook">Facebook</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {socialPlatform && (
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    {socialPlatform === "instagram" ? "Instagram" : "Facebook"} Handle
+                  </label>
+                  <Input
+                    className="w-full bg-white"
+                    value={socialNickname}
+                    onChange={(e) => setSocialNickname(e.target.value)}
+                    placeholder={socialPlatform === "facebook" ? "vanity name or full URL" : "@handle"}
+                  />
+                </div>
+              )}
             </div>
           </div>
 

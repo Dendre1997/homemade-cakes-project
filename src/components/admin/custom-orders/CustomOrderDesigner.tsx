@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { Calendar, Mail, Phone, User, Save, ArrowRight, Lock, Loader2 } from "lucide-react";
+import { SocialHandleAnchor } from "@/components/ui/SocialHandleAnchor";
 
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -514,6 +515,23 @@ export default function CustomOrderDesigner({
                                 {customOrder.contact?.phone}
                             </a>
                         </div>
+                        {customOrder.contact?.socialNickname?.trim() &&
+                          (customOrder.contact?.socialPlatform === "instagram" ||
+                            customOrder.contact?.socialPlatform === "facebook") && (
+                          <div className="flex items-start gap-3 pt-1">
+                            <span className="w-5 shrink-0 text-center text-xs font-bold text-primary mt-0.5">
+                              @
+                            </span>
+                            <div className="text-sm">
+                              <SocialHandleAnchor
+                                platform={customOrder.contact.socialPlatform}
+                                nickname={customOrder.contact.socialNickname}
+                                showPlatform
+                                className="text-primary font-semibold hover:underline break-all"
+                              />
+                            </div>
+                          </div>
+                        )}
                         
                         <div className="pt-4 mt-4 border-t">
                             <div className="flex items-center gap-2 mb-2">

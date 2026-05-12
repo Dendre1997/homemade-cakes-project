@@ -253,6 +253,9 @@ export interface Order {
     email: string;
     phone: string;
     notes?: string;
+    /** Customer social handle (without @); preserved from custom orders & explicit checkout if added later */
+    socialNickname?: string;
+    socialPlatform?: "instagram" | "facebook";
   };
   deliveryInfo: {
     method: "pickup" | "delivery";

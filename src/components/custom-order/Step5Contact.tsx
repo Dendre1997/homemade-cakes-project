@@ -37,7 +37,9 @@ export default function Step5Contact() {
       </div>
 
       <div className="space-y-5">
-        <div>
+
+        {/* 1. Full Name */}
+        <div data-field-name="contact.name">
           <label className="block text-sm font-semibold mb-1 text-primary">
             Full Name{" "}
             {hasNickname && (
@@ -56,11 +58,12 @@ export default function Step5Contact() {
             )}
           />
           {errors.contact?.name && (
-             <p className="text-primary/60 text-xs mt-1">{errors.contact.name.message}</p>
+            <p className="text-primary/60 text-xs mt-1">{errors.contact.name.message}</p>
           )}
         </div>
 
-        <div>
+        {/* 2. Social Media Nickname */}
+        <div data-field-name="contact.socialNickname">
           <label className="block text-sm font-semibold mb-1 text-primary">
             Social Media Nickname{" "}
             <span className="font-normal text-primary/50 text-xs">(Optional)</span>
@@ -73,37 +76,22 @@ export default function Step5Contact() {
                 {...field}
                 placeholder="e.g. @username or Instagram handle"
                 className="h-12 bg-white"
+                onChange={(e) => {
+                  field.onChange(e);
+                  // Smart auto-select: default to Instagram the moment the user
+                  // starts typing, so phone becomes optional in one keystroke.
+                  // The user can still toggle to Facebook manually.
+                  if (e.target.value.trim().length > 0 && !socialPlatform) {
+                    setValue("contact.socialPlatform", "instagram", { shouldValidate: true });
+                  }
+                }}
               />
             )}
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-semibold mb-1 text-primary">
-            Phone Number{" "}
-            {phoneIsOptional && (
-              <span className="font-normal text-primary/50 text-xs">(Optional)</span>
-            )}
-          </label>
-          <Controller
-            control={control}
-            name="contact.phone"
-            render={({ field }) => (
-              <Input
-                {...field}
-                type="tel"
-                placeholder="Your Phone Number"
-                className={`h-12 bg-white ${errors.contact?.phone ? "border-red-500" : ""}`}
-              />
-            )}
-          />
-          {errors.contact?.phone && (
-            <p className="text-primary/60 text-xs mt-1">{errors.contact.phone.message}</p>
-          )}
-        </div>
-
-        {/* ── Social platform alternative ── */}
-        <div className="pt-1">
+        {/* 3. Social Platform Buttons */}
+        <div className="pt-1" data-field-name="contact.socialPlatform">
           <div className="flex items-center gap-3 mb-4">
             <div className="flex-1 h-px bg-primary/10" />
             <span className="text-xs font-semibold text-primary/40 uppercase tracking-wider whitespace-nowrap">
@@ -159,26 +147,55 @@ export default function Step5Contact() {
           )}
         </div>
 
-        <div>
-           <label className="block text-sm font-semibold mb-1 text-primary">Email Address <span className="font-normal text-primary/50 text-xs">(Optional)</span></label>
-           <Controller
-             control={control}
-             name="contact.email"
-             render={({ field }) => (
-               <Input
-                 {...field}
-                 type="email"
-                 placeholder="name@example.com"
-                 className={`h-12 bg-white ${errors.contact?.email ? "border-red-500" : ""}`}
-               />
-             )}
-           />
-            {errors.contact?.email && (
-             <p className="text-primary/60 text-xs mt-1">{errors.contact.email.message}</p>
+        {/* 4. Phone Number */}
+        <div data-field-name="contact.phone">
+          <label className="block text-sm font-semibold mb-1 text-primary">
+            Phone Number{" "}
+            {phoneIsOptional && (
+              <span className="font-normal text-primary/50 text-xs">(Optional)</span>
+            )}
+          </label>
+          <Controller
+            control={control}
+            name="contact.phone"
+            render={({ field }) => (
+              <Input
+                {...field}
+                type="tel"
+                placeholder="Your Phone Number"
+                className={`h-12 bg-white ${errors.contact?.phone ? "border-red-500" : ""}`}
+              />
+            )}
+          />
+          {errors.contact?.phone && (
+            <p className="text-primary/60 text-xs mt-1">{errors.contact.phone.message}</p>
           )}
         </div>
+
+        {/* 5. Email Address */}
+        <div data-field-name="contact.email">
+          <label className="block text-sm font-semibold mb-1 text-primary">
+            Email Address{" "}
+            <span className="font-normal text-primary/50 text-xs">(Optional)</span>
+          </label>
+          <Controller
+            control={control}
+            name="contact.email"
+            render={({ field }) => (
+              <Input
+                {...field}
+                type="email"
+                placeholder="name@example.com"
+                className={`h-12 bg-white ${errors.contact?.email ? "border-red-500" : ""}`}
+              />
+            )}
+          />
+          {errors.contact?.email && (
+            <p className="text-primary/60 text-xs mt-1">{errors.contact.email.message}</p>
+          )}
+        </div>
+
       </div>
     </div>
   );
 }
-
