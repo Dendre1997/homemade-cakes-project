@@ -427,15 +427,18 @@ const CheckoutClientPage = ({ isDeliveryEnabled }: CheckoutClientPageProps) => {
   const availableHoursForSelectedDate = useMemo(() => {
     if (!selectedDate || !availability) return [];
 
+    let hours = [...availability.defaultAvailableHours];
+
     const override = availability.dateOverrides.find((o) =>
       isSameDay(new Date(o.date), selectedDate)
     );
 
-    if (override && override.availableHours) {
-      return override.availableHours;
+    if (override && override.availableHours && override.availableHours.length > 0) {
+      hours = [...hours, ...override.availableHours];
+      hours = Array.from(new Set(hours));
     }
 
-    return availability.defaultAvailableHours;
+    return hours;
   }, [selectedDate, availability]);
 
 

@@ -63,6 +63,7 @@ function CustomOrderContent() {
   const methods = useForm<CustomOrderFormData>({
     resolver: zodResolver(customOrderSchema) as any,
     mode: "onTouched",
+    shouldFocusError: true, // RHF focuses first errored field via internal refs on trigger() failure
     defaultValues: {
       status: "pending_review",
       timeSlot: "",
@@ -87,35 +88,7 @@ function CustomOrderContent() {
     },
   });
 
-  const { trigger, handleSubmit } = methods;
-
-  /**
-   * After a failed trigger(), walks the ordered field list for the current step,
-   * finds the first field that has an error in formState.errors, then:
-   *   1. scrollIntoView({ behavior:'smooth', block:'center' }) on its wrapper div
-   *   2. .focus() on the first focusable element inside it
-   * Uses data-field-name attributes placed on each field's wrapper in the step components.
-   */
-  const focusFirstError = (errors: Record<string, any>, fields: string[]) => {
-    for (const fieldPath of fields) {
-      // Resolve nested paths like "contact.name" → errors.contact?.name
-      const err = fieldPath.split(".").reduce((obj: any, key) => obj?.[key], errors);
-      if (!err) continue;
-
-      const wrapper = document.querySelector<HTMLElement>(`[data-field-name="${CSS.escape(fieldPath)}"]`);
-      if (!wrapper) continue;
-
-      wrapper.scrollIntoView({ behavior: "smooth", block: "center" });
-
-      // Try to focus a real input/textarea/button inside the wrapper
-      const focusable = wrapper.querySelector<HTMLElement>("input, textarea, button:not([disabled]), [tabindex]");
-      if (focusable) {
-        // Small delay so scroll completes before focus steals position
-        setTimeout(() => focusable.focus({ preventScroll: true }), 300);
-      }
-      return; // stop at first error
-    }
-  };
+  const { trigger, handleSubmit, setFocus } = methods;
 
   // -- 'Magic Jump' Navigation Logic --
   const handleNext = async () => {
@@ -131,7 +104,42 @@ function CustomOrderContent() {
       }
       window.scrollTo({ top: 0, behavior: "smooth" });
     } else {
-      focusFirstError(methods.formState.errors as any, STEPS[currentStep].fields);
+      // shouldFocusError:true (in useForm) already calls setFocus() on the first errored
+      // native field via RHF's internal ref registry.
+      // Here we only add the scroll and handle non-focusable custom components
+      // (DatePicker, upload zone) where RHF focus won't fire.
+      //
+      // NOTE: attribute value selectors do NOT use CSS.escape — the dot is a literal
+      // character inside quotes. The previous CSS.escape() call was the production bug.
+      const currentErrors = methods.formState.errors;
+
+      requestAnimationFrame(() => {
+        for (const fieldPath of STEPS[currentStep].fields) {
+          // Walk nested path: "contact.name" → errors?.contact?.name
+          const err = fieldPath
+            .split(".")
+            .reduce((obj: any, key: string) => obj?.[key], currentErrors);
+          if (!err) continue;
+
+          // 1. Scroll the labelled wrapper into view (works for all field types)
+          const wrapper = document.querySelector<HTMLElement>(
+            `[data-field-name="${fieldPath}"]`
+          );
+          if (wrapper) {
+            wrapper.scrollIntoView({ behavior: "smooth", block: "center" });
+          }
+
+          // 2. Focus via RHF — works for Input/Textarea (forwardRef).
+          //    Silently ignored for non-focusable custom components.
+          try {
+            setFocus(fieldPath as any, { shouldSelect: false });
+          } catch {
+            // Custom component (DatePicker, upload zone) — scroll-only is sufficient.
+          }
+
+          break; // stop at first error
+        }
+      });
     }
   };
 
