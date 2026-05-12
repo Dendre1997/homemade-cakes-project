@@ -59,7 +59,7 @@ export default function Step1Availability({ onNext }: { onNext: () => void }) {
             defaultAvailableHours: data.defaultAvailableHours?.length
               ? data.defaultAvailableHours
               : ["10:00 AM", "12:00 PM", "2:00 PM", "4:00 PM"],
-            dateOverrides: [],
+            dateOverrides: data.dateOverrides ?? [],
           });
         }
 
@@ -80,15 +80,21 @@ export default function Step1Availability({ onNext }: { onNext: () => void }) {
   const availableHoursForSelectedDate = useMemo(() => {
     if (!selectedDate || !availability) return [];
     
+    let hours = [...availability.defaultAvailableHours];
+    
     // Check if there is an admin override for this specific calendar day
     const override = availability.dateOverrides.find((o) =>
       isSameDay(new Date(o.date), selectedDate)
     );
     
+    // If override exists and has specific hours, append them to the defaults
     if (override && override.availableHours && override.availableHours.length > 0) {
-      return override.availableHours;
+      hours = [...hours, ...override.availableHours];
+      // Remove any duplicate time slots
+      hours = Array.from(new Set(hours));
     }
-    return availability.defaultAvailableHours;
+    
+    return hours;
   }, [selectedDate, availability]);
 
   const leadTime = availability?.leadTimeDays ?? 7;

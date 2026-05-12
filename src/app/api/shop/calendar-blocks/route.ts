@@ -187,16 +187,24 @@ export async function GET() {
     }
 
     // ── 6. Return ONLY the public-safe fields ──────────────────────────────
+    const publicDateOverrides = dateOverrides
+      .filter((o: any) => o.availableHours && o.availableHours.length > 0)
+      .map((o: any) => ({
+        date: o.date,
+        availableHours: o.availableHours,
+      }));
+
     return NextResponse.json({
       blockedDates: Array.from(blockedSet).sort(),
       leadTimeDays,
       defaultAvailableHours,
+      dateOverrides: publicDateOverrides,
     });
   } catch (error) {
     console.error("[/api/shop/calendar-blocks] Error:", error);
     // Safe fallback — the calendar will still render; no blocked dates surfaced
     return NextResponse.json(
-      { blockedDates: [], leadTimeDays: 7, defaultAvailableHours: [] },
+      { blockedDates: [], leadTimeDays: 7, defaultAvailableHours: [], dateOverrides: [] },
       { status: 200 }
     );
   }
