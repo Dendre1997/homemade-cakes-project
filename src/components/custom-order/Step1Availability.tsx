@@ -58,7 +58,7 @@ export default function Step1Availability({ onNext }: { onNext: () => void }) {
             leadTimeDays: data.leadTimeDays ?? "",
             defaultAvailableHours: data.defaultAvailableHours?.length
               ? data.defaultAvailableHours
-              : ["10:00 AM", "12:00 PM", "2:00 PM", "4:00 PM"],
+              : ["8:00 AM", "6:00 PM", "7:00 PM", "7:00 AM"],
             dateOverrides: data.dateOverrides ?? [],
           });
         }
