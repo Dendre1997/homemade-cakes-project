@@ -66,9 +66,12 @@ export default function Step6Success({ orderData, customOrderId }: Step6Props) {
 
   return (
     <div className="flex flex-col items-center">
-      <h2 className="text-3xl font-heading font-bold text-primary mb-2">Request Received!</h2>
+      <h2 className="text-3xl font-heading font-bold text-primary mb-2">
+        Request Received!
+      </h2>
       <p className="text-primary/70 mb-8 max-w-md text-center">
-        Thank you, {displayName}! We will review your custom request and contact you {contactMethod} with a price quote.
+        Thank you, {displayName}! We will review your custom request and contact
+        you {contactMethod} with a price quote.
       </p>
 
       {/* Reverse ping — customer must DM the bakery so inbox threading matches */}
@@ -78,29 +81,30 @@ export default function Step6Success({ orderData, customOrderId }: Step6Props) {
           className="mb-8 w-full max-w-lg rounded-2xl border border-primary/10 bg-white p-6 shadow-lg shadow-primary/5"
         >
           <div className="flex items-start gap-4">
-            
             <div className="min-w-0 space-y-2 text-center">
-              <p className="text-xs font-bold uppercase tracking-wider text-primary/60">
-                One Final Step
-              </p>
               <p className="text-sm leading-relaxed text-primary/80">
-                You chose to be contacted via{" "}
-                <span className="font-semibold text-amber-600">{socialPlatformLabel(socialPlatform)}</span>. 
-                Please send a quick DM to{" "}
+                If you’d like, you can also send us a quick message at{" "}
                 <SocialHandleAnchor
                   platform={socialPlatform}
                   nickname={getBakeryDmNicknameForPlatform(socialPlatform!)}
                   showPlatform
                   className="text-primary font-semibold hover:underline text-sm break-all"
-                />
-                {" "}
+                />{" "}
                 {customOrderId ? (
                   <>
-                    with your <span className="font-semibold text-primary">Request ID #{customOrderId.slice(-4)}</span> in the message so we can easily find you in our inbox.
+                    and mention your request number
+                    <span className="font-semibold text-primary">
+                      {" "}
+                      #{customOrderId.slice(-4)}
+                    </span>
                   </>
                 ) : (
                   <>
-                    mentioning your <span className="font-semibold text-primary">custom cake request</span> so we can easily find you in our inbox.
+                    mentioning your{" "}
+                    <span className="font-semibold text-primary">
+                      custom cake request
+                    </span>{" "}
+                    so we can easily find you in our inbox.
                   </>
                 )}
               </p>
@@ -111,64 +115,88 @@ export default function Step6Success({ orderData, customOrderId }: Step6Props) {
       {/* Digital Receipt Card */}
       <div className="w-full max-w-[400px] rounded-2xl shadow-xl overflow-hidden scale-95 sm:scale-100 mx-auto border-primary/10 border bg-primary/5">
         <div className="bg-primary/10 text-primary w-full h-full font-sans flex flex-col pt-6 pb-0">
-          
           {/* Header */}
           <div className="px-6 text-center space-y-1 mb-6">
-             <div className="w-24 h-24  flex items-center justify-center mx-auto mb-3">
-                <HeaderLogo />
-             </div>
-             <p className="text-primary/60 text-sm uppercase tracking-widest font-semibold flex items-center justify-center gap-2">
-                 Request Summary
-                 <span className="bg-amber-100 text-amber-700 text-[10px] px-2 py-0.5 rounded-full font-bold">PENDING QUOTE</span>
-             </p>
+            <div className="w-24 h-24  flex items-center justify-center mx-auto mb-3">
+              <HeaderLogo />
+            </div>
+            <p className="text-primary/60 text-sm uppercase tracking-widest font-semibold flex items-center justify-center gap-2">
+              Request Summary
+              <span className="bg-amber-100 text-amber-700 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                PENDING QUOTE
+              </span>
+            </p>
           </div>
 
           {/* Meta details */}
           <div className="px-6 py-4 bg-gray-50/80 border-y border-gray-100 grid grid-cols-2 gap-y-4 gap-x-2 text-sm">
             <div className="col-span-2">
-              <p className="text-primary/40 text-xs uppercase font-bold tracking-wider mb-0.5">Customer</p>
+              <p className="text-primary/40 text-xs uppercase font-bold tracking-wider mb-0.5">
+                Customer
+              </p>
               {orderData.contact.name ? (
                 <>
-                  <p className="font-semibold text-base">{orderData.contact.name}</p>
+                  <p className="font-semibold text-base">
+                    {orderData.contact.name}
+                  </p>
                   {orderData.contact.socialNickname && (
-                    <p className="text-primary/50 text-xs mt-0.5">{orderData.contact.socialPlatform}</p>
+                    <p className="text-primary/50 text-xs mt-0.5">
+                      {orderData.contact.socialPlatform}
+                    </p>
                   )}
                 </>
               ) : (
-                <p className="font-semibold text-base">{orderData.contact.socialNickname}</p>
+                <p className="font-semibold text-base">
+                  {orderData.contact.socialNickname}
+                </p>
               )}
-              <p className="text-primary/60 font-medium">{orderData.contact.phone}</p>
+              <p className="text-primary/60 font-medium">
+                {orderData.contact.phone}
+              </p>
               {orderData.contact.email && (
-                 <p className="text-primary/50 text-xs mt-0.5">{orderData.contact.email}</p>
+                <p className="text-primary/50 text-xs mt-0.5">
+                  {orderData.contact.email}
+                </p>
               )}
             </div>
           </div>
 
           {/* Fulfillment */}
           <div className="px-6 py-4 border-b border-gray-100">
-             <h3 className="text-primary/40 text-xs uppercase font-bold tracking-wider mb-3 flex items-center gap-1.5">
-               <Info className="w-4 h-4" />
-               Requested Date & Time
-             </h3>
-             <div className="bg-primary/5 p-3 rounded-xl border border-primary/10">
-                 <p className="font-semibold text-primary/90 uppercase text-sm mb-1">{orderData.deliveryMethod}</p>
-                 <p className="text-sm font-medium text-primary/70 mb-1">Date: {format(new Date(orderData.date), "MMM d, yyyy")}</p>
-                 <p className="text-sm font-medium text-primary/70">Time Slot: {orderData.timeSlot}</p>
-                 
-                 {orderData.deliveryMethod === "pickup" && (
-                    <div className="mt-2 pt-2 border-t border-primary/5">
-                        <span className="text-xs font-semibold text-primary/80 block mb-0.5">Location:</span>
-                        <p className="text-xs text-primary/60 leading-relaxed">Location will be provided in final quote after confirmation.</p>
-                    </div>
-                 )}
-                 {orderData.deliveryMethod === "delivery" && (
-                    <div className="mt-2 pt-2 border-t border-primary/5">
-                        <p className="text-xs text-primary/50 italic leading-relaxed">
-                            The baker will calculate delivery options based on your location and include them in the final quote.
-                        </p>
-                    </div>
-                 )}
-             </div>
+            <h3 className="text-primary/40 text-xs uppercase font-bold tracking-wider mb-3 flex items-center gap-1.5">
+              <Info className="w-4 h-4" />
+              Requested Date & Time
+            </h3>
+            <div className="bg-primary/5 p-3 rounded-xl border border-primary/10">
+              <p className="font-semibold text-primary/90 uppercase text-sm mb-1">
+                {orderData.deliveryMethod}
+              </p>
+              <p className="text-sm font-medium text-primary/70 mb-1">
+                Date: {format(new Date(orderData.date), "MMM d, yyyy")}
+              </p>
+              <p className="text-sm font-medium text-primary/70">
+                Time Slot: {orderData.timeSlot}
+              </p>
+
+              {orderData.deliveryMethod === "pickup" && (
+                <div className="mt-2 pt-2 border-t border-primary/5">
+                  <span className="text-xs font-semibold text-primary/80 block mb-0.5">
+                    Location:
+                  </span>
+                  <p className="text-xs text-primary/60 leading-relaxed">
+                    Location will be provided in final quote after confirmation.
+                  </p>
+                </div>
+              )}
+              {orderData.deliveryMethod === "delivery" && (
+                <div className="mt-2 pt-2 border-t border-primary/5">
+                  <p className="text-xs text-primary/50 italic leading-relaxed">
+                    The baker will calculate delivery options based on your
+                    location and include them in the final quote.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* ── Cake Specifications ─────────────────────────────────────── */}
@@ -179,25 +207,39 @@ export default function Step6Success({ orderData, customOrderId }: Step6Props) {
             </h3>
 
             <div className="flex justify-between items-center mb-2">
-              <p className="font-extrabold text-sm text-primary/80">{orderData.category}</p>
-              <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100 uppercase tracking-wide">Custom</span>
+              <p className="font-extrabold text-sm text-primary/80">
+                {orderData.category}
+              </p>
+              <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100 uppercase tracking-wide">
+                Custom
+              </span>
             </div>
 
             <div className="text-xs text-primary/60 space-y-1.5 bg-primary/5 p-3 rounded-xl border border-primary/10">
               {orderData.details?.size && (
                 <div className="flex gap-2">
-                  <span className="text-primary/40 w-20 shrink-0 font-semibold">Size:</span>
-                  <span className="text-primary/80 font-medium break-words min-w-0 flex-1">{orderData.details.size}</span>
+                  <span className="text-primary/40 w-20 shrink-0 font-semibold">
+                    Size:
+                  </span>
+                  <span className="text-primary/80 font-medium break-words min-w-0 flex-1">
+                    {orderData.details.size}
+                  </span>
                 </div>
               )}
               {orderData.details?.flavor && (
                 <div className="flex gap-2">
-                  <span className="text-primary/40 w-20 shrink-0 font-semibold">Flavor:</span>
-                  <span className="text-primary/80 font-medium break-words min-w-0 flex-1">{orderData.details.flavor}</span>
+                  <span className="text-primary/40 w-20 shrink-0 font-semibold">
+                    Flavor:
+                  </span>
+                  <span className="text-primary/80 font-medium break-words min-w-0 flex-1">
+                    {orderData.details.flavor}
+                  </span>
                 </div>
               )}
               <div className="flex gap-2">
-                <span className="text-primary/40 w-20 shrink-0 font-semibold">Inscription:</span>
+                <span className="text-primary/40 w-20 shrink-0 font-semibold">
+                  Inscription:
+                </span>
                 {orderData.details?.textOnCake?.trim() ? (
                   <span className="text-primary/80 font-serif italic break-words whitespace-pre-wrap min-w-0 flex-1">
                     "{orderData.details.textOnCake}"
@@ -208,14 +250,22 @@ export default function Step6Success({ orderData, customOrderId }: Step6Props) {
               </div>
               {orderData.allergies && orderData.allergies !== "No" && (
                 <div className="flex gap-2 pt-1.5 mt-1.5 border-t border-primary/10">
-                  <span className="text-primary/40 w-20 shrink-0 font-semibold">Allergies:</span>
-                  <span className="text-rose-600/80 font-medium break-words min-w-0 flex-1">{orderData.allergies}</span>
+                  <span className="text-primary/40 w-20 shrink-0 font-semibold">
+                    Allergies:
+                  </span>
+                  <span className="text-rose-600/80 font-medium break-words min-w-0 flex-1">
+                    {orderData.allergies}
+                  </span>
                 </div>
               )}
               {orderData.details?.designNotes && (
                 <div className="flex gap-2 pt-1.5 mt-1.5 border-t border-primary/10">
-                  <span className="text-primary/40 w-20 shrink-0 font-semibold">Design:</span>
-                  <span className="text-primary/70 leading-relaxed break-words whitespace-pre-wrap min-w-0 flex-1">{orderData.details.designNotes}</span>
+                  <span className="text-primary/40 w-20 shrink-0 font-semibold">
+                    Design:
+                  </span>
+                  <span className="text-primary/70 leading-relaxed break-words whitespace-pre-wrap min-w-0 flex-1">
+                    {orderData.details.designNotes}
+                  </span>
                 </div>
               )}
             </div>
@@ -228,11 +278,21 @@ export default function Step6Success({ orderData, customOrderId }: Step6Props) {
                 </p>
                 <div className="flex gap-2 overflow-hidden">
                   {orderData.referenceImages.map((img, i) => {
-                    const cbImg = img.includes("?") ? `${img}&_cb=${i}` : `${img}?_cb=${i}`;
+                    const cbImg = img.includes("?")
+                      ? `${img}&_cb=${i}`
+                      : `${img}?_cb=${i}`;
                     return (
-                      <div key={i} className="w-14 h-14 rounded-lg border border-primary/10 shadow-sm shrink-0 bg-primary/5 overflow-hidden">
+                      <div
+                        key={i}
+                        className="w-14 h-14 rounded-lg border border-primary/10 shadow-sm shrink-0 bg-primary/5 overflow-hidden"
+                      >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={cbImg} alt="Ref" className="w-full h-full object-cover" crossOrigin="anonymous" />
+                        <img
+                          src={cbImg}
+                          alt="Ref"
+                          className="w-full h-full object-cover"
+                          crossOrigin="anonymous"
+                        />
                       </div>
                     );
                   })}
@@ -249,13 +309,14 @@ export default function Step6Success({ orderData, customOrderId }: Step6Props) {
             </h3>
 
             <div className="space-y-2">
-
               {/* 1. Base Cake Size */}
               <div className="flex justify-between items-center text-sm">
                 <span className="text-primary/70 font-medium">
                   Base Cake
                   {orderData.details?.size ? (
-                    <span className="text-primary/40 font-normal ml-1 text-xs">({orderData.details.size})</span>
+                    <span className="text-primary/40 font-normal ml-1 text-xs">
+                      ({orderData.details.size})
+                    </span>
                   ) : null}
                 </span>
                 {grandTotal > 0 ? (
@@ -263,7 +324,9 @@ export default function Step6Success({ orderData, customOrderId }: Step6Props) {
                     ${baseCakePrice.toFixed(2)}
                   </span>
                 ) : (
-                  <span className="text-xs italic text-amber-600 font-semibold">TBD</span>
+                  <span className="text-xs italic text-amber-600 font-semibold">
+                    TBD
+                  </span>
                 )}
               </div>
 
@@ -273,7 +336,10 @@ export default function Step6Success({ orderData, customOrderId }: Step6Props) {
                   <span className="text-primary/60 font-medium">
                     Flavor
                     {flavorName && (
-                      <span className="text-primary/40 font-normal"> · {flavorName}</span>
+                      <span className="text-primary/40 font-normal">
+                        {" "}
+                        · {flavorName}
+                      </span>
                     )}
                   </span>
                   <span className="font-semibold text-primary/70 tabular-nums">
@@ -285,17 +351,29 @@ export default function Step6Success({ orderData, customOrderId }: Step6Props) {
               {/* 3. Addon lines — one row per selected addon */}
               {addons.length > 0 && (
                 <>
-                  <p className="text-[10px] text-primary/30 font-bold uppercase tracking-widest pt-1">Add-ons</p>
+                  <p className="text-[10px] text-primary/30 font-bold uppercase tracking-widest pt-1">
+                    Add-ons
+                  </p>
                   {addons.map((addon, idx) => (
-                    <div key={`${addon.addonId}-${idx}`} className="flex justify-between items-center text-sm">
+                    <div
+                      key={`${addon.addonId}-${idx}`}
+                      className="flex justify-between items-center text-sm"
+                    >
                       <span className="text-primary/60 font-medium">
                         {addon.name}
                         {addon.variantName && (
-                          <span className="text-primary/40 font-normal"> · {addon.variantName}</span>
+                          <span className="text-primary/40 font-normal">
+                            {" "}
+                            · {addon.variantName}
+                          </span>
                         )}
                       </span>
                       <span className="font-semibold text-primary/70 tabular-nums">
-                        {addon.price > 0 ? `+$${addon.price.toFixed(2)}` : <span className="italic text-primary/30">Free</span>}
+                        {addon.price > 0 ? (
+                          `+$${addon.price.toFixed(2)}`
+                        ) : (
+                          <span className="italic text-primary/30">Free</span>
+                        )}
                       </span>
                     </div>
                   ))}
@@ -304,29 +382,41 @@ export default function Step6Success({ orderData, customOrderId }: Step6Props) {
 
               {/* Disclaimer */}
               <p className="text-[12px] text-primary font-bold text-center leading-relaxed pt-2">
-                Please note: Design requests are subject to final review. Additional charges may apply based on the complexity of your reference images and instructions
+                Please note: Design requests are subject to final review.
+                Additional charges may apply based on the complexity of your
+                reference images and instructions
               </p>
               <p className="text-[12px] text-primary/30 font-medium text-center leading-relaxed pt-2">
                 Estimate only — final price confirmed by baker after review.
-
               </p>
             </div>
 
             {/* Grand Total — exact HTML required by spec */}
             <div className="flex justify-between items-center mt-3 pt-4 border-t border-gray-300 border-dashed">
-              <span className="font-extrabold text-lg text-primary/40">Est. Total</span>
+              <span className="font-extrabold text-lg text-primary/40">
+                Est. Total
+              </span>
               <span className="font-extrabold text-xl text-amber-600 italic">
-                {hasPricing ? `$${grandTotal.toFixed(2)}` : (orderData.approximatePrice ? `$${orderData.approximatePrice.toFixed(2)}` : "TBD")}
+                {hasPricing
+                  ? `$${grandTotal.toFixed(2)}`
+                  : orderData.approximatePrice
+                    ? `$${orderData.approximatePrice.toFixed(2)}`
+                    : "TBD"}
               </span>
             </div>
           </div>
 
           {/* Footer */}
           <div className="px-6 py-6 text-center bg-gray-50 text-xs font-medium text-primary/40 border-t border-gray-200">
-              <p className="mb-1 text-primary/50 font-semibold">Thank you for your custom request! 💖</p>
-              <p>{process.env.NEXT_PUBLIC_BAKERY_DM_HANDLE ? `@${process.env.NEXT_PUBLIC_BAKERY_DM_HANDLE.replace(/^@+/, "")}` : "@D&KCreations"}</p>
+            <p className="mb-1 text-primary/50 font-semibold">
+              Thank you for your custom request! 💖
+            </p>
+            <p>
+              {process.env.NEXT_PUBLIC_BAKERY_DM_HANDLE
+                ? `@${process.env.NEXT_PUBLIC_BAKERY_DM_HANDLE.replace(/^@+/, "")}`
+                : "@D&KCreations"}
+            </p>
           </div>
-
         </div>
       </div>
     </div>
