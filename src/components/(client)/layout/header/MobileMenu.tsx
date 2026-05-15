@@ -2,19 +2,31 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { X, LogOut, UserCircle, Phone, PencilRuler, ShieldCheck } from "lucide-react";
+import {
+  X,
+  LogOut,
+  UserCircle,
+  Phone,
+  MessageSquare,
+  ShieldCheck,
+  Menu,
+  WandSparkles,
+  GalleryHorizontalEnd,
+  Crown,
+} from "lucide-react";
 import { User, Collection } from "@/types";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import SearchInput from "./SearchInput";
 import HeaderLogo from "@/components/ui/HeaderLogo";
 import { useActiveSeasonal } from "@/hooks/useActiveSeasonal";
-import { Sparkles, ArrowRight } from "lucide-react";
+import { Sparkles } from "lucide-react";
+import { MenuItem } from "./MenuItem";
 
 interface MobileMenuProps {
   isOpen: boolean;
   onClose: () => void;
-  categories: { name: string; href: string }[];
+  categories: { name: string; href: string; imageUrl: string }[];
   secondaryLinks: { name: string; href: string; icon: React.ElementType }[];
   user: User | null;
   handleLogout: () => void;
@@ -83,9 +95,12 @@ const MobileMenu = ({
           <div className="z-10">
             <SearchInput
               onExpandChange={setIsSearchExpanded}
+              onSelect={onClose}
               className={cn(
                 "flex",
-                isSearchExpanded ? "w-[70vw] sm:w-80" : "w-10",
+                isSearchExpanded
+                  ? "w-[70vw] sm:w-80"
+                  : "w-10 rounded-full bg-accent/10 p-2",
               )}
             />
           </div>
@@ -101,170 +116,162 @@ const MobileMenu = ({
             )}
             onClick={onClose}
           >
-            <HeaderLogo size="80%" />
+            <div className="flex flex-col items-center">
+              <HeaderLogo size="80%" />
+            </div>
           </div>
 
           <button
             onClick={onClose}
             aria-label="Close menu"
-            className="shrink-0 z-10 p-2 rounded-full hover:bg-subtleBackground transition-colors"
+            className="shrink-0 z-10 p-2 rounded-full bg-subtleBackground transition-colors"
           >
             <X className="h-6 w-6 text-primary" />
           </button>
         </div>
-        <nav className="flex-grow overflow-y-auto p-lg">
-          <ul className="flex flex-col w-full space-y-md">
-            <li className="w-full">
-              <Link
-                href={`/products`}
+        <nav className="flex-grow overflow-y-auto px-3 pb-6 pt-2">
+          <div className="flex flex-col gap-2">
+            {/* Main Functional Groups */}
+            <div className="flex flex-col gap-1">
+              <MenuItem
+                href="/products"
+                icon={Menu}
+                label="Full Menu"
                 onClick={onClose}
-                className="text-md text-primary hover:text-accent hover:bg-subtleBackground text-center rounded p-2 transition-colors truncate font-bold"
-              >
-                Full Menu
-              </Link>
-            </li>
-            {activeEvent && (
-              <li className="w-full">
-                <Link
+                badge="All products"
+              />
+              <MenuItem
+                href="/custom-order"
+                icon={WandSparkles}
+                label="Start Your Custom Order"
+                onClick={onClose}
+                badge="Custom Form"
+              />
+              <MenuItem
+                href="/gallery"
+                icon={GalleryHorizontalEnd}
+                label="See Designs"
+                onClick={onClose}
+                badge="References"
+              />
+
+              {activeEvent && (
+                <MenuItem
                   href={`/specials/${activeEvent.slug}`}
+                  icon={Sparkles}
+                  label={activeEvent.name}
                   onClick={onClose}
-                  className="block w-full rounded-medium p-md bg-gradient-to-r from-accent/20 to-transparent border border-accent/20"
-                >
-                  <div className="flex items-center gap-sm mb-1 text-accent font-bold">
-                    <Sparkles className="h-4 w-4" />
-                    <span>{activeEvent.name}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-primary font-heading text-lg">
-                    <span>Shop Specials</span>
-                    <ArrowRight className="h-4 w-4" />
-                  </div>
-                </Link>
-              </li>
-            )}
+                  badge="Limited"
+                  highlight={true}
+                />
+              )}
+            </div>
 
-            <li>
-              <p className="text-sm font-bold text-primary/50 uppercase tracking-wider mb-2 px-md">
-                Categories
-              </p>
-              <ul className="flex flex-col w-full">
-                {categories.map((link) => (
-                  <li key={link.href} className="w-full">
-                    <Link
-                      href={link.href}
-                      onClick={onClose}
-                      className="block w-full rounded-medium p-md font-heading text-xl text-primary hover:bg-subtleBackground transition-colors"
-                    >
-                      {link.name}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </li>
+            <div className="h-px w-full bg-border/50 my-2" />
 
-            {/* Collections */}
-            {collections.length > 0 && (
-              <li>
-                <p className="text-sm font-bold text-primary/50 uppercase tracking-wider mb-2 px-md mt-4">
-                  Collections
-                </p>
-                <ul className="flex flex-col w-full">
+            {/* Secondary Actions (Categories & Collections) */}
+            <div className="flex flex-col gap-1">
+              <div className="px-3 pb-1 pt-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-primary/40">
+                  Categories
+                </span>
+              </div>
+              {categories.map((cat) => (
+                <MenuItem
+                  key={cat.href}
+                  href={cat.href}
+                  imageUrl={cat.imageUrl}
+                  label={cat.name}
+                  onClick={onClose}
+                />
+              ))}
+
+              {/* Collections */}
+              {collections.length > 0 && (
+                <>
+                  <div className="px-3 pb-1 pt-4">
+                    <span className="text-xs font-bold uppercase tracking-wider text-primary/40">
+                      Collections
+                    </span>
+                  </div>
                   {collections.map((col) => (
-                    <li key={col._id.toString()} className="w-full">
-                      <Link
-                        href={`/products/collections/${col.slug}`}
-                        onClick={onClose}
-                        className="block w-full rounded-medium p-md font-heading text-xl text-primary hover:bg-subtleBackground transition-colors"
-                      >
-                        {col.name}
-                      </Link>
-                    </li>
+                    <MenuItem
+                      key={col._id.toString()}
+                      href={`/products/collections/${col.slug}`}
+                      icon={Crown}
+                      imageUrl={col.imageUrl}
+                      label={col.name}
+                      onClick={onClose}
+                    />
                   ))}
-                </ul>
-              </li>
-            )}
-          </ul>
-          <hr className="w-full my-lg border-border" />
-          <ul className="flex flex-col w-full">
-            {secondaryLinks.map((link) => {
-              const Icon = link.icon;
-              return (
-                <li key={link.href} className="w-full">
-                  <Link
+                </>
+              )}
+            </div>
+
+            <div className="h-px w-full bg-border/50 my-2" />
+
+            <div className="flex flex-col gap-1">
+              {secondaryLinks.map((link) => {
+                const Icon = link.icon;
+                return (
+                  <MenuItem
+                    key={link.href}
                     href={link.href}
+                    icon={Icon}
+                    label={link.name}
                     onClick={onClose}
-                    className="flex items-center gap-md w-full rounded-medium p-md font-body text-lg text-primary hover:bg-subtleBackground transition-colors"
+                  />
+                );
+              })}
+              
+              {user ? (
+                <>
+                  <MenuItem
+                    href="/profile"
+                    icon={UserCircle}
+                    label="Profile"
+                    onClick={onClose}
+                  />
+                  <button 
+                    onClick={() => {
+                      handleLogout();
+                      onClose();
+                    }}
+                    className="w-full group flex items-center justify-between p-2.5 rounded-[16px] transition-all duration-300 hover:bg-error/5 cursor-pointer text-left"
                   >
-                    <Icon className="h-5 w-5 text-primary/80" />
-                    <span>{link.name}</span>
-                  </Link>
-                </li>
-              );
-            })}
-            {user ? (
-              <li className="w-full">
-                <Link
-                  href="/profile"
-                  onClick={onClose}
-                  className="flex items-center gap-md w-full rounded-medium p-md font-body text-lg text-primary hover:bg-subtleBackground transition-colors"
-                >
-                  <UserCircle className="h-5 w-5 text-primary/80" />
-                  <span>Profile</span>
-                </Link>
-              </li>
-            ) : (
-              <li className="w-full">
-                <Link
+                    <div className="flex items-center gap-3.5">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all duration-300 bg-error/10 text-error group-hover:bg-error group-hover:text-white group-hover:shadow-sm">
+                        <LogOut className="h-5 w-5 stroke-[1.5]" />
+                      </div>
+                      <span className="font-body text-[15px] font-medium transition-colors text-error group-hover:text-error">
+                        Logout
+                      </span>
+                    </div>
+                  </button>
+                </>
+              ) : (
+                <MenuItem
                   href="/login"
+                  icon={UserCircle}
+                  label="Login"
                   onClick={onClose}
-                  className="flex items-center gap-md w-full rounded-medium p-md font-body text-lg text-primary hover:bg-subtleBackground transition-colors"
-                >
-                  <UserCircle className="h-5 w-5 text-primary/80" />
-                  <span>Login</span>
-                </Link>
-              </li>
-            )}
-            {user && (
-              <li className="w-full">
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center gap-md w-full rounded-medium p-md font-body text-lg text-error hover:bg-error/10 transition-colors"
-                >
-                  <LogOut className="h-5 w-5" />
-                  <span>Logout</span>
-                </button>
-              </li>
-            )}
+                />
+              )}
 
-            {user?.role === 'admin' && (
-              <li className="w-full mt-2 pt-2 border-t border-border border-dashed">
-                <Link
-                  href="/bakery-manufacturing-orders/"
-                  onClick={onClose}
-                  className="flex items-center gap-md w-full rounded-medium p-md font-body text-lg text-accent hover:bg-accent/10 transition-colors"
-                >
-                  <ShieldCheck className="h-5 w-5" />
-                  <span className="font-bold">/Dashboard</span>
-                </Link>
-              </li>
-            )}
-          </ul>
-
-          
-          <div className="mt-xl">
-            <Link href="/custom-order" onClick={onClose}>
-              <Button variant="secondary" className="w-full">
-                <PencilRuler className="h-4 w-4 mr-sm" />
-                Create a Custom Cake
-              </Button>
-            </Link>
-          </div>
-          <div className="my-md">
-            <Link href="/gallery" onClick={onClose}>
-              <Button variant="secondary" className="w-full">
-                <PencilRuler className="h-4 w-4 mr-sm" />
-                Design Gallery
-              </Button>
-            </Link>
+              {user?.role === 'admin' && (
+                <>
+                  <div className="h-px w-full bg-border/50 my-2" />
+                  <MenuItem
+                    href="/bakery-manufacturing-orders"
+                    icon={ShieldCheck}
+                    label="Dashboard"
+                    onClick={onClose}
+                    badge="Admin"
+                    highlight={true}
+                  />
+                </>
+              )}
+            </div>
           </div>
         </nav>
       </div>
