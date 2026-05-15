@@ -8,7 +8,7 @@ import {
   Sparkles,
   ShieldCheck,
   Menu,
-  Palette, 
+  WandSparkles,
   CakeSlice,
   BookImage,
   Crown,
@@ -19,46 +19,11 @@ import { cn } from "@/lib/utils";
 import {  Collection } from "@/types";
 import { useActiveSeasonal } from "@/hooks/useActiveSeasonal";
 import { useAuthStore } from "@/lib/store/authStore";
+import { MenuItem } from "./MenuItem";
 
 interface CatalogDropdownProps {
-  categories: { name: string; href: string }[];
+  categories: { name: string; href: string; imageUrl?: string }[];
 }
-
-const MenuItem = ({ href, icon: Icon, label, badge, onClick, highlight = false }: any) => (
-  <Link
-    href={href}
-    onClick={onClick}
-    className={cn(
-      "group flex items-center justify-between p-2.5 rounded-[16px] transition-all duration-300",
-      highlight ? "hover:bg-accent/5" : "hover:bg-primary/5"
-    )}
-  >
-    <div className="flex items-center gap-3.5">
-      <div className={cn(
-        "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all duration-300",
-        highlight 
-          ? "bg-accent/10 text-accent group-hover:bg-accent group-hover:text-white group-hover:shadow-sm" 
-          : "bg-subtleBackground text-primary/70 group-hover:bg-white group-hover:shadow-sm group-hover:text-primary"
-      )}>
-        <Icon className="h-5 w-5 stroke-[1.5]" />
-      </div>
-      <span className={cn(
-        "font-body text-[15px] font-medium transition-colors",
-        highlight ? "text-accent" : "text-primary group-hover:text-primary"
-      )}>
-        {label}
-      </span>
-    </div>
-    {badge && (
-      <span className={cn(
-        "rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider",
-        highlight ? "bg-accent/20 text-accent" : "bg-primary/10 text-primary/70"
-      )}>
-        {badge}
-      </span>
-    )}
-  </Link>
-);
 
 export const CatalogDropdown = ({ categories }: CatalogDropdownProps) => {
   const [isOpen, setIsOpen] = React.useState(false);
@@ -121,10 +86,12 @@ export const CatalogDropdown = ({ categories }: CatalogDropdownProps) => {
       </PopoverPrimitive.Trigger>
       <PopoverPrimitive.Portal>
         <PopoverPrimitive.Content
-          className="z-50 min-w-[340px] max-h-[85vh] overflow-y-auto rounded-[28px] border border-border/60 bg-white/95 backdrop-blur-xl p-3 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1),0_10px_30px_-10px_rgba(0,0,0,0.05)] origin-top-right animate-in fade-in-0 zoom-in-[0.95] duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-[0.95] data-[side=bottom]:slide-in-from-top-2"
+          className="z-50 min-w-[340px] max-h-[85vh] rounded-[28px] border border-border/60 bg-white/95 backdrop-blur-xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1),0_10px_30px_-10px_rgba(0,0,0,0.05)] origin-top-right animate-in fade-in-0 zoom-in-[0.95] duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-[0.95] data-[side=bottom]:slide-in-from-top-2 overflow-hidden flex flex-col"
           sideOffset={8}
           align="end"
         >
+          <div className="overflow-y-auto p-3 h-full w-full">
+
           <div className="flex flex-col gap-2">
             {/* Main Functional Groups */}
             <div className="flex flex-col gap-1">
@@ -134,6 +101,13 @@ export const CatalogDropdown = ({ categories }: CatalogDropdownProps) => {
                 label="Full Menu"
                 onClick={() => setIsOpen(false)}
                 badge="All products"
+              />
+              <MenuItem
+                href="/custom-order"
+                icon={WandSparkles}
+                label="Custom order"
+                onClick={() => setIsOpen(false)}
+                badge="Custom Form"
               />
               <MenuItem
                 href="/gallery"
@@ -151,7 +125,7 @@ export const CatalogDropdown = ({ categories }: CatalogDropdownProps) => {
                   onClick={() => setIsOpen(false)}
                   badge="Limited"
                   highlight={true}
-                />
+                  />
               )}
             </div>
 
@@ -166,12 +140,13 @@ export const CatalogDropdown = ({ categories }: CatalogDropdownProps) => {
               </div>
               {categories.map((cat) => (
                 <MenuItem
-                  key={cat.href}
-                  href={cat.href}
-                  icon={LayoutGrid}
-                  label={cat.name}
+                key={cat.href}
+                href={cat.href}
+                icon={LayoutGrid}
+                imageUrl={cat.imageUrl}
+                label={cat.name}
                   onClick={() => setIsOpen(false)}
-                />
+                  />
               ))}
 
               {collections.length > 0 && (
@@ -183,12 +158,13 @@ export const CatalogDropdown = ({ categories }: CatalogDropdownProps) => {
                   </div>
                   {collections.map((col) => (
                     <MenuItem
-                      key={col._id.toString()}
+                    key={col._id.toString()}
                       href={`/products/collections/${col.slug}`}
                       icon={Crown}
+                      imageUrl={col.imageUrl}
                       label={col.name}
                       onClick={() => setIsOpen(false)}
-                    />
+                      />
                   ))}
                 </>
               )}
@@ -205,11 +181,12 @@ export const CatalogDropdown = ({ categories }: CatalogDropdownProps) => {
                     onClick={() => setIsOpen(false)}
                     badge="Admin"
                     highlight={true}
-                  />
+                    />
                 </div>
               </>
             )}
           </div>
+                    </div>
         </PopoverPrimitive.Content>
       </PopoverPrimitive.Portal>
     </PopoverPrimitive.Root>

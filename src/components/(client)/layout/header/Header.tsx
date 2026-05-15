@@ -17,7 +17,9 @@ import {
   ChevronDown,
   ChevronUp,
   Newspaper,
-  PencilRuler
+  PencilRuler,
+  MessageSquare,
+  BookOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ProductCategory } from "@/types";
@@ -87,6 +89,7 @@ const Header = ({ categories }: HeaderProps) => {
   const navCategories = categories.map((cat) => ({
     name: cat.name,
     href: `/products/category/${cat.slug}`,
+    imageUrl: cat.imageUrl
   }));
 
   const shouldShowCollectionsNav =
@@ -95,8 +98,8 @@ const Header = ({ categories }: HeaderProps) => {
     pathname.startsWith("/products/collections/");
 
   const secondaryLinks = [
-    { name: "Contact", href: "/contact", icon: Phone },
-    { name: "Blog", href: "/blog", icon: Newspaper },
+    { name: "Contact", href: "/contact", icon: MessageSquare },
+    { name: "Blog", href: "/blog", icon: BookOpen },
   ];
 
   return (
@@ -166,7 +169,7 @@ const Header = ({ categories }: HeaderProps) => {
                       href="/contact"
                       className="flex items-center gap-sm font-body text-body text-primary hover:text-accent whitespace-nowrap"
                     >
-                      <Phone className="h-4 w-4" />
+                      <MessageSquare className="h-4 w-4" />
                       <span>Contact</span>
                     </Link>
                   </div>
@@ -182,7 +185,7 @@ const Header = ({ categories }: HeaderProps) => {
                       href="/blog"
                       className="flex items-center gap-sm font-body text-body text-primary hover:text-accent whitespace-nowrap"
                     >
-                      <Newspaper className="h-4 w-4" />
+                      <BookOpen className="h-4 w-4" />
                       <span>Blog</span>
                     </Link>
                   </div>
@@ -195,24 +198,7 @@ const Header = ({ categories }: HeaderProps) => {
                 </div>
               </div>
               <div className="flex items-center gap-md justify-end">
-                <div
-                  className={cn(
-                    "hidden md:flex items-center gap-md transition-all duration-300 ease-in-out overflow-hidden",
-                    isSearchExpanded
-                      ? "w-0 opacity-0 translate-x-4"
-                      : "w-auto opacity-100 translate-x-0",
-                  )}
-                >
-                  <Link
-                    href="/custom-order"
-                    className="flex items-center gap-sm font-body text-body text-primary hover:text-accent whitespace-nowrap"
-                  >
-                    <PencilRuler className="h-4 w-4" />
-                    Custom Cake
-                  </Link>
-                </div>
-
-                <div className="hidden lg:block">
+                <div className="hidden md:block">
                   <CatalogDropdown categories={navCategories} />
                 </div>
 

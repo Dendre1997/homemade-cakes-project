@@ -30,11 +30,13 @@ const ProductThumbnail = ({ src, alt }: { src: string; alt: string }) => {
 
 interface SearchInputProps {
   onExpandChange?: (isExpanded: boolean) => void;
+  onSelect?: () => void;
   className?: string;
 }
 
 export default function SearchInput({
   onExpandChange,
+  onSelect,
   className,
 }: SearchInputProps) {
   const [query, setQuery] = useState("");
@@ -110,6 +112,7 @@ export default function SearchInput({
     setIsExpanded(false);
     setShowResults(false);
     setQuery("");
+    onSelect?.();
   };
   return (
     <div
@@ -117,7 +120,7 @@ export default function SearchInput({
       className={cn(
         "relative flex h-10 items-center justify-end transition-all duration-300 ease-in-out",
         isExpanded ? "w-64 md:w-56 lg:w-80 xl:w-96" : "w-10",
-        className
+        className,
       )}
     >
       <div
@@ -125,7 +128,7 @@ export default function SearchInput({
           "absolute inset-0 rounded-full border transition-all duration-300 flex items-center bg-white/80 backdrop-blur-sm overflow-hidden",
           isExpanded
             ? "border-primary/20 shadow-sm w-full"
-            : "border-transparent bg-transparent w-10 justify-center cursor-pointer hover:bg-accent"
+            : "border-transparent bg-transparent w-10 justify-center cursor-pointer hover:bg-accent",
         )}
       >
         <button
@@ -133,7 +136,7 @@ export default function SearchInput({
           onClick={handleExpand}
           className={cn(
             "flex items-center justify-center h-10 w-10 text-primary/50 transition-colors z-10 flex-shrink-0",
-            !isExpanded && "hover:text-primary"
+            !isExpanded && "hover:text-primary",
           )}
         >
           <Search className="h-5 w-5" />
@@ -147,7 +150,7 @@ export default function SearchInput({
           placeholder="Search..."
           className={cn(
             "w-full h-full bg-transparent text-primary placeholder:text-primary/50 text-sm focus:outline-none transition-opacity duration-200",
-            isExpanded ? "opacity-100 pr-10" : "opacity-0 pointer-events-none"
+            isExpanded ? "opacity-100 pr-10" : "opacity-0 pointer-events-none",
           )}
           tabIndex={isExpanded ? 0 : -1}
         />
@@ -161,7 +164,7 @@ export default function SearchInput({
             "absolute right-0 h-10 w-10 flex items-center justify-center text-primary/50 hover:text-primary transition-all",
             isExpanded && query
               ? "opacity-100 scale-100"
-              : "opacity-0 scale-90 pointer-events-none"
+              : "opacity-0 scale-90 pointer-events-none",
           )}
         >
           <X className="h-4 w-4" />
@@ -170,77 +173,80 @@ export default function SearchInput({
 
       {/* Results Dropdown */}
       {isExpanded && showResults && (query || isLoading) && (
-        <div className="absolute top-full left-0 right-0 mt-3 bg-card-background rounded-large shadow-xl border border-border overflow-hidden z-50 max-h-[400px] overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-200">
-          {isLoading ? (
-            <div className="p-8 flex flex-col items-center justify-center text-primary/50 gap-2">
-              <Loader2 className="h-6 w-6 animate-spin text-accent" />
-              <span className="text-xs font-medium">Searching...</span>
-            </div>
-          ) : results.length > 0 ? (
-            <div className="py-2">
-              {results.map((product) => (
-                <Link
-                  key={product._id}
-                  href={`/products/${product._id}`}
-                  onClick={handleSelect}
-                  className="flex items-center gap-4 px-4 py-3 hover:bg-subtleBackground transition-colors group border-b border-border/40 last:border-0"
-                >
-                  <div className="relative h-16 w-16 rounded-medium overflow-hidden bg-neutral-100 shrink-0 border border-border group-hover:border-accent/50 transition-colors shadow-sm">
-                    {product.imageUrls?.[0] ? (
-                      <Image
-                        src={product.imageUrls[0]}
-                        alt={product.name}
-                        fill
-                        className="object-cover"
-                        sizes="64px"
-                        quality={90}
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-400">
-                        No Img
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Text Content */}
-                  <div className="flex-1 min-w-0">
-                    <h4 className="text-base font-heading text-primary truncate group-hover:text-accent transition-colors mb-0.5">
-                      {product.name}
-                    </h4>
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs text-primary/60 truncate bg-primary/5 px-2 py-0.5 rounded-full inline-block">
-                        {product.category?.name}
-                      </p>
-                      {/* Optional: Show Price */}
-                      <p className="text-sm font-bold text-primary">
-                        ${product.structureBasePrice.toFixed(0)}
-                      </p>
+        <div className="absolute top-full left-0 right-0 mt-3 bg-card-background rounded-large shadow-xl border border-border overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200">
+          <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
+            {isLoading ? (
+              <div className="p-8 flex flex-col items-center justify-center text-primary/50 gap-2">
+                <Loader2 className="h-6 w-6 animate-spin text-accent" />
+                <span className="text-xs font-medium">Searching...</span>
+              </div>
+            ) : results.length > 0 ? (
+              <div className="py-2">
+                {results.map((product) => (
+                  <Link
+                    key={product._id}
+                    href={`/products/${product._id}`}
+                    onClick={handleSelect}
+                    className="flex items-center gap-4 px-4 py-3 hover:bg-subtleBackground transition-colors group border-b border-border/40 last:border-0"
+                  >
+                    <div className="relative h-16 w-16 rounded-medium overflow-hidden bg-neutral-100 shrink-0 border border-border group-hover:border-accent/50 transition-colors shadow-sm">
+                      {product.imageUrls?.[0] ? (
+                        <Image
+                          src={product.imageUrls[0]}
+                          alt={product.name}
+                          fill
+                          className="object-cover"
+                          sizes="64px"
+                          quality={90}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-400">
+                          No Img
+                        </div>
+                      )}
                     </div>
-                  </div>
 
-                  {/* Arrow Icon */}
-                  <ChevronRight className="h-4 w-4 text-primary/30 group-hover:text-accent transition-colors" />
+                    {/* Text Content */}
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-base font-heading text-primary truncate group-hover:text-accent transition-colors mb-0.5">
+                        {product.name}
+                      </h4>
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-primary/60 truncate bg-primary/5 px-2 py-0.5 rounded-full inline-block">
+                          {product.category?.name}
+                        </p>
+                        {/* Optional: Show Price */}
+                        <p className="text-sm font-bold text-primary">
+                          ${product.structureBasePrice.toFixed(0)}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Arrow Icon */}
+                    <ChevronRight className="h-4 w-4 text-primary/30 group-hover:text-accent transition-colors" />
+                  </Link>
+                ))}
+
+                {/* "View All" Link at bottom */}
+                <Link
+                  href="/products"
+                  onClick={handleSelect}
+                  className="block text-center py-3 text-sm font-medium text-accent hover:text-accent/80 hover:bg-subtleBackground transition-colors border-t border-border"
+                >
+                  View all results
                 </Link>
-              ))}
-
-              {/* "View All" Link at bottom */}
-              <Link
-                href="/products"
-                className="block text-center py-3 text-sm font-medium text-accent hover:text-accent/80 hover:bg-subtleBackground transition-colors border-t border-border"
-              >
-                View all results
-              </Link>
-            </div>
-          ) : (
-            <div className="p-8 text-center">
-              <p className="font-heading text-primary text-lg mb-1">
-                No matches found
-              </p>
-              <p className="text-sm text-primary/60">
-                Try checking your spelling or use a different keyword.
-              </p>
-            </div>
-          )}
+              </div>
+            ) : (
+              <div className="p-8 text-center">
+                <p className="font-heading text-primary text-lg mb-1">
+                  No matches found
+                </p>
+                <p className="text-sm text-primary/60">
+                  Try checking your spelling or use a different keyword.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
