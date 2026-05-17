@@ -70,7 +70,7 @@ export default function CustomOrderDetail({ initialOrder }: CustomOrderDetailPro
       navigator.clipboard.writeText(paymentLink);
       showAlert("Payment link copied to clipboard!", "success");
       setPaymentLink(null); // Clear after dismissing
-      router.push('/bakery-manufacturing-orders/custom-orders/');
+      router.push('/bakery-manufacturing-orders/custom-orders');
     }
   };
 

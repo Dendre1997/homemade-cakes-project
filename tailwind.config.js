@@ -32,11 +32,11 @@ module.exports = {
       },
 
       fontSize: {
-        h1: ["2.75rem", { lineHeight: "1.2" }], // 44px
-        h2: ["2rem", { lineHeight: "1.2" }], // 32px
-        h3: ["1.5rem", { lineHeight: "1.3" }], // 24px
-        body: ["1rem", { lineHeight: "1.6" }], // 16px
-        small: ["0.875rem", { lineHeight: "1.5" }], // 14px
+        h1: ["2.75rem", { lineHeight: "1.2" }],
+        h2: ["2rem", { lineHeight: "1.2" }],
+        h3: ["1.5rem", { lineHeight: "1.3" }],
+        body: ["1rem", { lineHeight: "1.6" }],
+        small: ["0.875rem", { lineHeight: "1.5" }],
       },
 
       spacing: {
@@ -52,16 +52,28 @@ module.exports = {
         md: "0px 4px 12px rgba(74, 46, 44, 0.08)",
         lg: "0px 8px 16px rgba(74, 46, 44, 0.12)",
       },
+
       animation: {
         marquee: "marquee 25s linear infinite",
+        "pulse-hint": "pulse-hint 2s ease-in-out infinite",
       },
       keyframes: {
         marquee: {
           "0%": { transform: "translateX(0%)" },
           "100%": { transform: "translateX(-100%)" },
         },
+        "pulse-hint": {
+          "0%, 100%": { opacity: "1", transform: "scale(1)" },
+          "50%": { opacity: "0.7", transform: "scale(0.95)" },
+        },
       },
     },
   },
-  plugins: [require("@tailwindcss/typography")],
+  plugins: [
+    require("@tailwindcss/typography"),
+    // Enables `pointer-coarse:` variant — targets touch/mobile devices only
+    function ({ addVariant }) {
+      addVariant("pointer-coarse", "@media (pointer: coarse)");
+    },
+  ],
 };

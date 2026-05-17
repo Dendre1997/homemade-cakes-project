@@ -4,6 +4,12 @@ import { adminAuth } from "@/lib/firebase/adminApp";
 import clientPromise from "@/lib/db";
 import { ObjectId } from "mongodb";
 import { OrderStatus, User } from "@/types";
+import { Resend } from "resend";
+import OrderConfirmationEmail from "@/emails/OrderConfirmationEmail";
+import { render } from "@react-email/render";
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+
 
 /**
  * POST /api/admin/custom-orders/[id]/convert
@@ -172,6 +178,48 @@ export async function POST(
     // Transaction: insert order, then delete the custom order request
     await ordersColl.insertOne(newOrder);
     await customOrdersColl.deleteOne({ _id: new ObjectId(id) });
+
+    // Trigger Order Confirmation Email if email is provided and not a placeholder
+    if (
+        newOrder.customerInfo?.email &&
+        newOrder.customerInfo.email.trim() !== "" &&
+        !newOrder.customerInfo.email.includes("@placeholder.com")
+    ) {
+        try {
+            const finalOrder = {
+                ...newOrder,
+                _id: newOrderId.toString(),
+                items: newOrder.items.map((item: any) => ({
+                    ...item,
+                    categoryId: item.categoryId?.toString(),
+                }))
+            };
+
+            const flavors = await db.collection("flavors").find({}).toArray();
+            const flavorMap = flavors.reduce((acc, flavor) => {
+                acc[flavor._id.toString()] = flavor.name;
+                return acc;
+            }, {} as Record<string, string>);
+
+            const diameters = await db.collection("diameters").find({}).toArray();
+            const diameterMap = diameters.reduce((acc, d) => {
+                acc[d._id.toString()] = d.name || d.sizeValue?.toString() + '"';
+                return acc;
+            }, {} as Record<string, string>);
+
+            const htmlContent = await render(OrderConfirmationEmail({ order: finalOrder as any, flavorMap, diameterMap }));
+
+            await resend.emails.send({
+                from: "Homemade Cakes <onboarding@resend.dev>",
+                to: newOrder.customerInfo.email,
+                subject: `Your Order Confirmation #${newOrderId.toString().slice(-6).toUpperCase()}`,
+                html: htmlContent,
+            });
+            console.log(`Confirmation email sent to ${newOrder.customerInfo.email} for converted order ${newOrderId}`);
+        } catch (emailError) {
+            console.error("Error sending confirmation email:", emailError);
+        }
+    }
 
     return NextResponse.json({
       success: true,
