@@ -36,11 +36,12 @@ export default function Step5Contact() {
   return (
     <div className="space-y-8 max-w-sm mx-auto">
       <div className="text-center mb-8">
-        <p className="text-primary/70 mt-2 font-semibold">How would you like to be contacted for the price quote?</p>
+        <p className="text-primary/70 mt-2 font-semibold">
+          How would you like to be contacted for the price quote?
+        </p>
       </div>
 
       <div className="space-y-5">
-
         {/* Contact Method Selector */}
         <div className="space-y-3 mb-6">
           <div className="flex gap-3 justify-center">
@@ -70,7 +71,9 @@ export default function Step5Contact() {
               <label className="block text-sm font-semibold mb-1 text-primary">
                 Full Name{" "}
                 {hasNickname && (
-                  <span className="font-normal text-primary/50 text-xs">(Optional)</span>
+                  <span className="font-normal text-primary/50 text-xs">
+                    (Optional)
+                  </span>
                 )}
               </label>
               <Controller
@@ -85,7 +88,9 @@ export default function Step5Contact() {
                 )}
               />
               {errors.contact?.name && (
-                <p className="text-primary/60 text-xs mt-1">{errors.contact.name.message}</p>
+                <p className="text-primary/60 text-xs mt-1">
+                  {errors.contact.name.message}
+                </p>
               )}
             </div>
 
@@ -94,7 +99,9 @@ export default function Step5Contact() {
               <label className="block text-sm font-semibold mb-1 text-primary">
                 Phone Number{" "}
                 {phoneIsOptional && (
-                  <span className="font-normal text-primary/50 text-xs">(Optional)</span>
+                  <span className="font-normal text-primary/50 text-xs">
+                    (Optional)
+                  </span>
                 )}
               </label>
               <Controller
@@ -110,7 +117,9 @@ export default function Step5Contact() {
                 )}
               />
               {errors.contact?.phone && (
-                <p className="text-primary/60 text-xs mt-1">{errors.contact.phone.message}</p>
+                <p className="text-primary/60 text-xs mt-1">
+                  {errors.contact.phone.message}
+                </p>
               )}
             </div>
           </>
@@ -121,7 +130,9 @@ export default function Step5Contact() {
             {/* 2. Social Media Nickname */}
             <div data-field-name="contact.socialNickname">
               <label className="block text-sm font-semibold mb-1 text-primary">
-                {socialPlatform === "facebook" ? "Facebook Profile URL" : "Instagram Nickname"}
+                {socialPlatform === "facebook"
+                  ? "Facebook Profile URL"
+                  : "Instagram Nickname"}
                 {socialPlatform === "facebook" && (
                   <span className="block font-normal text-primary/60 text-xs mt-0.5 mb-1.5">
                     Please paste full link to your Facebook profile or page
@@ -148,10 +159,17 @@ export default function Step5Contact() {
                     onChange={(e) => {
                       field.onChange(e);
                       const val = e.target.value;
-                      if (val.includes("https://www.facebook.com") || val.includes("facebook.com")) {
-                        setValue("contact.socialPlatform", "facebook", { shouldValidate: true });
+                      if (
+                        val.includes("https://www.facebook.com") ||
+                        val.includes("facebook.com")
+                      ) {
+                        setValue("contact.socialPlatform", "facebook", {
+                          shouldValidate: true,
+                        });
                       } else if (val.trim().length > 0 && !socialPlatform) {
-                        setValue("contact.socialPlatform", "instagram", { shouldValidate: true });
+                        setValue("contact.socialPlatform", "instagram", {
+                          shouldValidate: true,
+                        });
                       }
                     }}
                   />
@@ -210,8 +228,10 @@ export default function Step5Contact() {
               {phoneIsOptional && (
                 <p className="text-xs text-center text-primary/50 mt-3">
                   ✓ We'll reach out via{" "}
-                  <span className="font-semibold capitalize">{socialPlatform}</span> at{" "}
-                  <span className="font-semibold">{socialNickname}</span>
+                  <span className="font-semibold capitalize">
+                    {socialPlatform}
+                  </span>{" "}
+                  at <span className="font-semibold">{socialNickname}</span>
                 </p>
               )}
             </div>
@@ -223,9 +243,12 @@ export default function Step5Contact() {
           <div data-field-name="contact.email">
             <label className="block text-sm font-semibold mb-1 text-primary">
               Email Address{" "}
-              <span className="font-normal text-primary/50 text-xs">(Optional)</span>
+              <span className="font-normal text-primary/50 text-xs">
+                (Optional)
+              </span>
               <span className="block font-normal text-primary/60 text-xs mt-0.5 mb-1.5">
-                Enter your email if you'd like to receive a summary of your request
+                Enter your email to get a summary of your request after
+                confirmation
               </span>
             </label>
             <Controller
@@ -241,11 +264,12 @@ export default function Step5Contact() {
               )}
             />
             {errors.contact?.email && (
-              <p className="text-primary/60 text-xs mt-1">{errors.contact.email.message}</p>
+              <p className="text-primary/60 text-xs mt-1">
+                {errors.contact.email.message}
+              </p>
             )}
           </div>
         )}
-
       </div>
     </div>
   );

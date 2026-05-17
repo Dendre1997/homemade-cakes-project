@@ -89,7 +89,7 @@ const AdminSidebar = ({ isOpen, onClose }: SidebarProps) => {
   const [supportChats, setSupportChats] = React.useState<any[]>([]);
 
   const unreadSupportCount = React.useMemo(
-    () => supportChats.filter((c) => c.hasUnread).length,
+    () => Array.isArray(supportChats) ? supportChats.filter((c) => c.hasUnread).length : 0,
     [supportChats]
   );
 
@@ -114,16 +114,20 @@ const AdminSidebar = ({ isOpen, onClose }: SidebarProps) => {
         const ordersRes = await fetch("/api/admin/orders");
         if (ordersRes.ok) {
           const orders = await ordersRes.json();
-          const newOrderCount = orders.filter(
-            (o: any) => o.status === "new" || o.status === "pending_confirmation"
-          ).length;
-          setNewOrdersCount(newOrderCount);
+          if (Array.isArray(orders)) {
+            const newOrderCount = orders.filter(
+              (o: any) => o.status === "new" || o.status === "pending_confirmation"
+            ).length;
+            setNewOrdersCount(newOrderCount);
+          }
         }
 
         const supportRes = await fetch("/api/admin/chats");
         if (supportRes.ok) {
           const chats = await supportRes.json();
-          setSupportChats(chats);
+          if (Array.isArray(chats)) {
+            setSupportChats(chats);
+          }
         }
       } catch (error) {
         console.error("Failed to fetch sidebar counts", error);
@@ -152,9 +156,12 @@ const AdminSidebar = ({ isOpen, onClose }: SidebarProps) => {
       channel.bind("inbox-update", (data: any) => {
         if (data?.chatId) {
           setSupportChats((prev) => {
+            if (!Array.isArray(prev)) prev = [];
             const exists = prev.some((c) => c._id === data.chatId);
             if (!exists) {
-              fetch("/api/admin/chats").then((res) => res.json()).then(setSupportChats);
+              fetch("/api/admin/chats").then((res) => res.json()).then(chats => {
+                  if (Array.isArray(chats)) setSupportChats(chats);
+              });
               return prev;
             }
             return prev.map((c) =>
@@ -162,7 +169,9 @@ const AdminSidebar = ({ isOpen, onClose }: SidebarProps) => {
             );
           });
         } else {
-          fetch("/api/admin/chats").then((res) => res.json()).then(setSupportChats);
+          fetch("/api/admin/chats").then((res) => res.json()).then(chats => {
+              if (Array.isArray(chats)) setSupportChats(chats);
+          });
         }
       });
     }

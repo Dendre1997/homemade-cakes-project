@@ -281,7 +281,9 @@ export default function AdminSupportDashboard() {
                                         {ticket.userData?.name || "Guest Customer"}
                                     </div>
                                     <span className="text-xs text-primary/40 shrink-0 mt-0.5">
-                                        {new Date(ticket.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        {ticket.updatedAt && !isNaN(new Date(ticket.updatedAt).getTime()) 
+                                            ? new Date(ticket.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
+                                            : ""}
                                     </span>
                                 </div>
                                 <div className="text-xs text-primary/60 truncate mb-2">
@@ -292,7 +294,7 @@ export default function AdminSupportDashboard() {
                                         "text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider",
                                         ticket.status === 'waiting_admin' ? "bg-error/10 text-error" : "bg-success/10 text-success"
                                     )}>
-                                        {ticket.status.replace("_", " ")}
+                                        {ticket.status ? ticket.status.replace("_", " ") : "UNKNOWN"}
                                     </span>
                                     {ticket.hasUnread && (
                                         <span className="flex h-2 w-2 rounded-full bg-error" />
@@ -356,7 +358,9 @@ export default function AdminSupportDashboard() {
                                                 <div>{msg.text}</div>
                                             </div>
                                             <span className="text-[11px] text-primary/40 mt-1 px-1">
-                                                {new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                                {msg.createdAt && !isNaN(new Date(msg.createdAt).getTime())
+                                                    ? new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                                                    : ""}
                                             </span>
                                         </div>
                                     </div>
