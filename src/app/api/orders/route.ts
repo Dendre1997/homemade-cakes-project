@@ -515,6 +515,18 @@ export async function POST(request: NextRequest) {
       };
 
       try {
+        const flavors = await db.collection("flavors").find({}).toArray();
+        const flavorMap = flavors.reduce((acc, flavor) => {
+            acc[flavor._id.toString()] = flavor.name;
+            return acc;
+        }, {} as Record<string, string>);
+
+        const diameters = await db.collection("diameters").find({}).toArray();
+        const diameterMap = diameters.reduce((acc, d) => {
+            acc[d._id.toString()] = d.name || d.sizeValue?.toString() + '"';
+            return acc;
+        }, {} as Record<string, string>);
+
         await Promise.all([
           resend.emails.send({
             from: "Homemade Cakes <onboarding@resend.dev>",
@@ -526,7 +538,7 @@ export async function POST(request: NextRequest) {
             from: "Homemade Cakes <onboarding@resend.dev>",
             to: finalOrder.customerInfo.email,
             subject: `Your Order Confirmation #${finalOrder._id.toString().slice(-6).toUpperCase()}`,
-            react: OrderConfirmationEmail({ order: finalOrder }),
+            react: OrderConfirmationEmail({ order: finalOrder, flavorMap, diameterMap }),
           }),
         ]);
         console.log(`Confirmation emails sent for order ${orderId}.`);
