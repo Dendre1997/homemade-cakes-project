@@ -232,6 +232,9 @@ function CustomOrderContent() {
           <Step6Success
             orderData={submittedData}
             customOrderId={submittedCustomOrderId}
+            onMakeAnotherRequest={() => {
+              window.location.href = "/custom-order";
+            }}
           />
         );
       default: return null;

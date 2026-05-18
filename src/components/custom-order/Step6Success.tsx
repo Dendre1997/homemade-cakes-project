@@ -10,6 +10,7 @@ interface Step6Props {
   orderData: CustomOrderFormData | null;
   /** custom_orders document id from POST response */
   customOrderId?: string | null;
+  onMakeAnotherRequest: () => void;
 }
 
 /**
@@ -26,7 +27,7 @@ function getBakeryDmNicknameForPlatform(platform: "instagram" | "facebook"): str
   return raw || legacy;
 }
 
-export default function Step6Success({ orderData, customOrderId }: Step6Props) {
+export default function Step6Success({ orderData, customOrderId, onMakeAnotherRequest }: Step6Props) {
 
 
   if (!orderData) return null;
@@ -417,8 +418,18 @@ export default function Step6Success({ orderData, customOrderId }: Step6Props) {
                 : "@D&KCreations"}
             </p>
           </div>
-        </div>
       </div>
     </div>
+
+    {/* Make Another Request Button */}
+    <div className="mt-8 mb-4">
+      <Button
+        onClick={onMakeAnotherRequest}
+        className="h-11 px-6 rounded-xl border border-primary/20 bg-white hover:bg-primary/5 text-primary font-semibold text-sm shadow-md hover:shadow-lg transition-all active:scale-95 flex items-center gap-2"
+      >
+        Make Another Request
+      </Button>
+    </div>
+  </div>
   );
 }
