@@ -7,3 +7,8 @@ if (!resendApiKey) {
 }
 
 export const resend = new Resend(resendApiKey);
+
+// Centralized from email configurations
+export const SENDER_EMAIL = process.env.EMAIL_FROM || process.env.RESEND_FROM || "orders@d-kcreations.com";
+export const DEFAULT_FROM = `D&K Creations <${SENDER_EMAIL}>`;
+

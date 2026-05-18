@@ -4,11 +4,10 @@ import { adminAuth } from "@/lib/firebase/adminApp";
 import clientPromise from "@/lib/db";
 import { OrderStatus,  User } from "@/types";
 import { ObjectId } from "mongodb";
-import { Resend } from "resend";
+import { resend, DEFAULT_FROM } from "@/lib/email";
 import OrderConfirmationEmail from "@/emails/OrderConfirmationEmail";
 import { render } from "@react-email/render";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 
 export async function GET(request: NextRequest) {
@@ -196,7 +195,7 @@ export async function POST(request: NextRequest) {
             const htmlContent = await render(OrderConfirmationEmail({ order: finalOrder as any, flavorMap, diameterMap }));
 
             await resend.emails.send({
-                from: "D&K Creations <orders@d-kcreations.com>",
+                from: DEFAULT_FROM,
                 to: newOrder.customerInfo.email,
                 subject: `Your Order Confirmation #${result.insertedId.toString().slice(-6).toUpperCase()}`,
                 html: htmlContent,
