@@ -210,7 +210,7 @@ export async function POST(
             const htmlContent = await render(OrderConfirmationEmail({ order: finalOrder as any, flavorMap, diameterMap }));
 
             await resend.emails.send({
-                from: "Homemade Cakes <onboarding@resend.dev>",
+                from: "D&K Creations <orders@d-kcreations.com>",
                 to: newOrder.customerInfo.email,
                 subject: `Your Order Confirmation #${newOrderId.toString().slice(-6).toUpperCase()}`,
                 html: htmlContent,

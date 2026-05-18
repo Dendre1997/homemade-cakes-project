@@ -253,7 +253,7 @@ export async function POST(request: NextRequest) {
 
       try {
         await resend.emails.send({
-          from: "Dilna Cakes <onboarding@resend.dev>",
+          from: "D&K Creations <orders@d-kcreations.com>",
           to: process.env.ADMIN_EMAIL || "",
           subject: `ACTION REQUIRED: Order #${finalPendingOrder._id.toString().slice(-6).toUpperCase()} Needs Confirmation`,
           react: PendingOrderAdminEmail({ order: finalPendingOrder }),
@@ -529,13 +529,13 @@ export async function POST(request: NextRequest) {
 
         await Promise.all([
           resend.emails.send({
-            from: "Homemade Cakes <onboarding@resend.dev>",
+            from: "Homemade Cakes <orders@d-kcreations.com>",
             to: "anastasiiadilna@gmail.com",
             subject: `New Order #${finalOrder._id.toString().slice(-6).toUpperCase()}`,
             react: NewOrderEmail({ order: finalOrder }),
           }),
           resend.emails.send({
-            from: "Homemade Cakes <onboarding@resend.dev>",
+            from: "Homemade Cakes <orders@d-kcreations.com>",
             to: finalOrder.customerInfo.email,
             subject: `Your Order Confirmation #${finalOrder._id.toString().slice(-6).toUpperCase()}`,
             react: OrderConfirmationEmail({ order: finalOrder, flavorMap, diameterMap }),

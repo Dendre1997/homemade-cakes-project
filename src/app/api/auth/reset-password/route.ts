@@ -29,9 +29,9 @@ export async function POST(req: NextRequest) {
 
       // Send via custom API leveraging Resend vs the baked-in Google templates
       const { data, error: resendError } = await resend.emails.send({
-        from: "Homemade Cakes <onboarding@resend.dev>", 
+        from: "D&K Creations <resetpassword@d-kcreations.com>", 
         to: email,
-        subject: "Reset Your Password - Homemade Cakes",
+        subject: "Reset Your Password - D&K Creations",
         react: PasswordResetEmail({ resetLink: cleanLink }),
       });
 
