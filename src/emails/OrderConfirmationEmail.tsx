@@ -152,7 +152,7 @@ export const OrderConfirmationEmail = ({
             {/* ── FULFILLMENT ─────────────────────────────────────────────── */}
             <Section style={styles.sectionPad}>
               <Text style={styles.sectionLabel}>
-                {isDelivery ? "🚚  Delivery To" : "🏪  Pickup"}
+                {isDelivery ? " Delivery To" : " Pickup"}
               </Text>
 
               {order.deliveryInfo.deliveryDates?.length > 0 &&
@@ -350,7 +350,7 @@ export const OrderConfirmationEmail = ({
                 Thank you for your order! 💖
               </Text>
               <Text style={styles.footerHandle}>
-                @d&amp;kcreations &bull; d&amp;kcreations.com
+                {/* @d&amp;kcreations &bull; d&amp;kcreations.com */}
               </Text>
               <Row style={{ marginTop: "16px" }}>
                 <Column align="center">

@@ -10,6 +10,10 @@ import { ImageUploadPreview } from "@/components/admin/ImageUploadPreview";
 import LoadingSpinner from "@/components/ui/Spinner";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { ProductPicker } from "@/components/admin/ProductPicker";
+import {
+  appendCloudinaryUploadPreset,
+  cloudinaryUploadUrl,
+} from "@/lib/cloudinaryClient";
 import CustomDateRangePicker from "@/components/ui/CustomDateRangePicker";
 import { format } from "date-fns";
 
@@ -127,10 +131,10 @@ const SeasonalForm = ({
     }
     const uploadData = new FormData();
     uploadData.append("file", file);
-    uploadData.append("upload_preset", "homemade_cakes_preset");
+    appendCloudinaryUploadPreset(uploadData);
     try {
       const response = await fetch(
-        `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+        cloudinaryUploadUrl("image"),
         { method: "POST", body: uploadData }
       );
       if (!response.ok) throw new Error("Upload failed");

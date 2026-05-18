@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { MessageCircle, Send, Loader2, Bot, Cat, ChevronLeft, PlusCircle, Mail, Phone } from "lucide-react";
 import { AppSettings, IChat, IMessage, Flavor, Diameter } from "@/types";
-import { pusherClient } from "@/lib/pusher-client";
+import PusherClient from "pusher-js";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card, CardContent } from "@/components/ui/Card";
@@ -100,9 +100,20 @@ export default function ContactClient({ initialSettings, isAuthenticated = false
     }
   }, [messages]);
 
+  const pusherRef = useRef<PusherClient | null>(null);
+
+  // Clean up Pusher on unmount
+  useEffect(() => {
+    return () => {
+      if (pusherRef.current) {
+        pusherRef.current.disconnect();
+      }
+    };
+  }, []);
+
   // Handle activeChat Change & Pusher Subscription
   useEffect(() => {
-    if (!activeChat || !pusherClient) return;
+    if (!activeChat) return;
 
     if (activeChat.status === "bot_active") {
         if (messages.length === 0) {
@@ -118,8 +129,21 @@ export default function ContactClient({ initialSettings, isAuthenticated = false
         if (messages.length === 0) appendLocalBotMessage("Reconnected securely to active session.");
     }
 
+    const shouldConnectToPusher = isAuthenticated && !activeChat.isLocal && activeChat.status !== "bot_active";
+
+    if (!shouldConnectToPusher) {
+      return;
+    }
+
+    if (!pusherRef.current) {
+        pusherRef.current = new PusherClient(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
+            cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER || 'us2',
+            authEndpoint: "/api/pusher/auth",
+        });
+    }
+
     const channelName = `private-chat-${activeChat._id}`;
-    const channel = pusherClient.subscribe(channelName);
+    const channel = pusherRef.current.subscribe(channelName);
 
     channel.bind("new-message", (message: IMessage) => {
       setMessages((prev) => {
@@ -146,12 +170,14 @@ export default function ContactClient({ initialSettings, isAuthenticated = false
     });
 
     return () => {
-      pusherClient?.unsubscribe(channelName);
+      if (pusherRef.current) {
+          pusherRef.current.unsubscribe(channelName);
+      }
       if (typingFailsafeRef.current) clearTimeout(typingFailsafeRef.current);
       if (localTypingTimeoutRef.current) clearTimeout(localTypingTimeoutRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeChat?._id]);
+  }, [activeChat?._id, activeChat?.status, activeChat?.isLocal, isAuthenticated]);
 
   const changeActiveChat = (chat: PopulatedChat) => {
      setActiveChat(chat);

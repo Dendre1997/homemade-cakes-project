@@ -6,6 +6,10 @@ import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { ImageUploadPreview } from './ImageUploadPreview';
 import { slugify } from "@/lib/utils";
+import {
+  appendCloudinaryUploadPreset,
+  cloudinaryUploadUrl,
+} from "@/lib/cloudinaryClient";
 
 const FormLabel = ({ htmlFor, children }: { htmlFor: string; children: React.ReactNode; }) => (
   <label htmlFor={htmlFor} className="block font-body text-small text-primary/80 mb-sm">
@@ -94,11 +98,11 @@ const fileInputRef = useRef<HTMLInputElement>(null);
 
     const uploadData = new FormData();
     uploadData.append("file", file);
-    uploadData.append("upload_preset", "homemade_cakes_preset"); 
+    appendCloudinaryUploadPreset(uploadData);
 
     try {
       const response = await fetch(
-        `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+        cloudinaryUploadUrl("image"),
         {
           method: "POST",
           body: uploadData,

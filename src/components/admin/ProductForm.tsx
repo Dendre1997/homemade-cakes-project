@@ -50,6 +50,10 @@ import {
 } from "@/components/ui/Card";
 import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
 import { cn } from "@/lib/utils";
+import {
+  appendCloudinaryUploadPreset,
+  cloudinaryUploadUrl,
+} from "@/lib/cloudinaryClient";
 interface ProductFormProps {
   existingProduct?: Product | null;
   onFormSubmit: (productData: ProductFormData) => Promise<void> | void;
@@ -275,10 +279,10 @@ const ProductForm = ({
     for (const file of Array.from(files)) {
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("upload_preset", "homemade_cakes_preset");
+      appendCloudinaryUploadPreset(formData);
 
       const uploadPromise = fetch(
-        `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+        cloudinaryUploadUrl("image"),
         {
           method: "POST",
           body: formData,

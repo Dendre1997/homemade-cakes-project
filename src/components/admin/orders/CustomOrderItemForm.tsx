@@ -10,6 +10,10 @@ import { Textarea } from "@/components/ui/Textarea";
 import HybridSelector from "@/components/admin/custom-orders/HybridSelector";
 import ImageSelector from "@/components/admin/custom-orders/ImageSelector";
 import { getPublicIdFromUrl } from "@/lib/cloudinaryUtils";
+import {
+  appendCloudinaryUploadPreset,
+  cloudinaryUploadUrl,
+} from "@/lib/cloudinaryClient";
 import { Plus } from "lucide-react";
 import { useAlert } from "@/contexts/AlertContext";
 import { AddonAdminSelector } from "@/components/admin/addons/AddonAdminSelector";
@@ -144,10 +148,10 @@ export default function CustomOrderItemForm({
     for (const file of Array.from(files)) {
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("upload_preset", "homemade_cakes_preset");
+      appendCloudinaryUploadPreset(formData);
 
       const uploadPromise = fetch(
-        `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+        cloudinaryUploadUrl("image"),
         {
           method: "POST",
           body: formData,
@@ -356,7 +360,7 @@ export default function CustomOrderItemForm({
 
                  {/* FINAL IMAGES IN CART */}
                  <div className="pt-4 border-t">
-                     <Label className="mb-2 block flex items-center justify-between">
+                     <Label className="mb-2 flex items-center justify-between">
                         Active Order References
                         <span className="text-xs font-normal text-muted-foreground">{images.length} images</span>
                      </Label>

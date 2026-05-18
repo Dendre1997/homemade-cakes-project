@@ -25,6 +25,10 @@ import { useConfirmation } from "@/contexts/ConfirmationContext";
 import { IGalleryImage, ProductCategory } from "@/types";
 import { cn } from "@/lib/utils";
 import LoadingSpinner from "@/components/ui/Spinner";
+import {
+  appendCloudinaryUploadPreset,
+  cloudinaryUploadUrl,
+} from "@/lib/cloudinaryClient";
 
 export default function GalleryAdminPage() {
   const { showAlert } = useAlert();
@@ -147,11 +151,11 @@ export default function GalleryAdminPage() {
     setIsUploading(true);
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("upload_preset", "homemade_cakes_preset");
+    appendCloudinaryUploadPreset(formData);
 
     try {
       const res = await fetch(
-        `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+        cloudinaryUploadUrl("image"),
         { method: "POST", body: formData }
       );
       if (!res.ok) throw new Error("Upload failed");

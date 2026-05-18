@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import LoadingSpinner from "@/components/ui/Spinner";
+import { useAuthStore } from "@/lib/store/authStore";
 
 const LoginPage = () => {
   const router = useRouter();
@@ -33,6 +34,9 @@ const LoginPage = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ idToken }),
       });
+
+      const { fetchProfile } = useAuthStore.getState();
+      await fetchProfile();
 
       router.push("/");
     } catch (err) {

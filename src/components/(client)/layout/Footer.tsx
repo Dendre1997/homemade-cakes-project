@@ -68,7 +68,7 @@ const Footer: React.FC = () => {
             </ul>
           </div>
 
-          <div>
+          {/* <div>
             <h4 className="mb-md font-body text-lg font-bold">Information</h4>
             <ul className="space-y-sm font-body">
               <li>
@@ -96,12 +96,12 @@ const Footer: React.FC = () => {
                 </Link>
               </li>
             </ul>
-          </div>
+          </div> */}
         </div>
 
         <div className="mt-xl border-t border-background/20 pt-lg text-center">
           <p className="font-body text-small">
-            © 2025 D&K Creations. All rights reserved.
+            {/* © 2025 D&K Creations. All rights reserved. */}
           </p>
         </div>
       </div>

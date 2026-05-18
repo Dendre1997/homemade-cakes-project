@@ -3,6 +3,10 @@ import { Button } from "@/components/ui/Button";
 import { X, UploadCloud, Trash2, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { deleteVideoFromCloudinary } from "@/app/actions/cloudinary";
+import {
+  appendCloudinaryUploadPreset,
+  cloudinaryUploadUrl,
+} from "@/lib/cloudinaryClient";
 
 interface VideoUploadPreviewProps {
   videoUrl: string | null;
@@ -43,12 +47,11 @@ export const VideoUploadPreview = ({
     try {
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("upload_preset", "homemade_cakes_preset");
+      appendCloudinaryUploadPreset(formData);
       formData.append("resource_type", "video");
 
-      const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
       const response = await fetch(
-        `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`,
+        cloudinaryUploadUrl("video"),
         {
           method: "POST",
           body: formData,
