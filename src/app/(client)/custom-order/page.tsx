@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense, useMemo } from "react";
 import { useForm, FormProvider, useFormContext } from "react-hook-form";
 import { useSearchParams } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import LoadingSpinner from "@/components/ui/Spinner";
+import { FlavorCarousel } from "@/components/(client)/home/flavors/FlavorCarousel";
 
 // Steps
 import Step1Availability from "@/components/custom-order/Step1Availability";
@@ -60,6 +61,27 @@ function CustomOrderContent() {
   /** MongoDB custom_orders._id — returned by POST /api/custom-orders for DM / ops reference */
   const [submittedCustomOrderId, setSubmittedCustomOrderId] = useState<string | null>(null);
 
+  const [categories, setCategories] = useState<any[]>([]);
+  const [flavors, setFlavors] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (currentStep === 2 && categories.length === 0 && flavors.length === 0) {
+      const fetchFlavorsAndCategories = async () => {
+        try {
+          const [catRes, flavRes] = await Promise.all([
+            fetch("/api/categories"),
+            fetch("/api/flavors")
+          ]);
+          if (catRes.ok) setCategories(await catRes.json());
+          if (flavRes.ok) setFlavors(await flavRes.json());
+        } catch (error) {
+          console.error("Error fetching flavors/categories for carousel:", error);
+        }
+      };
+      fetchFlavorsAndCategories();
+    }
+  }, [currentStep, categories.length, flavors.length]);
+
   const methods = useForm<CustomOrderFormData>({
     resolver: zodResolver(customOrderSchema) as any,
     mode: "onTouched",
@@ -90,13 +112,45 @@ function CustomOrderContent() {
 
   const { trigger, handleSubmit, setFocus } = methods;
 
-  // -- 'Magic Jump' Navigation Logic --
+  const categoryName = methods.watch("category");
+
+  const activeCategoryObj = useMemo(() => {
+    if (!categoryName) return null;
+    return categories.find(c => {
+       const displayName = c.name.endsWith('s') || c.name.endsWith('S') ? c.name.slice(0, -1) : c.name;
+       return displayName === categoryName || c.name === categoryName;
+    }) || null;
+  }, [categoryName, categories]);
+
+  const activeCategoryId = activeCategoryObj?._id || null;
+
+  const filteredFlavors = useMemo(() => {
+    if (!activeCategoryId) return [];
+    return flavors.filter((f: any) => 
+       Array.isArray(f.categoryIds) && f.categoryIds.includes(activeCategoryId)
+    );
+  }, [flavors, activeCategoryId]);
+
+  const handleFlavorInfoClick = (flavorId: string) => {
+    const element = document.getElementById(`flavor-${flavorId}`);
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "center" });
+      
+     
+      
+      const isAlreadyFlipped = element.querySelector("[class*='rotateY(180deg)']") || element.querySelector("[class*='[transform:rotateY(180deg)]']");
+      if (!isAlreadyFlipped) {
+        element.click();
+      }
+
+    }
+  };
+
   const handleNext = async () => {
     const fieldsToValidate = STEPS[currentStep].fields as any[];
     const isValid = await trigger(fieldsToValidate);
 
     if (isValid) {
-      // Logic: If on Step 1 (Date) and we have an inspiration, skip Step 2 (Category) and go to Step 3 (Details/SizeFlavor)
       if (currentStep === 0 && hasInspiration) {
         setCurrentStep(2);
       } else {
@@ -104,24 +158,15 @@ function CustomOrderContent() {
       }
       window.scrollTo({ top: 0, behavior: "smooth" });
     } else {
-      // shouldFocusError:true (in useForm) already calls setFocus() on the first errored
-      // native field via RHF's internal ref registry.
-      // Here we only add the scroll and handle non-focusable custom components
-      // (DatePicker, upload zone) where RHF focus won't fire.
-      //
-      // NOTE: attribute value selectors do NOT use CSS.escape — the dot is a literal
-      // character inside quotes. The previous CSS.escape() call was the production bug.
       const currentErrors = methods.formState.errors;
 
       requestAnimationFrame(() => {
         for (const fieldPath of STEPS[currentStep].fields) {
-          // Walk nested path: "contact.name" → errors?.contact?.name
           const err = fieldPath
             .split(".")
             .reduce((obj: any, key: string) => obj?.[key], currentErrors);
           if (!err) continue;
 
-          // 1. Scroll the labelled wrapper into view (works for all field types)
           const wrapper = document.querySelector<HTMLElement>(
             `[data-field-name="${fieldPath}"]`
           );
@@ -129,12 +174,9 @@ function CustomOrderContent() {
             wrapper.scrollIntoView({ behavior: "smooth", block: "center" });
           }
 
-          // 2. Focus via RHF — works for Input/Textarea (forwardRef).
-          //    Silently ignored for non-focusable custom components.
           try {
             setFocus(fieldPath as any, { shouldSelect: false });
           } catch {
-            // Custom component (DatePicker, upload zone) — scroll-only is sufficient.
           }
 
           break; // stop at first error
@@ -183,7 +225,7 @@ function CustomOrderContent() {
     switch (currentStep) {
       case 0: return <Step1Availability onNext={handleNext} />;
       case 1: return <Step2Category onNext={handleNext} />;
-      case 2: return <Step3SizeFlavor onNext={handleNext} />;
+      case 2: return <Step3SizeFlavor onNext={handleNext} onFlavorInfoClick={handleFlavorInfoClick} />;
       case 3: return <Step4Design />;
       case 4: return <Step5Contact />;
       case 5: return (
@@ -305,6 +347,18 @@ function CustomOrderContent() {
           </FormProvider>
         </div>
       </div>
+
+      {currentStep === 2 && filteredFlavors.length > 0 && (
+        <div className="mt-16 max-w-6xl mx-auto relative z-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
+          <div className="text-center mb-10">
+            <h2 className="text-2xl sm:text-3xl font-heading font-bold text-primary mb-3">
+              Explore Our {categoryName} Flavors
+            </h2>
+          </div>
+          <FlavorCarousel flavors={filteredFlavors} />
+        </div>
+      )}
+      
     </div>
   );
 }

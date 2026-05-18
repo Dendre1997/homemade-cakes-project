@@ -22,6 +22,7 @@ type FlavorSelectorProps = {
   flavors: Flavor[];
   className?: string;
   hidePrice?: boolean;
+  onInfoClick?: (id: string) => void;
 } & (MultiSelectProps | SingleSelectProps);
 
 const FlavorSelector = (props: FlavorSelectorProps) => {
@@ -76,7 +77,7 @@ const FlavorSelector = (props: FlavorSelectorProps) => {
               onClick={handleClick}
               disabled={!!isDisabled}
               className={cn(
-                "flex w-full items-center gap-md rounded-medium p-md transition-all text-left",
+                "relative flex w-full items-center gap-md rounded-medium p-md transition-all text-left",
                 "hover:bg-subtleBackground",
                 isSelected
                   ? "ring-2 ring-accent ring-offset-2 ring-offset-background bg-subtleBackground"
@@ -107,6 +108,19 @@ const FlavorSelector = (props: FlavorSelectorProps) => {
                   </p>
                 )}
               </div>
+
+              {isSelected && props.onInfoClick && (
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    props.onInfoClick?.(flavor._id);
+                  }}
+                  className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-accent/20 hover:bg-accent text-accent hover:text-white transition-all border border-accent/30 text-xs font-bold z-10 cursor-pointer shadow-sm"
+                  title="View Flavor Details"
+                >
+                  ?
+                </div>
+              )}
             </button>
           );
         })}

@@ -20,6 +20,8 @@ import {
   PencilRuler,
   MessageSquare,
   BookOpen,
+  ArrowRight,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ProductCategory } from "@/types";
@@ -133,6 +135,50 @@ const Header = ({ categories }: HeaderProps) => {
       >
         <div className="bg-white/80 backdrop-blur-md border-b border-white/20 shadow-sm">
           <SeasonalHeaderBar />
+
+          {/* Custom Orders Only Notice Banner */}
+          {pathname !== "/custom-order" && (
+  <div className="bg-accent/10 border-b border-accent/20 px-4 py-2.5 animate-in fade-in duration-500">
+    <div className="mx-auto max-w-7xl flex flex-col sm:flex-row items-center justify-center gap-x-6 gap-y-1.5">
+      
+      {/* Status badge + message */}
+      <div className="flex items-center text-center gap-2.5">
+        <p className="text-lg font-medium text-accent/90 leading-snug">
+         We’re currently accepting{" "}
+          <span className="font-semibold text-accent">custom requests only</span>{" "}
+          while we improve our production process.
+        </p>
+      </div>
+
+      {/* Divider (desktop) */}
+      <span className="hidden sm:block w-px h-4 bg-accent/30 shrink-0" />
+
+      {/* CTA */}
+      <Link
+        href="/custom-order"
+        className="group inline-flex items-center gap-1.5 text-lg font-semibold text-accent hover:text-accent/75 transition-colors shrink-0"
+      >
+        Make a Custom Request
+        <ArrowRight className="w-3.5 h-3.5 animate-arrow-wiggle shrink-0" />
+        <style>{`
+          @keyframes arrow-wiggle {
+            0%, 100% {
+              transform: translateX(0);
+            }
+            50% {
+              transform: translateX(4px);
+            }
+          }
+          .animate-arrow-wiggle {
+            animation: arrow-wiggle 1.2s ease-in-out infinite !important;
+          }
+        `}</style>
+      </Link>
+
+    </div>
+  </div>
+)}
+
           <OfferBar />
           <MiniCart isOpen={isMiniCartOpen} onClose={closeMiniCart} />
 

@@ -37,7 +37,7 @@ const BOX_SIZES = [
   { value: "24", label: "Box of", Icon: BoxIconTwentyFour },
 ];
 
-export default function Step3SizeFlavor({ onNext }: { onNext: () => void }) {
+export default function Step3SizeFlavor({ onNext, onFlavorInfoClick }: { onNext: () => void; onFlavorInfoClick?: (id: string) => void }) {
   const { setValue, watch, getValues, formState: { errors } } = useFormContext<CustomOrderFormData>();
   const categoryName = watch("category");
   
@@ -337,6 +337,7 @@ export default function Step3SizeFlavor({ onNext }: { onNext: () => void }) {
                   onToggleId={handleToggleComboTreatFlavor}
                   maxSelection={3}
                   hidePrice={true}
+                  onInfoClick={onFlavorInfoClick}
                 />
               </div>
             </div>
@@ -365,6 +366,7 @@ export default function Step3SizeFlavor({ onNext }: { onNext: () => void }) {
                   selectedId={comboCakeFlavorId}
                   onSelectId={setComboCakeFlavorId}
                   hidePrice={true}
+                  onInfoClick={onFlavorInfoClick}
                 />
               </div>
             </div>
@@ -437,6 +439,7 @@ export default function Step3SizeFlavor({ onNext }: { onNext: () => void }) {
                   selectedIds={discreteFlavorIds}
                   onToggleId={handleToggleDiscreteFlavor}
                   hidePrice={true}
+                  onInfoClick={onFlavorInfoClick}
                 />
               </div>
               <p className="text-sm text-primary/60 mb-4">
@@ -524,6 +527,7 @@ export default function Step3SizeFlavor({ onNext }: { onNext: () => void }) {
                     selectedId={standardFlavorId}
                     onSelectId={setStandardFlavorId}
                     hidePrice={true}
+                    onInfoClick={onFlavorInfoClick}
                   />
                 </div>
               ) : (
