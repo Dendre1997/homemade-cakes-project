@@ -1,4 +1,3 @@
-// src/emails/OrderConfirmationEmail.tsx
 import {
   Body,
   Container,
@@ -34,15 +33,15 @@ const FacebookLink = process.env.NEXT_PUBLIC_BAKERY_DM_HANDLE_FACEBOOK;
 
 // ─── Colour tokens (mirrors the Tailwind primary palette) ──────────────────
 const C = {
-  primary: "#4A2E2C", // text-primary
-  primary60: "#7D5553", // text-primary/60
-  primary40: "#9B7A78", // text-primary/40
-  primary10: "#F5EFEE", // bg-primary/10  (card bg)
-  primaryBorder: "#C4A09E", // border-primary/60
+  primary: "#4A2E2C",
+  primary60: "#7D5553",
+  primary40: "#9B7A78",
+  primary10: "#F5EFEE",
+  primaryBorder: "#C4A09E",
   white: "#FFFFFF",
-  grayBg: "#F9FAFB", // bg-gray-50
-  grayBorder: "#F3F4F6", // border-gray-100
-  grayBorder2: "#E5E7EB", // border-gray-200
+  grayBg: "#F9FAFB",
+  grayBorder: "#F3F4F6",
+  grayBorder2: "#E5E7EB",
   green100: "#DCFCE7",
   green700: "#15803D",
   amber100: "#FEF3C7",
@@ -116,12 +115,15 @@ export const OrderConfirmationEmail = ({
                   <Text style={styles.metaLabel}>Order ID</Text>
                   <Text style={styles.metaValueMono}>#{orderIdShort}</Text>
                 </Column>
-                
+                <Column style={{ width: "50%" }}>
+                  <Text style={styles.metaLabel}>Date</Text>
+                  <Text style={styles.metaValue}>{dateFormatted}</Text>
+                </Column>
               </Row>
 
-              <Text style={{ ...styles.metaLabel, marginTop: "16px" }}>
-                Customer
-              </Text>
+              <Hr style={styles.metaDivider} />
+
+              <Text style={styles.metaLabel}>Customer</Text>
               <Text style={styles.metaCustomerName}>
                 {order.customerInfo.name}
               </Text>
@@ -152,7 +154,7 @@ export const OrderConfirmationEmail = ({
             {/* ── FULFILLMENT ─────────────────────────────────────────────── */}
             <Section style={styles.sectionPad}>
               <Text style={styles.sectionLabel}>
-                {isDelivery ? " Delivery To" : " Pickup"}
+                {isDelivery ? "Delivery To" : "Pickup"}
               </Text>
 
               {order.deliveryInfo.deliveryDates?.length > 0 &&
@@ -191,7 +193,8 @@ export const OrderConfirmationEmail = ({
                       item.flavor || item.selectedConfig?.cake?.flavorId,
                     );
                 const displaySize = isCustom
-                  ? item.customSize || getDiameterName(item.selectedConfig?.cake?.diameterId)
+                  ? item.customSize ||
+                    getDiameterName(item.selectedConfig?.cake?.diameterId)
                   : getDiameterName(item.diameterId);
 
                 const itemImages = item.imageUrls?.length
@@ -220,7 +223,6 @@ export const OrderConfirmationEmail = ({
                     }}
                   >
                     <Row>
-                      {/* Image(s) */}
                       <Column style={styles.itemImgCol}>
                         {itemImages.length > 0 ? (
                           <Img
@@ -278,8 +280,16 @@ export const OrderConfirmationEmail = ({
                           <Section style={{ marginTop: "4px" }}>
                             <Text style={styles.itemMeta}>Addons:</Text>
                             {item.addons.map((addon, aIdx) => (
-                              <Text key={aIdx} style={{ ...styles.itemMeta, paddingLeft: "8px" }}>
-                                • {addon.name} {addon.variantName && `(${addon.variantName})`} - ${addon.price.toFixed(2)}
+                              <Text
+                                key={aIdx}
+                                style={{
+                                  ...styles.itemMeta,
+                                  paddingLeft: "8px",
+                                }}
+                              >
+                                • {addon.name}{" "}
+                                {addon.variantName && `(${addon.variantName})`}{" "}
+                                - ${addon.price.toFixed(2)}
                               </Text>
                             ))}
                           </Section>
@@ -293,27 +303,30 @@ export const OrderConfirmationEmail = ({
 
             {/* ── FINANCIAL BREAKDOWN ──────────────────────────────────────── */}
             <Section style={styles.financialSection}>
-              <Row style={styles.finRow}>
+              <Row>
                 <Column>
                   <Text style={styles.finLabel}>Subtotal</Text>
                 </Column>
                 <Column align="right">
-                  <Text style={styles.finLabel}>${subtotal.toFixed(2)}</Text>
+                  <Text style={styles.finValue}>${subtotal.toFixed(2)}</Text>
                 </Column>
               </Row>
 
               {order.discountInfo && order.discountInfo.amount > 0 && (
-                <Row style={styles.discountRow}>
+                <Row>
                   <Column>
-                    <Text style={styles.discountLabel}>
-                      Discount
-                      {(order.discountInfo.code || order.discountInfo.name) && (
-                        <span style={styles.discountBadge}>
-                          {" "}
-                          {order.discountInfo.code || order.discountInfo.name}
-                        </span>
-                      )}
-                    </Text>
+                    <Section style={styles.discountRow}>
+                      <Text style={styles.discountLabel}>
+                        Discount
+                        {(order.discountInfo.code ||
+                          order.discountInfo.name) && (
+                          <span style={styles.discountBadge}>
+                            {" "}
+                            {order.discountInfo.code || order.discountInfo.name}
+                          </span>
+                        )}
+                      </Text>
+                    </Section>
                   </Column>
                   <Column align="right">
                     <Text style={styles.discountAmount}>
@@ -337,12 +350,6 @@ export const OrderConfirmationEmail = ({
               </Row>
             </Section>
 
-            {/* ── CTA ─────────────────────────────────────────────────────── */}
-            {/* <Section style={styles.ctaSection}>
-              <Button href={`${baseUrl}/profile`} style={styles.ctaButton}>
-                View Order Status
-              </Button>
-            </Section> */}
 
             {/* ── FOOTER ──────────────────────────────────────────────────── */}
             <Section style={styles.footer}>
@@ -353,18 +360,25 @@ export const OrderConfirmationEmail = ({
                 {/* @d&amp;kcreations &bull; d&amp;kcreations.com */}
               </Text>
               <Row style={{ marginTop: "16px" }}>
-                <Column align="center">
+                <Column
+                  align="right"
+                  style={{ width: "50%", paddingRight: "8px" }}
+                >
                   <Link
                     href={`https://www.instagram.com/${InstaLink}`}
                     style={styles.socialLinkFooter}
                   >
                     Instagram
                   </Link>
-                  {"  ·  "}
-                  <Link
-                    href={FacebookLink}
-                    style={styles.socialLinkFooter}
-                  >
+                </Column>
+                <Column style={{ width: "2px" }}>
+                  <Text style={styles.footerSep}>·</Text>
+                </Column>
+                <Column
+                  align="left"
+                  style={{ width: "50%", paddingLeft: "8px" }}
+                >
+                  <Link href={FacebookLink} style={styles.socialLinkFooter}>
                     Facebook
                   </Link>
                 </Column>
@@ -395,7 +409,7 @@ const styles = {
     maxWidth: "100%",
   },
 
-  // card shell — mirrors rounded-2xl shadow-xl border border-primary/60
+  // card shell
   card: {
     backgroundColor: C.primary10,
     borderRadius: "16px",
@@ -442,12 +456,17 @@ const styles = {
     display: "inline-block",
   },
 
-  // ── meta section — mirrors the gray-50/80 grid block
+  // ── meta section
   metaSection: {
     backgroundColor: "rgba(249,250,251,0.8)",
     borderTop: `1px solid ${C.grayBorder}`,
     borderBottom: `1px solid ${C.grayBorder}`,
     padding: "16px 24px",
+  },
+  // FIX: thin rule between the ID/Date row and the customer block
+  metaDivider: {
+    borderColor: C.grayBorder,
+    margin: "12px 0",
   },
   metaLabel: {
     color: C.primary40,
@@ -492,16 +511,18 @@ const styles = {
     borderColor: C.grayBorder,
     margin: "0",
   },
+  // FIX: uniform 20px 24px padding used consistently for all body sections
   sectionPad: {
-    padding: "16px 24px",
+    padding: "20px 24px",
   },
+  // FIX: uniform margin on all section labels
   sectionLabel: {
     color: C.primary60,
     fontSize: "10px",
     fontWeight: "700",
     letterSpacing: "2px",
     textTransform: "uppercase" as const,
-    margin: "0 0 12px",
+    margin: "0 0 10px",
   },
 
   // ── fulfillment
@@ -542,8 +563,10 @@ const styles = {
     paddingTop: "12px",
     paddingBottom: "12px",
   },
+  // FIX: 64px wide (56px img + 8px gap) so details col always starts at the same x
   itemImgCol: {
-    width: "72px",
+    width: "64px",
+    paddingRight: "8px",
     verticalAlign: "top",
   },
   itemImg: {
@@ -554,15 +577,13 @@ const styles = {
     border: `1px solid ${C.grayBorder}`,
     display: "block",
   },
+  // FIX: removed flex (not supported in email); centering via lineHeight instead
   itemImgPlaceholder: {
     width: "56px",
     height: "56px",
     borderRadius: "12px",
     backgroundColor: C.grayBorder,
     border: `1px solid ${C.grayBorder2}`,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
   },
   itemImgPlaceholderText: {
     color: C.primary40,
@@ -574,7 +595,6 @@ const styles = {
   },
   itemDetailsCol: {
     verticalAlign: "top",
-    paddingLeft: "8px",
   },
   itemName: {
     color: C.primary60,
@@ -602,22 +622,28 @@ const styles = {
   financialSection: {
     backgroundColor: "rgba(249,250,251,0.5)",
     borderTop: `1px solid ${C.grayBorder}`,
+    // FIX: matches sectionPad for consistent rhythm
     padding: "20px 24px",
   },
-  finRow: {
-    marginBottom: "8px",
-  },
+  // FIX: replaced Row-level margin (unreliable) with cell-level padding
   finLabel: {
     color: C.primary40,
     fontSize: "13px",
     fontWeight: "500",
-    margin: "0",
+    margin: "0 0 8px",
   },
+  finValue: {
+    color: C.primary40,
+    fontSize: "13px",
+    fontWeight: "500",
+    margin: "0 0 8px",
+    textAlign: "right" as const,
+  },
+  // FIX: replaced negative-margin trick with a left-border accent; renders correctly everywhere
   discountRow: {
-    backgroundColor: "#F0FDF4",
-    borderRadius: "6px",
-    padding: "4px 8px",
-    margin: "4px -8px",
+    borderLeft: `3px solid #86EFAC`,
+    paddingLeft: "8px",
+    margin: "0 0 8px",
   },
   discountLabel: {
     color: "#15803D",
@@ -639,16 +665,18 @@ const styles = {
     color: "#15803D",
     fontSize: "13px",
     fontWeight: "500",
-    margin: "0",
+    margin: "0 0 8px",
+    textAlign: "right" as const,
   },
   totalDivider: {
     borderColor: C.grayBorder2,
-    margin: "12px 0",
+    margin: "4px 0 12px",
   },
+  // FIX: label is now 13px/500 so it doesn't compete with the bold amount
   totalLabel: {
     color: C.primary40,
-    fontSize: "18px",
-    fontWeight: "800",
+    fontSize: "13px",
+    fontWeight: "500",
     margin: "0",
   },
   totalAmount: {
@@ -696,6 +724,13 @@ const styles = {
     fontSize: "12px",
     margin: "0",
     textAlign: "center" as const,
+  },
+  // FIX: separator is now a real cell, not a floating string
+  footerSep: {
+    color: C.primary40,
+    fontSize: "12px",
+    textAlign: "center" as const,
+    margin: "0",
   },
   socialLinkFooter: {
     color: C.primary60,

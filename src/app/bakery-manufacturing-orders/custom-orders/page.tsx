@@ -9,44 +9,57 @@ import {
   CarouselNext, 
   CarouselPrevious 
 } from "@/components/ui/shadcn-carousel";
+import RefreshTrigger from "@/components/admin/RefreshTrigger";
 
-// Revalidate every 60 seconds to keep list fresh, or 0 for dynamic
+// Ensure Next.js does not statically cache this page
+export const dynamic = 'force-dynamic';
 export const revalidate = 0; 
 
 export default async function CustomOrdersListPage() {
-  const client = await clientPromise;
-  const db = client.db(process.env.MONGODB_DB_NAME);
+  let customOrders: CustomOrder[] = [];
+  let errorMsg: string | null = null;
 
-  const rawOrders = await db
-    .collection("custom_orders")
-    .find({})
-    .sort({ date: 1 }) // Upcoming first
-    .toArray();
+  try {
+    const client = await clientPromise;
+    const db = client.db(process.env.MONGODB_DB_NAME);
 
-  const customOrders = rawOrders.map((order) => {
-    return {
-      ...order,
-      _id: order._id.toString(),
-      // Legacy schema fallbacks to prevent undefined UI errors
-      contact: order.contact || {
-        name: order.customerName || "Legacy Customer",
-        email: order.customerEmail || "",
-        phone: order.customerPhone || ""
-      },
-      date: order.date || order.eventDate,
-      category: order.category || order.eventType || "Unknown",
-      details: order.details || {
-        size: order.servingSize || "",
-        flavor: order.flavorPreferences || "",
-        textOnCake: "",
-        designNotes: order.description || ""
-      },
-      referenceImages: order.referenceImages || order.referenceImageUrls || []
-    };
-  }) as unknown as CustomOrder[];
+    const rawOrders = await db
+      .collection("custom_orders")
+      .find({})
+      .sort({ date: 1 }) // Upcoming first
+      .toArray();
+
+    customOrders = rawOrders.map((order) => {
+      return {
+        ...order,
+        _id: order._id.toString(),
+        // Legacy schema fallbacks to prevent undefined UI errors
+        contact: order.contact || {
+          name: order.customerName || "Legacy Customer",
+          email: order.customerEmail || "",
+          phone: order.customerPhone || ""
+        },
+        date: order.date || order.eventDate,
+        category: order.category || order.eventType || "Unknown",
+        details: order.details || {
+          size: order.servingSize || "",
+          flavor: order.flavorPreferences || "",
+          textOnCake: "",
+          designNotes: order.description || ""
+        },
+        referenceImages: order.referenceImages || order.referenceImageUrls || []
+      };
+    }) as unknown as CustomOrder[];
+  } catch (error) {
+    console.error("Failed to fetch custom orders:", error);
+    errorMsg = "We timed out trying to connect to the database. This frequently occurs during cold starts. Please reload the page to try again.";
+  }
 
   return (
     <div className="p-4 sm:p-8 max-w-7xl mx-auto min-h-screen bg-background">
+      {/* Background auto-polling (every 30 seconds) */}
+      <RefreshTrigger intervalMs={30000} />
+
       {/* Page Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
         <div className="space-y-1">
@@ -61,6 +74,16 @@ export default async function CustomOrdersListPage() {
             </div>
         </div>
       </div>
+
+      {errorMsg && (
+        <div className="mb-6 p-4 rounded-xl border border-destructive/20 bg-destructive/10 text-destructive flex items-center gap-3">
+          <div className="text-lg">⚠️</div>
+          <div>
+            <span className="font-semibold">Database Connection Issue: </span>
+            <span>{errorMsg}</span>
+          </div>
+        </div>
+      )}
 
       <div>
         {customOrders.length === 0 ? (
