@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Resend } from "resend";
+import { resend, DEFAULT_FROM } from "@/lib/email";
 import ContactRequestEmail from "@/emails/ContactRequestEmail";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(request: NextRequest) {
   try {
@@ -33,7 +32,7 @@ export async function POST(request: NextRequest) {
 
     // Send Email
     await resend.emails.send({
-      from: "D&K Creations <contact@d-kcreations.com>",
+      from: DEFAULT_FROM,
       to: process.env.ADMIN_EMAIL || "",
       subject: `New Contact Request: ${name}`,
       react: ContactRequestEmail({ name, email, phone: phone || "Not provided", message }),

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminAuth } from "@/lib/firebase/adminApp";
-import { resend } from "@/lib/email";
+import { resend, DEFAULT_FROM } from "@/lib/email";
 import PasswordResetEmail from "@/emails/PasswordResetEmail";
 
 export async function POST(req: NextRequest) {
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
 
       // Send via custom API leveraging Resend vs the baked-in Google templates
       const { data, error: resendError } = await resend.emails.send({
-        from: "D&K Creations <resetpassword@d-kcreations.com>", 
+        from: DEFAULT_FROM, 
         to: email,
         subject: "Reset Your Password - D&K Creations",
         react: PasswordResetEmail({ resetLink: cleanLink }),

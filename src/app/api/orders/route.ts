@@ -4,12 +4,11 @@ import { adminAuth } from "@/lib/firebase/adminApp";
 import clientPromise from "@/lib/db";
 import { Order, OrderStatus, CartItem, OrderItem, Discount } from "@/types";
 import { ObjectId } from "mongodb";
-import { Resend } from "resend";
+import { resend, DEFAULT_FROM } from "@/lib/email";
 import { NewOrderEmail } from "@/emails/NewOrderEmail";
 import OrderConfirmationEmail from "@/emails/OrderConfirmationEmail";
 import PendingOrderAdminEmail  from "@/emails/PendingOrderAdminEmail";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 import { calculateOrderPricing } from "@/lib/pricing";
 
@@ -253,7 +252,7 @@ export async function POST(request: NextRequest) {
 
       try {
         await resend.emails.send({
-          from: "D&K Creations <orders@d-kcreations.com>",
+          from: DEFAULT_FROM,
           to: process.env.ADMIN_EMAIL || "",
           subject: `ACTION REQUIRED: Order #${finalPendingOrder._id.toString().slice(-6).toUpperCase()} Needs Confirmation`,
           react: PendingOrderAdminEmail({ order: finalPendingOrder }),
@@ -529,13 +528,13 @@ export async function POST(request: NextRequest) {
 
         await Promise.all([
           resend.emails.send({
-            from: "Homemade Cakes <orders@d-kcreations.com>",
+            from: DEFAULT_FROM,
             to: "anastasiiadilna@gmail.com",
             subject: `New Order #${finalOrder._id.toString().slice(-6).toUpperCase()}`,
             react: NewOrderEmail({ order: finalOrder }),
           }),
           resend.emails.send({
-            from: "Homemade Cakes <orders@d-kcreations.com>",
+            from: DEFAULT_FROM,
             to: finalOrder.customerInfo.email,
             subject: `Your Order Confirmation #${finalOrder._id.toString().slice(-6).toUpperCase()}`,
             react: OrderConfirmationEmail({ order: finalOrder, flavorMap, diameterMap }),
