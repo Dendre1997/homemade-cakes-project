@@ -9,6 +9,10 @@ import { cn } from "@/lib/utils";
 import Cropper from "react-easy-crop";
 import { Point, Area } from "react-easy-crop";
 import { getOriginalCloudinaryUrl, generateCroppedUrl } from "@/lib/cloudinaryUtils";
+import {
+  appendCloudinaryUploadPreset,
+  cloudinaryUploadUrl,
+} from "@/lib/cloudinaryClient";
 
 type HeroSlideFormData = Omit<HeroSlide, "_id">;
 
@@ -99,11 +103,11 @@ const HeroSlideForm = ({
 
     const uploadData = new FormData();
     uploadData.append("file", file);
-    uploadData.append("upload_preset", "homemade_cakes_preset");
+    appendCloudinaryUploadPreset(uploadData);
 
     try {
       const response = await fetch(
-        `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+        cloudinaryUploadUrl("image"),
         { method: "POST", body: uploadData }
       );
 

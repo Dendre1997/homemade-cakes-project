@@ -9,6 +9,10 @@ import LoadingSpinner from "@/components/ui/Spinner";
 import { useAlert } from "@/contexts/AlertContext";
 import { X, Trash2, Plus } from "lucide-react";
 import { Switch } from "@/components/ui/Switch";
+import {
+  appendCloudinaryUploadPreset,
+  cloudinaryUploadUrl,
+} from "@/lib/cloudinaryClient";
 
 const FormLabel = ({
   htmlFor,
@@ -129,11 +133,11 @@ const AddonsForm = ({
 
     const uploadData = new FormData();
     uploadData.append("file", file);
-    uploadData.append("upload_preset", "homemade_cakes_preset");
+    appendCloudinaryUploadPreset(uploadData);
 
     try {
       const response = await fetch(
-        `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+        cloudinaryUploadUrl("image"),
         { method: "POST", body: uploadData }
       );
       if (!response.ok) throw new Error("Image upload failed.");
@@ -188,11 +192,11 @@ const AddonsForm = ({
 
     const uploadData = new FormData();
     uploadData.append("file", file);
-    uploadData.append("upload_preset", "homemade_cakes_preset");
+    appendCloudinaryUploadPreset(uploadData);
 
     try {
       const response = await fetch(
-        `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+        cloudinaryUploadUrl("image"),
         { method: "POST", body: uploadData }
       );
       if (!response.ok) throw new Error("Image upload failed.");

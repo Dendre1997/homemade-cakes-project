@@ -5,7 +5,11 @@ import { Button } from "../ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "../ui/Textarea";
 import { ChipCheckbox } from "../ui/ChipCheckbox";
-import { ImageUploadPreview } from "./ImageUploadPreview"; 
+import { ImageUploadPreview } from "./ImageUploadPreview";
+import {
+  appendCloudinaryUploadPreset,
+  cloudinaryUploadUrl,
+} from "@/lib/cloudinaryClient";
 
 const FormLabel = ({
   htmlFor,
@@ -121,11 +125,11 @@ const FlavorForm = ({
 
     const uploadData = new FormData();
     uploadData.append("file", file);
-    uploadData.append("upload_preset", "homemade_cakes_preset");
+    appendCloudinaryUploadPreset(uploadData);
 
     try {
       const response = await fetch(
-        `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+        cloudinaryUploadUrl("image"),
         {
           method: "POST",
           body: uploadData,

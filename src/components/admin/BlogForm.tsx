@@ -13,6 +13,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { ImageUploadPreview } from "@/components/admin/ImageUploadPreview";
 import { ProductPicker } from "@/components/admin/ProductPicker";
 import { Bold, Italic, List, ListOrdered, Heading1, Heading2, Loader2 } from "lucide-react";
+import {
+  appendCloudinaryUploadPreset,
+  cloudinaryUploadUrl,
+} from "@/lib/cloudinaryClient";
 
 interface BlogFormProps {
   initialData?: Blog | null;
@@ -130,11 +134,11 @@ export default function BlogForm({ initialData, onSubmit, isSubmitting, availabl
 
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("upload_preset", "homemade_cakes_preset");
+    appendCloudinaryUploadPreset(formData);
 
     try {
       const response = await fetch(
-        `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+        cloudinaryUploadUrl("image"),
         {
           method: "POST",
           body: formData,

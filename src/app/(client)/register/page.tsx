@@ -6,6 +6,7 @@ import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/
 import Link from "next/link";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { useAuthStore } from "@/lib/store/authStore";
 
 const RegisterPage = () => {
   const router = useRouter();
@@ -42,6 +43,9 @@ const RegisterPage = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ firebaseUid: userCredential.user.uid, email }),
       });
+
+      const { fetchProfile } = useAuthStore.getState();
+      await fetchProfile();
 
       router.push("/verify-email");
     } catch (err: any) {

@@ -5,6 +5,10 @@ import { ImageUploadPreview } from "@/components/ui/ImageUploadPreview";
 import { Button } from "@/components/ui/Button";
 import { ImagePlus, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/Input";
+import {
+  appendCloudinaryUploadPreset,
+  cloudinaryUploadUrl,
+} from "@/lib/cloudinaryClient";
 
 interface MultiImageUploadProps {
   value: string[];
@@ -34,11 +38,11 @@ export const MultiImageUpload = ({
     const uploadPromises = filesToUpload.map(async (file) => {
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("upload_preset", "homemade_cakes_preset"); // Using preset from other forms
+      appendCloudinaryUploadPreset(formData);
 
       try {
         const res = await fetch(
-          `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+          cloudinaryUploadUrl("image"),
           {
             method: "POST",
             body: formData,

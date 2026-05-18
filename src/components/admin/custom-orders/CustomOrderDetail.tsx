@@ -9,6 +9,10 @@ import { CustomOrderSpecsForm } from "./CustomOrderSpecsForm";
 import { CustomOrderContactForm } from "./CustomOrderContactForm";
 import { CustomOrderLogisticsForm } from "./CustomOrderLogisticsForm";
 import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
+import {
+  appendCloudinaryUploadPreset,
+  cloudinaryUploadUrl,
+} from "@/lib/cloudinaryClient";
 
 interface CustomOrderDetailProps {
   initialOrder: CustomOrder;
@@ -79,11 +83,10 @@ export default function CustomOrderDetail({ initialOrder }: CustomOrderDetailPro
     const uploadPromises = Array.from(files).map(async (file) => {
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("upload_preset", "homemade_cakes_preset");
-      
-      const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+      appendCloudinaryUploadPreset(formData);
+
       const res = await fetch(
-        `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+        cloudinaryUploadUrl("image"),
         { method: "POST", body: formData }
       );
       

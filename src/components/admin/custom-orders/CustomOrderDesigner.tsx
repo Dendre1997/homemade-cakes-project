@@ -16,6 +16,10 @@ import { useAlert } from "@/contexts/AlertContext";
 import { CustomOrderFormData } from "@/lib/validation/customOrderSchema";
 import { Flavor, Diameter } from "@/types";
 import { getPublicIdFromUrl } from "@/lib/cloudinaryUtils";
+import {
+  appendCloudinaryUploadPreset,
+  cloudinaryUploadUrl,
+} from "@/lib/cloudinaryClient";
 import HybridSelector from "./HybridSelector";
 import ImageSelector from "./ImageSelector";
 
@@ -110,10 +114,10 @@ export default function CustomOrderDesigner({
     for (const file of Array.from(files)) {
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("upload_preset", "homemade_cakes_preset");
+      appendCloudinaryUploadPreset(formData);
 
       const uploadPromise = fetch(
-        `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+        cloudinaryUploadUrl("image"),
         {
           method: "POST",
           body: formData,
