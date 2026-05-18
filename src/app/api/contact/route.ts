@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
 
     // Send Email
     await resend.emails.send({
-      from: "Dilna Cakes <onboarding@resend.dev>",
+      from: "D&K Creations <contact@d-kcreations.com>",
       to: process.env.ADMIN_EMAIL || "",
       subject: `New Contact Request: ${name}`,
       react: ContactRequestEmail({ name, email, phone: phone || "Not provided", message }),
