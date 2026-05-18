@@ -56,6 +56,7 @@ export const FlavorCard = ({
 
   return (
     <div
+      id={`flavor-${flavor._id.toString()}`}
       className={cn(
         "group w-full aspect-[3/4] [perspective:1500px] bg-transparent cursor-pointer",
         className,

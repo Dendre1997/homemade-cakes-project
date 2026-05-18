@@ -78,12 +78,14 @@ export default function Step2Category({ onNext }: { onNext: () => void }) {
                 }`}
               >
                 {/* Category Image Avatar */}
-                <div className="relative w-16 h-16 shrink-0 rounded-full overflow-hidden shadow-sm border border-black/5 bg-gray-100">
+                <div className="relative w-32 h-32 shrink-0 rounded-full overflow-hidden shadow-sm border border-black/5">
                   {cat.imageUrl ? (
                     <Image
                       src={cat.imageUrl}
                       alt={displayName}
                       fill
+                      sizes="256px"
+                      quality={100}
                       className="object-cover"
                       crossOrigin="anonymous"
                     />
