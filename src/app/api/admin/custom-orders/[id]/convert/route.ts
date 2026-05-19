@@ -154,7 +154,7 @@ export async function POST(
           },
         ],
       },
-      status: OrderStatus.AWAITING_PAYMENT,
+      status: OrderStatus.NEW,
       source: "admin-custom",
       referenceImages: customOrder.referenceImages || [],
       createdAt: new Date(),

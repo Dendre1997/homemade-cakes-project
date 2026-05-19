@@ -78,7 +78,7 @@ export const ClientReceiptCard = ({
 }: ClientReceiptCardProps) => {
   const isPaid = order.paymentDetails?.status === "paid" || order.isPaid;
   const orderIdShort = order._id.toString().slice(-6).toUpperCase();
-  const dateFormatted = format(new Date(order.createdAt), "MMMM d, yyyy");
+  const dateFormatted = order.createdAt ? format(new Date(order.createdAt), "MMMM d, yyyy") : "";
 
   // Get flavor name
   const getFlavorName = (id?: string) => {
@@ -96,13 +96,23 @@ export const ClientReceiptCard = ({
     return d ? d.name : id;
   };
 
-  // Calculate Subtotal (gross without discounts)
-  const calculateSubtotal = () => {
-    return order.items.reduce((acc, item) => acc + (item.rowTotal || (item.price * item.quantity)), 0);
-  };
-  const subtotal = calculateSubtotal();
+  // 1. Extras (Addons) separation across all items
+  const addons = order.items.flatMap((item) =>
+    (item.addons || []).map((addon) => ({
+      ...addon,
+      itemQuantity: item.quantity,
+    }))
+  );
 
-  const isDelivery = order.deliveryInfo.method === "delivery";
+  const addonsCost = order.items.reduce((acc, item) => {
+    const itemAddonsCost = (item.addons || []).reduce((sum, addon) => sum + addon.price, 0);
+    return acc + (itemAddonsCost * item.quantity);
+  }, 0);
+
+  // 2. Base Cake Price (TotalAmount - AddonsCost)
+  const baseCakePrice = Math.max(0, order.totalAmount - addonsCost);
+
+  const isDelivery = order.deliveryInfo?.method === "delivery";
 
   return (
     <div className="bg-primary/10 text-primary w-[400px] rounded-2xl shadow-xl overflow-hidden font-sans border border-primary/60 flex flex-col pt-6 pb-2">
@@ -111,71 +121,91 @@ export const ClientReceiptCard = ({
         <HeaderLogo size={100} />
         <p className="text-primary/60 text-sm uppercase tracking-widest font-semibold flex items-center justify-center gap-2">
           Order Summary
-          {isPaid ? (
+          {/* {isPaid ? (
             <span className="bg-green-100 text-green-700 text-[10px] px-2 py-0.5 rounded-full font-bold">PAID</span>
           ) : (
             <span className="bg-amber-100 text-amber-700 text-[10px] px-2 py-0.5 rounded-full font-bold">PENDING</span>
-          )}
+          )} */}
         </p>
       </div>
 
       {/* Meta details */}
       <div className="px-6 py-4 bg-gray-50/80 border-y border-gray-100 grid grid-cols-2 gap-y-4 gap-x-2 text-sm">
-        <div>
-          <p className="text-primary/40 text-xs uppercase font-bold tracking-wider mb-0.5">Order ID</p>
-          <p className="font-semibold font-mono">#{orderIdShort}</p>
-        </div>
-        <div>
-          <p className="text-primary/40 text-xs uppercase font-bold tracking-wider mb-0.5">Date</p>
-          <p className="font-medium">{dateFormatted}</p>
-        </div>
-        <div className="col-span-2">
-          <p className="text-primary/40 text-xs uppercase font-bold tracking-wider mb-0.5">Customer</p>
-          <p className="font-semibold text-base">{order.customerInfo.name}</p>
-          <p className="text-primary/40">{order.customerInfo.phone}</p>
-          {/* Hide bogus emails */}
-          {order.customerInfo.email && !order.customerInfo.email.includes("placeholder.com") && (
-            <p className="text-primary/40">{order.customerInfo.email}</p>
-          )}
-          {order.customerInfo.socialPlatform &&
-            order.customerInfo.socialNickname?.trim() && (
-              <p className="text-primary/50 mt-1 text-sm">
-                <span className="font-semibold text-primary/60">Social: </span>
-                <SocialHandleAnchor
-                  platform={order.customerInfo.socialPlatform}
-                  nickname={order.customerInfo.socialNickname}
-                  showPlatform
-                  className="text-primary/80 font-medium hover:underline"
-                />
-              </p>
-            )}
-        </div>
-      </div>
-
-      {/* Fulfillment */}
-      <div className="px-6 py-4 border-b border-gray-100">
-        <h3 className="text-primary/40 text-xs uppercase font-bold tracking-wider mb-3 flex items-center gap-1.5">
-          {isDelivery ? <Truck className="w-4 h-4" /> : <Store className="w-4 h-4" />}
-          {isDelivery ? "Delivery To" : "Pickup"}
-        </h3>
-        
-        {order.deliveryInfo.deliveryDates?.length > 0 && (
-          <div className="space-y-3">
-            {order.deliveryInfo.deliveryDates.map((dateObj, idx) => (
-              <div key={idx} className="bg-purple-50/50 p-3 rounded-xl border border-purple-100/50">
-                 <p className="font-semibold text-primary/90">{format(new Date(dateObj.date), "EEE, MMMM d, yyyy")}</p>
-                 <p className="text-sm text-primary/40 mt-0.5">{dateObj.timeSlot}</p>
-              </div>
-            ))}
+        {orderIdShort && (
+          <div>
+            <p className="text-primary/40 text-xs uppercase font-bold tracking-wider mb-0.5">Order ID</p>
+            <p className="font-semibold font-mono">#{orderIdShort}</p>
           </div>
         )}
-        
-        {isDelivery && (
-            <p className="text-sm font-medium mt-3 text-primary/40 bg-gray-50 p-3 rounded-xl border border-gray-100">
-               {order.deliveryInfo.address || "Address pending"}
-            </p>
+        {dateFormatted && (
+          <div>
+            <p className="text-primary/40 text-xs uppercase font-bold tracking-wider mb-0.5">Date</p>
+            <p className="font-medium">{dateFormatted}</p>
+          </div>
+        )}
+        {order.customerInfo && (
+          <div className="col-span-2">
+            <p className="text-primary/40 text-xs uppercase font-bold tracking-wider mb-0.5">Customer</p>
+            {order.customerInfo.name && order.customerInfo.name.trim() !== "" && (
+              <p className="font-semibold text-base">{order.customerInfo.name}</p>
+            )}
+            {order.customerInfo.phone && order.customerInfo.phone.trim() !== "" && (
+              <p className="text-primary/40">{order.customerInfo.phone}</p>
+            )}
+            {/* Hide bogus emails */}
+            {order.customerInfo.email &&
+              order.customerInfo.email.trim() !== "" &&
+              !order.customerInfo.email.includes("placeholder.com") && (
+                <p className="text-primary/40">{order.customerInfo.email}</p>
+              )}
+            {order.customerInfo.socialPlatform &&
+              order.customerInfo.socialNickname &&
+              order.customerInfo.socialNickname.trim() !== "" && (
+                <p className="text-primary/50 mt-1 text-sm">
+                  <span className="font-semibold text-primary/60">
+                    {order.customerInfo.socialPlatform.charAt(0).toUpperCase() + order.customerInfo.socialPlatform.slice(1)}:{" "}
+                  </span>
+                  <span className="text-primary/80 font-medium">
+                    {order.customerInfo.socialNickname}
+                  </span>
+                </p>
+              )}
+          </div>
         )}
       </div>
+
+      {/* Fulfillment (Display only if method, date, or timeSlot is available) */}
+      {order.deliveryInfo && order.deliveryInfo.method && (
+        <div className="px-6 py-4 border-b border-gray-100">
+          <h3 className="text-primary/40 text-xs uppercase font-bold tracking-wider mb-3 flex items-center gap-1.5">
+            {isDelivery ? <Truck className="w-4 h-4" /> : <Store className="w-4 h-4" />}
+            {isDelivery ? "Delivery To" : "Pickup"}
+          </h3>
+          
+          {order.deliveryInfo.deliveryDates && order.deliveryInfo.deliveryDates.length > 0 && (
+            <div className="space-y-3">
+              {order.deliveryInfo.deliveryDates.map((dateObj, idx) => (
+                <div key={idx} className="bg-purple-50/50 p-3 rounded-xl border border-purple-100/50">
+                  {dateObj.date && (
+                    <p className="font-semibold text-primary/90">
+                      {format(new Date(dateObj.date), "EEE, MMMM d, yyyy")}
+                    </p>
+                  )}
+                  {dateObj.timeSlot && dateObj.timeSlot.trim() !== "" && (
+                    <p className="text-sm text-primary/40 mt-0.5">{dateObj.timeSlot}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          
+          {isDelivery && order.deliveryInfo.address && order.deliveryInfo.address.trim() !== "" && (
+            <p className="text-sm font-medium mt-3 text-primary/40 bg-gray-50 p-3 rounded-xl border border-gray-100">
+              {order.deliveryInfo.address}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Line Items */}
       <div className="px-6 py-4 space-y-4">
@@ -190,72 +220,114 @@ export const ClientReceiptCard = ({
           const itemImages = item.imageUrls?.length ? item.imageUrls : (effectiveImageUrl ? [effectiveImageUrl] : []);
 
           return (
-            <div key={idx} className="flex items-start gap-4 pb-4 border-b border-gray-50 last:border-0 last:pb-0">
-               <div className="flex flex-wrap gap-1.5 shrink-0 max-w-[120px]">
-                 {itemImages.length > 0 ? itemImages.map((img, i) => (
+            <div key={idx} className="flex flex-col pb-4 border-b border-gray-50 last:border-0 last:pb-0">
+              <div className="flex items-start gap-4">
+                <div className="flex flex-wrap gap-1.5 shrink-0 max-w-[120px]">
+                  {itemImages.length > 0 ? itemImages.map((img, i) => (
                     <ReceiptItemImage key={i} effectiveImageUrl={img} alt={`${item.name} ${i}`} />
-                 )) : (
+                  )) : (
                     <ReceiptItemImage effectiveImageUrl={undefined} alt={item.name} />
-                 )}
-               </div>
-               <div className="flex-1 min-w-0 pt-0.5">
-                 <div className="flex justify-between items-start gap-2">
+                  )}
+                </div>
+                <div className="flex-1 min-w-0 pt-0.5">
+                  <div className="flex justify-between items-start gap-2">
                     <p className="font-bold text-sm text-primary/60 leading-snug">{item.name}</p>
                     <p className="font-semibold text-sm shrink-0">
-                        ${(item.rowTotal || (item.price * item.quantity)).toFixed(2)}
+                      ${(item.rowTotal || (item.price * item.quantity)).toFixed(2)}
                     </p>
-                 </div>
-                 <div className="mt-1 text-xs text-primary/40 font-medium space-y-0.5">
-                    {displaySize && <p>Size: {displaySize}</p>}
-                    {displayFlavor && <p>Flavor: {displayFlavor}</p>}
-                    <p className="text-primary/40">Qty: {item.quantity}</p>
-                    {item.inscription && <p>Inscription: {item.inscription}</p>}
-                    {item.designInstructions && <p className="whitespace-pre-wrap">Instructions: {item.designInstructions}</p>}
-                 </div>
-               </div>
+                  </div>
+                  <div className="mt-1 text-xs text-primary/40 font-medium space-y-0.5">
+                    {displaySize && displaySize.trim() !== "" && <p>Size: {displaySize}</p>}
+                    {displayFlavor && displayFlavor.trim() !== "" && <p>Flavor: {displayFlavor}</p>}
+                    {item.quantity > 0 && <p>Qty: {item.quantity}</p>}
+                    {item.inscription && item.inscription.trim() !== "" && <p>Inscription: {item.inscription}</p>}
+                    {item.designInstructions && 
+                     item.designInstructions.trim() !== "" && 
+                     item.designInstructions.trim().toLowerCase() !== "same as on reference" && (
+                       <p className="whitespace-pre-wrap">Instructions: {item.designInstructions}</p>
+                     )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Extras (Addons) rendered separately under each item */}
+              {item.addons && item.addons.length > 0 && (
+                <div className="mt-3 space-y-2 pt-2 border-t border-gray-100/50">
+                  <p className="text-[10px] text-primary/40 font-bold uppercase tracking-widest">Add-ons</p>
+                  {item.addons.map((addon, aIdx) => (
+                    <div key={aIdx} className="flex items-center gap-3 text-xs text-primary/60 bg-gray-50/50 p-2 rounded-xl border border-gray-100">
+                      
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-primary/70">{addon.name}</p>
+                        {addon.variantName && addon.variantName.trim() !== "" && (
+                          <p className="text-[10px] text-primary/45">{addon.variantName}</p>
+                        )}
+                      </div>
+                      <p className="font-semibold text-primary/80">
+                        {addon.price > 0 ? `+$${addon.price.toFixed(2)}` : "Free"}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          )
+          );
         })}
       </div>
 
-      {/* Financial Breakdown */}
+      {/* Financial Breakdown (Properly Separated Subtotal and Total Sections) */}
       <div className="bg-gray-50/50 border-t border-gray-100 px-6 py-5 mt-auto">
-         <div className="space-y-2.5 text-sm font-medium text-primary/40">
-             <div className="flex justify-between">
-                 <span>Subtotal</span>
-                 <span>${subtotal.toFixed(2)}</span>
-             </div>
-             
-             {order.discountInfo && order.discountInfo.amount > 0 && (
-                <div className="flex justify-between text-green-600 bg-green-50 px-2 py-1 -mx-2 rounded-md">
-                    <span className="flex items-center gap-1">
-                        Discount
-                        {(order.discountInfo.code || order.discountInfo.name) && (
-                           <span className="text-xs font-bold uppercase tracking-wider bg-green-100 text-green-700 px-1.5 py-0.5 rounded-sm">
-                               {order.discountInfo.code || order.discountInfo.name}
-                           </span>
-                        )}
-                    </span>
-                    <span>-${order.discountInfo.amount.toFixed(2)}</span>
+        <div className="space-y-2.5 text-sm font-medium text-primary/40">
+          {/* Base Cake Price */}
+          <div className="flex justify-between">
+            <span>Base Cake</span>
+            <span>${baseCakePrice.toFixed(2)}</span>
+          </div>
+          
+          {/* Extras (Addons breakdown) */}
+          {addons.length > 0 && (
+            <div className="space-y-1.5 pt-1">
+              <p className="text-[10px] text-primary/40 font-bold uppercase tracking-widest">Extras (Add-ons)</p>
+              {addons.map((addon, idx) => (
+                <div key={idx} className="flex justify-between items-center pl-2 text-xs">
+                  <span className="text-primary/60">
+                    {addon.name}
+                    {addon.variantName && addon.variantName.trim() !== "" && ` · ${addon.variantName}`}
+                    {addon.itemQuantity > 1 && ` (x${addon.itemQuantity})`}
+                  </span>
+                  <span className="font-semibold text-primary/70">
+                    {addon.price > 0 ? `+$${(addon.price * addon.itemQuantity).toFixed(2)}` : "Free"}
+                  </span>
                 </div>
-             )}
-             
-             {/* Note: Delivery fees aren't fully architected in the totalAmount yet consistently, 
-                 so for now it  will just show the final db total amount difference safely */}
-             
-         </div>
-         <div className="flex justify-between items-center mt-4 pt-3 border-t border-gray-200/60">
-             <span className="font-extrabold text-lg text-primary/40">Total</span>
-             <span className="font-extrabold text-2xl text-primary">${order.totalAmount.toFixed(2)}</span>
-         </div>
+              ))}
+            </div>
+          )}
+          
+          {order.discountInfo && order.discountInfo.amount > 0 && (
+            <div className="flex justify-between text-green-600 bg-green-50 px-2 py-1 -mx-2 rounded-md">
+              <span className="flex items-center gap-1">
+                Discount
+                {(order.discountInfo.code || order.discountInfo.name) && (
+                  <span className="text-xs font-bold uppercase tracking-wider bg-green-100 text-green-700 px-1.5 py-0.5 rounded-sm">
+                    {order.discountInfo.code || order.discountInfo.name}
+                  </span>
+                )}
+              </span>
+              <span>-${order.discountInfo.amount.toFixed(2)}</span>
+            </div>
+          )}
+        </div>
+        <div className="flex justify-between items-center mt-4 pt-3 border-t border-gray-200/60">
+          <span className="font-extrabold text-lg text-primary/40">Total</span>
+          <span className="font-extrabold text-2xl text-primary">${order.totalAmount.toFixed(2)}</span>
+        </div>
       </div>
 
       {/* Footer */}
       <div className="px-6 py-6 text-center bg-gray-50 text-xs font-medium text-primary/40 border-t border-primary/100">
-          <p className="mb-1 text-primary/40 font-semibold">Thank you for your order! 💖</p>
-          <p>@d&kcreations&bull; d&kcreations.com</p>
+        <p className="mb-1 text-primary/40 font-semibold">Thank you for your order! 💖</p>
+        <p>www.d-kcreations.com</p>
       </div>
-
     </div>
   );
 };
