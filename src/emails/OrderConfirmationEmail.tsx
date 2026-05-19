@@ -75,10 +75,21 @@ export const OrderConfirmationEmail = ({
     return id;
   };
 
-  const subtotal = order.items.reduce(
-    (acc, item) => acc + (item.rowTotal || item.price * item.quantity),
-    0,
+  // ── addon extraction (mirrors ClientReceiptCard) ──────────────────────────
+  const allAddons = order.items.flatMap((item) =>
+    (item.addons || []).map((addon) => ({
+      ...addon,
+      itemQuantity: item.quantity,
+    })),
   );
+
+  const addonsCost = order.items.reduce((acc, item) => {
+    const itemAddonsCost = (item.addons || []).reduce(
+      (sum, addon) => sum + addon.price,
+      0,
+    );
+    return acc + itemAddonsCost * item.quantity;
+  }, 0);
 
   return (
     <Html>
@@ -211,6 +222,7 @@ export const OrderConfirmationEmail = ({
 
                 const rowTotal = item.rowTotal || item.price * item.quantity;
                 const isLast = idx === order.items.length - 1;
+                const hasAddons = item.addons && item.addons.length > 0;
 
                 return (
                   <Section
@@ -222,6 +234,7 @@ export const OrderConfirmationEmail = ({
                         : `1px solid ${C.grayBorder}`,
                     }}
                   >
+                    {/* ── image + details row */}
                     <Row>
                       <Column style={styles.itemImgCol}>
                         {itemImages.length > 0 ? (
@@ -241,7 +254,6 @@ export const OrderConfirmationEmail = ({
                         )}
                       </Column>
 
-                      {/* Details */}
                       <Column style={styles.itemDetailsCol}>
                         <Row>
                           <Column>
@@ -276,26 +288,46 @@ export const OrderConfirmationEmail = ({
                             Instructions: {item.designInstructions}
                           </Text>
                         )}
-                        {item.addons && item.addons.length > 0 && (
-                          <Section style={{ marginTop: "4px" }}>
-                            <Text style={styles.itemMeta}>Addons:</Text>
-                            {item.addons.map((addon, aIdx) => (
-                              <Text
-                                key={aIdx}
-                                style={{
-                                  ...styles.itemMeta,
-                                  paddingLeft: "8px",
-                                }}
-                              >
-                                • {addon.name}{" "}
-                                {addon.variantName && `(${addon.variantName})`}{" "}
-                                - ${addon.price.toFixed(2)}
-                              </Text>
-                            ))}
-                          </Section>
-                        )}
                       </Column>
                     </Row>
+
+                    {/* ── addon block — indented to align with the details column */}
+                    {hasAddons && (
+                      <Row style={{ marginTop: "8px" }}>
+                        {/* spacer matches image column exactly */}
+                        <Column style={{ width: "64px" }} />
+                        <Column>
+                          <Section style={styles.itemAddonBlock}>
+                            <Text style={styles.itemAddonLabel}>Add-ons</Text>
+                            {item.addons!.map((addon, aIdx) => (
+                              <Row
+                                key={aIdx}
+                                style={{ marginTop: aIdx === 0 ? "0" : "5px" }}
+                              >
+                                <Column>
+                                  <Text style={styles.itemAddonName}>
+                                    {addon.name}
+                                  </Text>
+                                  {addon.variantName &&
+                                    addon.variantName.trim() !== "" && (
+                                      <Text style={styles.itemAddonVariant}>
+                                        {addon.variantName}
+                                      </Text>
+                                    )}
+                                </Column>
+                                <Column align="right">
+                                  <Text style={styles.itemAddonPrice}>
+                                    {addon.price > 0
+                                      ? `+$${addon.price.toFixed(2)}`
+                                      : "Free"}
+                                  </Text>
+                                </Column>
+                              </Row>
+                            ))}
+                          </Section>
+                        </Column>
+                      </Row>
+                    )}
                   </Section>
                 );
               })}
@@ -303,15 +335,63 @@ export const OrderConfirmationEmail = ({
 
             {/* ── FINANCIAL BREAKDOWN ──────────────────────────────────────── */}
             <Section style={styles.financialSection}>
-              <Row>
-                <Column>
-                  <Text style={styles.finLabel}>Subtotal</Text>
-                </Column>
-                <Column align="right">
-                  <Text style={styles.finValue}>${subtotal.toFixed(2)}</Text>
-                </Column>
-              </Row>
+              {/* Per-item rows — base price only (rowTotal minus that item's addon cost) */}
+              {order.items.map((item: CartItem, idx: number) => {
+                const itemAddonCost =
+                  (item.addons || []).reduce((s, a) => s + a.price, 0) *
+                  item.quantity;
+                const itemBaseTotal =
+                  (item.rowTotal || item.price * item.quantity) - itemAddonCost;
+                return (
+                  <Row key={idx}>
+                    <Column>
+                      <Text style={styles.finLabel}>
+                        {item.name}
+                        {item.quantity > 1 ? ` × ${item.quantity}` : ""}
+                      </Text>
+                    </Column>
+                    <Column align="right">
+                      <Text style={styles.finValue}>
+                        ${itemBaseTotal.toFixed(2)}
+                      </Text>
+                    </Column>
+                  </Row>
+                );
+              })}
 
+              {/* Extras sub-block — left-border accent, only shown when addons exist */}
+              {allAddons.length > 0 && (
+                <Section style={styles.extrasBlock}>
+                  <Text style={styles.extrasLabel}>Extras</Text>
+                  {allAddons.map((addon, idx) => (
+                    <Row
+                      key={idx}
+                      style={{ marginTop: idx === 0 ? "0" : "4px" }}
+                    >
+                      <Column>
+                        <Text style={styles.extrasItem}>
+                          {addon.name}
+                          {addon.variantName && addon.variantName.trim() !== ""
+                            ? ` · ${addon.variantName}`
+                            : ""}
+                          {addon.itemQuantity > 1
+                            ? ` (×${addon.itemQuantity})`
+                            : ""}
+                        </Text>
+                      </Column>
+                      <Column align="right">
+                        <Text style={styles.extrasItemPrice}>
+                          {addon.price > 0
+                            ? `+$${(addon.price * addon.itemQuantity).toFixed(2)}`
+                            : "Free"}
+                        </Text>
+                      </Column>
+                    </Row>
+                  ))}
+                </Section>
+              )}
+
+              {/* Discount */}
               {order.discountInfo && order.discountInfo.amount > 0 && (
                 <Row>
                   <Column>
@@ -330,7 +410,7 @@ export const OrderConfirmationEmail = ({
                   </Column>
                   <Column align="right">
                     <Text style={styles.discountAmount}>
-                      -${order.discountInfo.amount.toFixed(2)}
+                      −${order.discountInfo.amount.toFixed(2)}
                     </Text>
                   </Column>
                 </Row>
@@ -338,6 +418,7 @@ export const OrderConfirmationEmail = ({
 
               <Hr style={styles.totalDivider} />
 
+              {/* Total */}
               <Row>
                 <Column>
                   <Text style={styles.totalLabel}>Total</Text>
@@ -349,7 +430,6 @@ export const OrderConfirmationEmail = ({
                 </Column>
               </Row>
             </Section>
-
 
             {/* ── FOOTER ──────────────────────────────────────────────────── */}
             <Section style={styles.footer}>
@@ -463,7 +543,6 @@ const styles = {
     borderBottom: `1px solid ${C.grayBorder}`,
     padding: "16px 24px",
   },
-  // FIX: thin rule between the ID/Date row and the customer block
   metaDivider: {
     borderColor: C.grayBorder,
     margin: "12px 0",
@@ -511,11 +590,9 @@ const styles = {
     borderColor: C.grayBorder,
     margin: "0",
   },
-  // FIX: uniform 20px 24px padding used consistently for all body sections
   sectionPad: {
     padding: "20px 24px",
   },
-  // FIX: uniform margin on all section labels
   sectionLabel: {
     color: C.primary60,
     fontSize: "10px",
@@ -563,7 +640,6 @@ const styles = {
     paddingTop: "12px",
     paddingBottom: "12px",
   },
-  // FIX: 64px wide (56px img + 8px gap) so details col always starts at the same x
   itemImgCol: {
     width: "64px",
     paddingRight: "8px",
@@ -577,7 +653,6 @@ const styles = {
     border: `1px solid ${C.grayBorder}`,
     display: "block",
   },
-  // FIX: removed flex (not supported in email); centering via lineHeight instead
   itemImgPlaceholder: {
     width: "56px",
     height: "56px",
@@ -618,30 +693,95 @@ const styles = {
     lineHeight: "1.4",
   },
 
+  // ── item addon block (indented card, aligned with details column)
+  itemAddonBlock: {
+    backgroundColor: C.grayBg,
+    border: `1px solid ${C.grayBorder}`,
+    borderRadius: "10px",
+    padding: "8px 12px",
+  },
+  itemAddonLabel: {
+    color: C.primary40,
+    fontSize: "9px",
+    fontWeight: "700",
+    letterSpacing: "2px",
+    textTransform: "uppercase" as const,
+    margin: "0 0 6px",
+  },
+  itemAddonName: {
+    color: C.primary60,
+    fontSize: "12px",
+    fontWeight: "700",
+    margin: "0",
+    lineHeight: "1.3",
+  },
+  itemAddonVariant: {
+    color: C.primary40,
+    fontSize: "11px",
+    fontWeight: "500",
+    margin: "1px 0 0",
+  },
+  itemAddonPrice: {
+    color: C.primary,
+    fontSize: "12px",
+    fontWeight: "700",
+    margin: "0",
+    textAlign: "right" as const,
+  },
+
   // ── financial
   financialSection: {
     backgroundColor: "rgba(249,250,251,0.5)",
     borderTop: `1px solid ${C.grayBorder}`,
-    // FIX: matches sectionPad for consistent rhythm
     padding: "20px 24px",
   },
-  // FIX: replaced Row-level margin (unreliable) with cell-level padding
   finLabel: {
     color: C.primary40,
     fontSize: "13px",
     fontWeight: "500",
-    margin: "0 0 8px",
+    margin: "0 0 7px",
   },
   finValue: {
     color: C.primary40,
     fontSize: "13px",
     fontWeight: "500",
-    margin: "0 0 8px",
+    margin: "0 0 7px",
     textAlign: "right" as const,
   },
-  // FIX: replaced negative-margin trick with a left-border accent; renders correctly everywhere
+
+  // extras sub-block — left border accent in primaryBorder (matches the visualization)
+  extrasBlock: {
+    borderLeft: `2px solid ${C.primaryBorder}`,
+    borderRadius: "0",
+    paddingLeft: "10px",
+    margin: "4px 0 8px",
+  },
+  extrasLabel: {
+    color: C.primary40,
+    fontSize: "9px",
+    fontWeight: "700",
+    letterSpacing: "2px",
+    textTransform: "uppercase" as const,
+    margin: "0 0 6px",
+  },
+  extrasItem: {
+    color: C.primary60,
+    fontSize: "12px",
+    fontWeight: "500",
+    margin: "0",
+  },
+  extrasItemPrice: {
+    color: C.primary60,
+    fontSize: "12px",
+    fontWeight: "700",
+    margin: "0",
+    textAlign: "right" as const,
+  },
+
+  // discount
   discountRow: {
     borderLeft: `3px solid #86EFAC`,
+    borderRadius: "0",
     paddingLeft: "8px",
     margin: "0 0 8px",
   },
@@ -668,11 +808,12 @@ const styles = {
     margin: "0 0 8px",
     textAlign: "right" as const,
   },
+
+  // total
   totalDivider: {
     borderColor: C.grayBorder2,
     margin: "4px 0 12px",
   },
-  // FIX: label is now 13px/500 so it doesn't compete with the bold amount
   totalLabel: {
     color: C.primary40,
     fontSize: "13px",
@@ -687,7 +828,7 @@ const styles = {
     textAlign: "right" as const,
   },
 
-  // ── CTA
+  // ── CTA (kept for future use)
   ctaSection: {
     padding: "16px 24px",
     textAlign: "center" as const,
@@ -725,7 +866,6 @@ const styles = {
     margin: "0",
     textAlign: "center" as const,
   },
-  // FIX: separator is now a real cell, not a floating string
   footerSep: {
     color: C.primary40,
     fontSize: "12px",
