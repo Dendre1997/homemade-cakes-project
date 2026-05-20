@@ -137,6 +137,37 @@ export default function ManualOrderPage() {
 
       setIsSubmitting(true);
 
+      const finalItems = items.map(item => {
+          let flavorId = item.flavorId || item.selectedConfig?.cake?.flavorId;
+          const flavorString = item.flavor || item.customFlavor;
+          
+          if (!flavorId && flavorString) {
+              const match = allFlavors.find(f => f.name.toLowerCase() === flavorString.toLowerCase());
+              if (match) {
+                 flavorId = match._id;
+              }
+          }
+
+          let diameterId = item.diameterId || item.selectedConfig?.cake?.diameterId;
+          const sizeString = item.size || item.customSize;
+          
+          if (!diameterId && sizeString && item.categoryId) {
+              const match = allDiameters.find(d => 
+                  (d.name || "").toLowerCase() === sizeString.toLowerCase() && 
+                  d.categoryIds?.includes(item.categoryId.toString())
+              );
+              if (match) {
+                 diameterId = match._id;
+              }
+          }
+
+          return {
+             ...item,
+             flavorId,
+             diameterId
+          };
+      });
+
       const payload = {
           customerInfo: {
               name: customerName || "Guest",
@@ -155,7 +186,7 @@ export default function ManualOrderPage() {
                   }
               ]
           },
-          items: items,
+          items: finalItems,
           source: source,
           isPaid: isPaid
       };

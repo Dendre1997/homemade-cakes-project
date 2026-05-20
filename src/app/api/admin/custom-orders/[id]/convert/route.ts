@@ -104,6 +104,34 @@ export async function POST(
     });
     const resolvedCategoryId = categoryDoc ? new ObjectId(categoryDoc._id) : null;
 
+    // Resolve flavor name -> ObjectId
+    const flavorName = customOrder.details?.flavor || "";
+    let resolvedFlavorId = null;
+    if (flavorName) {
+      const flavorDoc = await db.collection("flavors").findOne({
+        name: { $regex: new RegExp(`^${flavorName}$`, "i") }
+      });
+      if (flavorDoc) {
+        resolvedFlavorId = new ObjectId(flavorDoc._id);
+      }
+    }
+
+    // Resolve size name -> ObjectId
+    const sizeName = customOrder.details?.size || "";
+    let resolvedDiameterId = null;
+    if (sizeName && resolvedCategoryId) {
+      const diameterDoc = await db.collection("diameters").findOne({
+        name: { $regex: new RegExp(`^${sizeName}$`, "i") },
+        $or: [
+          { categoryIds: resolvedCategoryId },
+          { categoryIds: resolvedCategoryId.toString() }
+        ]
+      });
+      if (diameterDoc) {
+        resolvedDiameterId = new ObjectId(diameterDoc._id);
+      }
+    }
+
     const item = {
       id: `${newOrderId.toString()}-custom-1`,
       name: `Custom ${customOrder.category}`,
@@ -112,8 +140,10 @@ export async function POST(
       originalPrice: Number(agreedPrice),
       quantity: 1,
       imageUrl: primaryImage,
-      customSize: customOrder.details?.size,
-      customFlavor: customOrder.details?.flavor,
+      customSize: sizeName, // Keep as string for receipts
+      diameterId: resolvedDiameterId, // Assign ID for backend & analytics
+      customFlavor: flavorName, // Keep as string for receipts
+      flavorId: resolvedFlavorId, // Assign ID for backend & analytics
       isManualPrice: true,
       isCustom: true,
       itemTotal: Number(agreedPrice),

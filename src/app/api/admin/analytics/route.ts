@@ -78,10 +78,9 @@ export async function GET(request: NextRequest) {
             { $sort: { _id: 1 } },
           ],
 
-          // Flavor Stats (Pie Chart)
+          // Flavor Stats (Raw items for frontend aggregation)
           flavorStats: [
             { $unwind: "$items" },
-            // Extract flavorId from the nested selectedConfig or top-level field
             {
               $addFields: {
                 resolvedFlavorId: {
@@ -92,7 +91,6 @@ export async function GET(request: NextRequest) {
                 },
               },
             },
-            // Pipeline $lookup: compare string representations of both IDs
             {
               $lookup: {
                 from: "flavors",
@@ -111,20 +109,26 @@ export async function GET(request: NextRequest) {
               },
             },
             {
-              $group: {
-                _id: {
-                  $cond: {
-                    if: { $gt: [{ $size: "$flavorDoc" }, 0] },
-                    then: { $arrayElemAt: ["$flavorDoc.name", 0] },
-                    else: "Unknown",
-                  },
-                },
-                count: { $sum: "$items.quantity" },
-              },
+              $lookup: {
+                from: "categories",
+                let: { cid: "$items.categoryId" },
+                pipeline: [
+                   { $match: { $expr: { $eq: [{ $toString: "$_id" }, { $toString: "$$cid" }] } } },
+                   { $project: { name: 1 } }
+                ],
+                as: "categoryDoc"
+              }
             },
-            { $match: { _id: { $ne: "Unknown" } } },
-            { $sort: { count: -1 } },
-            { $limit: 5 }, // Top 5 flavors
+            {
+              $project: {
+                flavorId: "$resolvedFlavorId",
+                flavor: "$items.flavor",
+                customFlavor: "$items.customFlavor",
+                flavorDocName: { $arrayElemAt: ["$flavorDoc.name", 0] },
+                categoryName: { $arrayElemAt: ["$categoryDoc.name", 0] },
+                quantity: "$items.quantity"
+              }
+            }
           ],
 
           // Category Stats (Pie Chart)
