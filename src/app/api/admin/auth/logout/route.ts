@@ -9,7 +9,7 @@ export async function POST() {
       path: "/",
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      sameSite: "strict",
     });
 
     return NextResponse.json({ status: "success" }, { status: 200 });
