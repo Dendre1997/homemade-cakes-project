@@ -240,7 +240,24 @@ export enum OrderStatus {
   DELIVERED = "delivered",
   CANCELLED = "cancelled",
   PENDING_CONFIRMATION = "pending_confirmation",
+  /** Order is waiting for e-transfer or cash from the customer. */
   AWAITING_PAYMENT = "awaiting_payment",
+  /** Payment is secured; order is confirmed and queued for baking. */
+  CONFIRMED = "confirmed",
+}
+
+/**
+ * Strict payment details attached to an order.
+ * `method` reflects how the transaction was actually completed.
+ * `expectedMethod` is set by the admin when converting a custom order,
+ * indicating what payment form the customer agreed to use.
+ */
+export interface PaymentDetails {
+  method: 'cash' | 'e-transfer' | 'square' | 'manual';
+  /** Selected by admin during custom-order conversion; indicates expected customer payment form. */
+  expectedMethod?: 'cash' | 'e-transfer';
+  transactionId?: string;
+  paidAt?: Date;
 }
 
 export interface Order {
@@ -263,10 +280,13 @@ export interface Order {
     deliveryDates: { date: Date; itemIds: string[]; timeSlot: string }[];
   };
   status: OrderStatus;
-  paymentDetails?: {
-    transactionId: string;
-    status: string;
-  };
+  /**
+   * Single source of truth for the financial state of this order.
+   * `true` means payment has been received and verified.
+   */
+  isPaid: boolean;
+  /** Structured payment details; replaces the old chaotic `paymentDetails.status` string. */
+  paymentDetails?: PaymentDetails;
   discountInfo?: {
     code?: string;
     name?: string;
@@ -275,13 +295,18 @@ export interface Order {
   createdAt: Date;
   source?: 'web' | 'instagram' | 'facebook' | 'phone' | 'other' | 'admin-custom';
   referenceImages?: string[];
-  isPaid?: boolean;
   notesLog?: {
-    id: string; 
+    id: string;
     content: string;
     createdAt: Date | string;
-    author?: string; 
+    author?: string;
   }[];
+  /** UID of the admin who has claimed/locked this order for processing. `null` means unclaimed. */
+  claimedByUid?: string | null;
+  /** Opaque token used to generate a self-serve payment link for the customer. */
+  paymentLinkToken?: string;
+  /** Expiry timestamp for the payment link token. */
+  paymentLinkExpiresAt?: Date;
 }
 export interface OrderItem {
   id: string;

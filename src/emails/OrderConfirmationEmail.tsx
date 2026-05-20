@@ -15,6 +15,7 @@ import {
 } from "@react-email/components";
 import { Order, CartItem } from "@/types";
 import { format } from "date-fns";
+import { SENDER_EMAIL } from "@/lib/email";
 
 interface OrderConfirmationEmailProps {
   order: Order;
@@ -55,7 +56,8 @@ export const OrderConfirmationEmail = ({
   flavorMap = {},
   diameterMap = {},
 }: OrderConfirmationEmailProps) => {
-  const isPaid = order.paymentDetails?.status === "paid" || order.isPaid;
+  const isPaid = order.isPaid;
+  const expectedMethod = order.paymentDetails?.expectedMethod;
   const orderIdShort = order._id.toString().slice(-6).toUpperCase();
   const dateFormatted = format(new Date(order.createdAt), "MMMM d, yyyy");
   const isDelivery = order.deliveryInfo.method === "delivery";
@@ -197,15 +199,15 @@ export const OrderConfirmationEmail = ({
                 const isCustom = item.productType === "custom" || item.isCustom;
                 const displayFlavor = isCustom
                   ? item.customFlavor ||
-                    getFlavorName(
-                      item.selectedConfig?.cake?.flavorId || item.flavor,
-                    )
+                  getFlavorName(
+                    item.selectedConfig?.cake?.flavorId || item.flavor,
+                  )
                   : getFlavorName(
-                      item.flavor || item.selectedConfig?.cake?.flavorId,
-                    );
+                    item.flavor || item.selectedConfig?.cake?.flavorId,
+                  );
                 const displaySize = isCustom
                   ? item.customSize ||
-                    getDiameterName(item.selectedConfig?.cake?.diameterId)
+                  getDiameterName(item.selectedConfig?.cake?.diameterId)
                   : getDiameterName(item.diameterId);
 
                 const itemImages = item.imageUrls?.length
@@ -214,10 +216,10 @@ export const OrderConfirmationEmail = ({
                     ? [item.imageUrl]
                     : order.referenceImages?.length
                       ? [
-                          order.referenceImages[
-                            Math.min(idx, order.referenceImages.length - 1)
-                          ],
-                        ]
+                        order.referenceImages[
+                        Math.min(idx, order.referenceImages.length - 1)
+                        ],
+                      ]
                       : [];
 
                 const rowTotal = item.rowTotal || item.price * item.quantity;
@@ -400,11 +402,11 @@ export const OrderConfirmationEmail = ({
                         Discount
                         {(order.discountInfo.code ||
                           order.discountInfo.name) && (
-                          <span style={styles.discountBadge}>
-                            {" "}
-                            {order.discountInfo.code || order.discountInfo.name}
-                          </span>
-                        )}
+                            <span style={styles.discountBadge}>
+                              {" "}
+                              {order.discountInfo.code || order.discountInfo.name}
+                            </span>
+                          )}
                       </Text>
                     </Section>
                   </Column>
@@ -430,6 +432,37 @@ export const OrderConfirmationEmail = ({
                 </Column>
               </Row>
             </Section>
+
+            {/* ── PAYMENT INSTRUCTIONS ─────────────────────────────────────── */}
+            {isPaid ? (
+              <Section style={styles.paymentInstructionBanner.paid}>
+                <Text style={styles.paymentInstructionBanner.text}>
+                  ✅ Payment Confirmed — Thank you!
+                </Text>
+              </Section>
+            ) : expectedMethod === "e-transfer" ? (
+              <Section style={styles.paymentInstructionBanner.unpaid}>
+                <Text style={styles.paymentInstructionBanner.text}>
+                  📩 <strong>Action Required:</strong> Your order is approved!
+                  Please send{" "}
+                  <strong>${order.totalAmount.toFixed(2)}</strong> via
+                  e-transfer to{" "}
+                  <Link href={`mailto:${SENDER_EMAIL}`} style={{ color: C.amber700 }}>
+                    {SENDER_EMAIL}
+                  </Link>{" "}
+                  to secure your spot.
+                </Text>
+              </Section>
+            ) : expectedMethod === "cash" ? (
+              <Section style={styles.paymentInstructionBanner.unpaid}>
+                <Text style={styles.paymentInstructionBanner.text}>
+                  💵 <strong>Payment Due at Pickup:</strong> Your order is
+                  approved! Please bring{" "}
+                  <strong>${order.totalAmount.toFixed(2)}</strong> in cash when
+                  you pick up your order.
+                </Text>
+              </Section>
+            ) : null}
 
             {/* ── FOOTER ──────────────────────────────────────────────────── */}
             <Section style={styles.footer}>
@@ -846,7 +879,31 @@ const styles = {
     display: "inline-block",
   },
 
+
+  // ── payment instruction banner
+  paymentInstructionBanner: {
+    paid: {
+      backgroundColor: C.green100,
+      borderTop: `1px solid #BBF7D0`,
+      padding: "14px 24px",
+      textAlign: "center" as const,
+    },
+    unpaid: {
+      backgroundColor: C.amber100,
+      borderTop: `1px solid #FDE68A`,
+      padding: "14px 24px",
+      textAlign: "center" as const,
+    },
+    text: {
+      fontSize: "13px",
+      fontWeight: "500",
+      margin: "0",
+      lineHeight: "1.6",
+    },
+  },
+
   // ── footer
+
   footer: {
     backgroundColor: C.grayBg,
     borderTop: `1px solid ${C.primaryBorder}`,

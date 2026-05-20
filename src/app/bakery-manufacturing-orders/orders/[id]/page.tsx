@@ -19,7 +19,7 @@ import { OrderDetailActions } from "@/components/admin/orders/OrderDetailActions
 import { OrderNotesSection } from "@/components/admin/orders/OrderNotesSection";
 import { useConfirmation } from "@/contexts/ConfirmationContext";
 import { ReceiptGeneratorModal } from "@/components/admin/orders/ReceiptGeneratorModal";
-import { Receipt, Printer } from "lucide-react";
+import { Receipt, Printer, DollarSign, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Flavor } from "@/types";
 interface AvailabilityData {
@@ -66,9 +66,10 @@ const OrderDetailsPage = () => {
   const [settings, setSettings] = useState<Partial<ScheduleSettings> | null>(
     null
   );
-  
+
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
   const [flavorMap, setFlavorMap] = useState<Record<string, string>>({});
+  const [isMarkingPaid, setIsMarkingPaid] = useState(false);
 
   // --- Data Fetching ---
   const fetchOrderAndDiameters = useCallback(async () => {
@@ -170,9 +171,9 @@ const OrderDetailsPage = () => {
     fetch("/api/admin/flavors")
       .then(res => res.json())
       .then((flavors: Flavor[]) => {
-          const map: Record<string, string> = {};
-          flavors.forEach(f => map[f._id] = f.name);
-          setFlavorMap(map);
+        const map: Record<string, string> = {};
+        flavors.forEach(f => map[f._id] = f.name);
+        setFlavorMap(map);
       })
       .catch(err => console.warn(err));
   }, []);
@@ -215,6 +216,42 @@ const OrderDetailsPage = () => {
     } catch (error) {
       console.error(error);
       showAlert("Error updating source", "error");
+    }
+  };
+
+  const handleMarkAsPaid = async () => {
+    if (!order) return;
+    const confirmed = await showConfirmation({
+      title: "Mark as Paid",
+      body: `Confirm that payment has been received for Order #${order._id.toString().slice(-6).toUpperCase()} ($${order.totalAmount.toFixed(2)})?`,
+      confirmText: "Yes, Mark as Paid",
+      variant: "primary",
+    });
+    if (!confirmed) return;
+
+    setIsMarkingPaid(true);
+    try {
+      const res = await fetch(`/api/admin/orders/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          isPaid: true,
+          // Atomically advance status — no need to touch the dropdown separately
+          status: OrderStatus.CONFIRMED,
+          paymentDetails: {
+            method: 'manual',
+            paidAt: new Date().toISOString(),
+          },
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to update payment status");
+      showAlert("Order marked as paid! ", "success");
+      fetchOrderAndDiameters();
+    } catch (error) {
+      console.error(error);
+      showAlert("Error updating payment status", "error");
+    } finally {
+      setIsMarkingPaid(false);
     }
   };
 
@@ -275,7 +312,7 @@ const OrderDetailsPage = () => {
       setAdminUnallocatedItems([]);
     }
     setAdminSelectedSingleDate(null);
-    setAdminPopupDate(null); 
+    setAdminPopupDate(null);
   };
 
   const handleBackToModeSelection = () => {
@@ -299,7 +336,7 @@ const OrderDetailsPage = () => {
         (sum, item) =>
           sum +
           (item.categoryId ? (availabilityData.manufacturingTimes[item.categoryId.toString()] || 0) : 0) *
-            item.quantity,
+          item.quantity,
         0
       );
       const dateStr = format(adminSelectedSingleDate, "yyyy-MM-dd");
@@ -373,8 +410,8 @@ const OrderDetailsPage = () => {
             sum +
             (itemDetails?.categoryId
               ? availabilityData.manufacturingTimes[
-                  itemDetails.categoryId.toString()
-                ] || 0
+              itemDetails.categoryId.toString()
+              ] || 0
               : 0)
           );
         }, 0);
@@ -442,8 +479,7 @@ const OrderDetailsPage = () => {
 
     if (requiresConfirmation) {
       console.log(
-        `Admin (Pending Confirmation) selected date: ${
-          date ? format(date, "yyyy-MM-dd") : "null"
+        `Admin (Pending Confirmation) selected date: ${date ? format(date, "yyyy-MM-dd") : "null"
         }`
       );
       setAdminSelectedSingleDate(date || null);
@@ -452,15 +488,13 @@ const OrderDetailsPage = () => {
 
     if (editMode === "single") {
       console.log(
-        `Admin (Edit Single) selected date: ${
-          date ? format(date, "yyyy-MM-dd") : "null"
+        `Admin (Edit Single) selected date: ${date ? format(date, "yyyy-MM-dd") : "null"
         }`
       );
       setAdminSelectedSingleDate(date || null);
     } else if (editMode === "split") {
       console.log(
-        `Admin (Edit Split) setting popup date: ${
-          date ? format(date, "yyyy-MM-dd") : "null"
+        `Admin (Edit Split) setting popup date: ${date ? format(date, "yyyy-MM-dd") : "null"
         }`
       );
       setAdminPopupDate(date || null);
@@ -557,7 +591,7 @@ const OrderDetailsPage = () => {
         (sum, item) =>
           sum +
           (item.categoryId ? (availabilityData.manufacturingTimes[item.categoryId.toString()] || 0) : 0) *
-            item.quantity,
+          item.quantity,
         0
       );
       const dateStr = format(adminSelectedSingleDate, "yyyy-MM-dd");
@@ -674,6 +708,58 @@ const OrderDetailsPage = () => {
         </div>{" "}
         {/* --- Right Column --- */}
         <div className="space-y-lg">
+          {/* ── Payment Status Banner ─────────────────────────────────────── */}
+          <div
+            className={`rounded-medium p-lg shadow-sm border flex flex-col gap-3 ${order.isPaid
+                ? "bg-green-50 border-green-200"
+                : "bg-primary-100 border-primary"
+              }`}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {order.isPaid ? (
+                  <CheckCircle2 className="w-5 h-5 text-green-600" />
+                ) : (
+                  <DollarSign className="w-5 h-5 text-primary" />
+                )}
+                <h2 className={`font-heading text-h5 tracking-tight ${order.isPaid ? "text-green-800" : "text-primary"
+                  }`}>
+                  {order.isPaid ? "Payment Received" : "Payment Pending"}
+                </h2>
+              </div>
+              {order.isPaid ? (
+                <span className="text-xs font-bold bg-green-100 text-green-700 px-2.5 py-1 rounded-full uppercase tracking-wide">
+                  PAID
+                </span>
+              ) : (
+                <span className="text-xs font-bold bg-primary-100 text-primary px-2.5 py-1 rounded-full uppercase tracking-wide">
+                  UNPAID
+                </span>
+              )}
+            </div>
+
+            {!order.isPaid && order.paymentDetails?.expectedMethod && (
+              <p className="text-md text-primary font-medium">
+                Expected:{" "}
+                <span className="font-bold capitalize">
+                  {order.paymentDetails.expectedMethod === "e-transfer"
+                    ? "E-Transfer"
+                    : "Cash at Pickup"}
+                </span>
+              </p>
+            )}
+
+            {!order.isPaid && (
+              <Button
+                onClick={handleMarkAsPaid}
+                disabled={isMarkingPaid}
+                className="w-full font-semibold bg-green-600 hover:bg-green-700 text-white transition-colors flex items-center justify-center gap-2"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                {isMarkingPaid ? "Updating..." : "Mark as Paid"}
+              </Button>
+            )}
+          </div>
           <div className="bg-card-background rounded-medium p-lg shadow-sm border border-border/40">
             <h2 className="font-heading text-h5 text-primary tracking-tight mb-2">
               Generate Receipt

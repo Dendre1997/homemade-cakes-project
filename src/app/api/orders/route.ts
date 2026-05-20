@@ -221,6 +221,7 @@ export async function POST(request: NextRequest) {
         status: OrderStatus.PENDING_CONFIRMATION,
         createdAt: new Date(),
         source: 'web', // Enforce source
+        isPaid: false,
         discountInfo: pricingResult.discountTotal > 0 ? {
             code: pricingResult.appliedCode || undefined,
             amount: pricingResult.discountTotal,
@@ -240,6 +241,7 @@ export async function POST(request: NextRequest) {
         totalAmount: pendingOrder.totalAmount,
         status: pendingOrder.status,
         createdAt: pendingOrder.createdAt,
+        isPaid: false,
         items: pendingOrder.items.map((item) => ({
           ...item,
           productId: item.productId?.toString(),
@@ -484,6 +486,7 @@ export async function POST(request: NextRequest) {
         status: OrderStatus.NEW,
         createdAt: new Date(),
         source: 'web', // Enforce source
+        isPaid: false,
         discountInfo: pricingResult.discountTotal > 0 ? {
             code: pricingResult.appliedCode || undefined,
             amount: pricingResult.discountTotal,
@@ -503,6 +506,7 @@ export async function POST(request: NextRequest) {
         totalAmount: newOrder.totalAmount,
         status: newOrder.status,
         createdAt: newOrder.createdAt,
+        isPaid: false,
         items: newOrder.items.map((item) => ({
           ...item,
           productId: item.productId?.toString(),

@@ -27,6 +27,12 @@ interface UpdateBody {
   totalAmount?: number;
   customerInfo?: CustomerInfoUpdate;
   source?: string;
+  isPaid?: boolean;
+  paymentDetails?: {
+    method?: 'cash' | 'e-transfer' | 'square' | 'manual';
+    paidAt?: string;
+    transactionId?: string;
+  };
 }
 
 export async function GET(_request: Request, { params }: Context) {
@@ -69,9 +75,9 @@ export async function PUT(request: NextRequest, { params }: Context) {
         { status: 400 }
       );
     }
-    const { status, deliveryDates, items, totalAmount, customerInfo, source } = body;
+    const { status, deliveryDates, items, totalAmount, customerInfo, source, isPaid, paymentDetails } = body;
 
-    if (!status && !deliveryDates && !items && typeof totalAmount === "undefined" && !customerInfo && source === undefined) {
+    if (!status && !deliveryDates && !items && typeof totalAmount === "undefined" && !customerInfo && source === undefined && typeof isPaid === "undefined" && !paymentDetails) {
       return NextResponse.json(
         { error: "At least one field is required for update" },
         { status: 400 }
@@ -147,6 +153,24 @@ export async function PUT(request: NextRequest, { params }: Context) {
 
     if (source !== undefined) {
       updateFields.$set.source = source || null;
+    }
+
+    if (typeof isPaid === "boolean") {
+      updateFields.$set.isPaid = isPaid;
+    }
+
+    if (paymentDetails) {
+      // Merge into paymentDetails using dot-notation to preserve other subfields
+      const allowedPaymentKeys = ['method', 'paidAt', 'transactionId'] as const;
+      for (const key of allowedPaymentKeys) {
+        if (key in paymentDetails) {
+          const val = (paymentDetails as any)[key];
+          if (val !== undefined) {
+            updateFields.$set[`paymentDetails.${key}`] =
+              key === 'paidAt' ? new Date(val) : val;
+          }
+        }
+      }
     }
 
     // --- Perform Update ---
