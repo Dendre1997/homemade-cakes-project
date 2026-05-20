@@ -32,6 +32,7 @@ export const CustomOrderCard = ({ order }: CustomOrderCardProps) => {
   
   const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
   const [isRejectModalOpen, setIsRejectOpen] = useState(false);
+  const [expectedMethod, setExpectedMethod] = useState<'cash' | 'e-transfer'>('e-transfer');
 
   // Use all reference images
   const images = order.referenceImages || order.referenceImageUrls || [];
@@ -44,7 +45,7 @@ export const CustomOrderCard = ({ order }: CustomOrderCardProps) => {
       const res = await fetch(`/api/admin/custom-orders/${order._id}/convert`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ agreedPrice: Number(agreedPrice) }),
+        body: JSON.stringify({ agreedPrice: Number(agreedPrice), expectedMethod }),
       });
       
       const data = await res.json();
@@ -289,7 +290,36 @@ export const CustomOrderCard = ({ order }: CustomOrderCardProps) => {
             title="Convert to Order"
             confirmText="Convert Now"
            >
-              Are you sure you want to convert this request into a production order for <span className="font-bold">${agreedPrice}</span>? This will generate a payment link for the customer.
+              <p className="mb-4">
+                Converting with agreed price of{" "}
+                <strong>${agreedPrice}</strong>. How will the customer pay?
+              </p>
+              <div className="flex flex-col gap-2">
+                {(["e-transfer", "cash"] as const).map((method) => (
+                  <label
+                    key={method}
+                    className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                      expectedMethod === method
+                        ? "border-accent bg-accent/5 text-accent font-semibold"
+                        : "border-border bg-card-background text-primary/70"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="expectedMethod"
+                      value={method}
+                      checked={expectedMethod === method}
+                      onChange={() => setExpectedMethod(method)}
+                      className="accent-accent w-4 h-4"
+                    />
+                    {method === "e-transfer" ? "E-Transfer" : "Cash at Pickup"}
+                  </label>
+                ))}
+              </div>
+              <p className="mt-3 text-xs text-primary/50">
+                The customer will receive an email with the corresponding payment
+                instructions.
+              </p>
            </ConfirmationModal>
 
            <ConfirmationModal

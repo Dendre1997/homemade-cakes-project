@@ -149,15 +149,10 @@ export async function POST(request: NextRequest) {
         status: isPaid ? OrderStatus.PAID : OrderStatus.NEW, // If marked as paid, set to PAID 
         isPaid: !!isPaid, // Explicit Flag
         source, // 'web', 'instagram', etc.
-        paymentDetails: paymentDetails || (isPaid ? { method: 'manual', status: 'completed' } : undefined),
+        paymentDetails: paymentDetails || (isPaid ? { method: 'manual', paidAt: new Date() } : undefined),
         createdAt: new Date(),
     };
 
-    if (isPaid) {
-        newOrder.status = OrderStatus.NEW; 
-    } else {
-        newOrder.status = OrderStatus.NEW;
-    }
 
     const result = await db.collection("orders").insertOne(newOrder);
 

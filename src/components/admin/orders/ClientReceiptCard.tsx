@@ -76,7 +76,7 @@ export const ClientReceiptCard = ({
   diameters,
   flavorMap,
 }: ClientReceiptCardProps) => {
-  const isPaid = order.paymentDetails?.status === "paid" || order.isPaid;
+  const isPaid = order.isPaid;
   const orderIdShort = order._id.toString().slice(-6).toUpperCase();
   const dateFormatted = order.createdAt ? format(new Date(order.createdAt), "MMMM d, yyyy") : "";
 

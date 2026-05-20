@@ -45,7 +45,15 @@ export async function POST(
 
     const { id } = await params;
     const body = await req.json();
-    const { agreedPrice, adminNotes, date, timeSlot, deliveryMethod } = body;
+    const { agreedPrice, adminNotes, date, timeSlot, deliveryMethod, expectedMethod } = body;
+
+    // Validate expectedMethod — required for the manual payment flow
+    if (!expectedMethod || !['cash', 'e-transfer'].includes(expectedMethod)) {
+      return NextResponse.json(
+        { error: "expectedMethod is required and must be 'cash' or 'e-transfer'" },
+        { status: 400 }
+      );
+    }
 
     if (!agreedPrice || agreedPrice <= 0) {
       return NextResponse.json(
@@ -154,14 +162,14 @@ export async function POST(
           },
         ],
       },
-      status: OrderStatus.NEW,
+      status: OrderStatus.AWAITING_PAYMENT,
       source: "admin-custom",
       referenceImages: customOrder.referenceImages || [],
       createdAt: new Date(),
-      paymentDetails: {
-        status: "unpaid",
-      },
       isPaid: false,
+      paymentDetails: {
+        expectedMethod: expectedMethod as 'cash' | 'e-transfer',
+      },
       notesLog: adminNotes
         ? [
             {
