@@ -110,7 +110,7 @@ export const FlavorCard = ({
         </div>
 
         {/* Back Side: Glassmorphism Details */}
-        <div className="absolute inset-0 h-full w-full rounded-[32px] p-6 sm:p-8 flex flex-col justify-center items-center text-center [transform:rotateY(180deg)] [backface-visibility:hidden] [-webkit-backface-visibility:hidden] bg-white/40 backdrop-blur-xl border border-white/60 shadow-inner overflow-hidden">
+        <div className="absolute inset-0 h-full w-full rounded-[32px] p-2 flex flex-col justify-center items-center text-center [transform:rotateY(180deg)] [backface-visibility:hidden] [-webkit-backface-visibility:hidden] bg-white/40 backdrop-blur-xl border border-white/60 shadow-inner overflow-hidden">
           <div className="absolute inset-0 bg-[#fbf9f6]/40 -z-10" />
 
           <h3 className="font-heading text-2xl sm:text-3xl font-bold text-primary mb-4 tracking-wide leading-tight drop-shadow-sm">
