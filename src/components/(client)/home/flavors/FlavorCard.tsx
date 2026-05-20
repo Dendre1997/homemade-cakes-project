@@ -67,12 +67,12 @@ export const FlavorCard = ({
     >
       <div
         className={cn(
-          "relative h-full w-full rounded-[32px] transition-all duration-[800ms] ease-[cubic-bezier(0.23,1,0.32,1)] [transform-style:preserve-3d] shadow-[0_20px_50px_-15px_rgba(230,224,212,0.6)] hover:shadow-[0_30px_60px_-15px_rgba(230,224,212,0.8)]",
+          "relative h-full w-full rounded-[32px] transition-transform duration-[800ms] ease-[cubic-bezier(0.23,1,0.32,1)] [transform-style:preserve-3d] shadow-[0_20px_50px_-15px_rgba(230,224,212,0.6)] hover:shadow-[0_30px_60px_-15px_rgba(230,224,212,0.8)] will-change-transform",
           isFlipped ? "[transform:rotateY(180deg)]" : "",
         )}
       >
         {/* Front Side: Image */}
-        <div className="absolute inset-0 h-full w-full rounded-[32px] overflow-hidden bg-[#faf8f5] [backface-visibility:hidden] [-webkit-backface-visibility:hidden]">
+        <div className="absolute inset-0 h-full w-full rounded-[32px] overflow-hidden bg-[#faf8f5] [backface-visibility:hidden] [-webkit-backface-visibility:hidden] [transform:translateZ(1px)]">
           <Image
             src={flavor.imageUrl || "/placeholder-flavor.png"}
             alt={flavor.name}
@@ -110,7 +110,7 @@ export const FlavorCard = ({
         </div>
 
         {/* Back Side: Glassmorphism Details */}
-        <div className="absolute inset-0 h-full w-full rounded-[32px] p-2 flex flex-col justify-center items-center text-center [transform:rotateY(180deg)] [backface-visibility:hidden] [-webkit-backface-visibility:hidden] bg-white/40 backdrop-blur-xl border border-white/60 shadow-inner overflow-hidden">
+        <div className="absolute inset-0 h-full w-full rounded-[32px] p-2 flex flex-col justify-center items-center text-center [transform:rotateY(180deg)_translateZ(1px)] [backface-visibility:hidden] [-webkit-backface-visibility:hidden] bg-white/40 backdrop-blur-xl border border-white/60 shadow-inner overflow-hidden">
           <div className="absolute inset-0 bg-[#fbf9f6]/40 -z-10" />
 
           <h3 className="font-heading text-2xl sm:text-3xl font-bold text-primary mb-4 tracking-wide leading-tight drop-shadow-sm">

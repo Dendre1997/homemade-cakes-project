@@ -6,7 +6,6 @@ import {
   Preview,
   Text,
   Img,
-  Button,
   Section,
   Row,
   Column,
@@ -32,7 +31,7 @@ const baseUrl = process.env.NEXT_PUBLIC_API_URL
 const InstaLink = process.env.NEXT_PUBLIC_BAKERY_DM_HANDLE_INSTAGRAM;
 const FacebookLink = process.env.NEXT_PUBLIC_BAKERY_DM_HANDLE_FACEBOOK;
 
-// ─── Colour tokens (mirrors the Tailwind primary palette) ──────────────────
+// ─── Colour tokens ──────────────────────────────────────────────────────────
 const C = {
   primary: "#4A2E2C",
   primary60: "#7D5553",
@@ -77,7 +76,7 @@ export const OrderConfirmationEmail = ({
     return id;
   };
 
-  // ── addon extraction (mirrors ClientReceiptCard) ──────────────────────────
+  // ── addon extraction ──────────────────────────────────────────────────────
   const allAddons = order.items.flatMap((item) =>
     (item.addons || []).map((addon) => ({
       ...addon,
@@ -95,132 +94,68 @@ export const OrderConfirmationEmail = ({
 
   return (
     <Html>
-      <Head />
+      <Head>
+        {/* ── Progressive enhancement: media queries for email clients that support them ── */}
+        <style>{`
+          @media screen and (max-width: 480px) {
+            .email-section { padding-left: 14px !important; padding-right: 14px !important; }
+            .email-header  { padding: 22px 14px 18px !important; }
+            .email-footer  { padding: 20px 14px !important; }
+            .total-amount  { font-size: 22px !important; }
+            .header-title  { font-size: 20px !important; }
+            .help-card     { padding: 12px !important; }
+            .thumb-col     { width: 52px !important; padding-right: 8px !important; }
+            .thumb-img     { width: 44px !important; height: 44px !important; }
+          }
+        `}</style>
+      </Head>
       <Preview>Thank you for your order! #{orderIdShort}</Preview>
 
       <Body style={styles.body}>
         <Container style={styles.container}>
-          {/* ── HEADER ──────────────────────────────────────────────── */}
-          <Section style={styles.header}>
-            <Img
-              src={`${baseUrl}/logo_1.2.svg`}
-              width="80"
-              height="80"
-              alt="D&K Creations"
-              style={styles.logo}
-            />
-            <Text style={styles.headerDate}>{dateFormatted}</Text>
-            <Text style={styles.headerTitle}>
-              Thanks for your order, {order.customerInfo.name}!
+          {/* ── HEADER ── */}
+          <Section style={styles.header} className="email-header">
+            <Link href={`${baseUrl}`}>
+              <Img
+                src={`${baseUrl}/logo_1.2.svg`}
+                width="72"
+                height="72"
+                alt="D&K Creations"
+                style={styles.logo}
+              />
+            </Link>
+            <Text style={styles.headerDate}>
+              {format(new Date(order.createdAt), "MMM d, yyyy · h:mm a")}
             </Text>
-            <Text style={styles.headerSubtitle}>
-              We can't wait to make something special for you. Check your order
-              details below.
+            <Text style={styles.headerTitle} className="header-title">
+              Thank you for your order,{"\n"}
+              {order.customerInfo.name}!
+            </Text>
+            <Text style={styles.headerSub}>
+              Check your order details below.
             </Text>
           </Section>
 
-          {/* ── MAIN CARD ─────────────────────────────────────────────── */}
-          <Section style={styles.mainCard}>
-            {/* ── FINANCIAL BREAKDOWN ──────────────────────────────────── */}
-            <Section style={styles.section}>
+          {/* ── WHITE CONTENT CARD ── */}
+          <Section style={styles.card}>
+            {/* ── TOTAL ── */}
+            <Section style={styles.section} className="email-section">
               <Row>
                 <Column>
                   <Text style={styles.totalLabel}>Total</Text>
                 </Column>
                 <Column align="right">
-                  <Text style={styles.totalAmount}>
+                  <Text style={styles.totalAmount} className="total-amount">
                     ${order.totalAmount.toFixed(2)}
                   </Text>
                 </Column>
               </Row>
-
-              <Hr style={styles.hr} />
-
-              {/* Per-item rows — base price only (rowTotal minus that item's addon cost) */}
-              {order.items.map((item: CartItem, idx: number) => {
-                const itemAddonCost =
-                  (item.addons || []).reduce((s, a) => s + a.price, 0) *
-                  item.quantity;
-                const itemBaseTotal =
-                  (item.rowTotal || item.price * item.quantity) - itemAddonCost;
-                return (
-                  <Row key={idx} style={{ marginBottom: "10px" }}>
-                    <Column>
-                      <Text style={styles.finLabel}>
-                        {item.name}
-                        {item.quantity > 1 ? ` × ${item.quantity}` : ""}
-                      </Text>
-                    </Column>
-                    <Column align="right">
-                      <Text style={styles.finValue}>
-                        ${itemBaseTotal.toFixed(2)}
-                      </Text>
-                    </Column>
-                  </Row>
-                );
-              })}
-
-              {/* Extras sub-block — left-border accent, only shown when addons exist */}
-              {allAddons.length > 0 && (
-                <Section style={styles.extrasBlock}>
-                  <Text style={styles.extrasLabel}>Extras</Text>
-                  {allAddons.map((addon, idx) => (
-                    <Row
-                      key={idx}
-                      style={{ marginTop: idx === 0 ? "0" : "4px" }}
-                    >
-                      <Column>
-                        <Text style={styles.extrasItem}>
-                          {addon.name}
-                          {addon.variantName && addon.variantName.trim() !== ""
-                            ? ` · ${addon.variantName}`
-                            : ""}
-                          {addon.itemQuantity > 1
-                            ? ` (×${addon.itemQuantity})`
-                            : ""}
-                        </Text>
-                      </Column>
-                      <Column align="right">
-                        <Text style={styles.extrasItemPrice}>
-                          {addon.price > 0
-                            ? `+$${(addon.price * addon.itemQuantity).toFixed(2)}`
-                            : "Free"}
-                        </Text>
-                      </Column>
-                    </Row>
-                  ))}
-                </Section>
-              )}
-
-              {/* Discount */}
-              {order.discountInfo && order.discountInfo.amount > 0 && (
-                <Row>
-                  <Column>
-                    <Text style={styles.discountLabel}>
-                      Discount
-                      {(order.discountInfo.code || order.discountInfo.name) && (
-                        <span style={styles.discountBadge}>
-                          {" "}
-                          {order.discountInfo.code || order.discountInfo.name}
-                        </span>
-                      )}
-                    </Text>
-                  </Column>
-                  <Column align="right">
-                    <Text style={styles.discountAmount}>
-                      −${order.discountInfo.amount.toFixed(2)}
-                    </Text>
-                  </Column>
-                </Row>
-              )}
             </Section>
 
-            <Hr style={styles.hrSection} />
+            <Hr style={styles.divider} />
 
-            {/* ── ITEMS ─────────────────────────────────────────────────── */}
-            <Section style={styles.section}>
-              <Text style={styles.sectionHeader}>Items</Text>
-
+            {/* ── LINE ITEMS ── */}
+            <Section style={styles.section} className="email-section">
               {order.items.map((item: CartItem, idx: number) => {
                 const isCustom = item.productType === "custom" || item.isCustom;
                 const displayFlavor = isCustom
@@ -249,68 +184,71 @@ export const OrderConfirmationEmail = ({
                       : [];
 
                 const rowTotal = item.rowTotal || item.price * item.quantity;
-                const isLast = idx === order.items.length - 1;
+                const itemAddonCost =
+                  (item.addons || []).reduce((s, a) => s + a.price, 0) *
+                  item.quantity;
+                const itemBaseTotal = rowTotal - itemAddonCost;
                 const hasAddons = item.addons && item.addons.length > 0;
 
                 return (
                   <Section
                     key={idx}
-                    style={{
-                      ...styles.itemRow,
-                      borderBottom: isLast
-                        ? "none"
-                        : `1px solid ${C.grayBorder}`,
-                    }}
+                    style={idx > 0 ? { marginTop: "16px" } : {}}
                   >
-                    {/* ── image + details row */}
+                    {/* Item main row */}
                     <Row>
-                      <Column style={styles.itemImgCol}>
+                      {/* Thumbnail */}
+                      <Column style={styles.thumbCol} className="thumb-col">
                         {itemImages.length > 0 ? (
                           <Img
                             src={itemImages[0]}
-                            width="56"
-                            height="56"
+                            width="52"
+                            height="52"
                             alt={item.name}
-                            style={styles.itemImg}
+                            style={styles.thumb}
+                            className="thumb-img"
                           />
                         ) : (
-                          <Section style={styles.itemImgPlaceholder}>
-                            <Text style={styles.itemImgPlaceholderText}>
-                              No Img
-                            </Text>
-                          </Section>
+                          <Section style={styles.thumbPlaceholder} />
                         )}
                       </Column>
 
+                      {/* Details */}
                       <Column style={styles.itemDetailsCol}>
                         <Row>
-                          <Column>
+                          <Column style={styles.itemNameCol}>
                             <Text style={styles.itemName}>{item.name}</Text>
                           </Column>
-                          <Column align="right">
+                          <Column style={styles.itemPriceCol} align="right">
                             <Text style={styles.itemPrice}>
-                              ${rowTotal.toFixed(2)}
+                              ${itemBaseTotal.toFixed(2)}
                             </Text>
                           </Column>
                         </Row>
-                        {displaySize && (
+
+                        {(displaySize || displayFlavor) && (
                           <Text style={styles.itemMeta}>
-                            Size: {displaySize}
+                            {[
+                              displaySize && `Size: ${displaySize}`,
+                              displayFlavor && `Flavor: ${displayFlavor}`,
+                            ]
+                              .filter(Boolean)
+                              .join("  ·  ")}
                           </Text>
                         )}
-                        {displayFlavor && (
+
+                        {item.quantity > 1 && (
                           <Text style={styles.itemMeta}>
-                            Flavor: {displayFlavor}
+                            Qty: {item.quantity}
                           </Text>
                         )}
-                        <Text style={styles.itemMeta}>
-                          Qty: {item.quantity}
-                        </Text>
+
                         {item.inscription && (
                           <Text style={styles.itemMeta}>
                             Inscription: {item.inscription}
                           </Text>
                         )}
+
                         {item.designInstructions && (
                           <Text style={styles.itemMeta}>
                             Instructions: {item.designInstructions}
@@ -319,40 +257,34 @@ export const OrderConfirmationEmail = ({
                       </Column>
                     </Row>
 
-                    {/* ── addon block — indented to align with the details column */}
+                    {/* Addon sub-rows */}
                     {hasAddons && (
                       <Row style={{ marginTop: "8px" }}>
-                        {/* spacer matches image column exactly */}
-                        <Column style={{ width: "64px" }} />
+                        <Column style={{ width: "60px" }} />
                         <Column>
-                          <Section style={styles.itemAddonBlock}>
-                            <Text style={styles.itemAddonLabel}>Add-ons</Text>
-                            {item.addons!.map((addon, aIdx) => (
-                              <Row
-                                key={aIdx}
-                                style={{ marginTop: aIdx === 0 ? "0" : "5px" }}
-                              >
-                                <Column>
-                                  <Text style={styles.itemAddonName}>
-                                    {addon.name}
-                                  </Text>
+                          {item.addons!.map((addon, aIdx) => (
+                            <Row
+                              key={aIdx}
+                              style={aIdx > 0 ? { marginTop: "4px" } : {}}
+                            >
+                              <Column>
+                                <Text style={styles.addonName}>
+                                  + {addon.name}
                                   {addon.variantName &&
-                                    addon.variantName.trim() !== "" && (
-                                      <Text style={styles.itemAddonVariant}>
-                                        {addon.variantName}
-                                      </Text>
-                                    )}
-                                </Column>
-                                <Column align="right">
-                                  <Text style={styles.itemAddonPrice}>
-                                    {addon.price > 0
-                                      ? `+$${addon.price.toFixed(2)}`
-                                      : "Free"}
-                                  </Text>
-                                </Column>
-                              </Row>
-                            ))}
-                          </Section>
+                                  addon.variantName.trim() !== ""
+                                    ? ` · ${addon.variantName}`
+                                    : ""}
+                                </Text>
+                              </Column>
+                              <Column align="right">
+                                <Text style={styles.addonPrice}>
+                                  {addon.price > 0
+                                    ? `+$${addon.price.toFixed(2)}`
+                                    : "Free"}
+                                </Text>
+                              </Column>
+                            </Row>
+                          ))}
                         </Column>
                       </Row>
                     )}
@@ -361,23 +293,144 @@ export const OrderConfirmationEmail = ({
               })}
             </Section>
 
-            <Hr style={styles.hrSection} />
+            <Hr style={styles.divider} />
 
-            {/* ── FULFILLMENT ───────────────────────────────────────────── */}
-            <Section style={styles.section}>
+            {/* ── FINANCIAL SUMMARY ── */}
+            <Section style={styles.section} className="email-section">
+              {/* Per-item base totals */}
+              {order.items.map((item: CartItem, idx: number) => {
+                const itemAddonCost =
+                  (item.addons || []).reduce((s, a) => s + a.price, 0) *
+                  item.quantity;
+                const itemBaseTotal =
+                  (item.rowTotal || item.price * item.quantity) - itemAddonCost;
+                return (
+                  <Row key={idx} style={idx > 0 ? { marginTop: "6px" } : {}}>
+                    <Column>
+                      <Text style={styles.summaryLabel}>
+                        {item.name}
+                        {item.quantity > 1 ? ` × ${item.quantity}` : ""}
+                      </Text>
+                    </Column>
+                    <Column align="right" style={styles.summaryValueCol}>
+                      <Text style={styles.summaryValue}>
+                        ${itemBaseTotal.toFixed(2)}
+                      </Text>
+                    </Column>
+                  </Row>
+                );
+              })}
+
+              {/* Extras block */}
+              {allAddons.length > 0 && (
+                <Section style={styles.extrasBlock}>
+                  <Text style={styles.extrasHeader}>Extras</Text>
+                  {allAddons.map((addon, idx) => (
+                    <Row key={idx} style={idx > 0 ? { marginTop: "4px" } : {}}>
+                      <Column>
+                        <Text style={styles.extrasItem}>
+                          {addon.name}
+                          {addon.variantName && addon.variantName.trim() !== ""
+                            ? ` · ${addon.variantName}`
+                            : ""}
+                          {addon.itemQuantity > 1
+                            ? ` (×${addon.itemQuantity})`
+                            : ""}
+                        </Text>
+                      </Column>
+                      <Column align="right" style={styles.extrasValueCol}>
+                        <Text style={styles.extrasItemPrice}>
+                          {addon.price > 0
+                            ? `+$${(addon.price * addon.itemQuantity).toFixed(2)}`
+                            : "Free"}
+                        </Text>
+                      </Column>
+                    </Row>
+                  ))}
+                </Section>
+              )}
+
+              {/* Discount */}
+              {order.discountInfo && order.discountInfo.amount > 0 && (
+                <Row style={{ marginTop: "8px" }}>
+                  <Column>
+                    <Text style={styles.discountLabel}>
+                      Discount
+                      {(order.discountInfo.code || order.discountInfo.name) && (
+                        <span style={styles.discountBadge}>
+                          {" "}
+                          {order.discountInfo.code || order.discountInfo.name}
+                        </span>
+                      )}
+                    </Text>
+                  </Column>
+                  <Column align="right" style={styles.discountValueCol}>
+                    <Text style={styles.discountAmount}>
+                      −${order.discountInfo.amount.toFixed(2)}
+                    </Text>
+                  </Column>
+                </Row>
+              )}
+            </Section>
+
+            <Hr style={styles.divider} />
+
+            {/* ── PAYMENT ── */}
+            <Section style={styles.section} className="email-section">
+              <Text style={styles.sectionHeader}>Payment</Text>
+
+              {isPaid ? (
+                <Row>
+                  <Column>
+                    <Text style={styles.paymentMethod}>
+                      ✅ Payment confirmed
+                    </Text>
+                  </Column>
+                  <Column align="right" style={styles.paymentAmountCol}>
+                    <Text style={styles.paymentAmount}>
+                      ${order.totalAmount.toFixed(2)}
+                    </Text>
+                  </Column>
+                </Row>
+              ) : expectedMethod === "e-transfer" ? (
+                <Section style={styles.paymentBanner}>
+                  <Text style={styles.paymentBannerText}>
+                    <strong>Action required:</strong> Your order will be
+                    reserved once we receive{" "}
+                    <strong>${order.totalAmount.toFixed(2)}</strong> via
+                    e-transfer.
+                  </Text>
+                </Section>
+              ) : expectedMethod === "cash" ? (
+                <Section style={styles.paymentBanner}>
+                  <Text style={styles.paymentBannerText}>
+                    <strong>Payment on pickup:</strong>
+                    <strong>${order.totalAmount.toFixed(2)}</strong> in
+                    cash—thank you!
+                  </Text>
+                </Section>
+              ) : null}
+            </Section>
+
+            <Hr style={styles.divider} />
+
+            {/* ── FULFILLMENT ── */}
+            <Section style={styles.section} className="email-section">
               <Text style={styles.sectionHeader}>
                 {isDelivery ? "Delivery" : "Pickup"}
               </Text>
 
               {order.deliveryInfo.deliveryDates?.length > 0 &&
                 order.deliveryInfo.deliveryDates.map((dateObj, idx) => (
-                  <Row key={idx} style={{ marginBottom: "12px" }}>
-                    <Column>
-                      <Text style={styles.infoLabel}>Date &amp; Time</Text>
+                  <Row key={idx} style={idx > 0 ? { marginTop: "8px" } : {}}>
+                    <Column style={styles.infoLabelCol}>
+                      <Text style={styles.infoLabel}>
+                        {isDelivery ? "Delivery date" : "Pickup date"}
+                      </Text>
                     </Column>
-                    <Column align="right">
+                    <Column align="right" style={styles.infoValueCol}>
                       <Text style={styles.infoValue}>
-                        {format(new Date(dateObj.date), "EEE, MMMM d, yyyy")}
+                        {format(new Date(dateObj.date), "EEE, MMM d, yyyy")}
                       </Text>
                       <Text style={styles.infoValueSub}>
                         {dateObj.timeSlot}
@@ -387,59 +440,50 @@ export const OrderConfirmationEmail = ({
                 ))}
 
               {isDelivery && (
-                <Row>
-                  <Column>
+                <Row style={{ marginTop: "10px" }}>
+                  <Column style={styles.infoLabelCol}>
                     <Text style={styles.infoLabel}>Address</Text>
                   </Column>
-                  <Column align="right">
+                  <Column align="right" style={styles.infoValueCol}>
                     <Text style={styles.infoValue}>
-                      {order.deliveryInfo.address || "Address pending"}
+                      {order.deliveryInfo.address || "Pending"}
                     </Text>
                   </Column>
                 </Row>
               )}
             </Section>
 
-            <Hr style={styles.hrSection} />
+            <Hr style={styles.divider} />
 
-            {/* ── ORDER INFORMATION ─────────────────────────────────────── */}
-            <Section style={styles.section}>
-              <Text style={styles.sectionHeader}>Order Information</Text>
+            {/* ── ADDITIONAL INFORMATION ── */}
+            <Section style={styles.section} className="email-section">
+              <Text style={styles.sectionHeader}>Additional information</Text>
 
-              <Row style={{ marginBottom: "12px" }}>
-                <Column>
+              <Row>
+                <Column style={styles.infoLabelCol}>
                   <Text style={styles.infoLabel}>Order ID</Text>
                 </Column>
-                <Column align="right">
+                <Column align="right" style={styles.infoValueCol}>
                   <Text style={styles.infoValueMono}>#{orderIdShort}</Text>
                 </Column>
               </Row>
 
-              <Row style={{ marginBottom: "12px" }}>
-                <Column>
-                  <Text style={styles.infoLabel}>Date</Text>
-                </Column>
-                <Column align="right">
-                  <Text style={styles.infoValue}>{dateFormatted}</Text>
-                </Column>
-              </Row>
-
-              <Row style={{ marginBottom: "12px" }}>
-                <Column>
+              <Row style={{ marginTop: "8px" }}>
+                <Column style={styles.infoLabelCol}>
                   <Text style={styles.infoLabel}>Customer</Text>
                 </Column>
-                <Column align="right">
+                <Column align="right" style={styles.infoValueCol}>
                   <Text style={styles.infoValue}>
                     {order.customerInfo.name}
                   </Text>
                 </Column>
               </Row>
 
-              <Row style={{ marginBottom: "12px" }}>
-                <Column>
+              <Row style={{ marginTop: "8px" }}>
+                <Column style={styles.infoLabelCol}>
                   <Text style={styles.infoLabel}>Phone</Text>
                 </Column>
-                <Column align="right">
+                <Column align="right" style={styles.infoValueCol}>
                   <Text style={styles.infoValue}>
                     {order.customerInfo.phone}
                   </Text>
@@ -448,11 +492,11 @@ export const OrderConfirmationEmail = ({
 
               {order.customerInfo.email &&
                 !order.customerInfo.email.includes("placeholder.com") && (
-                  <Row style={{ marginBottom: "12px" }}>
-                    <Column>
+                  <Row style={{ marginTop: "8px" }}>
+                    <Column style={styles.infoLabelCol}>
                       <Text style={styles.infoLabel}>Email</Text>
                     </Column>
-                    <Column align="right">
+                    <Column align="right" style={styles.infoValueCol}>
                       <Text style={styles.infoValue}>
                         {order.customerInfo.email}
                       </Text>
@@ -462,109 +506,67 @@ export const OrderConfirmationEmail = ({
 
               {order.customerInfo.socialPlatform &&
                 order.customerInfo.socialNickname?.trim() && (
-                  <Row style={{ marginBottom: "12px" }}>
-                    <Column>
+                  <Row style={{ marginTop: "8px" }}>
+                    <Column style={styles.infoLabelCol}>
                       <Text style={styles.infoLabel}>Social</Text>
                     </Column>
-                    <Column align="right">
-                      
-                    <Text>
-                    @{order.customerInfo.socialNickname}
-                    </Text>
+                    <Column align="right" style={styles.infoValueCol}>
+                      <Text style={styles.infoLabel}>
+                        @{order.customerInfo.socialNickname} (
+                        {order.customerInfo.socialPlatform})
+                      </Text>
                     </Column>
                   </Row>
                 )}
-
-              <Row>
-                <Column>
-                  <Text style={styles.infoLabel}>Payment Status</Text>
-                </Column>
-                <Column align="right">
-                  {isPaid ? (
-                    <Text style={styles.badgePaid}>PAID</Text>
-                  ) : (
-                    <Text style={styles.badgePending}>PENDING</Text>
-                  )}
-                </Column>
-              </Row>
             </Section>
 
-            {/* ── PAYMENT INSTRUCTIONS ──────────────────────────────────── */}
-            {isPaid ? (
-              <Section style={styles.paymentBannerPaid}>
-                <Text style={styles.paymentBannerText}>
-                  ✅ Payment Confirmed — Thank you!
-                </Text>
-              </Section>
-            ) : expectedMethod === "e-transfer" ? (
-              <Section style={styles.paymentBannerUnpaid}>
-                <Text style={styles.paymentBannerText}>
-                  <strong>Action Required:</strong> Your request is approved!
-                  Payment of <strong>${order.totalAmount.toFixed(2)}</strong>{" "}
-                  via e-transfer
-                  <Link
-                    href={`mailto:${SENDER_EMAIL}`}
-                    style={{ color: C.amber700 }}
-                  >
-                    {SENDER_EMAIL}
-                  </Link>{" "}
-                  to secure your spot.
-                </Text>
-              </Section>
-            ) : expectedMethod === "cash" ? (
-              <Section style={styles.paymentBannerUnpaid}>
-                <Text style={styles.paymentBannerText}>
-                  💵 <strong>Payment Due at Pickup:</strong> Your order is
-                  approved! Please bring{" "}
-                  <strong>${order.totalAmount.toFixed(2)}</strong> in cash when
-                  you pick up your order.
-                </Text>
-              </Section>
-            ) : null}
+            <Hr style={styles.divider} />
 
-            <Hr style={styles.hrSection} />
-
-            {/* ── NEED HELP ─────────────────────────────────────────────── */}
-            <Section style={styles.section}>
-              <Section style={styles.helpCard}>
+            {/* ── NEED HELP ── */}
+            <Section style={styles.section} className="email-section">
+              <Section style={styles.helpCard} className="help-card">
                 <Text style={styles.helpTitle}>Need help?</Text>
                 <Text style={styles.helpText}>
-                  Our support team is happy to help with any concern you might
-                  have.
+                  Need help or have a question? Log in and chat directly with
+                  the baker—we’re happy to help!
+                  <Link
+                    href={`${baseUrl}/contact`}
+                    style={{ color: C.primary60 }}
+                  >
+                    Click here
+                  </Link>
                 </Text>
-                <Link href={`mailto:${SENDER_EMAIL}`} style={styles.helpButton}>
-                  Contact support
-                </Link>
               </Section>
             </Section>
           </Section>
-          {/* ── END MAIN CARD ──────────────────────────────────────────── */}
+          {/* ── END CARD ── */}
 
-          {/* ── FOOTER ──────────────────────────────────────────────────── */}
-          <Section style={styles.footer}>
-            <Section style={styles.footerLinksSection}>
-              <Link
-                href={`https://www.instagram.com/${InstaLink}`}
-                style={styles.footerLink}
-              >
-                Instagram
-              </Link>
-              <Hr style={styles.footerHr} />
-              <Link href={FacebookLink} style={styles.footerLink}>
-                Facebook
-              </Link>
-              <Hr style={styles.footerHr} />
-            </Section>
+          {/* ── DARK FOOTER ── */}
+          <Section style={styles.footer} className="email-footer">
             <Text style={styles.footerThanks}>
               Thank you for your order! 💖
             </Text>
-            <Img
-              src={`${baseUrl}/logo_1.2.svg`}
-              width="60"
-              height="60"
-              alt="D&K Creations"
-              style={styles.footerLogo}
-            />
+            <Row style={{ marginTop: "16px" }}>
+              <Column
+                align="right"
+                style={{ width: "50%", paddingRight: "8px" }}
+              >
+                <Link
+                  href={`https://www.instagram.com/${InstaLink}`}
+                  style={styles.footerLink}
+                >
+                  Instagram
+                </Link>
+              </Column>
+              <Column style={{ width: "2px" }}>
+                <Text style={styles.footerSep}>·</Text>
+              </Column>
+              <Column align="left" style={{ width: "50%", paddingLeft: "8px" }}>
+                <Link href={FacebookLink} style={styles.footerLink}>
+                  Facebook
+                </Link>
+              </Column>
+            </Row>
           </Section>
         </Container>
       </Body>
@@ -580,136 +582,258 @@ const styles = {
   // ── layout
   body: {
     fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+    backgroundColor: C.grayBg,
     margin: "0",
     padding: "0",
-    backgroundColor: "#EAE0DF",
+    // Prevent iOS auto-zoom on small screens
+    WebkitTextSizeAdjust: "100%",
+    MsTextSizeAdjust: "100%",
   },
   container: {
     margin: "0 auto",
-    width: "520px",
-    maxWidth: "100%",
+    // Use percentage width so it fills narrow viewports without a fixed pixel value
+    width: "100%",
+    maxWidth: "600px",
   },
 
-  // ── header — warm brand bg, left-aligned, Uber-style
+  // ── header
+  // Reduced side padding from 32px → 20px so it breathes on 320px screens
   header: {
-    backgroundColor: C.primary10,
-    padding: "32px 32px 28px",
+    backgroundColor: "#EBEBEB",
+    padding: "28px 20px 24px",
   },
   logo: {
     display: "block",
     marginBottom: "20px",
+    // Cap so logo never overflows on tiny screens
+    maxWidth: "72px",
+    height: "auto",
   },
   headerDate: {
-    color: C.primary40,
+    color: "#666666",
     fontSize: "13px",
     fontWeight: "400",
     margin: "0 0 10px",
+    lineHeight: "1.4",
   },
+  // Reduced from 26px → 22px so long names don't overflow on 320px
   headerTitle: {
-    color: C.primary,
-    fontSize: "26px",
+    color: "#000000",
+    fontSize: "22px",
     fontWeight: "800",
+    margin: "0 0 8px",
     lineHeight: "1.25",
-    margin: "0 0 12px",
+    letterSpacing: "-0.3px",
+    wordBreak: "break-word" as const,
+    overflowWrap: "break-word" as const,
   },
-  headerSubtitle: {
-    color: C.primary60,
+  headerSub: {
+    color: "#444444",
     fontSize: "14px",
     fontWeight: "400",
-    lineHeight: "1.5",
     margin: "0",
+    lineHeight: "1.5",
   },
 
-  // ── main card — white body
-  mainCard: {
+  // ── white content card
+  card: {
     backgroundColor: C.white,
   },
 
-  // ── shared section wrapper
+  // ── shared section pad — reduced from 32px → 20px sides
   section: {
-    padding: "24px 32px",
-  },
-  sectionHeader: {
-    color: C.primary,
-    fontSize: "18px",
-    fontWeight: "700",
-    margin: "0 0 16px",
+    padding: "20px 20px",
   },
 
-  // ── dividers
-  hr: {
-    borderColor: C.grayBorder2,
-    margin: "16px 0",
-  },
-  hrSection: {
-    borderColor: C.grayBorder2,
+  // ── divider
+  divider: {
+    borderColor: "#E5E7EB",
+    borderTopWidth: "1px",
     margin: "0",
   },
 
-  // ── financial — total (large, prominent at top)
+  // ── total hero row
   totalLabel: {
-    color: C.primary,
-    fontSize: "20px",
+    color: "#000000",
+    fontSize: "16px",
     fontWeight: "700",
     margin: "0",
+    lineHeight: "1.4",
   },
+  // Reduced from 28px → 24px so "$1,234.00" doesn't overflow at 320px
   totalAmount: {
-    color: C.primary,
-    fontSize: "28px",
+    color: "#000000",
+    fontSize: "24px",
     fontWeight: "800",
     margin: "0",
     textAlign: "right" as const,
+    lineHeight: "1.2",
+    letterSpacing: "-0.5px",
+    whiteSpace: "nowrap" as const,
   },
 
-  // ── financial — per-item rows
-  finLabel: {
-    color: C.primary60,
+  // ── line items
+  // Fixed at 52px — narrow enough that the right column still has ~230px on a 320px screen
+  thumbCol: {
+    width: "52px",
+    paddingRight: "10px",
+    verticalAlign: "top",
+  },
+  thumb: {
+    width: "44px",
+    height: "44px",
+    borderRadius: "10px",
+    objectFit: "cover" as const,
+    border: `1px solid ${C.grayBorder2}`,
+    display: "block",
+    // Prevents image from overflowing its cell
+    maxWidth: "100%",
+  },
+  thumbPlaceholder: {
+    width: "44px",
+    height: "44px",
+    borderRadius: "10px",
+    backgroundColor: C.grayBorder,
+    border: `1px solid ${C.grayBorder2}`,
+    display: "block",
+  },
+  itemDetailsCol: {
+    verticalAlign: "top",
+    // Take remaining width so name + price row has room
+    width: "100%",
+  },
+  // Explicit column widths for the name/price inner row prevent overlap
+  itemNameCol: {
+    // Flex-grow substitute: take most of the space, leave ~70px for price
+    width: "65%",
+  },
+  itemPriceCol: {
+    width: "35%",
+    // Prevent wrapping of short price strings like "$25.00"
+    whiteSpace: "nowrap" as const,
+  },
+  itemName: {
+    color: "#111111",
     fontSize: "14px",
+    fontWeight: "700",
+    margin: "0",
+    lineHeight: "1.4",
+    wordBreak: "break-word" as const,
+    overflowWrap: "break-word" as const,
+  },
+  itemPrice: {
+    color: "#111111",
+    fontSize: "14px",
+    fontWeight: "600",
+    margin: "0",
+    textAlign: "right" as const,
+    lineHeight: "1.4",
+    whiteSpace: "nowrap" as const,
+  },
+  itemMeta: {
+    color: "#888888",
+    fontSize: "12px",
+    fontWeight: "400",
+    margin: "3px 0 0",
+    lineHeight: "1.4",
+    wordBreak: "break-word" as const,
+    overflowWrap: "break-word" as const,
+  },
+
+  // ── addon sub-rows (indented)
+  addonName: {
+    color: "#888888",
+    fontSize: "12px",
     fontWeight: "400",
     margin: "0",
+    lineHeight: "1.4",
+    wordBreak: "break-word" as const,
+    overflowWrap: "break-word" as const,
   },
-  finValue: {
-    color: C.primary60,
-    fontSize: "14px",
+  addonPrice: {
+    color: "#888888",
+    fontSize: "12px",
+    fontWeight: "500",
+    margin: "0",
+    textAlign: "right" as const,
+    lineHeight: "1.4",
+    whiteSpace: "nowrap" as const,
+  },
+
+  // ── financial summary
+  summaryLabel: {
+    color: "#555555",
+    fontSize: "13px",
+    fontWeight: "400",
+    margin: "0",
+    lineHeight: "1.5",
+    wordBreak: "break-word" as const,
+    overflowWrap: "break-word" as const,
+  },
+  // Pin value column to a fixed min-width so prices never get squished
+  summaryValueCol: {
+    whiteSpace: "nowrap" as const,
+    width: "80px",
+  },
+  summaryValue: {
+    color: "#555555",
+    fontSize: "13px",
     fontWeight: "400",
     margin: "0",
     textAlign: "right" as const,
+    lineHeight: "1.5",
+    whiteSpace: "nowrap" as const,
   },
 
-  // ── financial — extras sub-block
+  // extras sub-block
   extrasBlock: {
-    borderLeft: `2px solid ${C.primaryBorder}`,
-    paddingLeft: "10px",
-    margin: "4px 0 10px",
+    borderLeft: `3px solid ${C.primaryBorder}`,
+    paddingLeft: "12px",
+    margin: "10px 0 6px",
   },
-  extrasLabel: {
+  extrasHeader: {
     color: C.primary40,
-    fontSize: "9px",
+    fontSize: "10px",
     fontWeight: "700",
-    letterSpacing: "2px",
+    letterSpacing: "1.5px",
     textTransform: "uppercase" as const,
     margin: "0 0 6px",
   },
   extrasItem: {
     color: C.primary60,
-    fontSize: "13px",
+    fontSize: "12px",
     fontWeight: "400",
     margin: "0",
+    lineHeight: "1.5",
+    wordBreak: "break-word" as const,
+    overflowWrap: "break-word" as const,
+  },
+  extrasValueCol: {
+    whiteSpace: "nowrap" as const,
+    width: "80px",
   },
   extrasItemPrice: {
     color: C.primary60,
-    fontSize: "13px",
+    fontSize: "12px",
     fontWeight: "600",
     margin: "0",
     textAlign: "right" as const,
+    lineHeight: "1.5",
+    whiteSpace: "nowrap" as const,
   },
 
-  // ── financial — discount
+  // discount
   discountLabel: {
     color: C.green700,
-    fontSize: "14px",
+    fontSize: "13px",
     fontWeight: "400",
-    margin: "0 0 8px",
+    margin: "0",
+    lineHeight: "1.5",
+    wordBreak: "break-word" as const,
+  },
+  discountValueCol: {
+    whiteSpace: "nowrap" as const,
+    width: "80px",
   },
   discountBadge: {
     backgroundColor: C.green100,
@@ -723,134 +847,107 @@ const styles = {
   },
   discountAmount: {
     color: C.green700,
-    fontSize: "14px",
+    fontSize: "13px",
     fontWeight: "600",
-    margin: "0 0 8px",
+    margin: "0",
     textAlign: "right" as const,
+    lineHeight: "1.5",
+    whiteSpace: "nowrap" as const,
   },
 
-  // ── line items
-  itemRow: {
-    paddingTop: "14px",
-    paddingBottom: "14px",
+  // ── section header
+  sectionHeader: {
+    color: "#000000",
+    fontSize: "16px",
+    fontWeight: "700",
+    margin: "0 0 14px",
+    lineHeight: "1.3",
   },
-  itemImgCol: {
-    width: "64px",
-    paddingRight: "12px",
-    verticalAlign: "top",
-  },
-  itemImg: {
-    width: "56px",
-    height: "56px",
-    borderRadius: "10px",
-    objectFit: "cover" as const,
-    border: `1px solid ${C.grayBorder}`,
-    display: "block",
-  },
-  itemImgPlaceholder: {
-    width: "56px",
-    height: "56px",
-    borderRadius: "10px",
-    backgroundColor: C.grayBorder,
-    border: `1px solid ${C.grayBorder2}`,
-  },
-  itemImgPlaceholderText: {
-    color: C.primary40,
-    fontSize: "9px",
+
+  // ── payment
+  paymentMethod: {
+    color: C.green700,
+    fontSize: "14px",
     fontWeight: "500",
-    textAlign: "center" as const,
     margin: "0",
-    lineHeight: "56px",
+    lineHeight: "1.5",
   },
-  itemDetailsCol: {
-    verticalAlign: "top",
+  paymentAmountCol: {
+    whiteSpace: "nowrap" as const,
+    width: "100px",
   },
-  itemName: {
-    color: C.primary,
-    fontSize: "14px",
-    fontWeight: "700",
-    margin: "0",
-    lineHeight: "1.3",
-  },
-  itemPrice: {
-    color: C.primary,
+  paymentAmount: {
+    color: "#111111",
     fontSize: "14px",
     fontWeight: "600",
     margin: "0",
     textAlign: "right" as const,
+    lineHeight: "1.5",
+    whiteSpace: "nowrap" as const,
   },
-  itemMeta: {
-    color: C.primary40,
-    fontSize: "12px",
-    fontWeight: "400",
-    margin: "3px 0 0",
-    lineHeight: "1.4",
+  paymentBanner: {
+    backgroundColor: C.amber100,
+    border: `1px solid #FDE68A`,
+    borderRadius: "10px",
+    // Tighter padding on sides for narrow screens
+    padding: "12px 14px",
   },
-
-  // ── item addon block
-  itemAddonBlock: {
-    backgroundColor: C.grayBg,
-    border: `1px solid ${C.grayBorder}`,
-    borderRadius: "8px",
-    padding: "8px 12px",
-  },
-  itemAddonLabel: {
-    color: C.primary40,
-    fontSize: "9px",
-    fontWeight: "700",
-    letterSpacing: "2px",
-    textTransform: "uppercase" as const,
-    margin: "0 0 6px",
-  },
-  itemAddonName: {
-    color: C.primary60,
-    fontSize: "12px",
-    fontWeight: "700",
-    margin: "0",
-    lineHeight: "1.3",
-  },
-  itemAddonVariant: {
-    color: C.primary40,
-    fontSize: "11px",
-    fontWeight: "400",
-    margin: "1px 0 0",
-  },
-  itemAddonPrice: {
-    color: C.primary,
-    fontSize: "12px",
-    fontWeight: "700",
-    margin: "0",
-    textAlign: "right" as const,
-  },
-
-  // ── info rows — fulfillment & order information
-  infoLabel: {
-    color: C.primary40,
+  paymentBannerText: {
+    color: "#92400E",
     fontSize: "13px",
     fontWeight: "400",
     margin: "0",
+    lineHeight: "1.6",
+    wordBreak: "break-word" as const,
+    overflowWrap: "break-word" as const,
+  },
+
+  // ── info rows — label column fixed, value column flex
+  // Label gets a fixed min-width so it never crushes the value
+  infoLabelCol: {
+    width: "40%",
+    minWidth: "80px",
+  },
+  // Value column takes remaining space; text wraps gracefully
+  infoValueCol: {
+    width: "60%",
+  },
+  infoLabel: {
+    color: "#888888",
+    fontSize: "13px",
+    fontWeight: "400",
+    margin: "0",
+    lineHeight: "1.5",
   },
   infoValue: {
-    color: C.primary,
-    fontSize: "14px",
+    color: "#111111",
+    fontSize: "13px",
     fontWeight: "500",
     margin: "0",
     textAlign: "right" as const,
+    lineHeight: "1.5",
+    wordBreak: "break-word" as const,
+    overflowWrap: "break-word" as const,
   },
   infoValueSub: {
-    color: C.primary60,
-    fontSize: "13px",
+    color: "#888888",
+    fontSize: "12px",
     fontWeight: "400",
     margin: "2px 0 0",
     textAlign: "right" as const,
+    lineHeight: "1.4",
+    wordBreak: "break-word" as const,
   },
   infoValueMono: {
-    color: C.primary,
-    fontSize: "14px",
+    color: "#111111",
+    fontSize: "13px",
     fontWeight: "700",
     fontFamily: "monospace",
     margin: "0",
     textAlign: "right" as const,
+    lineHeight: "1.5",
+    // Order IDs are short uppercase hex — no break needed, but guard anyway
+    wordBreak: "break-all" as const,
   },
   socialLink: {
     color: C.primary60,
@@ -859,117 +956,58 @@ const styles = {
     textDecoration: "underline",
     display: "block",
     textAlign: "right" as const,
+    wordBreak: "break-word" as const,
+    overflowWrap: "break-word" as const,
   },
 
-  // ── status badges
-  badgePaid: {
-    backgroundColor: C.green100,
-    color: C.green700,
-    fontSize: "11px",
-    fontWeight: "700",
-    padding: "3px 10px",
-    borderRadius: "999px",
-    letterSpacing: "1px",
-    margin: "0",
-    display: "inline-block",
-    textAlign: "right" as const,
+  // ── need help card — reduced padding for narrow screens
+  helpCard: {
+    border: `1px solid #E5E7EB`,
+    borderRadius: "12px",
+    padding: "14px 16px",
+    backgroundColor: C.white,
   },
-  badgePending: {
-    backgroundColor: C.amber100,
-    color: C.amber700,
-    fontSize: "11px",
+  helpTitle: {
+    color: "#000000",
+    fontSize: "14px",
     fontWeight: "700",
-    padding: "3px 10px",
-    borderRadius: "999px",
-    letterSpacing: "1px",
+    margin: "0 0 6px",
+    lineHeight: "1.4",
+  },
+  helpText: {
+    color: "#555555",
+    fontSize: "13px",
+    fontWeight: "400",
     margin: "0",
-    display: "inline-block",
-    textAlign: "right" as const,
+    lineHeight: "1.6",
+    wordBreak: "break-word" as const,
+    overflowWrap: "break-word" as const,
   },
 
-  // ── payment instruction banners
-  paymentBannerPaid: {
-    backgroundColor: C.green100,
-    borderTop: `1px solid #BBF7D0`,
-    padding: "16px 32px",
+  // ── dark footer — reduced side padding
+  footer: {
+    backgroundColor: "#1a1a1a",
+    padding: "24px 20px",
     textAlign: "center" as const,
   },
-  paymentBannerUnpaid: {
-    backgroundColor: C.amber100,
-    borderTop: `1px solid #FDE68A`,
-    padding: "16px 32px",
-    textAlign: "center" as const,
-  },
-  paymentBannerText: {
+  footerThanks: {
+    color: "#AAAAAA",
     fontSize: "13px",
     fontWeight: "500",
     margin: "0",
-    lineHeight: "1.6",
-  },
-
-  // ── need help card
-  helpCard: {
-    border: `1px solid ${C.grayBorder2}`,
-    borderRadius: "12px",
-    padding: "20px 24px",
     textAlign: "center" as const,
-  },
-  helpTitle: {
-    color: C.primary,
-    fontSize: "16px",
-    fontWeight: "700",
-    margin: "0 0 6px",
-    textAlign: "center" as const,
-  },
-  helpText: {
-    color: C.primary60,
-    fontSize: "13px",
-    fontWeight: "400",
-    lineHeight: "1.5",
-    margin: "0 0 14px",
-    textAlign: "center" as const,
-  },
-  helpButton: {
-    backgroundColor: C.grayBg,
-    border: `1px solid ${C.grayBorder2}`,
-    borderRadius: "8px",
-    color: C.primary,
-    fontSize: "13px",
-    fontWeight: "600",
-    padding: "10px 24px",
-    textDecoration: "none",
-    display: "block",
-    textAlign: "center" as const,
-  },
-
-  // ── footer — dark brand background, Uber-style link list
-  footer: {
-    backgroundColor: C.primary,
-  },
-  footerLinksSection: {
-    padding: "0 32px",
   },
   footerLink: {
-    color: C.white,
-    fontSize: "14px",
-    fontWeight: "400",
-    textDecoration: "none",
-    display: "block",
-    padding: "16px 0",
-  },
-  footerHr: {
-    borderColor: "rgba(255,255,255,0.12)",
-    margin: "0",
-  },
-  footerThanks: {
-    color: "rgba(255,255,255,0.55)",
+    color: "#FFFFFF",
     fontSize: "13px",
-    fontWeight: "400",
-    textAlign: "center" as const,
-    margin: "20px 32px 16px",
+    fontWeight: "500",
+    textDecoration: "none",
   },
-  footerLogo: {
-    display: "block",
-    margin: "0 auto 28px",
+  footerSep: {
+    color: "#555555",
+    fontSize: "13px",
+    textAlign: "center" as const,
+    margin: "0",
+    lineHeight: "1.5",
   },
 } as const;
