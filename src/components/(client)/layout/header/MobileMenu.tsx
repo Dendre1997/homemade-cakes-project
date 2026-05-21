@@ -13,6 +13,7 @@ import {
   WandSparkles,
   GalleryHorizontalEnd,
   Crown,
+  LayoutGrid,
 } from "lucide-react";
 import { User, Collection } from "@/types";
 import { cn } from "@/lib/utils";
@@ -180,6 +181,7 @@ const MobileMenu = ({
                 <MenuItem
                   key={cat.href}
                   href={cat.href}
+                  icon={LayoutGrid}
                   imageUrl={cat.imageUrl}
                   label={cat.name}
                   onClick={onClose}
