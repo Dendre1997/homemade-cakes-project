@@ -11,10 +11,10 @@ import {
   getActiveDiscounts,
   getActiveCategories,
   getActiveCollections,
-  getHeroSlides,
   getActiveSeasonalEvent,
   getActiveDiscountedProducts,
 } from "@/lib/data";
+import { getGalleryCollection } from "@/lib/db";
 import DiscountShowcase from "@/components/(client)/home/DiscountShowcase";
 import ProductCarousel from "@/components/(client)/home/ProductCarousel";
 import SeasonalHomeBanner from "@/components/(client)/home/SeasonalHomeBanner";
@@ -50,7 +50,7 @@ const Homepage = async () => {
     latestBlogs,
     categories,
     collections,
-    heroSlides,
+    rawGalleryImages,
     activeSeasonalEvent,
     discountedProducts,
     activeFlavors,
@@ -61,12 +61,34 @@ const Homepage = async () => {
     getLatestBlogs(),
     getActiveCategories(),
     getActiveCollections(),
-    getHeroSlides(),
+    (async () => {
+      const collection = await getGalleryCollection();
+      return collection.find({ isActive: true }).sort({ createdAt: -1 }).limit(6).toArray();
+    })(),
     getActiveSeasonalEvent(),
     getActiveDiscountedProducts(),
     getActiveFlavors(),
     getVideoBanner(),
   ]);
+
+  const heroSlides = rawGalleryImages.map((img) => {
+    const firstCategoryId = img.categories?.[0];
+    const categoryName = categories.find((c) => c._id === firstCategoryId?.toString())?.name || "";
+    
+    const query = new URLSearchParams({
+      category: categoryName,
+      image: img.imageUrl || "",
+    }).toString();
+
+    return {
+      _id: img._id.toString(),
+      title: img.title || "Custom Design",
+      subtitle: "",
+      imageUrl: img.imageUrl,
+      link: `/custom-order?${query}`,
+      buttonText: "Order a Similar Design",
+    };
+  });
 
   // Filter Flavors
   const bentoCategoryIds = categories

@@ -296,8 +296,8 @@ export const OrderConfirmationEmail = ({
             <Hr style={styles.divider} />
 
             {/* ── FINANCIAL SUMMARY ── */}
-            <Section style={styles.section} className="email-section">
-              {/* Per-item base totals */}
+            {/* <Section style={styles.section} className="email-section">
+              
               {order.items.map((item: CartItem, idx: number) => {
                 const itemAddonCost =
                   (item.addons || []).reduce((s, a) => s + a.price, 0) *
@@ -319,10 +319,10 @@ export const OrderConfirmationEmail = ({
                     </Column>
                   </Row>
                 );
-              })}
+              })} */}
 
               {/* Extras block */}
-              {allAddons.length > 0 && (
+              {/* {allAddons.length > 0 && (
                 <Section style={styles.extrasBlock}>
                   <Text style={styles.extrasHeader}>Extras</Text>
                   {allAddons.map((addon, idx) => (
@@ -348,10 +348,10 @@ export const OrderConfirmationEmail = ({
                     </Row>
                   ))}
                 </Section>
-              )}
+              )} */}
 
               {/* Discount */}
-              {order.discountInfo && order.discountInfo.amount > 0 && (
+              {/* {order.discountInfo && order.discountInfo.amount > 0 && (
                 <Row style={{ marginTop: "8px" }}>
                   <Column>
                     <Text style={styles.discountLabel}>
@@ -371,7 +371,7 @@ export const OrderConfirmationEmail = ({
                   </Column>
                 </Row>
               )}
-            </Section>
+            </Section> */}
 
             <Hr style={styles.divider} />
 
