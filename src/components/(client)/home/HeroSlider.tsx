@@ -112,7 +112,7 @@ const HeroSlider = ({ slides }: HeroSliderProps) => {
                   "w-[90%] md:w-[100%] h-full",
                   "transition-all duration-700 ease-in-out",
                   "rounded-large overflow-hidden",
-                  getCardStyle(index)
+                  getCardStyle(index),
                 )}
               >
                 <Image
@@ -131,18 +131,18 @@ const HeroSlider = ({ slides }: HeroSliderProps) => {
                     "absolute inset-0 flex flex-col items-center justify-center text-center text-white p-lg transition-all duration-700 delay-300",
                     isActive
                       ? "opacity-100 translate-y-0"
-                      : "opacity-0 translate-y-8"
+                      : "opacity-0 translate-y-8",
                   )}
                 >
-                  <h2 className="font-heading text-3xl md:text-5xl mb-sm md:mb-md absolute left-2  top-3">
+                  {/* <h2 className="font-heading text-3xl md:text-5xl mb-sm md:mb-md absolute left-2  top-3" text-start>
                     {slide.title}
-                  </h2>
+                  </h2> */}
 
-                  {slide.subtitle && (
+                  {/* {slide.subtitle && (
                     <p className="font-body text-lg md:text-xl max-w-xl  absolute left-2  bottom-1/2">
                       {slide.subtitle}
                     </p>
-                  )}
+                  )} */}
 
                   <Link
                     href={slide.link || "/products"}
@@ -151,7 +151,7 @@ const HeroSlider = ({ slides }: HeroSliderProps) => {
                     <Button
                       size="lg"
                       variant="secondary"
-                      className="min-w-[280px] text-white font-black"
+                      className="min-w-[280px] bg-primary text-white px-4 py-2 rounded-lg backdrop-blur-md bg-opacity-80"
                     >
                       {slide.buttonText || "Order Now"}
                     </Button>
