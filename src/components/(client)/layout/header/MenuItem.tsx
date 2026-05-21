@@ -19,9 +19,9 @@ export const MenuItem = ({ href, icon: Icon, imageUrl, label, badge, onClick, hi
       )}>
         {imageUrl ? (
           <img src={imageUrl} alt="" aria-hidden="true" className="h-full w-full object-cover p-1 rounded-xl" />
-        ) : (
+        ) : Icon ? (
           <Icon className="h-5 w-5 stroke-[1.5]" />
-        )}
+        ) : null}
       </div>
       <span className={cn(
         "font-body text-[15px] font-medium transition-colors",
