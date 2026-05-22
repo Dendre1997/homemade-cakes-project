@@ -34,6 +34,7 @@ const getIllustrationForSize = (sizeValue: number) => {
 const BOX_SIZES = [
   { value: "6", label: "Box of", Icon: BoxIconSix },
   { value: "12", label: "Box of", Icon: BoxIconTwelve },
+  { value: "18", label: "Box of", Icon: BoxIconTwentyFour },
   { value: "24", label: "Box of", Icon: BoxIconTwentyFour },
 ];
 
@@ -170,14 +171,11 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick }: { onNext:
     return Math.ceil(basePrice * (1 + idx * 0.30) / 10) * 10;
   }, [isStandard, basePrice, standardDiameterId, filteredDiameters]);
 
-  // Discrete: basePrice × quantity — smallest box exact, larger ceil-to-10
+  // Discrete: basePrice × quantity
   const discretePrice = useMemo(() => {
     if (!isDiscrete || basePrice <= 0) return 0;
     const qty = Number(discreteQuantity) || Number(BOX_SIZES[0].value);
-    const raw = basePrice * qty;
-    return discreteQuantity === BOX_SIZES[0].value
-      ? raw           // smallest box — exact price
-      : Math.ceil(raw / 10) * 10;
+    return basePrice * qty;
   }, [isDiscrete, basePrice, discreteQuantity]);
 
   // ── Price Sync: Forward Math Engine ────────────────────────────────────────────
