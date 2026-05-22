@@ -2,22 +2,28 @@ import Link from "next/link";
 import Image from "next/image";
 import clientPromise from "@/lib/db";
 import { Blog } from "@/types";
-import { format } from "date-fns";
+import { format, isValid } from "date-fns";
 import { Button } from "@/components/ui/Button";
 
 // Force dynamic rendering to ensure fresh data
 export const dynamic = "force-dynamic";
 
 async function getBlogs() {
-  const client = await clientPromise;
-  const db = client.db(process.env.MONGODB_DB_NAME);
-  // Only active blogs for public view
-  const blogs = await db
-    .collection<Blog>("blogs")
-    .find({ isActive: true })
-    .sort({ publishedAt: -1 })
-    .toArray();
-  return JSON.parse(JSON.stringify(blogs)) as Blog[];
+  try {
+    const client = await clientPromise;
+    const db = client.db(process.env.MONGODB_DB_NAME);
+    // Only active blogs for public view
+    const blogs = await db
+      .collection<Blog>("blogs")
+      .find({ isActive: true })
+      .sort({ publishedAt: -1 })
+      .toArray();
+    return JSON.parse(JSON.stringify(blogs)) as Blog[];
+  } catch (error) {
+    console.error("Error fetching blogs for SSR:", error);
+    // Return empty array to fallback gracefully instead of crashing the page
+    return [];
+  }
 }
 
 export default async function BlogListingPage() {
@@ -68,7 +74,7 @@ export default async function BlogListingPage() {
                 {/* Content */}
                 <div className="flex-1 flex flex-col p-6">
                   <div className="mb-3 text-sm text-primary/60">
-                     {blog.publishedAt && format(new Date(blog.publishedAt), "MMMM d, yyyy")}
+                     {blog.publishedAt && isValid(new Date(blog.publishedAt)) ? format(new Date(blog.publishedAt), "MMMM d, yyyy") : null}
                   </div>
                   
                   <Link href={`/blog/${blog.slug}`} className="block mb-3">
@@ -79,7 +85,7 @@ export default async function BlogListingPage() {
 
                   <div className="text-primary/70 mb-6 line-clamp-3 text-sm">
                     {/* Basic strip HTML for excerpt */}
-                     {blog.content.replace(/<[^>]+>/g, '')}
+                     {typeof blog.content === 'string' ? blog.content.replace(/<[^>]+>/g, '') : ''}
                   </div>
 
                   <div className="mt-auto">

@@ -13,9 +13,43 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/Dialog";
 import { Button } from "@/components/ui/Button";
 import { IGalleryImage, ProductCategory } from "@/types";
-import { cn } from "@/lib/utils";
+// import { cn } from "@/lib/utils";
 import LoadingSpinner from "@/components/ui/Spinner";
 import { useAlert } from "@/contexts/AlertContext";
+
+function ExpandableDescription({ text }: { text: string }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  // Reset state when a different image is viewed
+  useEffect(() => {
+    setIsExpanded(false);
+  }, [text]);
+
+  const maxLength = 80;
+  if (text.length < maxLength) {
+    return (
+      <div className="space-y-xs">
+        <p className="text-muted-foreground font-body leading-relaxed whitespace-pre-wrap">
+          {text}
+        </p>
+      </div>
+    );
+  }
+
+  const displayText = isExpanded ? text : `${text.slice(0, maxLength).trim()}...`;
+
+  return (
+    <div className="space-y-xs text-muted-foreground font-body leading-relaxed whitespace-pre-wrap">
+      <span>{displayText}</span>
+      <button 
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="ml-2 text-accent font-bold hover:underline underline-offset-2 transition-all focus:outline-none inline-flex items-center"
+      >
+        {isExpanded ? "Show less" : "Read more"}
+      </button>
+    </div>
+  );
+}
 
 export default function GalleryPage() {
   const { showAlert } = useAlert();
@@ -130,7 +164,9 @@ export default function GalleryPage() {
     <main className="p-md md:p-lg max-w-7xl mx-auto">
       {/* Header */}
       <header className="mb-lg text-center md:text-left">
-        <h1 className="font-heading text-h2 md:text-h1 text-primary mb-xs">Portfolio Gallery</h1>
+        <h1 className="font-heading text-h2 md:text-h1 text-primary mb-xs">
+          Portfolio Gallery
+        </h1>
       </header>
 
       {/* Category Tabs/Pills */}
@@ -139,7 +175,10 @@ export default function GalleryPage() {
           <Button
             variant={activeCategory === "all" ? "primary" : "secondary"}
             size="sm"
-            onClick={() => { setActiveCategory("all"); setCurrentIndex(null); }}
+            onClick={() => {
+              setActiveCategory("all");
+              setCurrentIndex(null);
+            }}
             className="rounded-full px-lg border border-border"
           >
             All
@@ -149,7 +188,10 @@ export default function GalleryPage() {
               key={cat._id}
               variant={activeCategory === cat._id ? "primary" : "secondary"}
               size="sm"
-              onClick={() => { setActiveCategory(cat._id); setCurrentIndex(null); }}
+              onClick={() => {
+                setActiveCategory(cat._id);
+                setCurrentIndex(null);
+              }}
               className="rounded-full px-lg border border-border"
             >
               {cat.name}
@@ -194,10 +236,15 @@ export default function GalleryPage() {
       </section>
 
       {/* Swipeable Detail Modal */}
-      <Dialog open={currentIndex !== null} onOpenChange={(open) => !open && handleCloseModal()}>
+      <Dialog
+        open={currentIndex !== null}
+        onOpenChange={(open) => !open && handleCloseModal()}
+      >
         <DialogContent className="max-w-6xl w-[95vw] h-[90vh] p-0 gap-0 border-0 rounded-large shadow-2xl overflow-hidden flex flex-col bg-white">
-          <DialogTitle className="sr-only">{currentImage?.title || "Gallery Item"}</DialogTitle>
-          
+          <DialogTitle className="sr-only">
+            {currentImage?.title || "Gallery Item"}
+          </DialogTitle>
+
           <div className="flex flex-col md:flex-row h-full overflow-hidden">
             {/* Image Section (Stack Top on Mobile, Left on Desktop) */}
             <div className="relative w-full h-[50vh] md:h-full md:w-3/5 bg-background/20 flex items-center justify-center group overflow-hidden touch-pan-x">
@@ -211,7 +258,7 @@ export default function GalleryPage() {
                   exit="exit"
                   transition={{
                     x: { type: "spring", stiffness: 300, damping: 30 },
-                    opacity: { duration: 0.2 }
+                    opacity: { duration: 0.2 },
                   }}
                   className="relative w-full h-full flex items-center justify-center p-sm"
                   drag="x"
@@ -238,19 +285,24 @@ export default function GalleryPage() {
               {/* Navigation Arrows (Hidden on mobile touch by layout but functional) */}
               <div className="absolute inset-0 flex items-center justify-between px-md pointer-events-none z-20">
                 <button
-                  onClick={(e) => { e.stopPropagation(); handlePrev(); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handlePrev();
+                  }}
                   className="pointer-events-auto p-2 rounded-full bg-subtleBackground/60 backdrop-blur-md text-primary hover:text-white hover:bg-primary transition-all active:scale-95 hidden md:block"
                 >
                   <ChevronLeft className="h-8 w-8" />
                 </button>
                 <button
-                  onClick={(e) => { e.stopPropagation(); handleNext(); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleNext();
+                  }}
                   className="pointer-events-auto p-2 rounded-full bg-subtleBackground/60 backdrop-blur-md text-primary hover:text-white hover:bg-primary transition-all active:scale-95 hidden md:block"
                 >
                   <ChevronRight className="h-8 w-8" />
                 </button>
               </div>
-
             </div>
 
             {/* Info Section (Stack Bottom on Mobile, Right on Desktop) */}
@@ -260,27 +312,26 @@ export default function GalleryPage() {
                   {currentImage?.title}
                 </h3>
                 <div className="flex flex-wrap gap-xs mb-md">
-                   {currentImage?.categories?.map(catId => {
-                     const cat = categories.find(c => c._id === catId);
-                     return cat ? (
-                       <span key={catId} className="text-[10px] uppercase font-bold tracking-widest bg-subtleBackground text-muted-foreground px-2 py-0.5 rounded-full">
-                         {cat.name}
-                       </span>
-                     ) : null;
-                   })}
+                  {currentImage?.categories?.map((catId) => {
+                    const cat = categories.find((c) => c._id === catId);
+                    return cat ? (
+                      <span
+                        key={catId}
+                        className="text-[10px] uppercase font-bold tracking-widest bg-subtleBackground text-muted-foreground px-2 py-0.5 rounded-full"
+                      >
+                        {cat.name}
+                      </span>
+                    ) : null;
+                  })}
                 </div>
               </div>
 
-              <div className="space-y-md flex-1">
+              <div className="space-y-sm flex-1">
                 {currentImage?.description && (
-                  <div className="space-y-xs">
-                    <p className="text-muted-foreground font-body leading-relaxed whitespace-pre-wrap">
-                      {currentImage.description}
-                    </p>
-                  </div>
+                  <ExpandableDescription text={currentImage.description} />
                 )}
-                
-                  <div className="flex items-center gap-sm bg-accent/5 p-md rounded-medium border border-accent/10">
+
+                {/* <div className="flex items-center gap-sm bg-accent/5 p-md rounded-medium border border-accent/10">
                     <Info className="h-5 w-5 text-accent" />
                     <div>
                       <p className="text-small font-bold text-accent uppercase tracking-wider">Design Estimate</p>
@@ -294,29 +345,30 @@ export default function GalleryPage() {
                     </p>
                   )}
                     </div>
-                  </div>
-                
+                  </div> */}
               </div>
 
               <div className="pt-xl mt-lg border-t border-dotted">
-                <Button 
+                <Button
                   className="w-full h-12 rounded-full font-bold"
                   onClick={() => {
                     const firstCategory = currentImage?.categories?.[0];
-                    const categoryName = categories.find(c => c._id === firstCategory)?.name || "";
-                    
+                    const categoryName =
+                      categories.find((c) => c._id === firstCategory)?.name ||
+                      "";
+
                     const query = new URLSearchParams({
                       category: categoryName,
-                      image: currentImage?.imageUrl || ""
+                      image: currentImage?.imageUrl || "",
                     }).toString();
 
                     router.push(`/custom-order?${query}`);
                   }}
                 >
-                  Order a Similar Design
+                  Request This Design
                 </Button>
                 <p className="mt-sm text-center text-[11px] text-muted-foreground">
-                   Each design is unique and tailored to your preferences.
+                  Customizable to your date, size, and flavor
                 </p>
               </div>
             </div>
