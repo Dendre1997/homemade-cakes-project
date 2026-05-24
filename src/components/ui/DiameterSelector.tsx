@@ -2,12 +2,15 @@
 
 import { cn } from "@/lib/utils";
 import React from "react";
+import Image from "next/image";
 
 export interface DiameterOption {
   id: string;
   name: string;
   servings: string;
   illustration: React.FC<React.SVGProps<SVGSVGElement>>;
+  imageUrl?: string;
+  sizeValue?: number;
 }
 
 interface DiameterSelectorProps {
@@ -23,15 +26,18 @@ const DiameterSelector = ({
   onSelectDiameter,
   className,
 }: DiameterSelectorProps) => {
+  const sortedDiameters = [...diameters].sort((a, b) => (a.sizeValue || 0) - (b.sizeValue || 0));
+
   return (
     <div className={cn(className)}>
       <h3 className="font-body text-body font-bold text-primary mb-sm">
         Choose a size:
       </h3>
       <div className="flex gap-md overflow-x-auto pb-sm custom-scrollbar">
-        {diameters.map((diameter) => {
+        {diameters.map((diameter, index) => {
           const isSelected = selectedDiameterId === diameter.id;
           const Illustration = diameter.illustration;
+          const scaleMultiplier = 1 + index * 0.1;
 
           return (
             <button
@@ -46,7 +52,21 @@ const DiameterSelector = ({
               )}
             >
               <div className="flex h-16 w-16 items-center justify-center">
-                <Illustration className="h-full w-full text-primary" />
+                {diameter.imageUrl ? (
+                  <div 
+                    className="relative w-full h-full transition-transform duration-300"
+                    style={{ transform: `scale(${scaleMultiplier})` }}
+                  >
+                    <Image
+                      src={diameter.imageUrl}
+                      alt={diameter.name}
+                      fill
+                      className="object-contain"
+                    />
+                  </div>
+                ) : (
+                  <Illustration className="h-full w-full text-primary" />
+                )}
               </div>
               <div>
                 <p className="font-body text-body font-bold text-primary">

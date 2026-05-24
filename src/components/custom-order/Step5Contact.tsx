@@ -33,6 +33,16 @@ export default function Step5Contact() {
     );
   };
 
+  const handleContactMethodChange = (method: "social" | "phone") => {
+    setContactMethod(method);
+    if (method === "social") {
+      setValue("contact.phone", "", { shouldValidate: false });
+    } else if (method === "phone") {
+      setValue("contact.socialNickname", "", { shouldValidate: false });
+      setValue("contact.socialPlatform", undefined, { shouldValidate: false });
+    }
+  };
+
   return (
     <div className="space-y-8 max-w-sm mx-auto">
       <div className="text-center mb-8">
@@ -48,7 +58,7 @@ export default function Step5Contact() {
             <Button
               type="button"
               variant={contactMethod === "social" ? "primary" : "outline"}
-              onClick={() => setContactMethod("social")}
+              onClick={() => handleContactMethodChange("social")}
               className="flex-1 max-w-[140px]"
             >
               Social
@@ -56,7 +66,7 @@ export default function Step5Contact() {
             <Button
               type="button"
               variant={contactMethod === "phone" ? "primary" : "outline"}
-              onClick={() => setContactMethod("phone")}
+              onClick={() => handleContactMethodChange("phone")}
               className="flex-1 max-w-[140px]"
             >
               Phone
@@ -69,12 +79,7 @@ export default function Step5Contact() {
             {/* 1. Full Name */}
             <div data-field-name="contact.name">
               <label className="block text-sm font-semibold mb-1 text-primary">
-                Full Name{" "}
-                {hasNickname && (
-                  <span className="font-normal text-primary/50 text-xs">
-                    (Optional)
-                  </span>
-                )}
+                Your Name
               </label>
               <Controller
                 control={control}
@@ -98,11 +103,6 @@ export default function Step5Contact() {
             <div data-field-name="contact.phone">
               <label className="block text-sm font-semibold mb-1 text-primary">
                 Phone Number{" "}
-                {phoneIsOptional && (
-                  <span className="font-normal text-primary/50 text-xs">
-                    (Optional)
-                  </span>
-                )}
               </label>
               <Controller
                 control={control}
@@ -127,6 +127,24 @@ export default function Step5Contact() {
 
         {contactMethod === "social" && (
           <>
+            <div data-field-name="contact.name" className="mb-4">
+              <label className="block text-sm font-semibold mb-1 text-primary">
+                Your Name
+              </label>
+              <Controller
+                control={control}
+                name="contact.name"
+                render={({ field }) => (
+                  <Input {...field} placeholder="Your Name" className={`h-12 bg-white ${errors.contact?.name ? "border-red-500" : ""}`} />
+                )}
+              />
+              {errors.contact?.name && (
+                <p className="text-primary/60 text-xs mt-1">
+                  {errors.contact.name.message}
+                </p>
+              )}
+            </div>
+
             {/* 2. Social Media Nickname */}
             <div data-field-name="contact.socialNickname">
               <label className="block text-sm font-semibold mb-1 text-primary">

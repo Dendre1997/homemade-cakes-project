@@ -29,6 +29,7 @@ import ImageCarousel from "@/components/ui/ImageCarousel";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 import { Switch } from "@/components/ui/Switch";
 import { Label } from "@/components/ui/Label";
+import Image from "next/image";
 
 // Translator Page Pattern
 const SingleProductPage = () => {
@@ -87,6 +88,8 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
 
 
   const [selectedFlavorId, setSelectedFlavorId] = useState<string | null>(null);
+  const [flavorNote, setFlavorNote] = useState<string>("");
+  const [showFlavorNoteInput, setShowFlavorNoteInput] = useState<boolean | null>(null);
   const [selectedDiameterConfig, setSelectedDiameterConfig] = useState<AvailableDiameterConfig | null>(null);
   
   // Sets & Combo State
@@ -208,7 +211,9 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
           name: details?.name || "Unknown",
           servings: `Approx. ${details?.sizeValue || 0} servings`,
           illustration: getIllustrationForSize(details?.sizeValue || 0),
-        };
+          imageUrl: details?.imageUrl,
+          sizeValue: details?.sizeValue || 0,
+        } as DiameterOption;
       })
       .filter((d): d is DiameterOption => d !== null) || [];
 
@@ -269,6 +274,7 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
               name: details.name,
               servings: `Approx. ${details.sizeValue} servings`,
               illustration: getIllustrationForSize(details.sizeValue),
+              imageUrl: details.imageUrl,
            };
       });
 
@@ -447,6 +453,7 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
           
           // SET SPECIFIC
           flavor: `Mix: ${flavorNames}`, 
+          flavorNote: flavorNote ? flavorNote : undefined,
           diameterId: isCombo ? comboSelection.diameterId : undefined,
           addons: selectedAddons,
           selectedConfig: {
@@ -488,6 +495,7 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
           categoryId: product.category._id.toString(),
           name: product.name,
           flavor: selectedFlavor?.name || "N/A",
+          flavorNote: flavorNote ? flavorNote : undefined,
           diameterId: selectedDiameterConfig.diameterId,
           price: finalPrice, // Discounted Price
           quantity: quantity,
@@ -509,6 +517,9 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
         setSelectedSetFlavorIds([]);
         // Keep config selected
     }
+    
+    setShowFlavorNoteInput(null);
+    setFlavorNote("");
     
     if (showInscriptionInput) {
       setInscription("");
@@ -623,6 +634,72 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
                       selectedId={selectedFlavorId}
                       onSelectId={setSelectedFlavorId}
                     />
+                    
+                    {/* Flavor Note UI */}
+                    <div
+                      className={cn(
+                        "grid transition-all duration-300 ease-in-out overflow-hidden",
+                        selectedFlavorId
+                          ? "grid-rows-[1fr] opacity-100 mt-4 border-t border-border"
+                          : "grid-rows-[0fr] opacity-0"
+                      )}
+                    >
+                      <div className="min-h-0">
+                        <div className="pt-4">
+                          <Label className="font-medium mb-2 block">
+                            Do you have any inquiries/notes for the picked flavor?
+                          </Label>
+                          <div className="flex gap-3 mb-2">
+                            <Button
+                              type="button"
+                              onClick={() => {
+                                setShowFlavorNoteInput(false);
+                                setFlavorNote("");
+                              }}
+                              className={`flex-1 transition-all active:scale-95 ${
+                                showFlavorNoteInput === false
+                                  ? "border-primary bg-primary/5 shadow-sm"
+                                  : "bg-white border border-primary/20 text-primary/70 hover:bg-subtleBackground"
+                              }`}
+                              variant={showFlavorNoteInput === false ? "outline" : "outline"}
+                            >
+                              No
+                            </Button>
+
+                            <Button
+                              type="button"
+                              onClick={() => setShowFlavorNoteInput(true)}
+                              className={`flex-1 transition-all active:scale-95 ${
+                                showFlavorNoteInput === true
+                                  ? "border-primary bg-primary/5 shadow-sm"
+                                  : "bg-white border border-primary/20 text-primary/70 hover:bg-subtleBackground"
+                              }`}
+                              variant={showFlavorNoteInput === true ? "outline" : "outline"}
+                            >
+                              Yes
+                            </Button>
+                          </div>
+
+                          <div
+                            className={cn(
+                              "grid transition-all duration-300 ease-in-out overflow-hidden",
+                              showFlavorNoteInput === true
+                                ? "grid-rows-[1fr] opacity-100"
+                                : "grid-rows-[0fr] opacity-0"
+                            )}
+                          >
+                            <div className="min-h-0">
+                              <Input
+                                placeholder="e.g. Can it be less sweet? Or any other inquiry..."
+                                value={flavorNote}
+                                onChange={(e) => setFlavorNote(e.target.value)}
+                                className="w-full bg-white mt-2"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Size Selector */}
@@ -681,8 +758,17 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
                         onToggle={() => toggleAccordion("cake-flavor")}
                       >
                         <div className="mb-4 p-3 bg-subtleBackground rounded-md border border-primary/20 flex gap-3">
-                          <div className="h-24 w-24 flex items-center justify-center pb-4">
-                            <FourInchBentoIcon className="h-16 w-16" />
+                          <div className="h-24 w-24 flex items-center justify-center pb-4 relative">
+                            {comboCakeDiameters[0]?.imageUrl ? (
+                              <Image 
+                                src={comboCakeDiameters[0].imageUrl} 
+                                alt="Combo Cake" 
+                                fill
+                                className="object-contain" 
+                              />
+                            ) : (
+                              <FourInchBentoIcon className="h-16 w-16 text-primary" />
+                            )}
                           </div>
 
                           <div className="flex flex-col justify-center h-24">

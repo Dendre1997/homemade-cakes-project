@@ -237,6 +237,16 @@ export default function Step6Success({ orderData, customOrderId, onMakeAnotherRe
                   </span>
                 </div>
               )}
+              {orderData.details?.flavorNote && orderData.details.flavorNote !== "No" && (
+                <div className="flex gap-2 pt-1.5 mt-1.5 border-t border-primary/10">
+                  <span className="text-primary/40 w-20 shrink-0 font-semibold">
+                    Flavor Note:
+                  </span>
+                  <span className="text-primary/80 font-medium break-words min-w-0 flex-1">
+                    {orderData.details.flavorNote}
+                  </span>
+                </div>
+              )}
               <div className="flex gap-2">
                 <span className="text-primary/40 w-20 shrink-0 font-semibold">
                   Inscription:

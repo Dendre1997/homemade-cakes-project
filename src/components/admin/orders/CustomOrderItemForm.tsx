@@ -60,6 +60,7 @@ interface CustomOrderItemFormProps {
       inscription?: string;
       addons?: SelectedAddon[];
       price: number;
+      flavorNote?: string;
       quantity?: number;
       categoryId?: string;
   };
@@ -104,6 +105,7 @@ export default function CustomOrderItemForm({
   const [flavorValue, setFlavorValue] = useState<string>(initialValues?.flavorValue || "");
   const [designInstructions, setDesignInstructions] = useState<string>(initialValues?.designInstructions || "");
   const [inscription, setInscription] = useState<string>(initialValues?.inscription || "");
+  const [flavorNote, setFlavorNote] = useState<string>(initialValues?.flavorNote || "");
   const [price, setPrice] = useState<number>(initialValues?.price || 0);
   const [quantity, setQuantity] = useState<number>(initialValues?.quantity || 1);
   const [selectedAddons, setSelectedAddons] = useState<SelectedAddon[]>(initialValues?.addons || []);
@@ -268,6 +270,7 @@ export default function CustomOrderItemForm({
           isCustom: true,
           designInstructions: designInstructions,
           inscription: inscription,
+          flavorNote: flavorNote,
           addons: selectedAddons,
           categoryId: selectedCategoryId,
           
@@ -294,6 +297,7 @@ export default function CustomOrderItemForm({
           setSelectedImage("");
           setSizeValue("");
           setFlavorValue("");
+          setFlavorNote("");
           setDesignInstructions("");
           setInscription("");
           setPrice(0);
@@ -477,6 +481,16 @@ export default function CustomOrderItemForm({
                          options={activeFlavors}
                          value={flavorValue}
                          onChange={(val) => setFlavorValue(val)}
+                     />
+                 </div>
+                 
+                 <div className="pt-2 animate-in slide-in-from-top-2 duration-300">
+                     <Label className="text-xs text-muted-foreground mb-1 block">Flavor Note (Optional)</Label>
+                     <Input 
+                         placeholder="e.g. less sweet, specific inquiry" 
+                         value={flavorNote}
+                         onChange={(e) => setFlavorNote(e.target.value)}
+                         className="bg-white border-dashed"
                      />
                  </div>
                  

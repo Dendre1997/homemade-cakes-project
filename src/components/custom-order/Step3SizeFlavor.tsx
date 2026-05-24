@@ -11,6 +11,7 @@ import FlavorSelector from "@/components/ui/FlavorSelector";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
 
 import { FourInchBentoIcon } from "@/components/icons/cake-sizes/FourInchBentoIcon";
 import { FiveInchBentoIcon } from "@/components/icons/cake-sizes/FiveInchBentoIcon";
@@ -154,6 +155,8 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick }: { onNext:
       name: d.name,
       servings: d.servings || `Approx. ${d.sizeValue || 0} servings`,
       illustration: getIllustrationForSize(d.sizeValue || 0),
+      imageUrl: d.imageUrl,
+      sizeValue: d.sizeValue || 0,
     }));
   }, [filteredDiameters]);
 
@@ -265,6 +268,16 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick }: { onNext:
      });
   };
 
+  const isFlavorSelected = useMemo(() => {
+    if (isCombo) {
+      return !!comboCakeFlavorId || comboTreatFlavorIds.length > 0;
+    }
+    if (isDiscrete) {
+      return discreteFlavorIds.length > 0;
+    }
+    return !!standardFlavorId || (filteredFlavors.length === 0 && !!currentFlavor);
+  }, [isCombo, isDiscrete, comboCakeFlavorId, comboTreatFlavorIds, discreteFlavorIds, standardFlavorId, filteredFlavors.length, currentFlavor]);
+
   if (isLoading) {
       return (
            <LoadingSpinner />
@@ -345,8 +358,22 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick }: { onNext:
                 3. Cake Flavor
               </h3>
               <div className="mb-6 flex gap-4 items-center bg-accent/5 p-4 rounded-xl border border-accent/20">
-                <div className="w-16 h-16 shrink-0 bg-white rounded-lg shadow-sm flex items-center justify-center">
-                  <FourInchBentoIcon className="w-10 h-10 text-primary" />
+                <div className="w-16 h-16 shrink-0 bg-white rounded-lg shadow-sm flex items-center justify-center relative p-1">
+                  {(() => {
+                    const bentoImage = filteredDiameters.find((d: any) => d.sizeValue <= 4)?.imageUrl || filteredDiameters[0]?.imageUrl;
+                    return bentoImage ? (
+                      <div className="relative w-full h-full">
+                        <Image 
+                          src={bentoImage} 
+                          alt="Combo Cake" 
+                          fill
+                          className="object-contain" 
+                        />
+                      </div>
+                    ) : (
+                      <FourInchBentoIcon className="w-10 h-10 text-primary" />
+                    );
+                  })()}
                 </div>
                 <div>
                   <p className="font-bold text-primary">
@@ -550,6 +577,7 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick }: { onNext:
           </div>
         )}
 
+        <FlavorNoteSection isVisible={isFlavorSelected} />
         <AllergySection />
       </div>
     </div>
@@ -642,6 +670,104 @@ function AllergySection() {
             {errors.allergies.message}
           </p>
         )}
+      </div>
+    </div>
+  );
+}
+
+function FlavorNoteSection({ isVisible }: { isVisible: boolean }) {
+  const { setValue, watch } = useFormContext<CustomOrderFormData>();
+  const currentFlavorNote = watch("details.flavorNote");
+
+  const handleNo = () => {
+    setValue("details.flavorNote", "No", { shouldValidate: true });
+  };
+
+  const handleYes = () => {
+    // Switch to YES mode — clear "No" so the input shows and user must type
+    if (currentFlavorNote === "No" || currentFlavorNote === undefined) {
+      setValue("details.flavorNote", "", { shouldValidate: false });
+    }
+  };
+
+  const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setValue("details.flavorNote", e.target.value, { shouldValidate: true });
+  };
+
+  // Determine active button
+  const noActive  = currentFlavorNote === "No";
+  const yesActive = currentFlavorNote !== undefined && currentFlavorNote !== "No";
+
+  return (
+    <div
+      className={cn(
+        "grid transition-all duration-300 ease-in-out overflow-hidden",
+        isVisible
+          ? "grid-rows-[1fr] opacity-100 mt-4"
+          : "grid-rows-[0fr] opacity-0 mt-0",
+      )}
+    >
+      <div className="min-h-0">
+        <div className="pt-8 space-y-4">
+          <div>
+            <h3 className="font-heading text-xl text-primary mb-1">
+              Any notes about your selected flavor?
+            </h3>
+            <p className="text-sm text-primary/60 mb-4">
+              Optional — add notes like sweetness level, ingredients to include
+              or avoid, or any special requests.
+            </p>
+
+            <div className="flex gap-3">
+              <Button
+                type="button"
+                onClick={handleNo}
+                className={`w-32 h-12 text-lg rounded-xl transition-all active:scale-95 ${
+                  noActive
+                    ? ""
+                    : "bg-white border border-primary/20 text-primary/70 hover:bg-subtleBackground"
+                }`}
+                variant={noActive ? "primary" : "outline"}
+              >
+                No
+              </Button>
+
+              <Button
+                type="button"
+                onClick={handleYes}
+                className={`w-32 h-12 text-lg rounded-xl shadow-lg transition-all active:scale-95 ${
+                  yesActive
+                    ? ""
+                    : "bg-white border border-primary/20 text-primary/70 hover:bg-subtleBackground"
+                }`}
+                variant={yesActive ? "primary" : "outline"}
+              >
+                Yes
+              </Button>
+            </div>
+
+            {/* Conditional text input — CSS grid transition */}
+            <div
+              className={cn(
+                "grid transition-all duration-300 ease-in-out overflow-hidden",
+                yesActive
+                  ? "grid-rows-[1fr] opacity-100 mt-4"
+                  : "grid-rows-[0fr] opacity-0 mt-0",
+              )}
+            >
+              <div className="min-h-0">
+                <Input
+                  placeholder="e.g. Can it be less sweet? Or any other inquiry..."
+                  value={
+                    currentFlavorNote === "No" ? "" : currentFlavorNote || ""
+                  }
+                  onChange={handleTextChange}
+                  className="w-full bg-white"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

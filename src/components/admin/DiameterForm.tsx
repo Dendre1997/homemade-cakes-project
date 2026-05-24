@@ -4,6 +4,11 @@ import { Diameter, ProductCategory } from "@/types";
 import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";;
 import { ChipCheckbox } from "../ui/ChipCheckbox";
+import { ImageUploadPreview } from "@/components/ui/ImageUploadPreview";
+import {
+  appendCloudinaryUploadPreset,
+  cloudinaryUploadUrl,
+} from "@/lib/cloudinaryClient";
 
 
 // ---Icon Components ---
@@ -55,8 +60,15 @@ const DiameterForm = ({
     sizeValue: 0,
     servings: "",
     illustration: "",
+    imageUrl: "",
     categoryIds: [],
   });
+
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [orphanedImageUrl, setOrphanedImageUrl] = useState<string | null>(null);
+
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (existingDiameter) {
@@ -65,6 +77,7 @@ const DiameterForm = ({
         sizeValue: existingDiameter.sizeValue || 0,
         servings: existingDiameter.servings || "",
         illustration: existingDiameter.illustration || "",
+        imageUrl: existingDiameter.imageUrl || "",
         categoryIds: existingDiameter.categoryIds || [],
       });
     } else if (!isSubmitting) {
@@ -73,6 +86,7 @@ const DiameterForm = ({
         sizeValue: 0,
         servings: "",
         illustration: "",
+        imageUrl: "",
         categoryIds: [],
       });
     }
@@ -121,9 +135,62 @@ const DiameterForm = ({
     });
   };
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    setUploadError(null);
+
+    if (orphanedImageUrl) {
+      fetch("/api/admin/cloudinary-delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ urls: [orphanedImageUrl] }),
+      });
+    }
+
+    const uploadData = new FormData();
+    uploadData.append("file", file);
+    appendCloudinaryUploadPreset(uploadData);
+
+    try {
+      const response = await fetch(
+        cloudinaryUploadUrl("image"),
+        { method: "POST", body: uploadData }
+      );
+      if (!response.ok) throw new Error("Image upload failed.");
+      const result = await response.json();
+
+      setOrphanedImageUrl(result.secure_url);
+      setFormData((prev) => ({ ...prev, imageUrl: result.secure_url }));
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "Upload failed.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleCropSave = (newUrl: string) => {
+    setFormData((prev) => ({ ...prev, imageUrl: newUrl }));
+  };
+
+  const handleImageRemove = () => {
+    if (orphanedImageUrl) {
+      fetch("/api/admin/cloudinary-delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ urls: [orphanedImageUrl] }),
+      });
+      setOrphanedImageUrl(null);
+    }
+    setFormData((prev) => ({ ...prev, imageUrl: "" }));
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setOrphanedImageUrl(null);
     onSubmit(formData);
   };
 
@@ -184,6 +251,45 @@ const DiameterForm = ({
           onChange={handleChange}
           required
         />
+      </div>
+
+      <div>
+        <FormLabel htmlFor="image">Diameter Image (Optional)</FormLabel>
+        <ImageUploadPreview
+          imagePreview={formData.imageUrl || null}
+          isUploading={isUploading}
+          onRemove={handleImageRemove}
+          containerClassName="h-48 w-full"
+          allowPositioning={true}
+          onCropSave={handleCropSave}
+        />
+        <Input
+          id="image"
+          type="file"
+          accept="image/*"
+          onChange={handleImageUpload}
+          className="hidden"
+          ref={fileInputRef}
+          disabled={isUploading}
+        />
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() => fileInputRef.current?.click()}
+          className="mt-sm"
+          disabled={isUploading}
+        >
+          {isUploading ? (
+            <p>Uploading...</p>
+          ) : formData.imageUrl ? (
+            "Change Image"
+          ) : (
+            "Upload Image"
+          )}
+        </Button>
+        {uploadError && (
+          <p className="text-error text-small mt-sm">{uploadError}</p>
+        )}
       </div>
 
       <div className="space-y-sm">

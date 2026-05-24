@@ -36,9 +36,6 @@ export default async function BlogListingPage() {
           <h1 className="font-heading text-4xl md:text-5xl text-primary mb-4">
             Our Blog
           </h1>
-          <p className="font-body text-lg text-primary/70 max-w-2xl mx-auto">
-            Latest news, baking tips, and sweet stories from our kitchen.
-          </p>
         </div>
 
         {blogs.length === 0 ? (

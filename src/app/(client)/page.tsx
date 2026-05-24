@@ -86,7 +86,7 @@ const Homepage = async () => {
       subtitle: "",
       imageUrl: img.imageUrl,
       link: `/custom-order?${query}`,
-      buttonText: "Order a Similar Design",
+      buttonText: "Request This Design",
     };
   });
 

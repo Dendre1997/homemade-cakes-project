@@ -97,6 +97,16 @@ export const CustomOrderSpecsForm = ({
        </div>
 
        <div className="space-y-sm">
+          <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Flavor Note (Optional)</Label>
+          <Input 
+             value={order.details?.flavorNote || ""} 
+             onChange={(e) => onChange("details", { ...order.details, flavorNote: e.target.value })}
+             className="h-11"
+             placeholder="e.g. less sweet, specific inquiry"
+          />
+       </div>
+
+       <div className="space-y-sm">
           <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Text on Cake</Label>
           <Input 
              value={order.details?.textOnCake || ""} 
