@@ -237,6 +237,12 @@ export const OrderConfirmationEmail = ({
                           </Text>
                         )}
 
+                        {item.flavorNote && item.flavorNote !== "No" && (
+                          <Text style={styles.itemMeta}>
+                            Flavor Note: {item.flavorNote}
+                          </Text>
+                        )}
+
                         {item.quantity > 1 && (
                           <Text style={styles.itemMeta}>
                             Qty: {item.quantity}

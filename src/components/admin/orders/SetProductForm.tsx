@@ -41,6 +41,7 @@ export const SetProductForm = ({
   // 4. General
   const [qty, setQty] = useState(1); // How many SETS
   const [priceOverride, setPriceOverride] = useState("");
+  const [flavorNote, setFlavorNote] = useState("");
   const [selectedAddons, setSelectedAddons] = useState<SelectedAddon[]>([]);
 
   // Helpers
@@ -113,6 +114,7 @@ export const SetProductForm = ({
            quantity: qty,
            imageUrl: product.imageUrls?.[0] || "",
            isCustom: false,
+           flavorNote: flavorNote,
            addons: selectedAddons,
            
            // POLYMORPHIC DATA
@@ -230,6 +232,17 @@ export const SetProductForm = ({
                 </div>
             </div>
         )}
+
+        {/* Flavor Note */}
+        <div className="bg-white p-4 rounded-md border border-gray-200 mt-2">
+             <label className="block text-sm font-medium mb-1">Flavor Note (Optional)</label>
+             <input 
+                value={flavorNote}
+                onChange={e => setFlavorNote(e.target.value)}
+                placeholder="e.g. less sweet, specific inquiry"
+                className="w-full p-2 border rounded-md"
+             />
+        </div>
 
         {/* Addons */}
         <div className="pt-2">

@@ -150,6 +150,7 @@ export async function POST(
       rowTotal: Number(agreedPrice),
       inscription: customOrder.details?.textOnCake,
       designInstructions: customOrder.details?.designNotes,
+      flavorNote: customOrder.details?.flavorNote,
       categoryId: resolvedCategoryId,
       addons: customOrder.addons || [],
     };

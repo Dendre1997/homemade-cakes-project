@@ -235,7 +235,7 @@ const ManageDiametersPage = () => {
                     key={diameter._id.toString()}
                     title={diameter.name}
                     description={diameter.servings}
-                    imageUrl={null}
+                    imageUrl={diameter.imageUrl || null}
 
                     icon={IconComponent ? <IconComponent /> : null}
                     details={detailsForModal}

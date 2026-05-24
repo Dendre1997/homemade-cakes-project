@@ -17,6 +17,7 @@ export async function POST(request: NextRequest) {
       name,
       servings,
       illustration,
+      imageUrl,
     }: Partial<Diameter> = body;
 
     if (!name || typeof sizeValue !== "number" || !servings || !illustration) {
@@ -34,6 +35,7 @@ export async function POST(request: NextRequest) {
       sizeValue,
       servings,
       illustration,
+      imageUrl,
       categoryIds: categoryIds || [],
     };
 

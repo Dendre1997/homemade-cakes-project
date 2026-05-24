@@ -43,6 +43,7 @@ export interface Diameter {
   sizeValue: number;
   servings: string;
   illustration: string;
+  imageUrl?: string;
   categoryIds?: string[];
 }
 
@@ -223,6 +224,7 @@ export interface CartItem {
   productType?: 'cake' | 'set' | 'custom';
   customSize?: string;
   customFlavor?: string;
+  flavorNote?: string;
   isManualPrice?: boolean;
   designInstructions?: string;
   addons?: SelectedAddon[];
@@ -341,6 +343,7 @@ export interface OrderItem {
   productType?: 'cake' | 'set' | 'custom';
   customSize?: string;
   customFlavor?: string;
+  flavorNote?: string;
   isManualPrice?: boolean;
   designInstructions?: string;
   addons?: SelectedAddon[];
@@ -455,6 +458,7 @@ export interface CustomOrder {
   details: {
     size?: string;
     flavor?: string;
+    flavorNote?: string;
     textOnCake?: string;
     designNotes?: string;
     [key: string]: any;

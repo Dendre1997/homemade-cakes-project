@@ -33,6 +33,7 @@ export const StandardProductForm = ({
   const [qty, setQty] = useState(1);
   const [priceOverride, setPriceOverride] = useState("");
   const [inscription, setInscription] = useState("");
+  const [flavorNote, setFlavorNote] = useState("");
   const [selectedAddons, setSelectedAddons] = useState<SelectedAddon[]>([]);
 
   // --- Derived Lists ---
@@ -79,6 +80,7 @@ export const StandardProductForm = ({
           diameterId: selectedDiameterId,
           name: product.name,
           flavor: flavName,
+          flavorNote: flavorNote,
           price: finalUnitPrice,
           quantity: qty,
           imageUrl: product.imageUrls?.[0] || "",
@@ -110,6 +112,17 @@ export const StandardProductForm = ({
                         ))}
                     </SelectContent>
                 </Select>
+             </div>
+             
+             {/* Flavor Note */}
+             <div className="md:col-span-1">
+                 <label className="block text-sm font-medium mb-1">Flavor Note (Optional)</label>
+                 <input 
+                    value={flavorNote}
+                    onChange={e => setFlavorNote(e.target.value)}
+                    placeholder="e.g. less sweet, specific inquiry"
+                    className="w-full p-2 border rounded-md"
+                 />
              </div>
 
              {/* Size */}

@@ -9,6 +9,7 @@ export const customOrderSchema = z.object({
   details: z.object({
     size: z.string().min(1, "Please select a size or quantity"),
     flavor: z.string().min(1, "Please select a flavor"),
+    flavorNote: z.string().optional(),
     textOnCake: z.string().optional(),
     designNotes: z.string().min(1, "Please provide overall design notes").max(1000, "Notes are too long"),
   }),
@@ -27,14 +28,13 @@ export const customOrderSchema = z.object({
     const hasNickname = (data.socialNickname ?? "").trim().length > 0;
     const hasSocialPlatform = !!data.socialPlatform;
 
-    // Name: required unless socialNickname is provided
-    if (!hasNickname && (data.name ?? "").trim().length < 2) {
+    if ((data.name ?? "").trim().length < 2) {
       ctx.addIssue({
         code: z.ZodIssueCode.too_small,
         minimum: 2,
         origin: "string",
         inclusive: true,
-        message: "Name is required (or provide your social media nickname)",
+        message: "Name is required",
         path: ["name"],
       });
     }

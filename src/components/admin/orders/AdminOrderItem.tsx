@@ -126,6 +126,11 @@ export const AdminOrderItem = ({
                                     <span className="font-semibold text-primary">Flavor:</span> {displayFlavor}
                                 </span>
                              )}
+                             {item.flavorNote && item.flavorNote !== "No" && (
+                                <span className="flex items-center gap-1">
+                                    <span className="font-semibold text-primary">Flavor Note:</span> {item.flavorNote}
+                                </span>
+                             )}
                         </div>
                         
                          <span className="text-sm text-gray-500 font-mono mt-1 block flex items-center gap-2">
@@ -329,11 +334,17 @@ export const AdminOrderItem = ({
         {/* --- Condition 3: Standard Cake --- */}
         {isStandard && (
             <div className="mt-1 flex flex-col gap-2">
-                <div className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                    <span className="bg-gray-100 px-2 py-0.5 rounded text-gray-800 border">
-                        {/* If it's standard, item.flavor is usually the string name, but let's check */}
-                        {item.flavor || "Standard Flavor"}
-                    </span>
+                <div className="text-sm font-medium text-gray-700 flex flex-col gap-1">
+                    <div className="flex items-center gap-2">
+                        <span className="bg-gray-100 px-2 py-0.5 rounded text-gray-800 border">
+                            {item.flavor || "Standard Flavor"}
+                        </span>
+                    </div>
+                    {item.flavorNote && item.flavorNote !== "No" && (
+                        <div className="text-gray-600 text-xs mt-1">
+                            <span className="font-bold">Flavor Note:</span> {item.flavorNote}
+                        </div>
+                    )}
                 </div>
                 
                 {/* Standard Inscription */}

@@ -239,6 +239,7 @@ export const ClientReceiptCard = ({
                   <div className="mt-1 text-xs text-primary/40 font-medium space-y-0.5">
                     {displaySize && displaySize.trim() !== "" && <p>Size: {displaySize}</p>}
                     {displayFlavor && displayFlavor.trim() !== "" && <p>Flavor: {displayFlavor}</p>}
+                    {item.flavorNote && item.flavorNote !== "No" && <p>Flavor Note: {item.flavorNote}</p>}
                     {item.quantity > 0 && <p>Qty: {item.quantity}</p>}
                     {item.inscription && item.inscription.trim() !== "" && <p>Inscription: {item.inscription}</p>}
                     {item.designInstructions && 
