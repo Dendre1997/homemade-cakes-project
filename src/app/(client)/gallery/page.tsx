@@ -28,8 +28,8 @@ function ExpandableDescription({ text }: { text: string }) {
   const maxLength = 80;
   if (text.length < maxLength) {
     return (
-      <div className="space-y-xs">
-        <p className="text-muted-foreground font-body leading-relaxed whitespace-pre-wrap">
+      <div className="space-y-xs w-full">
+        <p className="text-muted-foreground font-body leading-relaxed whitespace-pre-wrap break-words">
           {text}
         </p>
       </div>
@@ -39,7 +39,7 @@ function ExpandableDescription({ text }: { text: string }) {
   const displayText = isExpanded ? text : `${text.slice(0, maxLength).trim()}...`;
 
   return (
-    <div className="space-y-xs text-muted-foreground font-body leading-relaxed whitespace-pre-wrap">
+    <div className="space-y-xs text-muted-foreground font-body leading-relaxed whitespace-pre-wrap break-words w-full">
       <span>{displayText}</span>
       <button 
         onClick={() => setIsExpanded(!isExpanded)}
@@ -183,7 +183,7 @@ export default function GalleryPage() {
           >
             All
           </Button>
-          {categories.map((cat) => (
+          {categories.filter(cat => images.some(img => img.categories?.includes(cat._id))).map((cat) => (
             <Button
               key={cat._id}
               variant={activeCategory === cat._id ? "primary" : "secondary"}
@@ -326,7 +326,7 @@ export default function GalleryPage() {
                 </div>
               </div>
 
-              <div className="space-y-sm flex-1">
+              <div className="space-y-sm flex-1 min-w-0 w-full overflow-hidden">
                 {currentImage?.description && (
                   <ExpandableDescription text={currentImage.description} />
                 )}
