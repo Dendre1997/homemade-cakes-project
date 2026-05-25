@@ -63,7 +63,7 @@ const Homepage = async () => {
     getActiveCollections(),
     (async () => {
       const collection = await getGalleryCollection();
-      return collection.find({ isActive: true }).sort({ createdAt: -1 }).limit(6).toArray();
+      return collection.find({ isActive: true }).sort({ createdAt: -1 }).limit(30).toArray();
     })(),
     getActiveSeasonalEvent(),
     getActiveDiscountedProducts(),
@@ -71,24 +71,28 @@ const Homepage = async () => {
     getVideoBanner(),
   ]);
 
-  const heroSlides = rawGalleryImages.map((img) => {
-    const firstCategoryId = img.categories?.[0];
-    const categoryName = categories.find((c) => c._id === firstCategoryId?.toString())?.name || "";
-    
-    const query = new URLSearchParams({
-      category: categoryName,
-      image: img.imageUrl || "",
-    }).toString();
+  const heroSlides = rawGalleryImages
+    .map((img) => {
+      const firstCategoryId = img.categories?.[0];
+      const categoryName = categories.find((c) => c._id === firstCategoryId?.toString())?.name || "";
+      
+      const query = new URLSearchParams({
+        category: categoryName,
+        image: img.imageUrl || "",
+      }).toString();
 
-    return {
-      _id: img._id.toString(),
-      title: img.title || "Custom Design",
-      subtitle: "",
-      imageUrl: img.imageUrl,
-      link: `/custom-order?${query}`,
-      buttonText: "Request This Design",
-    };
-  });
+      return {
+        _id: img._id.toString(),
+        title: img.title || "Custom Design",
+        subtitle: "",
+        imageUrl: img.imageUrl,
+        link: `/custom-order?${query}`,
+        buttonText: "Request This Design",
+        categoryName,
+      };
+    })
+    .filter((slide) => slide.categoryName.toLowerCase() === "cakes")
+    .slice(0, 6);
 
   // Filter Flavors
   const bentoCategoryIds = categories
