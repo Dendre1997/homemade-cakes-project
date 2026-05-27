@@ -5,7 +5,7 @@ import "./globals.css";
 import AuthProvider from "@/components/AuthProvider";
 import { CustomAlert } from "@/components/ui/CustomAlert";
 import { ConfirmationProvider } from "@/contexts/ConfirmationContext";
-
+import { GoogleAnalytics } from "@next/third-parties/google";
 const playfair = Playfair_Display({
   subsets: ["latin"],
   variable: "--font-playfair",
@@ -57,12 +57,13 @@ export default function RootLayout({
         <AuthProvider>
           <AlertProvider>
             <ConfirmationProvider>
-            <CustomAlert />
-            <main>{children}</main>
+              <CustomAlert />
+              <main>{children}</main>
             </ConfirmationProvider>
           </AlertProvider>
         </AuthProvider>
       </body>
+      <GoogleAnalytics gaId="G-XK5G13GNKV" />
     </html>
   );
 }
