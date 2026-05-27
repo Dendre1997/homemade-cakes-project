@@ -63,7 +63,7 @@ export default function RootLayout({
           </AlertProvider>
         </AuthProvider>
       </body>
-      <GoogleAnalytics gaId="G-XK5G13GNKV" />
+      <GoogleAnalytics gaId="G-2NJ0YC4YNT" />
     </html>
   );
 }
