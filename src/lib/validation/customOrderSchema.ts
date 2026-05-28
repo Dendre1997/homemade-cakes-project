@@ -21,7 +21,14 @@ export const customOrderSchema = z.object({
   contact: z.object({
     name: z.string().optional().default(""),
     phone: z.string().optional().default(""),
-    email: z.string().email("Invalid email address").optional().or(z.literal("")),
+    email: z
+      .string()
+      .regex(
+        /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+        "Please enter a valid email address (e.g., example@gmail.com)"
+      )
+      .optional()
+      .or(z.literal("")),
     socialNickname: z.string().optional(),
     socialPlatform: z.enum(["instagram", "facebook"]).optional(),
   }).superRefine((data, ctx) => {
@@ -41,15 +48,24 @@ export const customOrderSchema = z.object({
 
     // Phone: required unless user has both a nickname AND chose a social platform
     const canContactViaSocial = hasNickname && hasSocialPlatform;
-    if (!canContactViaSocial && (data.phone ?? "").trim().length < 5) {
+    const phoneVal = (data.phone ?? "").trim();
+
+    if (!canContactViaSocial && phoneVal.length === 0) {
       ctx.addIssue({
-        code: z.ZodIssueCode.too_small,
-        minimum: 5,
-        origin: "string",
-        inclusive: true,
+        code: z.ZodIssueCode.custom,
         message: "Phone is required (or select a social media platform above)",
         path: ["phone"],
       });
+    } else if (phoneVal.length > 0) {
+      // Strict phone validation if provided
+      const strippedPhone = phoneVal.replace(/[\s\-\(\)\+]/g, "");
+      if (!/^\d+$/.test(strippedPhone) || strippedPhone.length < 10 || strippedPhone.length > 15) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Please enter a valid phone number (e.g., 403-123-4567)",
+          path: ["phone"],
+        });
+      }
     }
   }),
   createdAt: z.date().optional(),

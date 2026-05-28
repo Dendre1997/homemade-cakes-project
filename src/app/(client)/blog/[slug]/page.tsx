@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import clientPromise from "@/lib/db";
 import { Blog } from "@/types";
-import { format } from "date-fns";
+import { format, isValid } from "date-fns";
 import { ArrowLeft } from "lucide-react";
 import { Metadata } from "next"; 
 import ProductCard from "@/components/(client)/ProductCard";
@@ -24,7 +24,16 @@ async function getBlog(slug: string) {
   // Populate related products (Server Side)
   if (blog.relatedProductIds && blog.relatedProductIds.length > 0) {
     const { ObjectId } = require("mongodb");
-    const pIds = blog.relatedProductIds.map((id) => new ObjectId(id));
+    const pIds = blog.relatedProductIds.reduce((acc: any[], id: string) => {
+      try {
+        if (id && ObjectId.isValid(id)) {
+          acc.push(new ObjectId(id));
+        }
+      } catch (e) {
+        // Ignore invalid ObjectId
+      }
+      return acc;
+    }, []);
     
     const products = await db.collection("products").aggregate([
       { $match: { _id: { $in: pIds }, isActive: true } },
@@ -94,7 +103,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
 
     {/* Header */}
     <header className="max-w-3xl mx-auto px-4 sm:px-6 text-center pt-12 pb-16">
-      {blog.publishedAt && (
+      {blog.publishedAt && isValid(new Date(blog.publishedAt)) && (
         <time className="block text-xs font-bold uppercase tracking-widest text-accent mb-4">
           {format(new Date(blog.publishedAt), "MMMM d, yyyy")}
         </time>

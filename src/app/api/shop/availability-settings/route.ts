@@ -26,6 +26,7 @@ export async function GET() {
       checkout: {
         isDeliveryEnabled: settings.checkout.isDeliveryEnabled,
         disabledMessage: settings.checkout.disabledMessage ?? "",
+        pickupAddress: settings.checkout.pickupAddress ?? "",
       },
     };
 

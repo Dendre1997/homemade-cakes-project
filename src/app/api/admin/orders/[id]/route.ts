@@ -75,6 +75,15 @@ export async function PUT(request: NextRequest, { params }: Context) {
         { status: 400 }
       );
     }
+
+    // --- Fetch existing order to prevent dot-notation MongoServerError ---
+    const client = await clientPromise;
+    const db = client.db(process.env.MONGODB_DB_NAME);
+    const existingOrder = await db.collection("orders").findOne({ _id: new ObjectId(id) });
+    if (!existingOrder) {
+      return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    }
+
     const { status, deliveryDates, items, totalAmount, customerInfo, source, isPaid, paymentDetails } = body;
 
     if (!status && !deliveryDates && !items && typeof totalAmount === "undefined" && !customerInfo && source === undefined && typeof isPaid === "undefined" && !paymentDetails) {
@@ -107,7 +116,7 @@ export async function PUT(request: NextRequest, { params }: Context) {
       }
     }
 
-    const updateFields: { $set: Partial<any> } = { $set: {} };
+    const updateFields: { $set: Partial<any>; $unset?: Partial<any> } = { $set: {} };
 
     if (status) {
       updateFields.$set.status = status;
@@ -118,7 +127,10 @@ export async function PUT(request: NextRequest, { params }: Context) {
         ...d,
         date: new Date(d.date),
       }));
-      updateFields.$set["deliveryInfo.deliveryDates"] = deliveryDatesForDb;
+      updateFields.$set.deliveryInfo = {
+        ...(existingOrder.deliveryInfo || {}),
+        deliveryDates: deliveryDatesForDb,
+      };
     }
 
     if (items) {
@@ -137,18 +149,21 @@ export async function PUT(request: NextRequest, { params }: Context) {
     }
 
     if (customerInfo) {
-      // Use dot-notation keys so we only touch the fields the admin edited
+      const mergedCustomerInfo = { ...(existingOrder.customerInfo || {}) };
       const allowed: (keyof CustomerInfoUpdate)[] = ["name", "email", "phone", "socialNickname", "socialPlatform"];
       for (const key of allowed) {
         if (key in customerInfo) {
           const val = customerInfo[key];
-          // Allow empty string to clear optional social fields; skip undefined
           if (val !== undefined) {
-            // Store empty socialPlatform as unset (remove field)
-            updateFields.$set[`customerInfo.${key}`] = val === "" ? undefined : val;
+            if (val === "") {
+              delete mergedCustomerInfo[key];
+            } else {
+              mergedCustomerInfo[key] = val;
+            }
           }
         }
       }
+      updateFields.$set.customerInfo = mergedCustomerInfo;
     }
 
     if (source !== undefined) {
@@ -160,22 +175,20 @@ export async function PUT(request: NextRequest, { params }: Context) {
     }
 
     if (paymentDetails) {
-      // Merge into paymentDetails using dot-notation to preserve other subfields
+      const mergedPaymentDetails = { ...(existingOrder.paymentDetails || {}) };
       const allowedPaymentKeys = ['method', 'paidAt', 'transactionId'] as const;
       for (const key of allowedPaymentKeys) {
         if (key in paymentDetails) {
           const val = (paymentDetails as any)[key];
           if (val !== undefined) {
-            updateFields.$set[`paymentDetails.${key}`] =
-              key === 'paidAt' ? new Date(val) : val;
+            mergedPaymentDetails[key] = key === 'paidAt' ? new Date(val) : val;
           }
         }
       }
+      updateFields.$set.paymentDetails = mergedPaymentDetails;
     }
 
     // --- Perform Update ---
-    const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB_NAME);
     const result = await db.collection("orders").updateOne(
       { _id: new ObjectId(id) },
       updateFields

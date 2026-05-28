@@ -2,7 +2,7 @@ import { useFormContext, Controller } from "react-hook-form";
 import CustomDatePicker from "@/components/ui/CustomDatePicker";
 import { CustomOrderFormData } from "@/lib/validation/customOrderSchema";
 import { useEffect, useState, useMemo } from "react";
-import { AlertCircle, Clock } from "lucide-react";
+import { AlertCircle, Clock, MapPin } from "lucide-react";
 import { isSameDay, addDays, startOfDay, format } from "date-fns";
 import { cn } from "@/lib/utils";
 import Spinner from "@/components/ui/Spinner";
@@ -208,6 +208,17 @@ export default function Step1Availability({ onNext }: { onNext: () => void }) {
                               <h3 className="text-sm font-bold text-primary mb-3">
                                 Order Delivery/Pickup Method
                               </h3>
+
+                              {(field.value === "pickup" || !field.value) && checkoutSettings?.pickupAddress?.trim() !== "" && (
+                                <div className="mb-4 p-3 bg-accent/5 rounded-lg border border-accent/20 text-sm text-primary/80 flex items-start gap-2">
+                                  <MapPin className="w-4 h-4 text-accent mt-0.5 shrink-0" />
+                                  <div>
+                                    <span className="font-semibold block mb-0.5">Pickup Location:</span>
+                                    Calgary (East Village area)
+                                  </div>
+                                </div>
+                              )}
+                              
                               <div
                                 className={`grid grid-cols-1 gap-4 ${isDeliveryEnabled ? "sm:grid-cols-2" : ""}`}
                               >

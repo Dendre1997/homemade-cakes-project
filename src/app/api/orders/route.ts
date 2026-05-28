@@ -11,6 +11,7 @@ import PendingOrderAdminEmail  from "@/emails/PendingOrderAdminEmail";
 
 
 import { calculateOrderPricing } from "@/lib/pricing";
+import { getAppSettings } from "@/lib/api/settings";
 
 // Helper to prevent NaN and ensure 2 decimals
 const safePrice = (val: any) => {
@@ -530,6 +531,9 @@ export async function POST(request: NextRequest) {
             return acc;
         }, {} as Record<string, string>);
 
+        const settings = await getAppSettings();
+        const pickupAddress = settings.checkout?.pickupAddress || "";
+
         await Promise.all([
           resend.emails.send({
             from: DEFAULT_FROM,
@@ -541,7 +545,7 @@ export async function POST(request: NextRequest) {
             from: DEFAULT_FROM,
             to: finalOrder.customerInfo.email,
             subject: `Your Order Confirmation #${finalOrder._id.toString().slice(-6).toUpperCase()}`,
-            react: OrderConfirmationEmail({ order: finalOrder, flavorMap, diameterMap }),
+            react: OrderConfirmationEmail({ order: finalOrder, flavorMap, diameterMap, pickupAddress } as any),
           }),
         ]);
         console.log(`Confirmation emails sent for order ${orderId}.`);

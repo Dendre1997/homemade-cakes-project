@@ -16,10 +16,11 @@ import { Order, CartItem } from "@/types";
 import { format } from "date-fns";
 import { SENDER_EMAIL } from "@/lib/email";
 
-interface OrderConfirmationEmailProps {
+export interface OrderConfirmationEmailProps {
   order: Order;
   flavorMap?: Record<string, string>;
   diameterMap?: Record<string, string>;
+  pickupAddress?: string;
 }
 
 const baseUrl = process.env.NEXT_PUBLIC_API_URL
@@ -54,12 +55,15 @@ export const OrderConfirmationEmail = ({
   order,
   flavorMap = {},
   diameterMap = {},
+  pickupAddress,
 }: OrderConfirmationEmailProps) => {
   const isPaid = order.isPaid;
   const expectedMethod = order.paymentDetails?.expectedMethod;
   const orderIdShort = order._id.toString().slice(-6).toUpperCase();
   const dateFormatted = format(new Date(order.createdAt), "MMMM d, yyyy");
-  const isDelivery = order.deliveryInfo.method === "delivery";
+  
+  const isDelivery = order.deliveryInfo?.method === "delivery";
+  const hasPickupAddress = !isDelivery && typeof pickupAddress === "string" && pickupAddress.trim() !== "";
 
   // ── helpers ───────────────────────────────────────────────────────────────
   const getFlavorName = (id?: string) => {
@@ -301,86 +305,6 @@ export const OrderConfirmationEmail = ({
 
             <Hr style={styles.divider} />
 
-            {/* ── FINANCIAL SUMMARY ── */}
-            {/* <Section style={styles.section} className="email-section">
-              
-              {order.items.map((item: CartItem, idx: number) => {
-                const itemAddonCost =
-                  (item.addons || []).reduce((s, a) => s + a.price, 0) *
-                  item.quantity;
-                const itemBaseTotal =
-                  (item.rowTotal || item.price * item.quantity) - itemAddonCost;
-                return (
-                  <Row key={idx} style={idx > 0 ? { marginTop: "6px" } : {}}>
-                    <Column>
-                      <Text style={styles.summaryLabel}>
-                        {item.name}
-                        {item.quantity > 1 ? ` × ${item.quantity}` : ""}
-                      </Text>
-                    </Column>
-                    <Column align="right" style={styles.summaryValueCol}>
-                      <Text style={styles.summaryValue}>
-                        ${itemBaseTotal.toFixed(2)}
-                      </Text>
-                    </Column>
-                  </Row>
-                );
-              })} */}
-
-              {/* Extras block */}
-              {/* {allAddons.length > 0 && (
-                <Section style={styles.extrasBlock}>
-                  <Text style={styles.extrasHeader}>Extras</Text>
-                  {allAddons.map((addon, idx) => (
-                    <Row key={idx} style={idx > 0 ? { marginTop: "4px" } : {}}>
-                      <Column>
-                        <Text style={styles.extrasItem}>
-                          {addon.name}
-                          {addon.variantName && addon.variantName.trim() !== ""
-                            ? ` · ${addon.variantName}`
-                            : ""}
-                          {addon.itemQuantity > 1
-                            ? ` (×${addon.itemQuantity})`
-                            : ""}
-                        </Text>
-                      </Column>
-                      <Column align="right" style={styles.extrasValueCol}>
-                        <Text style={styles.extrasItemPrice}>
-                          {addon.price > 0
-                            ? `+$${(addon.price * addon.itemQuantity).toFixed(2)}`
-                            : "Free"}
-                        </Text>
-                      </Column>
-                    </Row>
-                  ))}
-                </Section>
-              )} */}
-
-              {/* Discount */}
-              {/* {order.discountInfo && order.discountInfo.amount > 0 && (
-                <Row style={{ marginTop: "8px" }}>
-                  <Column>
-                    <Text style={styles.discountLabel}>
-                      Discount
-                      {(order.discountInfo.code || order.discountInfo.name) && (
-                        <span style={styles.discountBadge}>
-                          {" "}
-                          {order.discountInfo.code || order.discountInfo.name}
-                        </span>
-                      )}
-                    </Text>
-                  </Column>
-                  <Column align="right" style={styles.discountValueCol}>
-                    <Text style={styles.discountAmount}>
-                      −${order.discountInfo.amount.toFixed(2)}
-                    </Text>
-                  </Column>
-                </Row>
-              )}
-            </Section> */}
-
-            <Hr style={styles.divider} />
-
             {/* ── PAYMENT ── */}
             <Section style={styles.section} className="email-section">
               <Text style={styles.sectionHeader}>Payment</Text>
@@ -453,6 +377,19 @@ export const OrderConfirmationEmail = ({
                   <Column align="right" style={styles.infoValueCol}>
                     <Text style={styles.infoValue}>
                       {order.deliveryInfo.address || "Pending"}
+                    </Text>
+                  </Column>
+                </Row>
+              )}
+
+              {hasPickupAddress && (
+                <Row style={{ marginTop: "10px" }}>
+                  <Column style={styles.infoLabelCol}>
+                    <Text style={styles.infoLabel}>Pickup Location</Text>
+                  </Column>
+                  <Column align="right" style={styles.infoValueCol}>
+                    <Text style={styles.infoValue}>
+                      {pickupAddress}
                     </Text>
                   </Column>
                 </Row>
