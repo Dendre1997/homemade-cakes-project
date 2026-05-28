@@ -92,6 +92,7 @@ export const customOrderSchema = z.object({
     addonsCost: z.number(),      // Sum of all addon prices (mirrors addons[].price)
     grandTotal: z.number(),      // baseCakePrice + flavorUpcharge + addonsCost
   }).optional(),
+  idempotencyKey: z.string().optional(),
 });
 
 export type CustomOrderFormData = z.infer<typeof customOrderSchema>;

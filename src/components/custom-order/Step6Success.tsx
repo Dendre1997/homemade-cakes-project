@@ -439,6 +439,7 @@ export default function Step6Success({ orderData, customOrderId, onMakeAnotherRe
     {/* Make Another Request Button */}
     <div className="mt-8 mb-4">
       <Button
+        type="button"
         onClick={onMakeAnotherRequest}
         className="h-11 px-6 rounded-xl border border-primary/20 bg-white hover:bg-primary/5 text-primary font-semibold text-sm shadow-md hover:shadow-lg transition-all active:scale-95 flex items-center gap-2"
       >

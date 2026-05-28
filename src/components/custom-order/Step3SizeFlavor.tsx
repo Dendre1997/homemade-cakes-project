@@ -608,6 +608,11 @@ function AllergySection() {
   const noActive  = currentAllergies === "No";
   const yesActive = currentAllergies !== undefined && currentAllergies !== "No";
 
+  // ARCHITECTURAL FIX: Decouple CSS transition frame timing from synchronous state updates.
+  // This allows the DOM content (value="") to update in Frame 1, and the grid animation to start in Frame 2,
+  // completely eliminating layout thrashing while maintaining a single source of truth.
+  const animatedYesActive = React.useDeferredValue(yesActive);
+
   return (
     <div className="border-t border-primary/10 pt-8 space-y-4">
       <div>
@@ -649,7 +654,7 @@ function AllergySection() {
         <div
           className={cn(
             "grid transition-all duration-300 ease-in-out overflow-hidden",
-            yesActive
+            animatedYesActive
               ? "grid-rows-[1fr] opacity-100 mt-4"
               : "grid-rows-[0fr] opacity-0 mt-0",
           )}
@@ -697,6 +702,9 @@ function FlavorNoteSection({ isVisible }: { isVisible: boolean }) {
   // Determine active button
   const noActive  = currentFlavorNote === "No";
   const yesActive = currentFlavorNote !== undefined && currentFlavorNote !== "No";
+
+  // ARCHITECTURAL FIX: Decouple CSS transition frame timing from synchronous state updates.
+  const animatedYesActive = React.useDeferredValue(yesActive);
 
   return (
     <div
@@ -750,7 +758,7 @@ function FlavorNoteSection({ isVisible }: { isVisible: boolean }) {
             <div
               className={cn(
                 "grid transition-all duration-300 ease-in-out overflow-hidden",
-                yesActive
+                animatedYesActive
                   ? "grid-rows-[1fr] opacity-100 mt-4"
                   : "grid-rows-[0fr] opacity-0 mt-0",
               )}
@@ -758,9 +766,7 @@ function FlavorNoteSection({ isVisible }: { isVisible: boolean }) {
               <div className="min-h-0">
                 <Input
                   placeholder="e.g. Can it be less sweet? Or any other inquiry..."
-                  value={
-                    currentFlavorNote === "No" ? "" : currentFlavorNote || ""
-                  }
+                  value={currentFlavorNote === "No" ? "" : (currentFlavorNote || "")}
                   onChange={handleTextChange}
                   className="w-full bg-white"
                 />

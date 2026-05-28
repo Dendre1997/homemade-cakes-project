@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense, useMemo } from "react";
+import { useState, useEffect, Suspense, useMemo, useRef } from "react";
 import { useForm, FormProvider, useFormContext } from "react-hook-form";
 import { useSearchParams } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -63,6 +63,14 @@ function CustomOrderContent() {
 
   const [categories, setCategories] = useState<any[]>([]);
   const [flavors, setFlavors] = useState<any[]>([]);
+
+  // Generate a unique idempotency key once per session to prevent duplicate submissions
+  const idempotencyKeyRef = useRef<string>("");
+  useEffect(() => {
+    idempotencyKeyRef.current = typeof crypto !== "undefined" && crypto.randomUUID
+      ? crypto.randomUUID()
+      : Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  }, []);
 
   useEffect(() => {
     if (currentStep === 2 && categories.length === 0 && flavors.length === 0) {
@@ -199,10 +207,15 @@ function CustomOrderContent() {
   const onSubmit = async (data: CustomOrderFormData) => {
     setIsSubmitting(true);
     try {
+      const payload = {
+        ...data,
+        idempotencyKey: idempotencyKeyRef.current,
+      };
+
       const res = await fetch("/api/custom-orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) throw new Error("Failed to submit");
