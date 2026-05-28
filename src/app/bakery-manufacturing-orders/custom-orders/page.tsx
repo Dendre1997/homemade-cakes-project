@@ -2,6 +2,8 @@ import clientPromise from "@/lib/db";
 import { MessageCircle } from "lucide-react";
 import { CustomOrder } from "@/types";
 import { CustomOrderCard } from "@/components/admin/custom-orders/CustomOrderCard";
+import { CompactCustomOrderRow } from "@/components/admin/custom-orders/CompactCustomOrderRow";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs";
 import { 
   Carousel, 
   CarouselContent, 
@@ -17,6 +19,9 @@ export const revalidate = 0;
 
 export default async function CustomOrdersListPage() {
   let customOrders: CustomOrder[] = [];
+  let pendingOrders: CustomOrder[] = [];
+  let convertedOrders: CustomOrder[] = [];
+  let rejectedOrders: CustomOrder[] = [];
   let errorMsg: string | null = null;
 
   try {
@@ -50,6 +55,10 @@ export default async function CustomOrdersListPage() {
         referenceImages: order.referenceImages || order.referenceImageUrls || []
       };
     }) as unknown as CustomOrder[];
+
+    pendingOrders = customOrders.filter(o => o.status === 'pending_review' || !o.status);
+    convertedOrders = customOrders.filter(o => o.status === 'converted');
+    rejectedOrders = customOrders.filter(o => o.status === 'rejected');
   } catch (error) {
     console.error("Failed to fetch custom orders:", error);
     errorMsg = "We timed out trying to connect to the database. This frequently occurs during cold starts. Please reload the page to try again.";
@@ -86,39 +95,73 @@ export default async function CustomOrdersListPage() {
       )}
 
       <div>
-        {customOrders.length === 0 ? (
-          <div className="bg-white rounded-xl shadow-sm border p-12 text-center text-gray-500 flex flex-col items-center">
-            <MessageCircle className="w-12 h-12 mb-4 opacity-20" />
-            <h3 className="text-lg font-medium">No Request Yet</h3>
-            <p>Wait for customers to submit the "Dream Cake" form.</p>
-          </div>
-        ) : (
-          <>
-            {/* Mobile Carousel (sm and below) */}
-            <div className="block md:hidden">
-              <Carousel className="w-full">
-                <CarouselContent>
-                  {customOrders.map((order) => (
-                    <CarouselItem key={order._id} className="basis-[85%]">
-                      <CustomOrderCard order={order} />
-                    </CarouselItem>
-                  ))}
-                </CarouselContent>
-                <div className="flex justify-center gap-4 mt-6">
-                   <CarouselPrevious className="static translate-y-0" />
-                   <CarouselNext className="static translate-y-0" />
-                </div>
-              </Carousel>
-            </div>
+        <Tabs defaultValue="pending" className="w-full">
+          <TabsList className="mb-6">
+            <TabsTrigger value="pending">Pending ({pendingOrders.length})</TabsTrigger>
+            <TabsTrigger value="converted">Converted ({convertedOrders.length})</TabsTrigger>
+            <TabsTrigger value="rejected">Rejected ({rejectedOrders.length})</TabsTrigger>
+          </TabsList>
 
-            {/* Desktop Grid (md and up) */}
-            <div className="hidden md:grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-              {customOrders.map((order) => (
-                <CustomOrderCard key={order._id} order={order} />
-              ))}
-            </div>
-          </>
-        )}
+          <TabsContent value="pending" className="space-y-6">
+            {pendingOrders.length === 0 ? (
+              <div className="bg-white rounded-xl shadow-sm border p-12 text-center text-gray-500 flex flex-col items-center">
+                <MessageCircle className="w-12 h-12 mb-4 opacity-20" />
+                <h3 className="text-lg font-medium">No Pending Requests</h3>
+                <p>Wait for customers to submit the "Dream Cake" form.</p>
+              </div>
+            ) : (
+              <>
+                {/* Mobile Carousel (sm and below) */}
+                <div className="block md:hidden">
+                  <Carousel className="w-full">
+                    <CarouselContent>
+                      {pendingOrders.map((order) => (
+                        <CarouselItem key={order._id} className="basis-[85%]">
+                          <CustomOrderCard order={order} />
+                        </CarouselItem>
+                      ))}
+                    </CarouselContent>
+                    <div className="flex justify-center gap-4 mt-6">
+                       <CarouselPrevious className="static translate-y-0" />
+                       <CarouselNext className="static translate-y-0" />
+                    </div>
+                  </Carousel>
+                </div>
+
+                {/* Desktop Grid (md and up) */}
+                <div className="hidden md:grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                  {pendingOrders.map((order) => (
+                    <CustomOrderCard key={order._id} order={order} />
+                  ))}
+                </div>
+              </>
+            )}
+          </TabsContent>
+
+          <TabsContent value="converted" className="space-y-4">
+            {convertedOrders.length === 0 ? (
+              <div className="bg-white rounded-xl shadow-sm border p-12 text-center text-gray-500 flex flex-col items-center">
+                <h3 className="text-lg font-medium">No Converted Requests</h3>
+              </div>
+            ) : (
+              convertedOrders.map((order) => (
+                <CompactCustomOrderRow key={order._id} order={order} type="converted" />
+              ))
+            )}
+          </TabsContent>
+
+          <TabsContent value="rejected" className="space-y-4">
+            {rejectedOrders.length === 0 ? (
+              <div className="bg-white rounded-xl shadow-sm border p-12 text-center text-gray-500 flex flex-col items-center">
+                <h3 className="text-lg font-medium">No Rejected Requests</h3>
+              </div>
+            ) : (
+              rejectedOrders.map((order) => (
+                <CompactCustomOrderRow key={order._id} order={order} type="rejected" />
+              ))
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

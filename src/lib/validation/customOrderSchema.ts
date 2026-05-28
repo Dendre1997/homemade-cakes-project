@@ -93,6 +93,7 @@ export const customOrderSchema = z.object({
     grandTotal: z.number(),      // baseCakePrice + flavorUpcharge + addonsCost
   }).optional(),
   idempotencyKey: z.string().optional(),
+  userId: z.string().optional(),
 });
 
 export type CustomOrderFormData = z.infer<typeof customOrderSchema>;

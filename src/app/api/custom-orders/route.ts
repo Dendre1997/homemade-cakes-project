@@ -1,6 +1,32 @@
 import { NextResponse } from "next/server";
 import clientPromise from "@/lib/db";
 import { customOrderSchema } from "@/lib/validation/customOrderSchema";
+import { ObjectId } from "mongodb";
+
+export async function GET(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const userId = searchParams.get("userId");
+
+    if (!userId) {
+      return NextResponse.json({ error: "Missing userId" }, { status: 400 });
+    }
+
+    const client = await clientPromise;
+    const db = client.db(process.env.MONGODB_DB_NAME);
+    
+    // Using string matching for userId since it might be stored as a string or ObjectId depending on auth integration
+    const customOrders = await db.collection("custom_orders")
+      .find({ userId })
+      .sort({ createdAt: -1 })
+      .toArray();
+
+    return NextResponse.json(customOrders, { status: 200 });
+  } catch (error) {
+    console.error("Fetch Custom Orders Error:", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
+}
 
 /**
  * POST /api/custom-orders

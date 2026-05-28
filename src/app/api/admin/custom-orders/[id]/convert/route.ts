@@ -169,6 +169,7 @@ export async function POST(
 
     const newOrder: any = {
       _id: newOrderId,
+      customerId: customOrder.userId ? new ObjectId(customOrder.userId) : null,
       items: [item],
       totalAmount: Number(agreedPrice),
       customerInfo: {
@@ -214,9 +215,26 @@ export async function POST(
         : [],
     };
 
-    // Transaction: insert order, then delete the custom order request
+    // Transaction: insert order, then update the custom order request status
     await ordersColl.insertOne(newOrder);
-    await customOrdersColl.deleteOne({ _id: new ObjectId(id) });
+    await customOrdersColl.replaceOne(
+      { _id: new ObjectId(id) },
+      {
+        _id: new ObjectId(id),
+        userId: customOrder.userId,
+        status: 'converted',
+        convertedOrderId: newOrderId.toString(),
+        category: customOrder.category,
+        date: customOrder.date || customOrder.eventDate,
+        contact: { 
+          name: customOrder.contact?.name || customOrder.customerName, 
+          email: customOrder.contact?.email || customOrder.customerEmail 
+        },
+        agreedPrice: Number(agreedPrice),
+        createdAt: customOrder.createdAt || customOrder.date || new Date(),
+        updatedAt: new Date()
+      }
+    );
 
     // Trigger Order Confirmation Email if email is provided and not a placeholder
     if (

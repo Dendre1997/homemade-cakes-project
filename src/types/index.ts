@@ -475,6 +475,7 @@ export interface CustomOrder {
   convertedOrderId?: string;
   createdAt?: string | Date;
   updatedAt?: string | Date;
+  userId?: string;
   
   // Customer-submitted allergy info
   allergies?: string;

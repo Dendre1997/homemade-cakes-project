@@ -140,14 +140,30 @@ export async function DELETE(
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
-    // 2. Delete from MongoDB first
+    // Extract reason if provided
+    const body = await req.json().catch(() => ({}));
+    const reason = body.reason || null;
+
+    // 2. Replace with a sparse "rejected" document instead of complete deletion
     const deleteResult = await db
       .collection("custom_orders")
-      .deleteOne({ _id: new ObjectId(id) });
+      .replaceOne(
+        { _id: new ObjectId(id) },
+        {
+           _id: new ObjectId(id),
+           userId: order.userId,
+           status: 'rejected',
+           category: order.category,
+           createdAt: order.createdAt || new Date(),
+           date: order.date || order.eventDate,
+           contact: { name: order.contact?.name || order.customerName },
+           rejectionReason: reason || null,
+        }
+      );
 
-    if (deleteResult.deletedCount === 0) {
+    if (deleteResult.matchedCount === 0) {
       return NextResponse.json(
-        { error: "Failed to delete order from database" },
+        { error: "Failed to update order in database" },
         { status: 500 }
       );
     }

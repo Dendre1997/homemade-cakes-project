@@ -3,6 +3,11 @@ import { useFormContext, Controller } from "react-hook-form";
 import { CustomOrderFormData } from "@/lib/validation/customOrderSchema";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { useAuthStore } from "@/lib/store/authStore";
+import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
+import { auth } from "@/lib/firebase/client";
+import { LogIn } from "lucide-react";
+import { useEffect } from "react";
 
 // Inline SVG brand icons
 const InstagramIcon = ({ className }: { className?: string }) => (
@@ -19,11 +24,51 @@ const FacebookIcon = ({ className }: { className?: string }) => (
 
 export default function Step5Contact() {
   const [contactMethod, setContactMethod] = useState<"social" | "phone" | null>(null);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const { user, fetchProfile } = useAuthStore();
   const { control, watch, setValue, formState: { errors } } = useFormContext<CustomOrderFormData>();
   const socialNickname = watch("contact.socialNickname") ?? "";
   const socialPlatform = watch("contact.socialPlatform");
   const hasNickname = socialNickname.trim().length > 0;
   const phoneIsOptional = hasNickname && !!socialPlatform;
+
+  useEffect(() => {
+    if (user) {
+      const currentName = watch("contact.name");
+      const currentEmail = watch("contact.email");
+      
+      if (!currentName && user.name?.first) {
+        setValue("contact.name", `${user.name.first} ${user.name.last || ''}`.trim(), { shouldValidate: true });
+      } else if (!currentName && user.email) {
+        setValue("contact.name", user.email.split('@')[0], { shouldValidate: true });
+      }
+      
+      if (!currentEmail && user.email) {
+        setValue("contact.email", user.email, { shouldValidate: true });
+      }
+    }
+  }, [user, setValue, watch]);
+
+  const handleLoginClick = async () => {
+    setIsLoggingIn(true);
+    try {
+      const provider = new GoogleAuthProvider();
+      const userCredential = await signInWithPopup(auth, provider);
+      const idToken = await userCredential.user.getIdToken();
+
+      await fetch("/api/auth/sessionLogin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken }),
+      });
+
+      await fetchProfile();
+    } catch (err) {
+      console.error("Login failed", err);
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
 
   const togglePlatform = (platform: "instagram" | "facebook") => {
     setValue(
@@ -50,6 +95,24 @@ export default function Step5Contact() {
           How would you like to be contacted for the price quote?
         </p>
       </div>
+
+      {!user && (
+        <div className="mb-8 bg-primary/5 rounded-xl p-4 border border-primary/10 flex flex-col items-center text-center gap-3">
+          <p className="text-sm font-medium text-primary">
+            Log in to track your request status
+          </p>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleLoginClick} 
+            disabled={isLoggingIn}
+            className="w-full max-w-[200px] flex items-center justify-center gap-2"
+          >
+            <LogIn className="w-4 h-4" />
+            {isLoggingIn ? "Logging in..." : "Log In or Sign Up"}
+          </Button>
+        </div>
+      )}
 
       <div className="space-y-5">
         {/* Contact Method Selector */}
