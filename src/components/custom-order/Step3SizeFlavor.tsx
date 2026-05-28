@@ -611,7 +611,21 @@ function AllergySection() {
   // ARCHITECTURAL FIX: Decouple CSS transition frame timing from synchronous state updates.
   // This allows the DOM content (value="") to update in Frame 1, and the grid animation to start in Frame 2,
   // completely eliminating layout thrashing while maintaining a single source of truth.
-  const animatedYesActive = React.useDeferredValue(yesActive);
+  const [animatedYesActive, setAnimatedYesActive] = React.useState(yesActive);
+
+  React.useEffect(() => {
+    let raf1: number;
+    let raf2: number;
+    raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        setAnimatedYesActive(yesActive);
+      });
+    });
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+    };
+  }, [yesActive]);
 
   return (
     <div className="border-t border-primary/10 pt-8 space-y-4">
@@ -704,7 +718,21 @@ function FlavorNoteSection({ isVisible }: { isVisible: boolean }) {
   const yesActive = currentFlavorNote !== undefined && currentFlavorNote !== "No";
 
   // ARCHITECTURAL FIX: Decouple CSS transition frame timing from synchronous state updates.
-  const animatedYesActive = React.useDeferredValue(yesActive);
+  const [animatedYesActive, setAnimatedYesActive] = React.useState(yesActive);
+
+  React.useEffect(() => {
+    let raf1: number;
+    let raf2: number;
+    raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        setAnimatedYesActive(yesActive);
+      });
+    });
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+    };
+  }, [yesActive]);
 
   return (
     <div

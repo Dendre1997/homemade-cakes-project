@@ -10,6 +10,7 @@ import { Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import LoadingSpinner from "@/components/ui/Spinner";
 import { FlavorCarousel } from "@/components/(client)/home/flavors/FlavorCarousel";
+import { useAuthStore } from "@/lib/store/authStore";
 
 // Steps
 import Step1Availability from "@/components/custom-order/Step1Availability";
@@ -54,6 +55,7 @@ function WizardHydrator() {
 function CustomOrderContent() {
   const searchParams = useSearchParams();
   const hasInspiration = !!searchParams.get("image");
+  const { user } = useAuthStore();
 
   const [currentStep, setCurrentStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -210,6 +212,7 @@ function CustomOrderContent() {
       const payload = {
         ...data,
         idempotencyKey: idempotencyKeyRef.current,
+        ...(user?._id ? { userId: user._id } : {}),
       };
 
       const res = await fetch("/api/custom-orders", {

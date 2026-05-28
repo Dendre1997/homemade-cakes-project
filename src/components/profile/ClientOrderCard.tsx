@@ -13,7 +13,8 @@ import {
   Calendar,
   AlertCircle,
   CalendarClock,
-  Timer
+  Timer,
+  StickyNote
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -40,7 +41,7 @@ interface ClientOrderCardProps {
 }
 
 const steps = [
-  { id: "placed", label: "Placed", icon: Package, statuses: [OrderStatus.NEW, OrderStatus.PAID, OrderStatus.PENDING_CONFIRMATION] },
+  { id: "placed", label: "Placed", icon: Package, statuses: [OrderStatus.NEW, OrderStatus.PAID, OrderStatus.PENDING_CONFIRMATION, OrderStatus.AWAITING_PAYMENT, OrderStatus.CONFIRMED] },
   { id: "baking", label: "Baking", icon: ChefHat, statuses: [OrderStatus.IN_PROGRESS] },
   { id: "ready", label: "Ready", icon: CheckCircle2, statuses: [OrderStatus.READY] },
   { id: "enjoy", label: "Enjoy", icon: Truck, statuses: [OrderStatus.DELIVERED] },
@@ -92,21 +93,41 @@ export default function ClientOrderCard({ order, diameters = [] }: ClientOrderCa
       <CardContent className="pt-6 space-y-6">
         
         {!isCancelled && (
-            <div className="bg-subtleBackground/50 rounded-lg p-4 border border-blue-100 flex items-start gap-3">
-                <div className="bg-white p-2 rounded-full border border-blue-100 text-blue-600">
-                    <CalendarClock className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                    <h4 className="font-bold text-primary text-sm uppercase tracking-wide mb-1">
-                        {isDelivery ? "Scheduled Delivery" : "Scheduled Pickup"}
-                    </h4>
-                    <p className="font-heading text-lg font-semibold text-primary leading-none">
-                        {dateString}
-                    </p>
-                    <div className="flex items-center gap-1.5 mt-2 text-sm text-muted-foreground">
-                        <Timer className="w-4 h-4" />
-                        <span>Between {timeString}</span>
+            <div className="space-y-3">
+                <div className="bg-subtleBackground/50 rounded-lg p-4 border border-blue-100 flex items-start gap-3">
+                    <div className="bg-white p-2 rounded-full border border-blue-100 text-blue-600">
+                        <CalendarClock className="w-5 h-5 text-primary" />
                     </div>
+                    <div>
+                        <h4 className="font-bold text-primary text-sm uppercase tracking-wide mb-1">
+                            {isDelivery ? "Scheduled Delivery" : "Scheduled Pickup"}
+                        </h4>
+                        <p className="font-heading text-lg font-semibold text-primary leading-none">
+                            {dateString}
+                        </p>
+                        <div className="flex items-center gap-1.5 mt-2 text-sm text-muted-foreground">
+                            <Timer className="w-4 h-4" />
+                            <span>Between {timeString}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1">
+                    <div className="flex items-center gap-2">
+                        {order.isPaid ? (
+                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Payment Confirmed</Badge>
+                        ) : order.status === OrderStatus.AWAITING_PAYMENT ? (
+                            <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">Payment Pending</Badge>
+                                <span className="text-xs text-muted-foreground">You will receive a payment link shortly</span>
+                            </div>
+                        ) : null}
+                    </div>
+                    {order.discountInfo && order.discountInfo.amount > 0 && (
+                        <div className="text-sm text-muted-foreground italic">
+                            Discount applied: {order.discountInfo.name} (-${order.discountInfo.amount.toFixed(2)})
+                        </div>
+                    )}
                 </div>
             </div>
         )}
@@ -213,12 +234,55 @@ export default function ClientOrderCard({ order, diameters = [] }: ClientOrderCa
                                             <span className="block font-medium">Inscription: "{item.inscription}"</span>
                                         </div>
                                     )}
+                                    
+                                    {item.customFlavor && (
+                                        <div className="mt-1 text-sm text-muted-foreground">
+                                            Flavor: {item.customFlavor}
+                                        </div>
+                                    )}
+                                    {item.flavorNote && item.flavorNote !== "No" && (
+                                        <div className="mt-1 text-sm text-muted-foreground">
+                                            Flavor Note: {item.flavorNote}
+                                        </div>
+                                    )}
+
+                                    {item.designInstructions && (
+                                        <details className="mt-2 text-sm group">
+                                            <summary className="cursor-pointer text-accent font-medium hover:underline">Design Instructions</summary>
+                                            <div className="mt-2 p-3 bg-white rounded-md border border-gray-100 text-muted-foreground whitespace-pre-wrap">
+                                                {item.designInstructions}
+                                            </div>
+                                        </details>
+                                    )}
+
+                                    {item.addons && item.addons.length > 0 && (
+                                        <div className="mt-2 flex flex-wrap gap-1.5">
+                                            {item.addons.map((addon, aIdx) => (
+                                                <Badge key={aIdx} variant="secondary" className="text-xs font-normal">
+                                                    {addon.name} {addon.variantName ? `(${addon.variantName})` : ''}
+                                                </Badge>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                             
-                            <p className="mt-3 font-bold text-primary text-sm">
-                                ${(item.price * item.quantity).toFixed(2)}
-                            </p>
+                            <div className="mt-3 text-right">
+                                {item.originalPrice && item.discountName ? (
+                                    <div className="flex flex-col items-end">
+                                        <span className="text-xs text-muted-foreground line-through">
+                                            ${(item.originalPrice).toFixed(2)}
+                                        </span>
+                                        <span className="font-bold text-primary text-sm">
+                                            ${(item.rowTotal ?? (item.price * item.quantity)).toFixed(2)}
+                                        </span>
+                                    </div>
+                                ) : (
+                                    <span className="font-bold text-primary text-sm">
+                                        ${(item.rowTotal ?? (item.price * item.quantity)).toFixed(2)}
+                                    </span>
+                                )}
+                            </div>
                         </div>
 
                          <div className="flex-shrink-0">
@@ -243,6 +307,47 @@ export default function ClientOrderCard({ order, diameters = [] }: ClientOrderCa
                })}
            </div>
         </div>
+
+        {/* Special Notes Section */}
+        {(order.customerInfo.notes || (order.referenceImages && order.referenceImages.length > 0)) && (
+            <div className="pt-6 border-t border-dashed">
+                <div className="flex items-center gap-2 mb-4 pb-2">
+                    <StickyNote className="w-4 h-4 text-primary" />
+                    <h4 className="text-sm font-bold text-primary uppercase tracking-wider">Special Notes</h4>
+                </div>
+                
+                <div className="space-y-4">
+                    {order.customerInfo.notes && (
+                        <div className="bg-yellow-50 text-yellow-800 p-4 rounded-md flex items-start gap-3">
+                            <StickyNote className="w-5 h-5 mt-0.5 flex-shrink-0" />
+                            <p className="text-sm whitespace-pre-wrap leading-relaxed">{order.customerInfo.notes}</p>
+                        </div>
+                    )}
+                    
+                    {order.referenceImages && order.referenceImages.length > 0 && (
+                        <div>
+                            <p className="text-sm font-medium text-primary mb-3">Reference Images</p>
+                            <div className="flex gap-3 overflow-x-auto pb-2 custom-scrollbar snap-x snap-mandatory">
+                              {order.referenceImages.map((url, idx) => (
+                                <div
+                                  key={idx}
+                                  className="relative w-48 h-48 shrink-0 snap-center rounded-xl overflow-hidden border border-border shadow-sm"
+                                >
+                                  <Image
+                                    src={url}
+                                    alt={`Reference image ${idx + 1}`}
+                                    fill
+                                    className="object-cover"
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+        )}
+
       </CardContent>
 
       <CardFooter className="bg-subtleBackground/30 border-t p-4 flex justify-between items-center">

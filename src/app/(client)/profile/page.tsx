@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/Button";
 import ProductCard from "@/components/(client)/ProductCard";
 import { ObjectId } from "mongodb";
 import ProfileGuard from "@/components/auth/ProfileGuard";
+import ClientRequestsTab from "@/components/profile/ClientRequestsTab";
 
 export const dynamic = "force-dynamic";
 
@@ -61,7 +62,9 @@ export default async function ProfilePage() {
     OrderStatus.PAID,
     OrderStatus.IN_PROGRESS,
     OrderStatus.READY,
-    OrderStatus.PENDING_CONFIRMATION
+    OrderStatus.PENDING_CONFIRMATION,
+    OrderStatus.AWAITING_PAYMENT,
+    OrderStatus.CONFIRMED
   ];
 
   const activeOrders = userOrders.filter(o => activeStatuses.includes(o.status));
@@ -141,8 +144,9 @@ export default async function ProfilePage() {
 
           {/* --- Orders Tabs --- */}
           <Tabs defaultValue="active" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 max-w-[400px] mb-8">
+              <TabsList className="grid w-full grid-cols-3 max-w-[500px] mb-8">
                   <TabsTrigger value="active">Orders ({activeOrders.length})</TabsTrigger>
+                  <TabsTrigger value="requests">Requests</TabsTrigger>
                   <TabsTrigger value="history">Buy Again</TabsTrigger>
               </TabsList>
 
@@ -159,6 +163,10 @@ export default async function ProfilePage() {
                           </Link>
                       </div>
                   )}
+              </TabsContent>
+
+              <TabsContent value="requests">
+                  <ClientRequestsTab userId={user._id.toString()} />
               </TabsContent>
 
               <TabsContent value="history">

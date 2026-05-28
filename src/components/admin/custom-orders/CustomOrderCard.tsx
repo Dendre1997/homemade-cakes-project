@@ -11,6 +11,7 @@ import Image from "next/image";
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { Textarea } from "@/components/ui/Textarea";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -28,6 +29,7 @@ export const CustomOrderCard = ({ order }: CustomOrderCardProps) => {
   const [agreedPrice, setAgreedPrice] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
   const [paymentLink, setPaymentLink] = useState<string | null>(null);
   
   const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
@@ -65,6 +67,8 @@ export const CustomOrderCard = ({ order }: CustomOrderCardProps) => {
     try {
       const res = await fetch(`/api/admin/custom-orders/${order._id}`, {
         method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: rejectReason })
       });
       if (!res.ok) throw new Error("Failed to delete the order");
       
@@ -327,11 +331,21 @@ export const CustomOrderCard = ({ order }: CustomOrderCardProps) => {
             onClose={() => setIsRejectOpen(false)}
             onConfirm={handleReject}
             title="Reject Request"
-            confirmText="Delete Permanently"
+            confirmText="Reject & Delete Images"
             variant="danger"
            >
-              Are you sure you want to reject and completely delete this custom request? 
+              <p>Are you sure you want to reject this custom request? The request will become read-only and stripped of its full details.</p>
               <span className="block mt-2 font-semibold">All associated reference images will be permanently purged from cloud storage.</span>
+              
+              <div className="space-y-2 mt-4 text-left">
+                <label className="text-sm font-medium text-primary">Reason for rejection (optional)</label>
+                <Textarea 
+                  value={rejectReason} 
+                  onChange={(e) => setRejectReason(e.target.value)} 
+                  placeholder="E.g., We are fully booked for this date."
+                  className="w-full text-sm min-h-[80px]"
+                />
+              </div>
            </ConfirmationModal>
         </div>
       </div>
