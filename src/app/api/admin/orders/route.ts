@@ -7,6 +7,7 @@ import { ObjectId } from "mongodb";
 import { resend, DEFAULT_FROM } from "@/lib/email";
 import OrderConfirmationEmail from "@/emails/OrderConfirmationEmail";
 import { render } from "@react-email/render";
+import { getAppSettings } from "@/lib/api/settings";
 
 
 
@@ -187,7 +188,10 @@ export async function POST(request: NextRequest) {
                 return acc;
             }, {} as Record<string, string>);
 
-            const htmlContent = await render(OrderConfirmationEmail({ order: finalOrder as any, flavorMap, diameterMap }));
+            const settings = await getAppSettings();
+            const pickupAddress = settings.checkout?.pickupAddress || "";
+
+            const htmlContent = await render(OrderConfirmationEmail({ order: finalOrder as any, flavorMap, diameterMap, pickupAddress } as any));
 
             await resend.emails.send({
                 from: DEFAULT_FROM,

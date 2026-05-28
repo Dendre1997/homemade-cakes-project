@@ -110,6 +110,10 @@ export default function Step5Contact() {
                 render={({ field }) => (
                   <Input
                     {...field}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^0-9\s+()-]/g, "");
+                      field.onChange(val);
+                    }}
                     type="tel"
                     placeholder="Your Phone Number"
                     className={`h-12 bg-white ${errors.contact?.phone ? "border-red-500" : ""}`}
@@ -275,6 +279,10 @@ export default function Step5Contact() {
               render={({ field }) => (
                 <Input
                   {...field}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^a-zA-Z0-9@._-]/g, "");
+                    field.onChange(val);
+                  }}
                   type="email"
                   placeholder="name@example.com"
                   className={`h-12 bg-white ${errors.contact?.email ? "border-red-500" : ""}`}

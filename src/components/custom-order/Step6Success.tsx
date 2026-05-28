@@ -1,5 +1,5 @@
 import { CustomOrderFormData } from "@/lib/validation/customOrderSchema";
-import { Info, Sparkles, DollarSign } from "lucide-react";
+import { Info, Sparkles, DollarSign, MapPin } from "lucide-react";
 import { format } from "date-fns";
 import HeaderLogo from "@/components/ui/HeaderLogo";
 import { SocialHandleAnchor } from "@/components/ui/SocialHandleAnchor";
@@ -184,9 +184,14 @@ export default function Step6Success({ orderData, customOrderId, onMakeAnotherRe
                   <span className="text-xs font-semibold text-primary/80 block mb-0.5">
                     Location:
                   </span>
-                  <p className="text-xs text-primary/60 leading-relaxed">
-                    Location will be provided in final quote after confirmation.
-                  </p>
+                    <div className="mb-4 p-3 bg-accent/5 rounded-lg border border-accent/20 text-sm text-primary/80 flex items-start gap-2">
+                                  <MapPin className="w-4 h-4 text-accent mt-0.5 shrink-0" />
+                                  <div>
+                                    <span className="font-semibold block mb-0.5">Pickup Location:</span>
+                                    Calgary (East Village area)
+                                  </div>
+                                </div>
+                  
                 </div>
               )}
               {orderData.deliveryMethod === "delivery" && (

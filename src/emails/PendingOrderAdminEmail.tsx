@@ -16,7 +16,7 @@ import {
 } from "@react-email/components";
 import { Order, CartItem } from "@/types";
 
-interface OrderConfirmationEmailProps {
+interface PendingOrderAdminEmailProps {
   order: Order;
 }
 
@@ -26,9 +26,9 @@ const baseUrl = process.env.NEXT_PUBLIC_API_URL
   ? `https://${process.env.VERCEL_URL}`
   : "http://localhost:3000";
 
-export const OrderConfirmationEmail = ({
+export const PendingOrderAdminEmail = ({
   order,
-}: OrderConfirmationEmailProps) => (
+}: PendingOrderAdminEmailProps) => (
   <Html>
     <Head />
     <Preview>
@@ -152,7 +152,7 @@ export const OrderConfirmationEmail = ({
   </Html>
 );
 
-export default OrderConfirmationEmail;
+export default PendingOrderAdminEmail;
 
 // --- STYLES ---
 
