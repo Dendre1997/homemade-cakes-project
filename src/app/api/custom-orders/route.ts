@@ -1,4 +1,3 @@
-
 import { NextResponse } from "next/server";
 import clientPromise from "@/lib/db";
 import { customOrderSchema } from "@/lib/validation/customOrderSchema";
@@ -28,15 +27,45 @@ export async function POST(req: Request) {
 
     const { data } = validation;
 
-    // 2. Database Insertion
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
+    const collection = db.collection("custom_orders");
+
+    // 2. Primary Idempotency Check (Strict Match)
+    if (data.idempotencyKey) {
+      const existingStrict = await collection.findOne({ idempotencyKey: data.idempotencyKey });
+      if (existingStrict) {
+        return NextResponse.json(
+          { success: true, orderId: existingStrict._id.toString(), note: "idempotent_strict" },
+          { status: 200 }
+        );
+      }
+    }
+
+    // 3. Secondary Idempotency Check (Fuzzy Match - last 5 minutes)
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    const existingFuzzy = await collection.findOne({
+      "contact.email": data.contact.email,
+      category: data.category,
+      "details.flavor": data.details.flavor,
+      "details.size": data.details.size,
+      createdAt: { $gte: fiveMinutesAgo }
+    });
+
+    if (existingFuzzy) {
+      return NextResponse.json(
+        { success: true, orderId: existingFuzzy._id.toString(), note: "idempotent_fuzzy" },
+        { status: 200 }
+      );
+    }
+
+    // 4. Database Insertion
     const orderData = {
         ...data,
         status: data.status || 'new'
     };
     
-    const result = await db.collection("custom_orders").insertOne(orderData);
+    const result = await collection.insertOne(orderData);
 
     return NextResponse.json(
       { success: true, orderId: result.insertedId.toString() },
