@@ -20,7 +20,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   },
   support: {
     isLiveChatEnabled: true,
-    botGreetingMessage: "Привіт! Я віртуальний помічник Dilna Cakes. Чим можу допомогти?",
+    botGreetingMessage: "Hi! I’m your bakery assistant. How can I help you today?",
   },
 };
 
