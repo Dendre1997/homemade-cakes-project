@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ProductWithCategory, Flavor, CartItem } from "@/types";
 import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 import { Plus, Minus } from "lucide-react";
 import { useAlert } from "@/contexts/AlertContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/Select";
@@ -30,6 +31,7 @@ export const SetProductForm = ({
   // --- State ---
   // 1. Box Size (Quantity Config)
   const [selectedQtyConfigId, setSelectedQtyConfigId] = useState<string>(""); 
+  const [customBoxSize, setCustomBoxSize] = useState("");
   
   // 2. Flavor Distribution: { flavorId: count }
   const [flavorCounts, setFlavorCounts] = useState<Record<string, number>>({});
@@ -46,7 +48,7 @@ export const SetProductForm = ({
 
   // Helpers
   const selectedConfig = product.availableQuantityConfigs?.find(c => c.label === selectedQtyConfigId || c._id === selectedQtyConfigId);
-  const maxItemsPerBox = selectedConfig?.quantity || 0;
+  const maxItemsPerBox = selectedConfig?.quantity || parseInt(selectedQtyConfigId) || 0;
   
   const currentTotalItems = Object.values(flavorCounts).reduce((a, b) => a + b, 0);
   const remainingItems = maxItemsPerBox - currentTotalItems;
@@ -142,21 +144,37 @@ export const SetProductForm = ({
         {/* 1. Box Size */}
         <div>
             <label className="block text-sm font-bold text-gray-700 mb-1">Box Size / Quantity</label>
-            <Select value={selectedQtyConfigId} onValueChange={(val) => {
-                setSelectedQtyConfigId(val);
-                setFlavorCounts({}); // Reset counts on size change
-            }}>
-                <SelectTrigger className="bg-white border-gray-300">
-                    <SelectValue placeholder="Select Box Size" />
-                </SelectTrigger>
-                <SelectContent>
-                    {product.availableQuantityConfigs?.map(c => (
-                        <SelectItem key={c.label} value={c.label}>
-                            {c.label} ({c.quantity} items) - ${c.price}
-                        </SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
+            <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+              <Input
+                type="number"
+                min={1}
+                placeholder="Enter custom quantity"
+                value={customBoxSize}
+                onChange={(e) => {
+                  setCustomBoxSize(e.target.value);
+                  setSelectedQtyConfigId(e.target.value);
+                  setFlavorCounts({});
+                }}
+                className="w-full sm:w-44 bg-white"
+              />
+              <span className="text-muted-foreground text-sm hidden sm:inline">or pick:</span>
+              <Select value={selectedQtyConfigId} onValueChange={(val) => {
+                  setSelectedQtyConfigId(val);
+                  setCustomBoxSize("");
+                  setFlavorCounts({}); // Reset counts on size change
+              }}>
+                  <SelectTrigger className="bg-white border-gray-300 w-full">
+                      <SelectValue placeholder="Select Box Size" />
+                  </SelectTrigger>
+                  <SelectContent>
+                      {product.availableQuantityConfigs?.map(c => (
+                          <SelectItem key={c.label} value={c.label}>
+                              {c.label} ({c.quantity} items) - ${c.price}
+                          </SelectItem>
+                      ))}
+                  </SelectContent>
+              </Select>
+            </div>
         </div>
 
         {/* 2. Flavor Distributor */}
@@ -171,6 +189,8 @@ export const SetProductForm = ({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-60 overflow-y-auto p-1">
                     {availableFlavors.map(f => {
                          const count = flavorCounts[f._id] || 0;
+                         const differentFlavorsCount = Object.values(flavorCounts).filter(c => c > 0).length;
+                         const isNewFlavor = count === 0;
                          return (
                              <div key={f._id} className="flex items-center justify-between p-2 bg-gray-50 rounded border">
                                  <span className="text-sm truncate mr-2" title={f.name}>{f.name}</span>
@@ -188,7 +208,7 @@ export const SetProductForm = ({
                                         type="button"
                                         onClick={() => handleIncrementFlavor(f._id)}
                                         className="h-6 w-6 flex items-center justify-center rounded bg-primary text-white hover:bg-primary/90 disabled:opacity-50"
-                                        disabled={remainingItems <= 0}
+                                        disabled={remainingItems <= 0 || (isNewFlavor && differentFlavorsCount >= 5)}
                                      >
                                         <Plus className="w-3 h-3" />
                                      </button>

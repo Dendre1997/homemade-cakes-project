@@ -26,6 +26,7 @@ export interface CartItem {
     };
   };
   addons?: SelectedAddon[];
+  isCombo?: boolean;
 }
 
 interface CartState {

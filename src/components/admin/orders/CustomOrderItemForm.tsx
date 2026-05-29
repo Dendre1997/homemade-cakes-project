@@ -14,10 +14,11 @@ import {
   appendCloudinaryUploadPreset,
   cloudinaryUploadUrl,
 } from "@/lib/cloudinaryClient";
-import { Plus } from "lucide-react";
+import { Plus, Minus } from "lucide-react";
 import { useAlert } from "@/contexts/AlertContext";
 import { AddonAdminSelector } from "@/components/admin/addons/AddonAdminSelector";
 import { SelectedAddon } from "@/types";
+import { ComboProductForm } from "@/components/admin/orders/ComboProductForm";
 
 // Icons Imports
 import { FourInchBentoIcon } from "@/components/icons/cake-sizes/FourInchBentoIcon";
@@ -99,6 +100,8 @@ export default function CustomOrderItemForm({
 
   // -- State --
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>(initialValues?.categoryId || "");
+  const [customBoxSize, setCustomBoxSize] = useState("");
+  const [flavorCounts, setFlavorCounts] = useState<Record<string, number>>({});
   const [images, setImages] = useState<string[]>(initialValues?.images || []);
   const [selectedImage, setSelectedImage] = useState<string>(initialValues?.selectedImage || "");
   const [sizeValue, setSizeValue] = useState<string>(initialValues?.sizeValue || "");
@@ -136,6 +139,15 @@ export default function CustomOrderItemForm({
       .sort((a, b) => (a.sizeValue || 0) - (b.sizeValue || 0));
   }, [diameters, selectedCategoryId]);
 
+  useEffect(() => {
+    if (activeCategoryObj?.categoryType === 'set') {
+      const selected = Object.entries(flavorCounts)
+        .filter(([_, count]) => count > 0)
+        .map(([fId, count]) => `${count}x ${flavors.find(f => f._id === fId)?.name || fId}`)
+        .join(', ');
+      setFlavorValue(selected);
+    }
+  }, [flavorCounts, activeCategoryObj, flavors]);
 
   // -- Handlers --
 
@@ -337,8 +349,19 @@ export default function CustomOrderItemForm({
        </div>
 
        {selectedCategoryId && (
-         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 mt-6 border-t border-primary/10 pt-8">
-             {/* LEFT: Images & Description */}
+           (activeCategoryObj?.categoryType as string) === 'combo' ? (
+               <div className="mt-6 border-t border-primary/10 pt-8">
+                   <ComboProductForm
+                       allCategories={categories}
+                       allFlavors={flavors}
+                       allDiameters={diameters}
+                       onAdd={(item) => onSubmit(item)}
+                       onCancel={() => setSelectedCategoryId("")}
+                   />
+               </div>
+           ) : (
+             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 mt-6 border-t border-primary/10 pt-8">
+                 {/* LEFT: Images & Description */}
              <div className="space-y-8 min-w-0">
                  
                  {/* GALLERY REFERENCES */}
@@ -417,26 +440,36 @@ export default function CustomOrderItemForm({
                      <Label className="block text-md border-b pb-2">Size / Quantity Config</Label>
                      
                      <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
-                         {(activeCategoryObj?.categoryType === "combo" || activeCategoryObj?.categoryType === "set") ? (
-                             BOX_SIZES.map((box) => (
-                               <button
-                                 key={box.value}
-                                 type="button"
-                                 onClick={() => setSizeValue(box.value)}
-                                 className={`flex w-32 shrink-0 flex-col items-center gap-2 rounded-xl border p-3 text-center transition-all duration-200 ${
-                                   sizeValue === box.value
-                                     ? "border-accent bg-accent/5 shadow-sm shadow-accent/10"
-                                     : "border-primary/10 bg-white hover:border-accent/50 hover:bg-subtleBackground"
-                                 }`}
-                               >
-                                 <div className="flex h-16 w-16 items-center justify-center pointer-events-none">
-                                   <box.Icon className={`h-full w-full ${sizeValue === box.value ? "text-accent" : "text-primary"}`} />
+                         {(activeCategoryObj?.categoryType as string) === "combo" || activeCategoryObj?.categoryType === "set" ? (
+                             <div className="flex flex-col gap-4 w-full">
+                               <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+                                 <div className="flex gap-4 overflow-x-auto pb-2 custom-scrollbar flex-1">
+                                   {BOX_SIZES.map((box) => (
+                                     <button
+                                       key={box.value}
+                                       type="button"
+                                       onClick={() => {
+                                         setSizeValue(box.value);
+                                         setCustomBoxSize("");
+                                         setFlavorCounts({});
+                                       }}
+                                       className={`flex w-32 shrink-0 flex-col items-center gap-2 rounded-xl border p-3 text-center transition-all duration-200 ${
+                                         sizeValue === box.value
+                                           ? "border-accent bg-accent/5 shadow-sm shadow-accent/10"
+                                           : "border-primary/10 bg-white hover:border-accent/50 hover:bg-subtleBackground"
+                                       }`}
+                                     >
+                                       <div className="flex h-16 w-16 items-center justify-center pointer-events-none">
+                                         <box.Icon className={`h-full w-full ${sizeValue === box.value ? "text-accent" : "text-primary"}`} />
+                                       </div>
+                                       <p className="font-bold text-sm text-primary">
+                                         {box.label} {box.value}
+                                       </p>
+                                     </button>
+                                   ))}
                                  </div>
-                                 <p className="font-bold text-sm text-primary">
-                                   {box.label} {box.value}
-                                 </p>
-                               </button>
-                             ))
+                               </div>
+                             </div>
                          ) : (
                              activeDiameters.map((d) => {
                                const IconComp = getIllustrationForSize(d.sizeValue || 0);
@@ -461,7 +494,7 @@ export default function CustomOrderItemForm({
                          )}
                      </div>
 
-                     {!isIconPicked && (
+                     
                         <div className="mt-2 animate-in slide-in-from-top-2 duration-300">
                           <Label className="text-xs text-muted-foreground mb-1 block">Or Manual Type Override</Label>
                           <Input 
@@ -471,17 +504,82 @@ export default function CustomOrderItemForm({
                             className="bg-white border-dashed"
                           />
                         </div>
-                     )}
+                     
                  </div>
 
                  {/* FLAVOR SELECTION UI */}
                  <div className="pt-2">
-                     <HybridSelector 
-                         label={`Flavor Profile (${activeFlavors.length} detected)`}
-                         options={activeFlavors}
-                         value={flavorValue}
-                         onChange={(val) => setFlavorValue(val)}
-                     />
+                     {activeCategoryObj?.categoryType === "set" ? (
+                         <div className="bg-white p-4 rounded-md border border-gray-200 mt-2">
+                             <div className="flex justify-between items-center mb-2">
+                                 <label className="text-sm font-bold text-gray-700">Distribute Flavors (Max 5)</label>
+                                 <span className={`text-xs font-bold px-2 py-1 rounded ${
+                                     (parseInt(sizeValue) || 0) - Object.values(flavorCounts).reduce((a, b) => a + b, 0) === 0 
+                                     ? 'bg-green-100 text-green-700' 
+                                     : 'bg-yellow-100 text-yellow-700'
+                                 }`}>
+                                     {(parseInt(sizeValue) || 0) - Object.values(flavorCounts).reduce((a, b) => a + b, 0) === 0 
+                                     ? "Box Full" 
+                                     : `Remaining slots: ${(parseInt(sizeValue) || 0) - Object.values(flavorCounts).reduce((a, b) => a + b, 0)}`}
+                                 </span>
+                             </div>
+                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-60 overflow-y-auto p-1">
+                                 {activeFlavors.map(f => {
+                                      const count = flavorCounts[f._id] || 0;
+                                      const remainingItems = (parseInt(sizeValue) || 0) - Object.values(flavorCounts).reduce((a, b) => a + b, 0);
+                                      const differentFlavorsCount = Object.values(flavorCounts).filter(c => c > 0).length;
+                                      const isNewFlavor = count === 0;
+                                      return (
+                                          <div key={f._id} className="flex items-center justify-between p-2 bg-gray-50 rounded border gap-2">
+                                              <span className="text-sm truncate flex-1 min-w-0 mr-2" title={f.name}>{f.name}</span>
+                                              <div className="flex items-center gap-2 flex-shrink-0">
+                                                  <button 
+                                                     type="button"
+                                                     onClick={() => {
+                                                         setFlavorCounts(prev => {
+                                                             const newCount = (prev[f._id] || 0) - 1;
+                                                             if (newCount <= 0) {
+                                                                 const copy = { ...prev };
+                                                                 delete copy[f._id];
+                                                                 return copy;
+                                                             }
+                                                             return { ...prev, [f._id]: newCount };
+                                                         });
+                                                     }}
+                                                     className="h-6 w-6 flex items-center justify-center rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+                                                     disabled={count === 0}
+                                                  >
+                                                     <Minus className="w-3 h-3" />
+                                                  </button>
+                                                  <span className="w-4 text-center text-sm font-bold">{count}</span>
+                                                  <button 
+                                                     type="button"
+                                                     onClick={() => {
+                                                         if (remainingItems <= 0) return;
+                                                         setFlavorCounts(prev => ({
+                                                             ...prev,
+                                                             [f._id]: (prev[f._id] || 0) + 1
+                                                         }));
+                                                     }}
+                                                     className="h-6 w-6 flex items-center justify-center rounded bg-primary text-white hover:bg-primary/90 disabled:opacity-50"
+                                                     disabled={remainingItems <= 0 || (isNewFlavor && differentFlavorsCount >= 5) || !(parseInt(sizeValue) > 0)}
+                                                  >
+                                                     <Plus className="w-3 h-3" />
+                                                  </button>
+                                              </div>
+                                          </div>
+                                      );
+                                 })}
+                             </div>
+                         </div>
+                     ) : (
+                         <HybridSelector 
+                             label={`Flavor Profile (${activeFlavors.length} detected)`}
+                             options={activeFlavors}
+                             value={flavorValue}
+                             onChange={(val) => setFlavorValue(val)}
+                         />
+                     )}
                  </div>
                  
                  <div className="pt-2 animate-in slide-in-from-top-2 duration-300">
@@ -560,6 +658,7 @@ export default function CustomOrderItemForm({
                  </div>
              </div>
          </div>
+         )
        )}
     </div>
   );

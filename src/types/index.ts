@@ -105,7 +105,7 @@ export interface Product {
   // SEO
   slug: string;
   
-  productType?: 'cake' | 'set' | 'custom'; // Defaults to 'cake'
+  productType?: 'cake' | 'set' | 'combo' | 'custom'; // Defaults to 'cake'
   availableQuantityConfigs?: {
     _id?: string;
     label: string;
@@ -142,7 +142,7 @@ export interface ProductFormData {
   slug?: string;
 
   // NEW FIELDS for Form
-  productType?: 'cake' | 'set' | 'custom';
+  productType?: 'cake' | 'set' | 'combo' | 'custom';
   availableQuantityConfigs?: {
     label: string;
     quantity: number;
@@ -210,9 +210,11 @@ export interface CartItem {
   discountId?: string | null;
   rowTotal?: number;
   isCustom?: boolean;
+  isCombo?: boolean;
   
   // NEW FIELD
   selectedConfig?: {
+    setCategoryId?: string;
     quantityConfigId?: string;
     cake?: {
       flavorId: string;
@@ -223,7 +225,7 @@ export interface CartItem {
   };
 
   // Custom Order Fields
-  productType?: 'cake' | 'set' | 'custom';
+  productType?: 'cake' | 'set' | 'combo' | 'custom';
   customSize?: string;
   customFlavor?: string;
   flavorNote?: string;
@@ -342,7 +344,7 @@ export interface OrderItem {
   };
 
   // Custom Order Fields
-  productType?: 'cake' | 'set' | 'custom';
+  productType?: 'cake' | 'set' | 'combo' | 'custom';
   customSize?: string;
   customFlavor?: string;
   flavorNote?: string;

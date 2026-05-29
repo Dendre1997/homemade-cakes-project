@@ -7,7 +7,7 @@ import { useAlert } from "@/contexts/AlertContext";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import LoadingSpinner from "@/components/ui/Spinner";
-import { Trash2, Calendar as CalendarIcon, X } from "lucide-react";
+import { Trash2, Calendar as CalendarIcon, X, Plus } from "lucide-react";
 import { ProductPicker } from "@/components/admin/ProductPicker";
 import CustomDatePicker from "@/components/ui/CustomDatePicker";
 import { format } from "date-fns";
@@ -15,7 +15,8 @@ import { ArrowLeft } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/Select";
 import { StandardProductForm } from "@/components/admin/orders/StandardProductForm";
 import { SetProductForm } from "@/components/admin/orders/SetProductForm";
-import { ProductWithCategory, Flavor, Diameter, OrderItem } from "@/types";
+import { ComboProductForm } from "@/components/admin/orders/ComboProductForm";
+import { ProductCategory, ProductWithCategory, Flavor, Diameter, OrderItem } from "@/types";
 import CustomOrderItemForm from "@/components/admin/orders/CustomOrderItemForm";
 
 export default function ManualOrderPage() {
@@ -26,6 +27,7 @@ export default function ManualOrderPage() {
   const [products, setProducts] = useState<ProductWithCategory[]>([]);
   const [allFlavors, setAllFlavors] = useState<Flavor[]>([]);
   const [allDiameters, setAllDiameters] = useState<Diameter[]>([]); 
+  const [allCategories, setAllCategories] = useState<ProductCategory[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
 
   // --- Form State ---
@@ -64,10 +66,11 @@ export default function ManualOrderPage() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const [prodRes, flavRes, diamRes] = await Promise.all([
+        const [prodRes, flavRes, diamRes, catRes] = await Promise.all([
             fetch("/api/admin/products?context=admin"), 
             fetch("/api/admin/flavors"), 
-            fetch("/api/admin/diameters")
+            fetch("/api/admin/diameters"),
+            fetch("/api/categories")
         ]);
         
         if (prodRes.ok) {
@@ -76,6 +79,7 @@ export default function ManualOrderPage() {
         }
         if (flavRes.ok) setAllFlavors(await flavRes.json());
         if (diamRes.ok) setAllDiameters(await diamRes.json());
+        if (catRes.ok) setAllCategories(await catRes.json());
       } catch (e) {
         console.error("Failed to load catalog data", e);
         showAlert("Failed to load catalog data", "error");
@@ -474,7 +478,7 @@ export default function ManualOrderPage() {
                         </div>
                       )}
                       
-                      {selectedProduct.productType === 'set' ? (
+                      {selectedProduct?.productType === 'set' ? (
                           <SetProductForm 
                              product={selectedProduct}
                              allFlavors={allFlavors} 
@@ -483,7 +487,7 @@ export default function ManualOrderPage() {
                              }}
                              onCancel={() => setSelectedProduct(null)}
                           />
-                      ) : (
+                      ) : selectedProduct ? (
                           <StandardProductForm 
                              product={selectedProduct}
                              allFlavors={allFlavors}
@@ -493,7 +497,7 @@ export default function ManualOrderPage() {
                              }}
                              onCancel={() => setSelectedProduct(null)}
                           />
-                      )}
+                      ) : null}
                    </div>
                 )}
               </div>

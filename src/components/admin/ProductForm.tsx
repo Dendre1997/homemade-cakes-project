@@ -107,8 +107,7 @@ const ProductForm = ({
   const [collectionIds, setCollectionIds] = useState<string[]>([]);
   const [defaultAddons, setDefaultAddons] = useState<SelectedAddon[]>([]);
   
-  // Sets & Combo State
-  const [productType, setProductType] = useState<'cake' | 'set' | 'custom'>('cake');
+  const [productType, setProductType] = useState<'cake' | 'set' | 'combo' | 'custom'>('cake');
   const [availableQuantityConfigs, setAvailableQuantityConfigs] = useState<QuantityConfig[]>([]);
   
   const [isCombo, setIsCombo] = useState(false);
