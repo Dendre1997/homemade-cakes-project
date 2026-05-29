@@ -280,8 +280,8 @@ export const OrderDetailActions = ({
                   {availabilityData ? (
                     <OrderAssignmentDatePicker
                       capacityPercentages={capacityPercentages}
-                      adminBlockedDates={availabilityData.adminBlockedDates}
-                      leadTimeDays={availabilityData.leadTimeDays}
+                      adminBlockedDates={[]}
+                      leadTimeDays={0}
                       selected={adminPopupDate}
                       onSelect={handleAdminDateSelect}
                       isSplitRequired={true}
