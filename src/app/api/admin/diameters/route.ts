@@ -18,6 +18,7 @@ export async function POST(request: NextRequest) {
       servings,
       illustration,
       imageUrl,
+      basePrice,
     }: Partial<Diameter> = body;
 
     if (!name || typeof sizeValue !== "number" || !servings || !illustration) {
@@ -30,7 +31,7 @@ export async function POST(request: NextRequest) {
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
 
-    const newDiameterData = {
+    const newDiameterData: any = {
       name,
       sizeValue,
       servings,
@@ -38,6 +39,10 @@ export async function POST(request: NextRequest) {
       imageUrl,
       categoryIds: categoryIds || [],
     };
+    
+    if (basePrice !== undefined && basePrice !== null) {
+      newDiameterData.basePrice = basePrice;
+    }
 
     const result = await db.collection('diameters').insertOne(newDiameterData);
 

@@ -23,27 +23,33 @@ export const calculateItemPrice = ({
 }: PriceCalculationParams): number => {
   if (!product) return 0;
 
-  let total = product.structureBasePrice;
-
-  // Flavor Price
+  let total = 0;
+  let flavorPrice = 0;
   if (flavorId) {
     const flav = availableFlavors.find((f) => f._id === flavorId);
-    if (flav) total += flav.price;
+    if (flav) flavorPrice = flav.price;
   }
 
-  // Diameter Multiplier
+  let currentInscriptionPrice = 0;
+  if (hasInscription && inscriptionAvailable) {
+    currentInscriptionPrice = inscriptionPrice;
+  }
+
   if (diameterId) {
     const diamConfig = product.availableDiameterConfigs?.find(
       (c) => c.diameterId === diameterId
     );
     if (diamConfig) {
-      total = total * diamConfig.multiplier;
+      if (diamConfig.price && diamConfig.price > 0) {
+        total = diamConfig.price + flavorPrice + currentInscriptionPrice;
+      } else {
+        total = (product.structureBasePrice + flavorPrice + currentInscriptionPrice) * (diamConfig.multiplier || 1);
+      }
+    } else {
+      total = product.structureBasePrice + flavorPrice + currentInscriptionPrice;
     }
-  }
-
-  // Inscription
-  if (hasInscription && inscriptionAvailable) {
-    total += inscriptionPrice;
+  } else {
+    total = product.structureBasePrice + flavorPrice + currentInscriptionPrice;
   }
 
   return total * quantity;

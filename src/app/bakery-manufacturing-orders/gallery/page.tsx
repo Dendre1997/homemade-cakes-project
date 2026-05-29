@@ -22,7 +22,7 @@ import { ChipCheckbox } from "@/components/ui/ChipCheckbox";
 import { AddonSelector } from "@/components/shared/AddonSelector";
 import { useAlert } from "@/contexts/AlertContext";
 import { useConfirmation } from "@/contexts/ConfirmationContext";
-import { IGalleryImage, ProductCategory } from "@/types";
+import { IGalleryImage, ProductCategory, Collection } from "@/types";
 import { cn } from "@/lib/utils";
 import LoadingSpinner from "@/components/ui/Spinner";
 import {
@@ -36,6 +36,7 @@ export default function GalleryAdminPage() {
 
   const [images, setImages] = useState<IGalleryImage[]>([]);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
+  const [collections, setCollections] = useState<Collection[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
   // Refs
@@ -52,6 +53,7 @@ export default function GalleryAdminPage() {
     description: "",
     imageUrl: "",
     categories: [],
+    collectionIds: [],
     decorationPrice: 0,
     isActive: true,
     defaultAddons: [],
@@ -60,15 +62,17 @@ export default function GalleryAdminPage() {
   const fetchData = useCallback(async () => {
     try {
       setIsLoading(true);
-      const [galleryRes, categoriesRes] = await Promise.all([
+      const [galleryRes, categoriesRes, collectionsRes] = await Promise.all([
         fetch("/api/admin/gallery"),
-        fetch("/api/categories")
+        fetch("/api/categories"),
+        fetch("/api/collections/all")
       ]);
 
-      if (!galleryRes.ok || !categoriesRes.ok) throw new Error("Failed to fetch data");
+      if (!galleryRes.ok || !categoriesRes.ok || !collectionsRes.ok) throw new Error("Failed to fetch data");
 
       setImages(await galleryRes.json());
       setCategories(await categoriesRes.json());
+      setCollections(await collectionsRes.json());
     } catch (error) {
       console.error(error);
       showAlert("Failed to load gallery data", "error");
@@ -419,6 +423,28 @@ export default function GalleryAdminPage() {
                           }}
                         >
                           {cat.name}
+                        </ChipCheckbox>
+                      ))}
+                   </div>
+                </div>
+
+                <div className="pt-2 border-t mt-4">
+                   <Label className="mb-3 block">Collections</Label>
+                   <div className="flex flex-wrap gap-2">
+                      {collections.map(col => (
+                        <ChipCheckbox
+                          key={col._id.toString()}
+                          checked={editingItem?.collectionIds?.includes(col._id.toString()) || false}
+                          onCheckedChange={() => {
+                            const colId = col._id.toString();
+                            const currentCols = editingItem?.collectionIds || [];
+                            const newCols = currentCols.includes(colId)
+                              ? currentCols.filter(c => c !== colId)
+                              : [...currentCols, colId];
+                            setEditingItem(prev => ({ ...prev!, collectionIds: newCols }));
+                          }}
+                        >
+                          {col.name}
                         </ChipCheckbox>
                       ))}
                    </div>

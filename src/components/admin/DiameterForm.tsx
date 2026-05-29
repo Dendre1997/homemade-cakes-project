@@ -62,6 +62,7 @@ const DiameterForm = ({
     illustration: "",
     imageUrl: "",
     categoryIds: [],
+    basePrice: undefined,
   });
 
   const [isUploading, setIsUploading] = useState(false);
@@ -79,6 +80,7 @@ const DiameterForm = ({
         illustration: existingDiameter.illustration || "",
         imageUrl: existingDiameter.imageUrl || "",
         categoryIds: existingDiameter.categoryIds || [],
+        basePrice: existingDiameter.basePrice,
       });
     } else if (!isSubmitting) {
       setFormData({
@@ -88,6 +90,7 @@ const DiameterForm = ({
         illustration: "",
         imageUrl: "",
         categoryIds: [],
+        basePrice: undefined,
       });
     }
   }, [existingDiameter, isSubmitting]);
@@ -251,6 +254,29 @@ const DiameterForm = ({
           onChange={handleChange}
           required
         />
+      </div>
+
+      <div>
+        <FormLabel htmlFor="basePrice">
+          Base Price for Custom Orders (optional)
+        </FormLabel>
+        <Input
+          type="number"
+          id="basePrice"
+          value={formData.basePrice ?? ""}
+          onChange={(e) => {
+            const val = e.target.value;
+            setFormData(prev => ({
+              ...prev,
+              basePrice: val === "" ? undefined : parseFloat(val)
+            }));
+          }}
+          placeholder="e.g. 50"
+          step="0.01"
+        />
+        <p className="text-xs text-primary/60 mt-1">
+          If set, this price will be used directly in the custom order form instead of calculating from category base price.
+        </p>
       </div>
 
       <div>

@@ -168,6 +168,12 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick }: { onNext:
   const approximatePrice = useMemo(() => {
     if (!isStandard || basePrice <= 0) return 0;
     if (!standardDiameterId) return basePrice; // show base price before selection
+    const selectedDiameter = filteredDiameters.find((d: any) => d._id === standardDiameterId);
+    // Use fixed diameter base price if set
+    if (selectedDiameter?.basePrice && selectedDiameter.basePrice > 0) {
+      return selectedDiameter.basePrice;
+    }
+    // Fallback to existing index-based calculation
     const idx = filteredDiameters.findIndex((d: any) => d._id === standardDiameterId);
     if (idx < 0) return basePrice;
     if (idx <= 0) return basePrice; // smallest size — keep exact base price

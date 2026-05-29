@@ -12,6 +12,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const categoryId = searchParams.get("categoryId");
+    const collectionId = searchParams.get("collectionId");
 
     const collection = await getGalleryCollection();
 
@@ -21,6 +22,10 @@ export async function GET(request: NextRequest) {
       // categories is stored as an array of ObjectId strings.
       // Support both raw string and ObjectId formats for robustness.
       query.categories = { $in: [categoryId, new ObjectId(categoryId)] };
+    }
+    
+    if (collectionId) {
+      query.collectionIds = { $in: [collectionId, new ObjectId(collectionId)] };
     }
 
     const images = await collection

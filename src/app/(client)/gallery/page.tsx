@@ -12,7 +12,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/Dialog";
 import { Button } from "@/components/ui/Button";
-import { IGalleryImage, ProductCategory } from "@/types";
+import { IGalleryImage, ProductCategory, Collection } from "@/types";
 // import { cn } from "@/lib/utils";
 import LoadingSpinner from "@/components/ui/Spinner";
 import { useAlert } from "@/contexts/AlertContext";
@@ -57,7 +57,9 @@ export default function GalleryPage() {
   // -- State --
   const [images, setImages] = useState<IGalleryImage[]>([]);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
+  const [collections, setCollections] = useState<Collection[]>([]);
   const [activeCategory, setActiveCategory] = useState<string>("all");
+  const [activeCollection, setActiveCollection] = useState<string | null>(null);
   const [currentIndex, setCurrentIndex] = useState<number | null>(null);
   const [direction, setDirection] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -67,18 +69,21 @@ export default function GalleryPage() {
   const fetchData = useCallback(async () => {
     try {
       setIsLoading(true);
-      const [galleryRes, categoriesRes] = await Promise.all([
+      const [galleryRes, categoriesRes, collectionsRes] = await Promise.all([
         fetch("/api/gallery"),
-        fetch("/api/categories")
+        fetch("/api/categories"),
+        fetch("/api/collections/all")
       ]);
 
-      if (!galleryRes.ok || !categoriesRes.ok) throw new Error("Failed to load gallery");
+      if (!galleryRes.ok || !categoriesRes.ok || !collectionsRes.ok) throw new Error("Failed to load gallery");
 
       const galleryData = await galleryRes.json();
       const categoriesData = await categoriesRes.json();
+      const collectionsData = await collectionsRes.json();
 
       setImages(galleryData);
       setCategories(categoriesData);
+      setCollections(collectionsData);
     } catch (error) {
       console.error(error);
       showAlert("Could not load the gallery. Please try again later.", "error");
@@ -93,11 +98,16 @@ export default function GalleryPage() {
 
   // -- Derived State (Logic Trap Fix) --
   const filteredImages = useMemo(() => {
-    if (activeCategory === "all") return images;
-    return images.filter((img) => 
-      img.categories?.includes(activeCategory)
-    );
-  }, [images, activeCategory]);
+    let result = activeCategory === "all" ? images : images.filter(img => img.categories?.includes(activeCategory));
+    if (activeCollection) {
+      result = result.filter(img => img.collectionIds?.includes(activeCollection));
+    }
+    return result;
+  }, [images, activeCategory, activeCollection]);
+
+  const hasCollections = useMemo(() =>
+    filteredImages.some(img => img.collectionIds && img.collectionIds.length > 0)
+  , [filteredImages]);
 
   // -- Modal Controls --
   const handleOpenModal = (index: number) => {
@@ -177,6 +187,7 @@ export default function GalleryPage() {
             size="sm"
             onClick={() => {
               setActiveCategory("all");
+              setActiveCollection(null);
               setCurrentIndex(null);
             }}
             className="rounded-full px-lg border border-border"
@@ -190,6 +201,7 @@ export default function GalleryPage() {
               size="sm"
               onClick={() => {
                 setActiveCategory(cat._id);
+                setActiveCollection(null);
                 setCurrentIndex(null);
               }}
               className="rounded-full px-lg border border-border"
@@ -198,6 +210,35 @@ export default function GalleryPage() {
             </Button>
           ))}
         </div>
+        {hasCollections && (
+          <div className="flex flex-wrap gap-2 mt-3">
+            <Button
+              variant={activeCollection === null ? "primary" : "secondary"}
+              size="sm"
+              onClick={() => setActiveCollection(null)}
+              className="rounded-full px-lg border border-border"
+            >
+              All
+            </Button>
+            {collections
+              .filter(col => filteredImages.some(img => img.collectionIds?.includes(col._id.toString())))
+              .map(col => (
+                <Button
+                  key={col._id.toString()}
+                  variant={activeCollection === col._id.toString() ? "primary" : "secondary"}
+                  size="sm"
+                  onClick={() => {
+                    setActiveCollection(col._id.toString());
+                    setCurrentIndex(null);
+                  }}
+                  className="rounded-full px-lg border border-border"
+                >
+                  {col.name}
+                </Button>
+              ))
+            }
+          </div>
+        )}
       </section>
 
       {/* Image Grid */}

@@ -45,11 +45,13 @@ export interface Diameter {
   illustration: string;
   imageUrl?: string;
   categoryIds?: string[];
+  basePrice?: number;
 }
 
 export interface AvailableDiameterConfig {
   diameterId: string;
-  multiplier: number;
+  price?: number;
+  multiplier?: number;
 }
 
 // ... existing imports
@@ -127,7 +129,7 @@ export interface ProductFormData {
   isActive: boolean;
   availableFlavorIds: string[];
   allergenIds: string[];
-  availableDiameterConfigs: { diameterId: string; multiplier: number }[];
+  availableDiameterConfigs: AvailableDiameterConfig[];
   imageUrls: string[];
   inscriptionSettings?: {
     isAvailable: boolean;
@@ -529,6 +531,7 @@ export interface IGalleryImage {
   title: string;
   description?: string;
   categories: string[];      // e.g., ['cake', 'wedding', 'vintage']
+  collectionIds?: string[];  // For filtering by collection
   decorationPrice?: number;  // Optional add-on price for this design
   isActive: boolean;         // Allows hiding without deleting
   createdAt: Date | string;
