@@ -320,18 +320,21 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
         }
         
      } else {
-        calculatedPrice = product.structureBasePrice;
-        
         const selectedFlavor = product.availableFlavors.find(
           (f) => f._id.toString() === selectedFlavorId
         );
-        if (selectedFlavor) calculatedPrice += selectedFlavor.price;
-    
-        if (product.inscriptionSettings?.isAvailable && inscription.trim() !== "") {
-          calculatedPrice += product.inscriptionSettings.price;
-        }  
-        if (selectedDiameterConfig)
-          calculatedPrice *= selectedDiameterConfig.multiplier;
+        const flavorPrice = selectedFlavor ? selectedFlavor.price : 0;
+        const inscriptionFee = (product.inscriptionSettings?.isAvailable && inscription.trim() !== "") ? product.inscriptionSettings.price : 0;
+
+        if (selectedDiameterConfig) {
+          if (selectedDiameterConfig.price && selectedDiameterConfig.price > 0) {
+            calculatedPrice = selectedDiameterConfig.price + flavorPrice + inscriptionFee;
+          } else {
+            calculatedPrice = (product.structureBasePrice + flavorPrice + inscriptionFee) * (selectedDiameterConfig.multiplier || 1);
+          }
+        } else {
+          calculatedPrice = product.structureBasePrice + flavorPrice + inscriptionFee;
+        }
      }
   }
 

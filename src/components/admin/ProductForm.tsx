@@ -153,7 +153,7 @@ const ProductForm = ({
   const addDiameter = (diameterId: string) => {
     setAvailableDiameterConfigs((prev) => [
       ...prev,
-      { diameterId, multiplier: 1 },
+      { diameterId, price: 0 },
     ]);
   };
   const removeDiameter = (diameterId: string) => {
@@ -174,22 +174,22 @@ const ProductForm = ({
 
   const handleDiameterConfigChange = (
     diameterId: string,
-    multiplier: string
+    value: string
   ) => {
-    const numericMultiplier = parseFloat(multiplier);
+    const numericValue = parseFloat(value);
     setAvailableDiameterConfigs((prev) => {
       const existingConfig = prev.find((c) => c.diameterId === diameterId);
-      if (multiplier === "" || isNaN(numericMultiplier)) {
+      if (value === "" || isNaN(numericValue)) {
         return prev.filter((c) => c.diameterId !== diameterId);
       }
       if (existingConfig) {
         return prev.map((c) =>
           c.diameterId === diameterId
-            ? { ...c, multiplier: numericMultiplier }
+            ? { ...c, price: numericValue, multiplier: undefined }
             : c
         );
       } else {
-        return [...prev, { diameterId, multiplier: numericMultiplier }];
+        return [...prev, { diameterId, price: numericValue }];
       }
     });
   };
@@ -746,14 +746,14 @@ const ProductForm = ({
                             </div>
                             <div className="flex items-center gap-2">
                               <span className="text-xs text-muted-foreground">
-                                x
+                                $
                               </span>
                               <Input
                                 type="number"
-                                placeholder="1.0"
-                                step="0.1"
-                                className="w-20 h-8 text-right bg-white"
-                                value={diameter.multiplier}
+                                placeholder="0.00"
+                                step="0.01"
+                                className="w-24 h-8 text-right bg-white"
+                                value={diameter.price ?? diameter.multiplier ?? ""}
                                 onChange={(e) =>
                                   handleDiameterConfigChange(
                                     diameter.diameterId,

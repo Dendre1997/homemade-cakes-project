@@ -47,7 +47,7 @@ export async function PUT(
 
   try {
     const { id } = await params;
-    const { sizeValue, categoryIds, name, servings, illustration, imageUrl } =
+    const { sizeValue, categoryIds, name, servings, illustration, imageUrl, basePrice } =
       await request.json();
 
     if (!name || typeof sizeValue !== "number" || !servings || !illustration) {
@@ -60,18 +60,26 @@ export async function PUT(
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
 
+    const updateDoc: any = {
+      $set: {
+        name,
+        sizeValue,
+        servings,
+        illustration,
+        imageUrl,
+        categoryIds: categoryIds || [],
+      }
+    };
+
+    if (basePrice !== undefined && basePrice !== null) {
+      updateDoc.$set.basePrice = basePrice;
+    } else {
+      updateDoc.$unset = { basePrice: "" };
+    }
+
     const result = await db.collection("diameters").updateOne(
       { _id: new ObjectId(id) },
-      {
-        $set: {
-          name,
-          sizeValue,
-          servings,
-          illustration,
-          imageUrl,
-          categoryIds: categoryIds || [],
-        },
-      }
+      updateDoc
     );
 
     if (result.matchedCount === 0) {

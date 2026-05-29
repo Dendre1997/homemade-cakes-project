@@ -190,23 +190,24 @@ export async function calculateOrderPricing(
         const dbFlavor = flavorMap.get(flavorId);
         const flavorPrice = dbFlavor ? dbFlavor.price : 0;
 
-        // B. Diameter Multiplier
-        const diameterId = idParts[2]; // From your ID structure
-        const diameterConfig = dbProduct.availableDiameterConfigs?.find(
-        (c) => c.diameterId.toString() === diameterId
-        );
-        const multiplier = diameterConfig ? diameterConfig.multiplier : 1;
-
-        // C. Inscription Price
+        // B. Inscription Price
         const inscriptionPrice =
         item.inscription && dbProduct.inscriptionSettings?.isAvailable
             ? dbProduct.inscriptionSettings.price
             : 0;
 
-        // D. Formula
-        unitPrice =
-        ((dbProduct.structureBasePrice + flavorPrice + inscriptionPrice) *
-        multiplier) + addonCost;
+        // C. Diameter Logic
+        const diameterId = idParts[2]; // From your ID structure
+        const diamConfig = dbProduct.availableDiameterConfigs?.find(
+          (c) => c.diameterId.toString() === diameterId
+        );
+
+        if (diamConfig?.price && diamConfig.price > 0) {
+          unitPrice = diamConfig.price + flavorPrice + inscriptionPrice + addonCost;
+        } else {
+          const multiplier = diamConfig?.multiplier ?? 1;
+          unitPrice = (dbProduct.structureBasePrice + flavorPrice + inscriptionPrice) * multiplier + addonCost;
+        }
     }
 
     const lineItemOriginalTotal = unitPrice * item.quantity;

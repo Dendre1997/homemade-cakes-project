@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 import { MultiImageUpload } from "@/components/custom-order/MultiImageUpload";
 import { AddonSelector } from "@/components/shared/AddonSelector";
-import { Addon, IGalleryImage, SelectedAddon } from "@/types";
+import { Addon, IGalleryImage, SelectedAddon, Collection } from "@/types";
 import { calculateCustomOrderTotal } from "@/lib/pricing/customOrderPricing";
 
 export default function Step4Design() {
@@ -28,6 +28,8 @@ export default function Step4Design() {
   const [catalogImages, setCatalogImages] = useState<string[]>([]);
   const [galleryData, setGalleryData] = useState<IGalleryImage[]>([]);
   const [allAddons, setAllAddons] = useState<Addon[]>([]);
+  const [allCollections, setAllCollections] = useState<Collection[]>([]);
+  const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null);
   
   // Category ID & Type State
   const [activeCategoryId, setActiveCategoryId] = useState<string | undefined>(undefined);
@@ -68,14 +70,18 @@ export default function Step4Design() {
     async function fetchCatalogInspiration() {
       setIsLoadingCatalog(true);
       try {
-        const [catRes, addonsRes] = await Promise.all([
+        const [catRes, addonsRes, colsRes] = await Promise.all([
             fetch("/api/categories"),
-            fetch("/api/addons")
+            fetch("/api/addons"),
+            fetch("/api/collections/all")
         ]);
         if (!catRes.ok) throw new Error("Failed to load categories");
         const categories = await catRes.json();
         if (addonsRes.ok) {
             setAllAddons(await addonsRes.json());
+        }
+        if (colsRes.ok) {
+            setAllCollections(await colsRes.json());
         }
 
         const activeCategoryObj = categories.find((c: any) => {
@@ -203,6 +209,17 @@ export default function Step4Design() {
 
 
 
+  // Derived state for filtering
+  const filteredCatalogImages = useMemo(() => {
+    if (!selectedCollectionId) return catalogImages;
+    return catalogImages.filter(url => {
+      const img = galleryData.find(g => g.imageUrl === url);
+      return img?.collectionIds?.includes(selectedCollectionId);
+    });
+  }, [catalogImages, galleryData, selectedCollectionId]);
+
+  const hasCollections = galleryData.some(img => img.collectionIds && img.collectionIds.length > 0);
+
   // Split images for visual grouping (Uploaded vs Catalog)
   const uploadedSelectedImages = referenceImages.filter(url => !catalogImages.includes(url));
   const catalogSelectedImagesCount = referenceImages.filter(url => catalogImages.includes(url)).length;
@@ -222,50 +239,134 @@ export default function Step4Design() {
             Tap any design to use it as inspiration for your order
           </p>
 
+          {/* COLLECTION NAV UI */}
+          {!isLoadingCatalog && hasCollections && allCollections.length > 0 && (
+            <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar mb-4">
+              <button
+                type="button"
+                onClick={() => setSelectedCollectionId(null)}
+                className="flex flex-col items-center gap-1 group flex-shrink-0 shrink-0 cursor-pointer"
+              >
+                <div
+                  className={cn(
+                    "w-24 h-20 rounded-xl overflow-hidden transition-all group-hover:shadow-md flex items-center justify-center bg-subtleBackground",
+                    selectedCollectionId === null
+                      ? "border-2 border-accent"
+                      : "border border-border group-hover:border-accent/50"
+                  )}
+                >
+                  <span className={cn(
+                    "font-heading text-lg font-semibold",
+                    selectedCollectionId === null ? "text-accent" : "text-primary/60 group-hover:text-primary"
+                  )}>All</span>
+                </div>
+                <span
+                  className={cn(
+                    "font-body text-sm font-semibold transition-colors text-center mt-1",
+                    selectedCollectionId === null
+                      ? "text-accent"
+                      : "text-primary/80 group-hover:text-primary"
+                  )}
+                >
+                  All
+                </span>
+              </button>
+              
+              {allCollections.map((collection) => {
+                const isActive = selectedCollectionId === collection._id.toString();
+                // Only show collections that actually have images in this category
+                const hasImagesInThisCategory = galleryData.some(img => img.collectionIds?.includes(collection._id.toString()));
+                if (!hasImagesInThisCategory) return null;
+
+                return (
+                  <button
+                    key={collection._id.toString()}
+                    type="button"
+                    onClick={() => setSelectedCollectionId(collection._id.toString())}
+                    className="flex flex-col items-center gap-1 group flex-shrink-0 shrink-0 cursor-pointer"
+                  >
+                    <div
+                      className={cn(
+                        "w-24 h-20 rounded-xl overflow-hidden transition-all group-hover:shadow-md",
+                        isActive
+                          ? "border-2 border-accent"
+                          : "border border-border group-hover:border-accent/50"
+                      )}
+                    >
+                      <Image
+                        src={collection.imageUrl || "/placeholder.png"}
+                        alt={collection.name}
+                        width={96}
+                        height={80}
+                        className="object-cover w-full h-full"
+                      />
+                    </div>
+                    <span
+                      className={cn(
+                        "font-body text-sm font-semibold transition-colors text-center mt-1",
+                        isActive
+                          ? "text-accent"
+                          : "text-primary/80 group-hover:text-primary"
+                      )}
+                    >
+                      {collection.name}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
           {isLoadingCatalog ? (
             <div className="flex justify-center -my-32 scale-[0.4]">
               <Spinner />
             </div>
           ) : catalogImages.length > 0 ? (
-            <div 
-              ref={carouselRef}
-              className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar snap-x snap-mandatory"
-            >
-              {catalogImages.map((imgUrl, idx) => {
-                const isSelected = referenceImages.includes(imgUrl);
-                // Can't click unselected if at capacity
-                const isDisabled = !isSelected && isAtCapacity;
+            filteredCatalogImages.length > 0 ? (
+              <div 
+                ref={carouselRef}
+                className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar snap-x snap-mandatory"
+              >
+                {filteredCatalogImages.map((imgUrl, idx) => {
+                  const isSelected = referenceImages.includes(imgUrl);
+                  // Can't click unselected if at capacity
+                  const isDisabled = !isSelected && isAtCapacity;
 
-                return (
-                  <button
-                    key={idx}
-                    type="button"
-                    data-image-url={imgUrl}
-                    onClick={() => handleToggleCarouselImage(imgUrl)}
-                    disabled={isDisabled}
-                    className={`relative w-60 h-60 shrink-0 snap-center rounded-2xl overflow-hidden shadow-sm transition-all duration-300 ${
-                      isSelected
-                        ? "ring-4 ring-accent scale-95"
-                        : "border border-border hover:brightness-110"
-                    } ${isDisabled ? "opacity-40 cursor-not-allowed grayscale" : ""}`}
-                  >
-                    <Image
-                      src={imgUrl}
-                      alt="Catalog Inspiration"
-                      fill
-                      className={`object-cover ${isSelected ? "" : "opacity-90"}`}
-                    />
-                    {isSelected && (
-                      <div className="absolute inset-0 bg-accent/20 flex items-center justify-center">
-                        <div className="bg-white rounded-full p-2 shadow-lg">
-                          <Check className="w-6 h-6 text-accent" />
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      data-image-url={imgUrl}
+                      onClick={() => handleToggleCarouselImage(imgUrl)}
+                      disabled={isDisabled}
+                      className={`relative w-60 h-60 shrink-0 snap-center rounded-2xl overflow-hidden shadow-sm transition-all duration-300 ${
+                        isSelected
+                          ? "ring-4 ring-accent scale-95"
+                          : "border border-border hover:brightness-110"
+                      } ${isDisabled ? "opacity-40 cursor-not-allowed grayscale" : ""}`}
+                    >
+                      <Image
+                        src={imgUrl}
+                        alt="Catalog Inspiration"
+                        fill
+                        className={`object-cover ${isSelected ? "" : "opacity-90"}`}
+                      />
+                      {isSelected && (
+                        <div className="absolute inset-0 bg-accent/20 flex items-center justify-center">
+                          <div className="bg-white rounded-full p-2 shadow-lg">
+                            <Check className="w-6 h-6 text-accent" />
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-primary/50 italic bg-subtleBackground p-4 rounded-xl text-center">
+                No images available in this collection.
+              </p>
+            )
           ) : (
             <p className="text-sm text-primary/50 italic bg-subtleBackground p-4 rounded-xl text-center">
               No images available for this category yet.

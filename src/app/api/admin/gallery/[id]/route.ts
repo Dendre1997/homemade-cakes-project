@@ -54,6 +54,7 @@ export async function PATCH(
     if (body.description !== undefined) updateData.description = body.description;
     if (body.imageUrl !== undefined) updateData.imageUrl = body.imageUrl;
     if (body.categories !== undefined) updateData.categories = body.categories;
+    if (body.collectionIds !== undefined) updateData.collectionIds = body.collectionIds;
     if (body.decorationPrice !== undefined) updateData.decorationPrice = Number(body.decorationPrice);
     if (body.isActive !== undefined) updateData.isActive = !!body.isActive;
     if (body.defaultAddons !== undefined) {

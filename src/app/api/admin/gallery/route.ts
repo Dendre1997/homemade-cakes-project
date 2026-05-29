@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { imageUrl, title, description, categories, decorationPrice, isActive, defaultAddons } = body;
+    const { imageUrl, title, description, categories, collectionIds, decorationPrice, isActive, defaultAddons } = body;
 
     // Basic validation
     if (!imageUrl || !title) {
@@ -65,6 +65,7 @@ export async function POST(request: NextRequest) {
       title,
       description: description || "",
       categories: categories || [],
+      collectionIds: Array.isArray(collectionIds) ? collectionIds : [],
       decorationPrice: decorationPrice !== undefined ? Number(decorationPrice) : undefined,
       isActive: isActive !== undefined ? !!isActive : true,
       createdAt: new Date(),
