@@ -239,6 +239,21 @@ export const ClientReceiptCard = ({
                   <div className="mt-1 text-xs text-primary/40 font-medium space-y-0.5">
                     {displaySize && displaySize.trim() !== "" && <p>Size: {displaySize}</p>}
                     {displayFlavor && displayFlavor.trim() !== "" && <p>Flavor: {displayFlavor}</p>}
+                    {item.isCombo && item.selectedConfig?.cake && (
+                      <div className="text-sm text-muted-foreground">
+                        <span className="font-medium">Center Cake:</span>{' '}
+                        {flavorMap?.[item.selectedConfig.cake.flavorId] || item.selectedConfig.cake.flavorId}
+                        {item.selectedConfig.cake.inscription && ` — "${item.selectedConfig.cake.inscription}"`}
+                      </div>
+                    )}
+                    {item.isCombo && item.selectedConfig?.items && item.selectedConfig.items.length > 0 && (
+                      <div className="text-sm text-muted-foreground">
+                        <span className="font-medium">Box ({item.selectedConfig.quantityConfigId}):</span>{' '}
+                        {item.selectedConfig.items
+                          .map((si: any) => `${si.count}x ${flavorMap?.[si.flavorId] || si.flavorId}`)
+                          .join(', ')}
+                      </div>
+                    )}
                     {item.flavorNote && item.flavorNote !== "No" && <p>Flavor Note: {item.flavorNote}</p>}
                     {item.quantity > 0 && <p>Qty: {item.quantity}</p>}
                     {item.inscription && item.inscription.trim() !== "" && <p>Inscription: {item.inscription}</p>}

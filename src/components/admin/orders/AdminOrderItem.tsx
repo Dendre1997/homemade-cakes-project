@@ -41,7 +41,7 @@ export const AdminOrderItem = ({
   };
 
   const isComboSet =
-    item.selectedConfig && !!item.selectedConfig.cake;
+    item.isCombo === true || (item.selectedConfig && !!item.selectedConfig.cake);
   
   const isSimpleSet =
     item.selectedConfig &&
@@ -165,6 +165,29 @@ export const AdminOrderItem = ({
                             {item.designInstructions}
                         </p>
                     </div>
+                )}
+
+                 {/* Combo Config Display — only for custom combos */}
+                {item.isCombo && item.selectedConfig?.cake && (
+                  <div className="mt-3 space-y-2">
+                    <p className="text-xs font-bold uppercase text-muted-foreground border-b pb-1">Center Cake</p>
+                    <p className="text-sm">Flavor: {flavorMap?.[item.selectedConfig.cake.flavorId] || item.selectedConfig.cake.flavorId}</p>
+                    {item.selectedConfig.cake.inscription && (
+                      <p className="text-sm">Inscription: "{item.selectedConfig.cake.inscription}"</p>
+                    )}
+                  </div>
+                )}
+                {item.isCombo && item.selectedConfig?.items && item.selectedConfig.items.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    <p className="text-xs font-bold uppercase text-muted-foreground border-b pb-1">
+                      Box: {item.selectedConfig.quantityConfigId} items
+                    </p>
+                    {item.selectedConfig.items.map((si: any, idx: number) => (
+                      <p key={idx} className="text-sm">
+                        {si.count}x {flavorMap?.[si.flavorId] || si.flavorId}
+                      </p>
+                    ))}
+                  </div>
                 )}
 
                  {/* Inscription (if integrated into custom flow) */}

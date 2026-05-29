@@ -25,6 +25,7 @@ import { AdminOrderItem } from "@/components/admin/orders/AdminOrderItem";
 import { useAlert } from "@/contexts/AlertContext";
 import { useParams } from "next/navigation";
 import CustomOrderItemForm from "./CustomOrderItemForm";
+import { ComboProductForm } from "@/components/admin/orders/ComboProductForm";
 import { AddonAdminSelector } from "@/components/admin/addons/AddonAdminSelector";
 import { SelectedAddon } from "@/types";
 
@@ -34,6 +35,7 @@ interface OrderDetailItemsProps {
   totalAmount: number;
   onUpdate?: () => void;
   referenceImages?: string[];
+  flavorMap?: Record<string, string>;
 }
 
 const OrderDetailItems = ({
@@ -42,6 +44,7 @@ const OrderDetailItems = ({
   totalAmount,
   onUpdate,
   referenceImages,
+  flavorMap: externalFlavorMap,
 }: OrderDetailItemsProps) => {
   const { showAlert } = useAlert();
   const params = useParams();
@@ -64,6 +67,7 @@ const OrderDetailItems = ({
   
   // Edit Context Data
   const [products, setProducts] = useState<ProductWithCategory[]>([]);
+  const [allCategories, setAllCategories] = useState<any[]>([]);
   const [availableFlavors, setAvailableFlavors] = useState<Flavor[]>([]);
   const [availableDiameters, setAvailableDiameters] = useState<Diameter[]>([]);
   const [allFlavors, setAllFlavors] = useState<Flavor[]>([]);
@@ -75,6 +79,9 @@ const OrderDetailItems = ({
         .then((res) => res.json())
         .then(setProducts)
         .catch(console.error);
+
+      fetch("/api/admin/flavors").then(r => r.json()).then(setAllFlavors);
+      fetch("/api/categories").then(r => r.json()).then(setAllCategories);
     }
   }, [editingItem, products.length]);
 
@@ -306,7 +313,7 @@ const OrderDetailItems = ({
                 <AdminOrderItem
                     key={item.id || item.productId?.toString() || Math.random().toString()}
                     item={item}
-                    flavorMap={flavorMap}
+                    flavorMap={externalFlavorMap || flavorMap}
                     diameters={diameters}
                     onEdit={handleEditClick}
                     referenceImages={referenceImages}
@@ -343,7 +350,44 @@ const OrderDetailItems = ({
                 )}
             </DialogHeader>
             
-             {editingItem && isCustomMode ? (
+             {editingItem?.isCombo === true ? (
+                <div className="py-4">
+                  <ComboProductForm
+                    allCategories={allCategories}
+                    allFlavors={allFlavors}
+                    allDiameters={diameters}
+                    initialValues={editingItem}
+                    onAdd={(updatedItem) => {
+                         const newItem = {
+                             ...editingItem,
+                             ...updatedItem,
+                             id: editingItem.id
+                         };
+                         const newItems = items.map(i => i.id === editingItem.id ? newItem : i);
+                         const newTotalAmount = newItems.reduce((sum, i) => sum + (i.price * i.quantity), 0);
+                         
+                         setIsSaving(true);
+                         fetch(`/api/admin/orders/${orderId}`, {
+                            method: "PUT",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ items: newItems, totalAmount: newTotalAmount })
+                         })
+                         .then(res => {
+                             if(!res.ok) throw new Error("Failed");
+                             showAlert("Combo Item Updated", "success");
+                             setEditingItem(null);
+                             if (onUpdate) onUpdate();
+                         })
+                         .catch(err => {
+                             console.error(err);
+                             showAlert("Failed to update", "error");
+                         })
+                         .finally(() => setIsSaving(false));
+                    }}
+                    onCancel={() => setEditingItem(null)}
+                  />
+                </div>
+            ) : editingItem && isCustomMode ? (
                   <div className="py-4">
                       <CustomOrderItemForm 
                          flavors={allFlavors} 

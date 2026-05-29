@@ -109,14 +109,12 @@ const OrderDetailsPage = () => {
   useEffect(() => {
     const fetchAvailability = async () => {
       try {
-        console.log("Fetching availability data for admin...");
         const res = await fetch("/api/availability", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
         });
         if (!res.ok) throw new Error("Failed to fetch availability data");
         const data: AvailabilityData = await res.json();
-        console.log("Availability data received:", data);
         setAvailabilityData(data);
       } catch (err) {
         console.error("Error fetching availability:", err);
@@ -135,7 +133,6 @@ const OrderDetailsPage = () => {
       setCapacityPercentages({});
       return;
     }
-    console.log("Calculating capacity percentages...");
 
     const percentages: Record<string, number> = {};
     const { availableMinutesPerDay, defaultWorkMinutes, dateOverrides } =
@@ -163,7 +160,6 @@ const OrderDetailsPage = () => {
         percentages[dateString] = 100;
       }
     });
-    console.log("Capacity percentages calculated:", percentages);
     setCapacityPercentages(percentages);
   }, [availabilityData]);
 
@@ -697,6 +693,7 @@ const OrderDetailsPage = () => {
             totalAmount={order.totalAmount}
             onUpdate={fetchOrderAndDiameters}
             referenceImages={order.referenceImages}
+            flavorMap={flavorMap}
           />
 
           {/* --- Assigned Delivery Dates (Shown for non-pending orders) --- */}
