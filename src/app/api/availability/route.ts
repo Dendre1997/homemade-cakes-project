@@ -32,6 +32,7 @@ export async function POST(request: NextRequest) {
     const defaultWorkMinutes = settings?.defaultWorkMinutes || 240;
     const dateOverrides = settings?.dateOverrides || [];
     const defaultAvailableHours = settings?.defaultAvailableHours || [];
+    const weekdayHours: Record<number, string[]> = settings?.weekdayHours || {};
 
     const categories = await db.collection("categories").find({}).toArray();
     // Create a fast lookup map for category ID -> manufacturing time
@@ -174,6 +175,7 @@ export async function POST(request: NextRequest) {
       adminBlockedDates,
       defaultWorkMinutes,
       defaultAvailableHours,
+      weekdayHours,
       dateOverrides: dateOverrides.map((o: any) => ({
         ...o,
         // Ensure dates are serialized in a consistent format

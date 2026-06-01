@@ -53,6 +53,7 @@ export async function GET() {
     const dateOverrides: any[] = settings?.dateOverrides ?? [];
     const defaultAvailableHours: string[] =
       settings?.defaultAvailableHours ?? [];
+    const weekdayHours: Record<number, string[]> = settings?.weekdayHours || {};
 
     // ── 2. Build category → manufacturingTimeInMinutes lookup ─────────────
     const categories = await db.collection("categories").find({}).toArray();
@@ -198,13 +199,14 @@ export async function GET() {
       blockedDates: Array.from(blockedSet).sort(),
       leadTimeDays,
       defaultAvailableHours,
+      weekdayHours,
       dateOverrides: publicDateOverrides,
     });
   } catch (error) {
     console.error("[/api/shop/calendar-blocks] Error:", error);
     // Safe fallback — the calendar will still render; no blocked dates surfaced
     return NextResponse.json(
-      { blockedDates: [], leadTimeDays: 7, defaultAvailableHours: [], dateOverrides: [] },
+      { blockedDates: [], leadTimeDays: 7, defaultAvailableHours: [], weekdayHours: {}, dateOverrides: [] },
       { status: 200 }
     );
   }

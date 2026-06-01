@@ -19,6 +19,7 @@ export async function GET() {
         ordersPerDayLimit: 5,
         blockedDates: [],
         defaultAvailableHours: [],
+        weekdayHours: {},
       });
     }
 
@@ -44,6 +45,7 @@ export async function PUT(request: NextRequest) {
       defaultWorkMinutes,
       dateOverrides,
       defaultAvailableHours,
+      weekdayHours,
     } = body;
 
     // Basic validation
@@ -59,6 +61,7 @@ export async function PUT(request: NextRequest) {
       leadTimeDays,
       defaultWorkMinutes,
       defaultAvailableHours: defaultAvailableHours || [],
+      weekdayHours: weekdayHours || {},
       dateOverrides:
         dateOverrides?.map((override) => ({
           ...override,

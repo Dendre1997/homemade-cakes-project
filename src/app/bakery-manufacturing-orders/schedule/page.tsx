@@ -8,6 +8,15 @@ import LoadingSpinner from "@/components/ui/Spinner";
 import { TimeSlotManager } from "@/components/ui/TimeSlotManager";
 import { useAlert } from "@/contexts/AlertContext";
 import { useConfirmation } from "@/contexts/ConfirmationContext";
+import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/Dialog";
 
 const SchedulePage = () => {
   const { showAlert } = useAlert()
@@ -17,6 +26,9 @@ const SchedulePage = () => {
     defaultWorkMinutes: 240, 
     dateOverrides: [],
   });
+  const [selectedWeekday, setSelectedWeekday] = useState<number | null>(null);
+  const [isWeekdayModalOpen, setIsWeekdayModalOpen] = useState(false);
+  const [draftWeekdaySlots, setDraftWeekdaySlots] = useState<string[]>([]);
   const [minutesBooked, setMinutesBooked] = useState<Record<string, number>>(
     {}
   );
@@ -104,6 +116,42 @@ const SchedulePage = () => {
     setSettings((prev) => ({ ...prev, dateOverrides: newOverrides }));
   };
 
+  const WEEKDAYS = [
+    { label: 'Sun', value: 0 },
+    { label: 'Mon', value: 1 },
+    { label: 'Tue', value: 2 },
+    { label: 'Wed', value: 3 },
+    { label: 'Thu', value: 4 },
+    { label: 'Fri', value: 5 },
+    { label: 'Sat', value: 6 },
+  ];
+
+  const handleOpenWeekdayModal = (day: number) => {
+    setSelectedWeekday(day);
+    setDraftWeekdaySlots(settings.weekdayHours?.[day] || []);
+    setIsWeekdayModalOpen(true);
+  };
+
+  const handleSaveWeekdaySlots = () => {
+    const updated = { ...(settings.weekdayHours || {}) };
+    if (draftWeekdaySlots.length === 0) {
+      delete updated[selectedWeekday!];
+    } else {
+      updated[selectedWeekday!] = draftWeekdaySlots;
+    }
+    handleInputChange('weekdayHours', updated);
+    setIsWeekdayModalOpen(false);
+    setSelectedWeekday(null);
+  };
+
+  const handleClearWeekday = () => {
+    const updated = { ...(settings.weekdayHours || {}) };
+    delete updated[selectedWeekday!];
+    handleInputChange('weekdayHours', updated);
+    setIsWeekdayModalOpen(false);
+    setSelectedWeekday(null);
+  };
+
   const blockedDates =
     settings.dateOverrides?.filter((o) => o.isBlocked).map((o) => o.date) || [];
 
@@ -166,6 +214,82 @@ const SchedulePage = () => {
             </div>
           </div>
         </div>
+
+        {/* Weekday Time Slots section */}
+        <div className="bg-card-background p-lg rounded-large shadow-md">
+          <h2 className="font-heading text-h3 text-primary">Weekday Time Slots</h2>
+          <p className="mt-xs font-body text-small text-primary/80 mb-md">
+            Set specific time slots for each day of the week. Days without custom slots will use the Default Time Slots above.
+          </p>
+          <div className="grid grid-cols-7 gap-2">
+            {WEEKDAYS.map((day) => {
+              const slots = settings.weekdayHours?.[day.value];
+              const hasSlots = slots && slots.length > 0;
+              return (
+                <button
+                  key={day.value}
+                  type="button"
+                  onClick={() => handleOpenWeekdayModal(day.value)}
+                  className={cn(
+                    "flex flex-col items-center gap-1 p-3 rounded-xl border-2 transition-all hover:shadow-md",
+                    hasSlots
+                      ? "border-accent bg-accent/5"
+                      : "border-border bg-white hover:border-accent/50"
+                  )}
+                >
+                  <span className={cn(
+                    "font-heading text-sm font-bold",
+                    hasSlots ? "text-accent" : "text-primary"
+                  )}>
+                    {day.label}
+                  </span>
+                  <span className={cn(
+                    "text-xs font-body",
+                    hasSlots ? "text-accent/80" : "text-primary/40"
+                  )}>
+                    {hasSlots ? `${slots.length} slot${slots.length > 1 ? 's' : ''}` : 'default'}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Weekday Modal */}
+        <Dialog open={isWeekdayModalOpen} onOpenChange={(open) => {
+          if (!open) {
+            setIsWeekdayModalOpen(false);
+            setSelectedWeekday(null);
+          }
+        }}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="font-heading text-primary">
+                {selectedWeekday !== null ? WEEKDAYS[selectedWeekday].label : ''} Time Slots
+              </DialogTitle>
+              <DialogDescription className="font-body text-small text-primary/70">
+                Slots set here override the Default Time Slots for every {selectedWeekday !== null ? WEEKDAYS[selectedWeekday].label : ''}.
+                Leave empty to use defaults.
+              </DialogDescription>
+            </DialogHeader>
+            <TimeSlotManager
+              value={draftWeekdaySlots}
+              onChange={setDraftWeekdaySlots}
+            />
+            <DialogFooter className="flex gap-2 mt-4">
+              <Button
+                variant="outline"
+                onClick={handleClearWeekday}
+                className="text-red-500 border-red-200 hover:bg-red-50"
+              >
+                Clear → Use Default
+              </Button>
+              <Button variant="primary" onClick={handleSaveWeekdaySlots}>
+                Save
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Column: Calendar */}
         <div className="bg-card-background p-lg rounded-large shadow-md">

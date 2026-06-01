@@ -53,7 +53,7 @@ export async function addOrderNote(orderId: string, content: string) {
       return { success: false, error: "Note not added (document found but not modified)" };
     }
 
-    revalidatePath(`/admin/orders/${orderId}`);
+    revalidatePath(`/bakery-manufacturing-orders/orders/${orderId}`);
     return { success: true };
   } catch (error) {
     console.error("Failed to add order note:", error);
@@ -93,7 +93,7 @@ export async function deleteOrderNote(orderId: string, noteId: string) {
         return { success: false, error: "Order not found" };
     }
     
-    revalidatePath(`/admin/orders/${orderId}`);
+    revalidatePath(`/bakery-manufacturing-orders/orders/${orderId}`);
     return { success: true };
   } catch (error) {
     console.error("Failed to delete order note:", error);
@@ -137,7 +137,7 @@ export async function updateOrderNote(orderId: string, noteId: string, newConten
           return { success: false, error: "Order or Note not found" };
       }
   
-      revalidatePath(`/admin/orders/${orderId}`);
+      revalidatePath(`/bakery-manufacturing-orders/orders/${orderId}`);
       return { success: true };
     } catch (error) {
       console.error("Failed to update order note:", error);

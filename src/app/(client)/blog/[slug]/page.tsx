@@ -7,11 +7,11 @@ import { format, isValid } from "date-fns";
 import { ArrowLeft } from "lucide-react";
 import { Metadata } from "next"; 
 import ProductCard from "@/components/(client)/ProductCard";
+import { cache } from 'react';
 
-// Force dynamic for simple implementation, or can use generateStaticParams
-export const dynamic = "force-dynamic";
+export const revalidate = 3600;
 
-async function getBlog(slug: string) {
+const getBlog = cache(async (slug: string) => {
   const client = await clientPromise;
   const db = client.db(process.env.MONGODB_DB_NAME);
   const blog = await db.collection<Blog>("blogs").findOne({ 
@@ -54,7 +54,7 @@ async function getBlog(slug: string) {
   }
 
   return JSON.parse(JSON.stringify(blog)) as Blog;
-}
+});
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
