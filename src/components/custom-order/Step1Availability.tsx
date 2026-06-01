@@ -1,8 +1,8 @@
 import { useFormContext, Controller } from "react-hook-form";
 import CustomDatePicker from "@/components/ui/CustomDatePicker";
 import { CustomOrderFormData } from "@/lib/validation/customOrderSchema";
-import { useEffect, useState, useMemo } from "react";
-import { AlertCircle, Clock, MapPin } from "lucide-react";
+import { useEffect, useState, useMemo, useRef } from "react";
+import { AlertCircle, Clock, MapPin, ChevronLeft, ChevronRight } from "lucide-react";
 import { isSameDay, addDays, startOfDay, format } from "date-fns";
 import { cn } from "@/lib/utils";
 import Spinner from "@/components/ui/Spinner";
@@ -80,7 +80,7 @@ export default function Step1Availability({ onNext }: { onNext: () => void }) {
   const availableHoursForSelectedDate = useMemo(() => {
     if (!selectedDate || !availability) return [];
     
-    let hours = [...availability.defaultAvailableHours];
+    let slots = [...availability.defaultAvailableHours];
     
     // Check if there is an admin override for this specific calendar day
     const override = availability.dateOverrides.find((o) =>
@@ -89,13 +89,52 @@ export default function Step1Availability({ onNext }: { onNext: () => void }) {
     
     // If override exists and has specific hours, append them to the defaults
     if (override && override.availableHours && override.availableHours.length > 0) {
-      hours = [...hours, ...override.availableHours];
+      slots = [...slots, ...override.availableHours];
       // Remove any duplicate time slots
-      hours = Array.from(new Set(hours));
+      slots = Array.from(new Set(slots));
     }
     
-    return hours;
+    const parseTime = (slot: string) => {
+      const match = slot.match(/(\d+):(\d+)\s*(AM|PM)/i);
+      if (!match) return 0;
+      let hours = parseInt(match[1]);
+      const minutes = parseInt(match[2]);
+      const period = match[3].toUpperCase();
+      if (period === 'PM' && hours !== 12) hours += 12;
+      if (period === 'AM' && hours === 12) hours = 0;
+      return hours * 60 + minutes;
+    };
+    return [...slots].sort((a, b) => parseTime(a) - parseTime(b));
   }, [selectedDate, availability]);
+
+  const [carouselIndex, setCarouselIndex] = useState(0);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const touchStartX = useRef(0);
+  const visibleCount = 3;
+
+  const uniqueDotIndices = useMemo(() => {
+    const indices: number[] = [];
+    const maxIdx = Math.max(0, availableHoursForSelectedDate.length - visibleCount);
+    for (let i = 0; i < availableHoursForSelectedDate.length; i += visibleCount) {
+      indices.push(Math.min(i, maxIdx));
+    }
+    return Array.from(new Set(indices));
+  }, [availableHoursForSelectedDate.length, visibleCount]);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const diff = touchStartX.current - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 40) {
+      if (diff > 0) setCarouselIndex(i => Math.min(availableHoursForSelectedDate.length - visibleCount, i + visibleCount));
+      else setCarouselIndex(i => Math.max(0, i - visibleCount));
+    }
+  };
+
+  useEffect(() => {
+    setCarouselIndex(0);
+  }, [selectedDate]);
 
   const leadTime = availability?.leadTimeDays ?? 7;
   return (
@@ -159,29 +198,77 @@ export default function Step1Availability({ onNext }: { onNext: () => void }) {
 
                     {availableHoursForSelectedDate.length === 0 ? (
                       <p className="text-sm text-muted-foreground p-3 bg-gray-50 rounded-lg border border-dashed text-center">
-                        No specific time slots available for this day. Please
-                        try another date.
+                        No specific time slots available for this day. Please try another date.
                       </p>
                     ) : (
-                      <div className="grid grid-cols-2 gap-2">
-                        {availableHoursForSelectedDate.map((slot: string) => (
-                          <button
-                            key={slot}
-                            type="button"
-                            onClick={() => {
-                              field.onChange(slot);
-                              // Auto-advance once the time slot is successfully picked
-                              setTimeout(() => onNext(), 300);
-                            }}
-                            className={`h-11 rounded-lg text-sm font-semibold transition-all shadow-sm ${
-                              field.value === slot
-                                ? "bg-accent text-white border-accent scale-95 ring-2 ring-accent/20"
-                                : "bg-white border text-primary hover:border-accent hover:bg-accent/5"
-                            }`}
+                      <div className="relative">
+                        {/* Navigation buttons */}
+                        <button
+                          type="button"
+                          onClick={() => setCarouselIndex(i => Math.max(0, i - visibleCount))}
+                          disabled={carouselIndex === 0}
+                          className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white border shadow-sm flex items-center justify-center disabled:opacity-30 hover:border-accent transition-all"
+                        >
+                          <ChevronLeft className="w-4 h-4 text-primary" />
+                        </button>
+
+                        {/* Slots track */}
+                        <div
+                          className="overflow-hidden mx-10"
+                          ref={trackRef}
+                          onTouchStart={handleTouchStart}
+                          onTouchEnd={handleTouchEnd}
+                        >
+                          <div
+                            className="flex transition-transform duration-300 ease-in-out gap-2"
+                            style={{ transform: `translateX(-${carouselIndex * (100 / visibleCount)}%)` }}
                           >
-                            {slot}
-                          </button>
-                        ))}
+                            {availableHoursForSelectedDate.map((slot: string) => (
+                              <div
+                                key={slot}
+                                className="flex-shrink-0"
+                                style={{ width: `calc(${100 / visibleCount}% - 4px)` }}
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    field.onChange(slot);
+                                  }}
+                                  className={`w-full h-11 rounded-lg text-sm font-semibold transition-all shadow-sm ${
+                                    field.value === slot
+                                      ? "bg-accent text-white border-accent scale-95 ring-2 ring-accent/20"
+                                      : "bg-white border text-primary hover:border-accent hover:bg-accent/5"
+                                  }`}
+                                >
+                                  {slot}
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => setCarouselIndex(i => Math.min(availableHoursForSelectedDate.length - visibleCount, i + visibleCount))}
+                          disabled={carouselIndex >= availableHoursForSelectedDate.length - visibleCount}
+                          className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white border shadow-sm flex items-center justify-center disabled:opacity-30 hover:border-accent transition-all"
+                        >
+                          <ChevronRight className="w-4 h-4 text-primary" />
+                        </button>
+
+                        {/* Dots */}
+                        <div className="flex justify-center gap-1.5 mt-3">
+                          {uniqueDotIndices.map((targetIndex, i) => (
+                            <button
+                              key={i}
+                              type="button"
+                              onClick={() => setCarouselIndex(targetIndex)}
+                              className={`w-1.5 h-1.5 rounded-full transition-all ${
+                                carouselIndex === targetIndex ? 'bg-accent w-3' : 'bg-gray-300'
+                              }`}
+                            />
+                          ))}
+                        </div>
                       </div>
                     )}
 
