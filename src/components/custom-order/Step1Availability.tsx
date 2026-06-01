@@ -7,6 +7,17 @@ import { isSameDay, addDays, startOfDay, format } from "date-fns";
 import { cn } from "@/lib/utils";
 import Spinner from "@/components/ui/Spinner";
 
+const parseTime = (slot: string) => {
+  const match = slot.match(/(\d+):(\d+)\s*(AM|PM)/i);
+  if (!match) return 0;
+  let hours = parseInt(match[1]);
+  const minutes = parseInt(match[2]);
+  const period = match[3].toUpperCase();
+  if (period === 'PM' && hours !== 12) hours += 12;
+  if (period === 'AM' && hours === 12) hours = 0;
+  return hours * 60 + minutes;
+};
+
 export default function Step1Availability({ onNext }: { onNext: () => void }) {
   const { control, watch, setValue, formState: { errors } } = useFormContext<CustomOrderFormData>();
   
@@ -14,6 +25,7 @@ export default function Step1Availability({ onNext }: { onNext: () => void }) {
     unavailableDates: string[];
     leadTimeDays: number;
     defaultAvailableHours: string[];
+    weekdayHours?: Record<number, string[]>;
     dateOverrides: any[];
   } | null>(null);
   const [checkoutSettings, setCheckoutSettings] = useState<any>(null);
@@ -59,6 +71,7 @@ export default function Step1Availability({ onNext }: { onNext: () => void }) {
             defaultAvailableHours: data.defaultAvailableHours?.length
               ? data.defaultAvailableHours
               : ["8:00 AM", "6:00 PM", "7:00 PM", "7:00 AM"],
+            weekdayHours: data.weekdayHours,
             dateOverrides: data.dateOverrides ?? [],
           });
         }
@@ -79,32 +92,24 @@ export default function Step1Availability({ onNext }: { onNext: () => void }) {
   // Compute the available time slots for the actively selected date
   const availableHoursForSelectedDate = useMemo(() => {
     if (!selectedDate || !availability) return [];
-    
-    let slots = [...availability.defaultAvailableHours];
-    
-    // Check if there is an admin override for this specific calendar day
+
+    // Priority 1: dateOverride for this specific date
     const override = availability.dateOverrides.find((o) =>
       isSameDay(new Date(o.date), selectedDate)
     );
-    
-    // If override exists and has specific hours, append them to the defaults
-    if (override && override.availableHours && override.availableHours.length > 0) {
-      slots = [...slots, ...override.availableHours];
-      // Remove any duplicate time slots
-      slots = Array.from(new Set(slots));
+    if (override?.availableHours && override.availableHours.length > 0) {
+      return [...override.availableHours].sort((a, b) => parseTime(a) - parseTime(b));
     }
-    
-    const parseTime = (slot: string) => {
-      const match = slot.match(/(\d+):(\d+)\s*(AM|PM)/i);
-      if (!match) return 0;
-      let hours = parseInt(match[1]);
-      const minutes = parseInt(match[2]);
-      const period = match[3].toUpperCase();
-      if (period === 'PM' && hours !== 12) hours += 12;
-      if (period === 'AM' && hours === 12) hours = 0;
-      return hours * 60 + minutes;
-    };
-    return [...slots].sort((a, b) => parseTime(a) - parseTime(b));
+
+    // Priority 2: weekdayHours for this day of week
+    const dayOfWeek = selectedDate.getDay(); // 0=Sunday...6=Saturday
+    const weekdaySlots = availability.weekdayHours?.[dayOfWeek];
+    if (weekdaySlots && weekdaySlots.length > 0) {
+      return [...weekdaySlots].sort((a, b) => parseTime(a) - parseTime(b));
+    }
+
+    // Priority 3: defaultAvailableHours fallback
+    return [...availability.defaultAvailableHours].sort((a, b) => parseTime(a) - parseTime(b));
   }, [selectedDate, availability]);
 
   const [carouselIndex, setCarouselIndex] = useState(0);

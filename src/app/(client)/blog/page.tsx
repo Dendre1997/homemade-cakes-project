@@ -5,8 +5,8 @@ import { Blog } from "@/types";
 import { format, isValid } from "date-fns";
 import { Button } from "@/components/ui/Button";
 
-// Force dynamic rendering to ensure fresh data
-export const dynamic = "force-dynamic";
+// Regenerate every hour
+export const revalidate = 3600;
 
 async function getBlogs() {
   try {

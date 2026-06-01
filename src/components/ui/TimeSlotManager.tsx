@@ -35,12 +35,19 @@ const generateHourOptions = () => {
 };
 
 const generateMinuteOptions = () => {
-  const minutes = [];
-  for (let i = 0; i < 60; i += 10) {
-    minutes.push(i.toString().padStart(2, "0"));
-  }
-  return minutes;
+  return ['00', '30'];
 };
+
+const PRESETS = [
+  '7:00 AM - 7:30 AM',
+  '7:30 AM - 8:00 AM',
+  '8:00 AM - 8:30 AM',
+  '8:30 AM - 9:00 AM',
+  '6:00 PM - 6:30 PM',
+  '6:30 PM - 7:00 PM',
+  '7:00 PM - 7:30 PM',
+  '7:30 PM - 8:00 PM',
+];
 
 interface TimeSlotManagerProps {
   value: string[];
@@ -56,34 +63,68 @@ export const TimeSlotManager = ({ value, onChange }: TimeSlotManagerProps) => {
   const [endMinute, setEndMinute] = useState("00");
   const [endPeriod, setEndPeriod] = useState("AM");
 
+  const [validationError, setValidationError] = useState('');
+
   const handleAddSlot = () => {
+    const toMinutes = (hour: string, minute: string, period: string) => {
+      let h = parseInt(hour);
+      if (period === 'PM' && h !== 12) h += 12;
+      if (period === 'AM' && h === 12) h = 0;
+      return h * 60 + parseInt(minute);
+    };
+    const startTotal = toMinutes(startHour, startMinute, startPeriod);
+    const endTotal = toMinutes(endHour, endMinute, endPeriod);
+    if (endTotal <= startTotal) {
+      setValidationError('End time must be after start time');
+      return;
+    }
+    setValidationError('');
+
     const newSlot = `${formatTime(startHour, startMinute, startPeriod)} - ${formatTime(endHour, endMinute, endPeriod)}`;
 
     if (!value.includes(newSlot)) {
       onChange([...value, newSlot]); 
     }
 
-    let currentEndHour24 = parseInt(endHour, 10);
-    if (endPeriod === "PM" && currentEndHour24 !== 12) {
-      currentEndHour24 += 12;
-    }
-    if (endPeriod === "AM" && currentEndHour24 === 12) {
-      currentEndHour24 = 0;
-    }
+    // After slot is added, advance by 30 minutes from end time
+    const nextStartTotal = endTotal;
+    const nextEndTotal = endTotal + 30;
 
-    const nextHour24 = (currentEndHour24 + 1) % 24; 
-    setStartHour(get12Hour(currentEndHour24));
-    setStartMinute(endMinute);
-    setStartPeriod(getPeriod(currentEndHour24));
+    const toTimeComponents = (totalMinutes: number) => {
+      const h24 = Math.floor(totalMinutes / 60) % 24;
+      const m = totalMinutes % 60;
+      return {
+        hour: get12Hour(h24),
+        minute: m.toString().padStart(2, '0'),
+        period: getPeriod(h24)
+      };
+    };
 
-    setEndHour(get12Hour(nextHour24));
-    setEndMinute(endMinute);
-    setEndPeriod(getPeriod(nextHour24));
+    const nextStart = toTimeComponents(nextStartTotal);
+    const nextEnd = toTimeComponents(nextEndTotal);
+    setStartHour(nextStart.hour);
+    setStartMinute(nextStart.minute);
+    setStartPeriod(nextStart.period);
+    setEndHour(nextEnd.hour);
+    setEndMinute(nextEnd.minute);
+    setEndPeriod(nextEnd.period);
   };
 
   const handleRemoveSlot = (slotToRemove: string) => {
     onChange(value.filter((slot) => slot !== slotToRemove));
   };
+
+  const parseTime = (slot: string) => {
+    const match = slot.match(/(\d+):(\d+)\s*(AM|PM)/i);
+    if (!match) return 0;
+    let hours = parseInt(match[1]);
+    const minutes = parseInt(match[2]);
+    const period = match[3].toUpperCase();
+    if (period === 'PM' && hours !== 12) hours += 12;
+    if (period === 'AM' && hours === 12) hours = 0;
+    return hours * 60 + minutes;
+  };
+  const sortedSlots = [...value].sort((a, b) => parseTime(a) - parseTime(b));
 
   return (
     <div
@@ -93,6 +134,34 @@ export const TimeSlotManager = ({ value, onChange }: TimeSlotManagerProps) => {
         "pr-sm custom-scrollbar" 
       )}
     >
+      {/* Quick Add Presets */}
+      <div>
+        <p className="font-body text-small text-primary/70 mb-2">Quick Add:</p>
+        <div className="flex flex-wrap gap-1.5">
+          {PRESETS.map(preset => {
+            const alreadyAdded = value.includes(preset);
+            return (
+              <button
+                key={preset}
+                type="button"
+                disabled={alreadyAdded}
+                onClick={() => {
+                  if (!alreadyAdded) onChange([...value, preset]);
+                }}
+                className={cn(
+                  "text-xs px-2 py-1 rounded-full border transition-all",
+                  alreadyAdded
+                    ? "border-accent/30 bg-accent/10 text-accent/50 cursor-not-allowed"
+                    : "border-border hover:border-accent hover:bg-accent/5 text-primary"
+                )}
+              >
+                {preset}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Time Picker Controls */}
       <div className="flex flex-col gap-sm p-md rounded-medium bg-subtleBackground shadow-inset">
         <h3 className="font-body text-normal font-semibold text-primary">
@@ -217,15 +286,18 @@ export const TimeSlotManager = ({ value, onChange }: TimeSlotManagerProps) => {
         >
           <PlusCircle className="h-4 w-4 mr-2" /> Add Time Slot
         </Button>
+        {validationError && (
+          <p className="text-xs text-red-500 mt-1">{validationError}</p>
+        )}
       </div>
 
       <div className="mt-md space-y-sm">
-        {value.length === 0 ? (
+        {sortedSlots.length === 0 ? (
           <p className="font-body text-primary/70 text-small text-center py-md">
             No time slots added yet.
           </p>
         ) : (
-          value.map((slot, index) => (
+          sortedSlots.map((slot, index) => (
             <div
               key={`${slot}-${index}`}
               className={cn(
