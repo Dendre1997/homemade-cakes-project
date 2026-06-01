@@ -11,7 +11,7 @@ const options = {
   minPoolSize: 0,            // Allow idle connections to close
   connectTimeoutMS: 15000,   // Prevent timing out on cold starts
   socketTimeoutMS: 45000,
-  serverSelectionTimeoutMS: 15000,
+  serverSelectionTimeoutMS: 5000,
   maxIdleTimeMS: 10000,      // Terminate idle connections quickly
 };
 
@@ -23,13 +23,15 @@ const globalWithMongo = global as typeof globalThis & {
 
 if (!globalWithMongo._mongoClientPromise) {
   const client = new MongoClient(uri, options);
-  globalWithMongo._mongoClientPromise = client.connect();
+  const promise = client.connect();
+  // Clear cache on failure so the next request creates a fresh connection
+  promise.catch((err) => {
+    console.error('[MongoDB] Connection failed, clearing cache:', err);
+    globalWithMongo._mongoClientPromise = undefined;
+  });
+  globalWithMongo._mongoClientPromise = promise;
 }
-clientPromise = globalWithMongo._mongoClientPromise;
-
-// Attach a dummy catch to prevent Unhandled Promise Rejection crashes 
-// if the connection fails before it's explicitly awaited.
-clientPromise.catch(console.error);
+clientPromise = globalWithMongo._mongoClientPromise!;
 
 
 /**
