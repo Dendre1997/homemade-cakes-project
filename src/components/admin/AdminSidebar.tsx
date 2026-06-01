@@ -108,7 +108,10 @@ const AdminSidebar = ({ isOpen, onClose }: SidebarProps) => {
         const customRes = await fetch("/api/admin/custom-orders");
         if (customRes.ok) {
           const customOrders = await customRes.json();
-          setTotalCustomRequestsCount(customOrders.length);
+          const pendingCustomCount = customOrders.filter(
+            (o: any) => !['converted', 'rejected'].includes(o.status)
+          ).length;
+          setTotalCustomRequestsCount(pendingCustomCount);
         }
 
         const ordersRes = await fetch("/api/admin/orders");
@@ -116,7 +119,7 @@ const AdminSidebar = ({ isOpen, onClose }: SidebarProps) => {
           const orders = await ordersRes.json();
           if (Array.isArray(orders)) {
             const newOrderCount = orders.filter(
-              (o: any) => o.status === "new" || o.status === "pending_confirmation"
+              (o: any) => !["delivered", "cancelled"].includes(o.status)
             ).length;
             setNewOrdersCount(newOrderCount);
           }

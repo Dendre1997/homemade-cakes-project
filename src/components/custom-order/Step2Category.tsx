@@ -42,9 +42,6 @@ export default function Step2Category({ onNext }: { onNext: () => void }) {
     setValue("category", name, { shouldValidate: true });
     setValue("details.size", "");
     setValue("details.flavor", "");
-    
-    // Auto-advance with a slight delay for better UX
-    setTimeout(() => onNext(), 300);
   };
 
   return (
