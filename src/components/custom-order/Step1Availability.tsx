@@ -203,14 +203,19 @@ export default function Step1Availability({ onNext }: { onNext: () => void }) {
 
                     {availableHoursForSelectedDate.length === 0 ? (
                       <p className="text-sm text-muted-foreground p-3 bg-gray-50 rounded-lg border border-dashed text-center">
-                        No specific time slots available for this day. Please try another date.
+                        No specific time slots available for this day. Please
+                        try another date.
                       </p>
                     ) : (
                       <div className="relative">
                         {/* Navigation buttons */}
                         <button
                           type="button"
-                          onClick={() => setCarouselIndex(i => Math.max(0, i - visibleCount))}
+                          onClick={() =>
+                            setCarouselIndex((i) =>
+                              Math.max(0, i - visibleCount),
+                            )
+                          }
                           disabled={carouselIndex === 0}
                           className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white border shadow-sm flex items-center justify-center disabled:opacity-30 hover:border-accent transition-all"
                         >
@@ -219,43 +224,61 @@ export default function Step1Availability({ onNext }: { onNext: () => void }) {
 
                         {/* Slots track */}
                         <div
-                          className="overflow-hidden mx-10"
+                          className="overflow-hidden"
                           ref={trackRef}
                           onTouchStart={handleTouchStart}
                           onTouchEnd={handleTouchEnd}
                         >
                           <div
-                            className="flex transition-transform duration-300 ease-in-out gap-2"
-                            style={{ transform: `translateX(-${carouselIndex * (100 / visibleCount)}%)` }}
+                            className="flex transition-transform duration-300 ease-in-out"
+                            style={{
+                              transform: `translateX(-${carouselIndex * 50}%)`,
+                            }}
                           >
-                            {availableHoursForSelectedDate.map((slot: string) => (
-                              <div
-                                key={slot}
-                                className="flex-shrink-0"
-                                style={{ width: `calc(${100 / visibleCount}% - 4px)` }}
-                              >
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    field.onChange(slot);
-                                  }}
-                                  className={`w-full h-11 rounded-lg text-sm font-semibold transition-all shadow-sm ${
-                                    field.value === slot
-                                      ? "bg-accent text-white border-accent scale-95 ring-2 ring-accent/20"
-                                      : "bg-white border text-primary hover:border-accent hover:bg-accent/5"
-                                  }`}
+                            {availableHoursForSelectedDate.map(
+                              (slot: string) => (
+                                <div
+                                  key={slot}
+                                  className="flex-shrink-0 basis-1/2 px-1"
                                 >
-                                  {slot}
-                                </button>
-                              </div>
-                            ))}
+                                  <button
+                                    type="button"
+                                    onClick={() => field.onChange(slot)}
+                                    className={`w-full h-20 rounded-lg text-sm font-semibold 
+            flex items-center justify-center text-center
+            leading-tight transition-all shadow-sm
+            ${
+              field.value === slot
+                ? "bg-accent text-white border-accent ring-2 ring-accent/20"
+                : "bg-white border text-primary hover:border-accent hover:bg-accent/5"
+            }`}
+                                  >
+                                    <span>
+                                      {slot.split(" - ")[0]} <br />
+                                      {slot.split(" - ")[1]}
+                                    </span>
+                                  </button>
+                                </div>
+                              ),
+                            )}
                           </div>
                         </div>
 
                         <button
                           type="button"
-                          onClick={() => setCarouselIndex(i => Math.min(availableHoursForSelectedDate.length - visibleCount, i + visibleCount))}
-                          disabled={carouselIndex >= availableHoursForSelectedDate.length - visibleCount}
+                          onClick={() =>
+                            setCarouselIndex((i) =>
+                              Math.min(
+                                availableHoursForSelectedDate.length -
+                                  visibleCount,
+                                i + visibleCount,
+                              ),
+                            )
+                          }
+                          disabled={
+                            carouselIndex >=
+                            availableHoursForSelectedDate.length - visibleCount
+                          }
                           className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white border shadow-sm flex items-center justify-center disabled:opacity-30 hover:border-accent transition-all"
                         >
                           <ChevronRight className="w-4 h-4 text-primary" />
@@ -269,7 +292,9 @@ export default function Step1Availability({ onNext }: { onNext: () => void }) {
                               type="button"
                               onClick={() => setCarouselIndex(targetIndex)}
                               className={`w-1.5 h-1.5 rounded-full transition-all ${
-                                carouselIndex === targetIndex ? 'bg-accent w-3' : 'bg-gray-300'
+                                carouselIndex === targetIndex
+                                  ? "bg-accent w-3"
+                                  : "bg-gray-300"
                               }`}
                             />
                           ))}
@@ -301,16 +326,20 @@ export default function Step1Availability({ onNext }: { onNext: () => void }) {
                                 Order Delivery/Pickup Method
                               </h3>
 
-                              {(field.value === "pickup" || !field.value) && checkoutSettings?.pickupAddress?.trim() !== "" && (
-                                <div className="mb-4 p-3 bg-accent/5 rounded-lg border border-accent/20 text-sm text-primary/80 flex items-start gap-2">
-                                  <MapPin className="w-4 h-4 text-accent mt-0.5 shrink-0" />
-                                  <div>
-                                    <span className="font-semibold block mb-0.5">Pickup Location:</span>
-                                    Calgary (East Village area)
+                              {(field.value === "pickup" || !field.value) &&
+                                checkoutSettings?.pickupAddress?.trim() !==
+                                  "" && (
+                                  <div className="mb-4 p-3 bg-accent/5 rounded-lg border border-accent/20 text-sm text-primary/80 flex items-start gap-2">
+                                    <MapPin className="w-4 h-4 text-accent mt-0.5 shrink-0" />
+                                    <div>
+                                      <span className="font-semibold block mb-0.5">
+                                        Pickup Location:
+                                      </span>
+                                      Calgary (East Village area)
+                                    </div>
                                   </div>
-                                </div>
-                              )}
-                              
+                                )}
+
                               <div
                                 className={`grid grid-cols-1 gap-4 ${isDeliveryEnabled ? "sm:grid-cols-2" : ""}`}
                               >
