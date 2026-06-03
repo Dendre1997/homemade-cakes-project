@@ -5,7 +5,7 @@ import "./globals.css";
 import AuthProvider from "@/components/AuthProvider";
 import { CustomAlert } from "@/components/ui/CustomAlert";
 import { ConfirmationProvider } from "@/contexts/ConfirmationContext";
-import { GoogleAnalytics } from "@next/third-parties/google";
+import Script from "next/script";
 const playfair = Playfair_Display({
   subsets: ["latin"],
   variable: "--font-playfair",
@@ -54,6 +54,18 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://res.cloudinary.com" />
       </head>
       <body className="font-body bg-background text-text-main h-full min-h-screen">
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-2NJ0YC4YNT"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-2NJ0YC4YNT');
+          `}
+        </Script>
         <AuthProvider>
           <AlertProvider>
             <ConfirmationProvider>
@@ -63,7 +75,6 @@ export default function RootLayout({
           </AlertProvider>
         </AuthProvider>
       </body>
-      <GoogleAnalytics gaId="G-2NJ0YC4YNT" />
     </html>
   );
 }
