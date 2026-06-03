@@ -105,7 +105,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get("session")?.value;
+    const sessionCookie = cookieStore.get("session")?.value || cookieStore.get("admin_session")?.value;
     
     if (!sessionCookie) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
