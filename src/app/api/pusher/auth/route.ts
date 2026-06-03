@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
 
     // 2. Identity Verification via Firebase Cookies
     const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get("session")?.value;
+    const sessionCookie = cookieStore.get("session")?.value || cookieStore.get("admin_session")?.value;
 
     if (!sessionCookie) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
