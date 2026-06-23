@@ -22,6 +22,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     isLiveChatEnabled: true,
     botGreetingMessage: "Hi! I’m your bakery assistant. How can I help you today?",
   },
+  eTransferEmail: "",
 };
 
 export async function getAppSettings(): Promise<AppSettings> {

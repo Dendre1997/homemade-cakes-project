@@ -1,3 +1,13 @@
+/** True when `url` is a Cloudinary delivery URL allowed by next/image remotePatterns. */
+export function isCloudinaryDeliveryUrl(url: string): boolean {
+  if (!url) return false;
+  try {
+    return new URL(url).hostname === "res.cloudinary.com";
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Extracts the public_id from a full Cloudinary URL.
  * @param url The full Cloudinary URL.

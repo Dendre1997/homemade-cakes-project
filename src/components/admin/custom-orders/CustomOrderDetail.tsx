@@ -27,7 +27,9 @@ export default function CustomOrderDetail({ initialOrder }: CustomOrderDetailPro
   const [isConverting, setIsConverting] = useState(false);
   const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
   const [paymentLink, setPaymentLink] = useState<string | null>(null);
-  const [expectedMethod, setExpectedMethod] = useState<'cash' | 'e-transfer'>('e-transfer');
+  const [expectedMethod, setExpectedMethod] = useState<'cash' | 'e-transfer'>(
+    initialOrder.paymentPreference ?? 'e-transfer'
+  );
 
   const handleFieldChange = (field: string, value: any) => {
     setOrder((prev) => ({ ...prev, [field]: value }));
@@ -91,7 +93,7 @@ export default function CustomOrderDetail({ initialOrder }: CustomOrderDetailPro
         cloudinaryUploadUrl("image"),
         { method: "POST", body: formData }
       );
-      
+
       if (!res.ok) throw new Error("Upload failed");
       const data = await res.json();
       return data.secure_url;
@@ -125,7 +127,7 @@ export default function CustomOrderDetail({ initialOrder }: CustomOrderDetailPro
         const data = await res.json();
         throw new Error(data.error || "Failed to save changes");
       }
-      
+
       showAlert("Custom Request updated successfully!", "success");
       router.refresh();
     } catch (err: any) {
@@ -138,12 +140,12 @@ export default function CustomOrderDetail({ initialOrder }: CustomOrderDetailPro
 
   return (
     <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-in fade-in duration-500">
-      <CustomOrderDetailHeader 
-        id={order._id} 
-        status={order.status} 
+      <CustomOrderDetailHeader
+        id={order._id}
+        status={order.status}
         agreedPrice={order.agreedPrice ?? null}
         onPriceChange={(price) => handleFieldChange("agreedPrice", price)}
-        isSaving={isSaving} 
+        isSaving={isSaving}
         onSave={handleSave}
         isConverting={isConverting}
         onConvert={handleConvertClick}
@@ -153,22 +155,41 @@ export default function CustomOrderDetail({ initialOrder }: CustomOrderDetailPro
 
       <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
-          <CustomOrderSpecsForm 
-            order={order} 
-            onChange={handleFieldChange} 
+          <CustomOrderSpecsForm
+            order={order}
+            onChange={handleFieldChange}
             onImageUpload={handleImageUpload}
             isUploading={isUploading}
           />
         </div>
 
         <div className="space-y-8">
-          <CustomOrderContactForm 
-            contact={order.contact} 
-            onChange={handleFieldChange} 
+          <CustomOrderContactForm
+            contact={order.contact}
+            onChange={handleFieldChange}
           />
-          <CustomOrderLogisticsForm 
-            order={order} 
-            onChange={handleFieldChange} 
+          <div className="bg-card-background p-lg rounded-large shadow-md border border-border/40">
+            <h2 className="font-heading text-h4 text-primary border-b border-border/40 pb-4 mb-4">
+              Payment Preference
+            </h2>
+            <p className="text-sm text-primary font-medium">
+              {order.paymentPreference === "cash"
+                ? "Cash at Pickup"
+                : order.paymentPreference === "e-transfer"
+                  ? "E-Transfer"
+                  : "Not specified"}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {order.paymentPreference === "cash"
+                ? "Customer will pay the full amount in cash at pickup."
+                : order.paymentPreference === "e-transfer"
+                  ? "Customer will pay the full amount via e-transfer the day before pickup."
+                  : "Customer did not select a payment method (legacy request)."}
+            </p>
+          </div>
+          <CustomOrderLogisticsForm
+            order={order}
+            onChange={handleFieldChange}
           />
         </div>
       </div>
@@ -183,17 +204,20 @@ export default function CustomOrderDetail({ initialOrder }: CustomOrderDetailPro
       >
         <p className="mb-4">
           Converting with agreed price of{" "}
-          <strong>${order.agreedPrice}</strong>. How will the customer pay?
+          <strong>${order.agreedPrice}</strong>. The customer selected{" "}
+          <strong>
+            {order.paymentPreference === "cash" ? "Cash at Pickup" : "E-Transfer"}
+          </strong>
+          . Confirm or override the payment method:
         </p>
         <div className="flex flex-col gap-2">
           {(["e-transfer", "cash"] as const).map((method) => (
             <label
               key={method}
-              className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                expectedMethod === method
+              className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${expectedMethod === method
                   ? "border-accent bg-accent/5 text-accent font-semibold"
                   : "border-border bg-card-background text-primary/70"
-              }`}
+                }`}
             >
               <input
                 type="radio"

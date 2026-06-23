@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { Order, CartItem, Diameter } from "@/types";
 import { format } from "date-fns";
-import { Truck, Store } from "lucide-react";
+import { Truck, Store, DollarSign } from "lucide-react";
 import HeaderLogo from "@/components/ui/HeaderLogo";
 import { SocialHandleAnchor } from "@/components/ui/SocialHandleAnchor";
 
@@ -12,6 +12,7 @@ interface ClientReceiptCardProps {
   order: Order;
   diameters: Diameter[];
   flavorMap: Record<string, string>;
+  eTransferEmail?: string;
 }
 
 const ReceiptItemImage = ({ effectiveImageUrl, alt }: { effectiveImageUrl: string | undefined, alt: string }) => {
@@ -75,8 +76,13 @@ export const ClientReceiptCard = ({
   order,
   diameters,
   flavorMap,
+  eTransferEmail = "",
 }: ClientReceiptCardProps) => {
   const isPaid = order.isPaid;
+  const paymentMethod = order.paymentDetails?.expectedMethod;
+  const showPaymentInstructions =
+    !isPaid &&
+    (paymentMethod === "cash" || paymentMethod === "e-transfer");
   const orderIdShort = order._id.toString().slice(-6).toUpperCase();
   const dateFormatted = order.createdAt ? format(new Date(order.createdAt), "MMMM d, yyyy") : "";
 
@@ -337,6 +343,46 @@ export const ClientReceiptCard = ({
           <span className="font-extrabold text-lg text-primary/40">Total</span>
           <span className="font-extrabold text-2xl text-primary">${order.totalAmount.toFixed(2)}</span>
         </div>
+
+        {showPaymentInstructions && (
+          <div className="mt-4 pt-4 border-t border-accent/20">
+            <h3 className="text-primary/40 text-xs uppercase font-bold tracking-wider mb-2.5 flex items-center gap-1.5">
+              <DollarSign className="w-3.5 h-3.5" />
+              Payment Instructions
+            </h3>
+            <div className="bg-accent/5 p-4 rounded-xl border border-accent/20 text-sm text-primary/80 leading-relaxed">
+              {paymentMethod === "cash" ? (
+                <p>
+                  <span className="font-semibold text-primary">Instruction:</span>{" "}
+                  Pay the total amount of{" "}
+                  <span className="font-bold text-primary">
+                    ${order.totalAmount.toFixed(2)}
+                  </span>{" "}
+                  at the pickup in cash.
+                </p>
+              ) : (
+                <p>
+                  <span className="font-semibold text-primary">Instruction:</span>{" "}
+                  Pay the total amount of{" "}
+                  <span className="font-bold text-primary">
+                    ${order.totalAmount.toFixed(2)}
+                  </span>{" "}
+                  the day before pickup by sending an e-transfer to{" "}
+                  {eTransferEmail.trim() ? (
+                    <span className="font-bold text-primary break-all">
+                      {eTransferEmail.trim()}
+                    </span>
+                  ) : (
+                    <span className="italic text-primary/50">
+                      the bakery e-transfer address (see confirmation email)
+                    </span>
+                  )}
+                  .
+                </p>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Footer */}

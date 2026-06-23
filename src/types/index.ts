@@ -81,6 +81,9 @@ export interface AppSettings {
     isLiveChatEnabled: boolean;
     botGreetingMessage?: string;
   };
+
+  /** Email address displayed to customers for e-transfer payments */
+  eTransferEmail?: string | null;
 }
 
 export interface Product {
@@ -492,6 +495,7 @@ export interface CustomOrder {
   approximatePrice?: number;
   adminNotes?: string;
   deliveryMethod?: "pickup" | "delivery" | string;
+  paymentPreference?: "cash" | "e-transfer";
   addons?: SelectedAddon[];
   [key: string]: any;
 }

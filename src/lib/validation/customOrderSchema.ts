@@ -94,6 +94,7 @@ export const customOrderSchema = z.object({
   }).optional(),
   idempotencyKey: z.string().optional(),
   userId: z.string().optional(),
+  paymentPreference: z.enum(["cash", "e-transfer"]).default("e-transfer"),
 });
 
 export type CustomOrderFormData = z.infer<typeof customOrderSchema>;

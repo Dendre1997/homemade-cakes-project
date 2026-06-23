@@ -21,6 +21,7 @@ export interface OrderConfirmationEmailProps {
   flavorMap?: Record<string, string>;
   diameterMap?: Record<string, string>;
   pickupAddress?: string;
+  eTransferEmail?: string;
 }
 
 const baseUrl = process.env.NEXT_PUBLIC_API_URL
@@ -56,6 +57,7 @@ export const OrderConfirmationEmail = ({
   flavorMap = {},
   diameterMap = {},
   pickupAddress,
+  eTransferEmail,
 }: OrderConfirmationEmailProps) => {
   const isPaid = order.isPaid;
   const expectedMethod = order.paymentDetails?.expectedMethod;
@@ -325,18 +327,26 @@ export const OrderConfirmationEmail = ({
               ) : expectedMethod === "e-transfer" ? (
                 <Section style={styles.paymentBanner}>
                   <Text style={styles.paymentBannerText}>
-                    <strong>Action required:</strong> Your order will be
-                    reserved once we receive{" "}
-                    <strong>${order.totalAmount.toFixed(2)}</strong> via
-                    e-transfer.
+                    Pay the total amount of{" "}
+                    <strong>${order.totalAmount.toFixed(2)}</strong> the day
+                    before pickup
+                    {eTransferEmail ? (
+                      <>
+                        {" "}
+                        by sending an e-transfer to{" "}
+                        <strong>{eTransferEmail}</strong>.
+                      </>
+                    ) : (
+                      <> via e-transfer. Payment details will follow separately.</>
+                    )}
                   </Text>
                 </Section>
               ) : expectedMethod === "cash" ? (
                 <Section style={styles.paymentBanner}>
                   <Text style={styles.paymentBannerText}>
-                    <strong>Payment on pickup:</strong>
-                    <strong>${order.totalAmount.toFixed(2)}</strong> in
-                    cash—thank you!
+                    Pay the total amount of{" "}
+                    <strong>${order.totalAmount.toFixed(2)}</strong> at the
+                    pickup in cash.
                   </Text>
                 </Section>
               ) : null}
