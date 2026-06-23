@@ -48,21 +48,6 @@ export async function POST(
     const body = await req.json();
     const { agreedPrice, adminNotes, date, timeSlot, deliveryMethod, expectedMethod } = body;
 
-    // Validate expectedMethod — required for the manual payment flow
-    if (!expectedMethod || !['cash', 'e-transfer'].includes(expectedMethod)) {
-      return NextResponse.json(
-        { error: "expectedMethod is required and must be 'cash' or 'e-transfer'" },
-        { status: 400 }
-      );
-    }
-
-    if (!agreedPrice || agreedPrice <= 0) {
-      return NextResponse.json(
-        { error: "Agreed price is required" },
-        { status: 400 }
-      );
-    }
-
     const customOrdersColl = db.collection("custom_orders");
     const ordersColl = db.collection("orders");
 
@@ -80,6 +65,26 @@ export async function POST(
     if (customOrder.status === "converted") {
       return NextResponse.json(
         { error: "Order already converted" },
+        { status: 400 }
+      );
+    }
+
+    const resolvedExpectedMethod =
+      expectedMethod ??
+      customOrder.paymentPreference ??
+      "e-transfer";
+
+    // Validate expectedMethod — required for the manual payment flow
+    if (!["cash", "e-transfer"].includes(resolvedExpectedMethod)) {
+      return NextResponse.json(
+        { error: "expectedMethod must be 'cash' or 'e-transfer'" },
+        { status: 400 }
+      );
+    }
+
+    if (!agreedPrice || agreedPrice <= 0) {
+      return NextResponse.json(
+        { error: "Agreed price is required" },
         { status: 400 }
       );
     }
@@ -201,7 +206,7 @@ export async function POST(
       createdAt: new Date(),
       isPaid: false,
       paymentDetails: {
-        expectedMethod: expectedMethod as 'cash' | 'e-transfer',
+        expectedMethod: resolvedExpectedMethod as 'cash' | 'e-transfer',
       },
       notesLog: adminNotes
         ? [
@@ -230,6 +235,7 @@ export async function POST(
           name: customOrder.contact?.name || customOrder.customerName, 
           email: customOrder.contact?.email || customOrder.customerEmail 
         },
+        paymentPreference: customOrder.paymentPreference,
         agreedPrice: Number(agreedPrice),
         createdAt: customOrder.createdAt || customOrder.date || new Date(),
         updatedAt: new Date()
@@ -266,8 +272,15 @@ export async function POST(
 
             const settings = await getAppSettings();
             const pickupAddress = settings.checkout?.pickupAddress || "";
+            const eTransferEmail = settings.eTransferEmail?.trim() || "";
 
-            const htmlContent = await render(OrderConfirmationEmail({ order: finalOrder as any, flavorMap, diameterMap, pickupAddress } as any));
+            const htmlContent = await render(OrderConfirmationEmail({
+              order: finalOrder as any,
+              flavorMap,
+              diameterMap,
+              pickupAddress,
+              eTransferEmail,
+            } as any));
 
             await resend.emails.send({
                 from: DEFAULT_FROM,

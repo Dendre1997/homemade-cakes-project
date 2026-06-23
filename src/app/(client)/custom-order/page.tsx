@@ -25,7 +25,7 @@ const STEPS = [
   { id: 1, title: "Category", fields: ["category"], subTitle: "What would you like to order?" },
   { id: 2, title: "Details", fields: ["details.size", "details.flavor", "allergies"], subTitle: "Choose your preferences" },
   { id: 3, title: "Design", fields: ["referenceImages", "details.textOnCake", "details.designNotes"], subTitle: "What design do you need?" },
-  { id: 4, title: "Contact", fields: ["contact.name", "contact.email", "contact.phone", "contact.socialNickname", "contact.socialPlatform"], subTitle: "What is your contact information?" },
+  { id: 4, title: "Contact", fields: ["contact.name", "contact.email", "contact.phone", "contact.socialNickname", "contact.socialPlatform", "paymentPreference"], subTitle: "What is your contact information?" },
   { id: 5, title: "Success", fields: [], subTitle: "Thank you for your order!" },
 ];
 
@@ -117,6 +117,7 @@ function CustomOrderContent() {
       allergies: "",
       approximatePrice: 0,
       priceBreakdown: undefined,
+      paymentPreference: "e-transfer",
     },
   });
 

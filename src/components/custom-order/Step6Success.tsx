@@ -60,6 +60,12 @@ export default function Step6Success({ orderData, customOrderId, onMakeAnotherRe
   const addonsCost = pb?.addonsCost ?? 0;
   const grandTotal = pb?.grandTotal ?? orderData.approximatePrice ?? 0;
 
+  const paymentPreference = orderData.paymentPreference ?? "e-transfer";
+  const paymentReminder =
+    paymentPreference === "cash"
+      ? "Payment: You selected Cash. You will pay the total amount upon pickup/delivery once your design is approved and priced."
+      : "Payment: You selected E-transfer. Once your design is approved and priced, we will email you the final amount and the e-transfer email address. Payment is required the day before pickup.";
+
   // Flavor name is already in details.flavor (set by Step 3's compilePayload)
   const flavorName = orderData.details?.flavor ?? "";
 
@@ -74,6 +80,25 @@ export default function Step6Success({ orderData, customOrderId, onMakeAnotherRe
         Thank you, {displayName}! We will review your custom request and contact
         you {contactMethod} with a price quote.
       </p>
+
+      <div
+        role="status"
+        className="mb-8 w-full max-w-lg rounded-2xl border border-primary/10 bg-white p-6 shadow-lg shadow-primary/5"
+      >
+        <div className="flex items-start gap-4">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent/10 border border-accent/20">
+            <DollarSign className="h-5 w-5 text-accent" />
+          </div>
+          <div className="min-w-0 space-y-1">
+            <p className="text-xs font-bold uppercase tracking-wider text-primary/50">
+              What happens next
+            </p>
+            <p className="text-sm leading-relaxed text-primary/80">
+              {paymentReminder}
+            </p>
+          </div>
+        </div>
+      </div>
 
       {/* Reverse ping — customer must DM the bakery so inbox threading matches */}
       {hasSocialPlatform && (

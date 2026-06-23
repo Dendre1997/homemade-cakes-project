@@ -33,6 +33,12 @@ const settingsSchema = z.object({
     isLiveChatEnabled: z.boolean(),
     botGreetingMessage: z.string().optional(),
   }).optional(),
+  eTransferEmail: z
+    .string()
+    .email("Please enter a valid email address")
+    .optional()
+    .or(z.literal(""))
+    .nullable(),
 });
 
 type SettingsFormValues = z.infer<typeof settingsSchema>;
@@ -66,6 +72,7 @@ export default function SettingsForm({ initialSettings }: SettingsFormProps) {
         isLiveChatEnabled: initialSettings.support?.isLiveChatEnabled ?? true,
         botGreetingMessage: initialSettings.support?.botGreetingMessage ?? "",
       },
+      eTransferEmail: initialSettings.eTransferEmail ?? "",
     },
   });
 
@@ -323,6 +330,37 @@ export default function SettingsForm({ initialSettings }: SettingsFormProps) {
                   value={field.value ?? ""}
                   placeholder="e.g. Priwiet! Ya virtualnyi pomichnik..."
                   className="min-h-[100px]"
+                />
+              )}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 4. Payment Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Payment Settings</CardTitle>
+          <CardDescription>
+            Configure payment instructions shown to customers on custom order confirmations.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="e-transfer-email">E-transfer Email</Label>
+            <p className="text-sm text-muted-foreground">
+              Customers who choose e-transfer will be instructed to send payment to this address.
+            </p>
+            <Controller
+              control={control}
+              name="eTransferEmail"
+              render={({ field }) => (
+                <Input
+                  id="e-transfer-email"
+                  type="email"
+                  {...field}
+                  value={field.value ?? ""}
+                  placeholder="payments@yourdomain.com"
                 />
               )}
             />

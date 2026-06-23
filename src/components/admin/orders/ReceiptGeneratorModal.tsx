@@ -21,6 +21,20 @@ export function ReceiptGeneratorModal({ isOpen, onClose, order, diameters, flavo
   const containerRef = useRef<HTMLDivElement>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [scale, setScale] = useState(1);
+  const [eTransferEmail, setETransferEmail] = useState("");
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    fetch("/api/admin/settings")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((settings) => {
+        if (settings?.eTransferEmail) {
+          setETransferEmail(String(settings.eTransferEmail));
+        }
+      })
+      .catch((err) => console.error("Failed to load e-transfer email for receipt:", err));
+  }, [isOpen]);
 
   // Constants
   const EXPORT_WIDTH = 400; // Optimal width for the receipt ticket
@@ -122,7 +136,12 @@ export function ReceiptGeneratorModal({ isOpen, onClose, order, diameters, flavo
                   >
                       
                 <div ref={cardRef} className="bg-white rounded-2xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.05)] border border-gray-100">
-                    <ClientReceiptCard order={order} diameters={diameters} flavorMap={flavorMap} />
+                    <ClientReceiptCard
+                      order={order}
+                      diameters={diameters}
+                      flavorMap={flavorMap}
+                      eTransferEmail={eTransferEmail}
+                    />
                 </div>
             </div>
          </div>

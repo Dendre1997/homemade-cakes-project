@@ -323,7 +323,6 @@ export default function Step5Contact() {
           </>
         )}
 
-        {/* 5. Email Address */}
         {contactMethod !== null && (
           <div data-field-name="contact.email">
             <label className="block text-sm font-semibold mb-1 text-primary">
@@ -357,6 +356,54 @@ export default function Step5Contact() {
                 {errors.contact.email.message}
               </p>
             )}
+          </div>
+        )}
+
+        {contactMethod !== null && (
+          <div className="pt-2" data-field-name="paymentPreference">
+            <label className="block text-sm font-semibold mb-3 text-primary">
+              Payment Preference
+            </label>
+            <p className="text-xs text-primary/60 mb-3">
+              How would you like to pay once your quote is confirmed?
+            </p>
+            <Controller
+              control={control}
+              name="paymentPreference"
+              render={({ field }) => (
+                <div className="flex flex-col gap-2">
+                  {(["e-transfer", "cash"] as const).map((method) => (
+                    <label
+                      key={method}
+                      className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
+                        field.value === method
+                          ? "border-accent bg-accent/5 text-accent font-semibold"
+                          : "border-primary/15 bg-white text-primary/70 hover:border-primary/30"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="paymentPreference"
+                        value={method}
+                        checked={field.value === method}
+                        onChange={() => field.onChange(method)}
+                        className="accent-accent w-4 h-4"
+                      />
+                      <div>
+                        <span className="text-sm block">
+                          {method === "e-transfer" ? "E-Transfer" : "Cash at Pickup"}
+                        </span>
+                        <span className="text-xs font-normal text-primary/50">
+                          {method === "e-transfer"
+                            ? "E-Transfer — Payment required 24 hours before pickup"
+                            : "Pay full amount in cash when you pick up your order"}
+                        </span>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              )}
+            />
           </div>
         )}
       </div>
