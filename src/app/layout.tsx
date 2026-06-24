@@ -17,9 +17,38 @@ const montserrat = Montserrat({
   display: "swap",
 });
 
+const siteUrl = (
+  process.env.NEXT_PUBLIC_APP_URL ?? "https://d-kcreations.com"
+).replace(/\/$/, "");
+
 export const metadata: Metadata = {
-  title: "Sweet Creations",
-  description: "Handcrafted cakes for your sweetest moments",
+  metadataBase: new URL(siteUrl),
+  title: "D&K Creations | Custom Cakes, Bento Cakes, Cupcakes & Desserts",
+  description:
+    "Order custom cakes, bento cakes, cupcakes, and more from D&K Creations. Handmade desserts perfect for birthdays, weddings, and special events",
+  openGraph: {
+    title: "D&K Creations | Custom Cakes & Desserts",
+    description:
+      "Order custom cakes, bento cakes, cupcakes, and more from D&K Creations.",
+    url: siteUrl,
+    siteName: "D&K Creations",
+    images: [
+      {
+        url: "/DKCREATIONSBANNER.png",
+        width: 1200,
+        height: 630,
+        alt: "D&K Creations",
+      },
+    ],
+    locale: "en_CA",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "D&K Creations",
+    description: "Order custom cakes, bento cakes, cupcakes, and more.",
+    images: ["/DKCREATIONSBANNER.png"],
+  },
   icons: {
     icon: [
       { url: "/favicon-96x96.png", sizes: "96x96", type: "image/png" },
@@ -30,7 +59,6 @@ export const metadata: Metadata = {
       { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
     ],
   },
-  manifest: "/manifest.json",
 };
 
 export default function RootLayout({
@@ -70,7 +98,7 @@ export default function RootLayout({
           <AlertProvider>
             <ConfirmationProvider>
               <CustomAlert />
-              <main>{children}</main>
+              {children}
             </ConfirmationProvider>
           </AlertProvider>
         </AuthProvider>
