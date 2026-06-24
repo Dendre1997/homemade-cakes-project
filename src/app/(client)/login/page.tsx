@@ -1,57 +1,77 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { auth } from "@/lib/firebase/client";
-import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import LoadingSpinner from "@/components/ui/Spinner";
-import { useAuthStore } from "@/lib/store/authStore";
+import {
+  signInWithGoogle,
+  getGoogleRedirectSignInResult,
+  getFirebaseAuthErrorMessage,
+  shouldLogFirebaseAuthError,
+} from "@/lib/firebase/googleSignIn";
+import { completeSessionLogin } from "@/lib/firebase/completeSessionLogin";
 
 const LoginPage = () => {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const result = await getGoogleRedirectSignInResult();
+        if (!result || cancelled) return;
+
+        setIsLoading(true);
+        setError(null);
+        const idToken = await result.user.getIdToken();
+        await completeSessionLogin(idToken);
+        router.push("/");
+      } catch (err) {
+        if (cancelled) return;
+        if (err && typeof err === "object" && "code" in err) {
+          const code = (err as { code: string }).code;
+          if (shouldLogFirebaseAuthError(code)) {
+            console.error("Firebase Auth Error:", code);
+          }
+          setError(getFirebaseAuthErrorMessage(code));
+        } else {
+          console.error("Google redirect sign-in failed:", err);
+          setError("Failed to sign in with Google. Please try again.");
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
+
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const provider = new GoogleAuthProvider();
-      const userCredential = await signInWithPopup(auth, provider);
+      const userCredential = await signInWithGoogle();
       const idToken = await userCredential.user.getIdToken();
-
-      await fetch("/api/auth/sessionLogin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken }),
-      });
-
-      const { fetchProfile } = useAuthStore.getState();
-      await fetchProfile();
-
+      await completeSessionLogin(idToken);
       router.push("/");
     } catch (err) {
-      let errorMessage = "An unknown error occurred. Please try again.";
-
       if (err && typeof err === "object" && "code" in err) {
-        const firebaseError = err as { code: string };
-        switch (firebaseError.code) {
-          case "auth/popup-closed-by-user":
-          case "auth/cancelled-popup-request":
-            errorMessage = "Sign-in was cancelled. Please try again.";
-            break;
-          case "auth/too-many-requests":
-            errorMessage =
-              "Access temporarily disabled due to too many failed attempts.";
-            break;
-          default:
-            console.error("Firebase Auth Error:", firebaseError.code);
-            break;
+        const code = (err as { code: string }).code;
+        if (shouldLogFirebaseAuthError(code)) {
+          console.error("Firebase Auth Error:", code);
         }
+        setError(getFirebaseAuthErrorMessage(code));
+      } else {
+        console.error("Google sign-in failed:", err);
+        setError("Failed to sign in with Google. Please try again.");
       }
-      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }

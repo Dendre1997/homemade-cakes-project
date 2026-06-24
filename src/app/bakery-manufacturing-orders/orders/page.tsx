@@ -14,6 +14,59 @@ import { Plus } from "lucide-react";
 // Helper for stable date comparison
 const toISODate = (d: Date) => format(d, "yyyy-MM-dd");
 
+const parseTimeSlot = (slot: string) => {
+  const match = slot.match(/(\d+):(\d+)\s*(AM|PM)/i);
+  if (!match) return Number.MAX_SAFE_INTEGER;
+  let hours = parseInt(match[1], 10);
+  const minutes = parseInt(match[2], 10);
+  const period = match[3].toUpperCase();
+  if (period === "PM" && hours !== 12) hours += 12;
+  if (period === "AM" && hours === 12) hours = 0;
+  return hours * 60 + minutes;
+};
+
+/** Earliest scheduled pickup/delivery slot on the order (for chronological sort). */
+const getOrderScheduleSortKey = (order: Order) => {
+  const deliveryDates = order.deliveryInfo?.deliveryDates ?? [];
+
+  if (deliveryDates.length === 0) {
+    return {
+      dateMs: Number.MAX_SAFE_INTEGER,
+      timeMinutes: Number.MAX_SAFE_INTEGER,
+    };
+  }
+
+  let dateMs = Number.MAX_SAFE_INTEGER;
+  let timeMinutes = Number.MAX_SAFE_INTEGER;
+
+  for (const entry of deliveryDates) {
+    const entryDateMs = startOfDay(new Date(entry.date)).getTime();
+    const entryTimeMinutes = parseTimeSlot(entry.timeSlot || "");
+
+    if (
+      entryDateMs < dateMs ||
+      (entryDateMs === dateMs && entryTimeMinutes < timeMinutes)
+    ) {
+      dateMs = entryDateMs;
+      timeMinutes = entryTimeMinutes;
+    }
+  }
+
+  return { dateMs, timeMinutes };
+};
+
+const sortOrdersByDeliverySchedule = (list: Order[]) =>
+  [...list].sort((a, b) => {
+    const keyA = getOrderScheduleSortKey(a);
+    const keyB = getOrderScheduleSortKey(b);
+
+    if (keyA.dateMs !== keyB.dateMs) {
+      return keyA.dateMs - keyB.dateMs;
+    }
+
+    return keyA.timeMinutes - keyB.timeMinutes;
+  });
+
 const ManageOrdersPage = () => {
   const { showAlert } = useAlert();
   
@@ -244,7 +297,7 @@ const ManageOrdersPage = () => {
          );
     }
 
-    return result;
+    return sortOrdersByDeliverySchedule(result);
   }, [orders, searchQuery, statusFilter, timeScope, selectedDate]);
 
 

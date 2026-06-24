@@ -13,7 +13,21 @@ interface ClientReceiptCardProps {
   diameters: Diameter[];
   flavorMap: Record<string, string>;
   eTransferEmail?: string;
+  pickupAddress?: string;
 }
+
+const formatDeliveryAddress = (
+  address:
+    | string
+    | { street?: string; unit?: string; city?: string; postalCode?: string }
+    | undefined
+): string => {
+  if (!address) return "";
+  if (typeof address === "string") return address.trim();
+
+  const streetLine = [address.street, address.unit].filter(Boolean).join(", ");
+  return [streetLine, address.city, address.postalCode].filter(Boolean).join(", ");
+};
 
 const ReceiptItemImage = ({ effectiveImageUrl, alt }: { effectiveImageUrl: string | undefined, alt: string }) => {
   const [dataUri, setDataUri] = useState<string | undefined>(undefined);
@@ -77,6 +91,7 @@ export const ClientReceiptCard = ({
   diameters,
   flavorMap,
   eTransferEmail = "",
+  pickupAddress,
 }: ClientReceiptCardProps) => {
   const isPaid = order.isPaid;
   const paymentMethod = order.paymentDetails?.expectedMethod;
@@ -119,6 +134,14 @@ export const ClientReceiptCard = ({
   const baseCakePrice = Math.max(0, order.totalAmount - addonsCost);
 
   const isDelivery = order.deliveryInfo?.method === "delivery";
+  const deliveryAddressText = formatDeliveryAddress(
+    order.deliveryInfo?.address as
+      | string
+      | { street?: string; unit?: string; city?: string; postalCode?: string }
+      | undefined
+  );
+  const pickupAddressText =
+    pickupAddress?.trim() || "East Village, Calgary";
 
   return (
     <div className="bg-primary/10 text-primary w-[400px] rounded-2xl shadow-xl overflow-hidden font-sans border border-primary/60 flex flex-col pt-6 pb-2">
@@ -205,10 +228,24 @@ export const ClientReceiptCard = ({
             </div>
           )}
           
-          {isDelivery && order.deliveryInfo.address && order.deliveryInfo.address.trim() !== "" && (
-            <p className="text-sm font-medium mt-3 text-primary/40 bg-gray-50 p-3 rounded-xl border border-gray-100">
-              {order.deliveryInfo.address}
-            </p>
+          {isDelivery ? (
+            <div className="mt-3">
+              <p className="text-primary/40 text-xs uppercase font-bold tracking-wider mb-1">
+                Delivery Address:
+              </p>
+              <p className="text-sm font-medium text-primary/80">
+                {deliveryAddressText || "Pending"}
+              </p>
+            </div>
+          ) : (
+            <div className="mt-3">
+              <p className="text-primary/40 text-xs uppercase font-bold tracking-wider mb-1">
+                Pickup Address:
+              </p>
+              <p className="text-sm font-medium text-primary/80">
+                {pickupAddressText}
+              </p>
+            </div>
           )}
         </div>
       )}

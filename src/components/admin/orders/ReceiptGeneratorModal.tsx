@@ -22,6 +22,7 @@ export function ReceiptGeneratorModal({ isOpen, onClose, order, diameters, flavo
   const [isGenerating, setIsGenerating] = useState(false);
   const [scale, setScale] = useState(1);
   const [eTransferEmail, setETransferEmail] = useState("");
+  const [pickupAddress, setPickupAddress] = useState("");
 
   useEffect(() => {
     if (!isOpen) return;
@@ -31,6 +32,9 @@ export function ReceiptGeneratorModal({ isOpen, onClose, order, diameters, flavo
       .then((settings) => {
         if (settings?.eTransferEmail) {
           setETransferEmail(String(settings.eTransferEmail));
+        }
+        if (settings?.checkout?.pickupAddress) {
+          setPickupAddress(String(settings.checkout.pickupAddress));
         }
       })
       .catch((err) => console.error("Failed to load e-transfer email for receipt:", err));
@@ -141,6 +145,7 @@ export function ReceiptGeneratorModal({ isOpen, onClose, order, diameters, flavo
                       diameters={diameters}
                       flavorMap={flavorMap}
                       eTransferEmail={eTransferEmail}
+                      pickupAddress={pickupAddress}
                     />
                 </div>
             </div>
@@ -155,7 +160,7 @@ export function ReceiptGeneratorModal({ isOpen, onClose, order, diameters, flavo
                     <DialogTitle className="text-xl font-heading text-primary shrink-0 leading-tight flex items-center gap-2">
                        Receipt Generator
                     </DialogTitle>
-                    <p className="text-body text-primary/80 text-sm mt-2 leading-relaxed">
+                    <p className="text-body text-primary/80 mt-2 leading-relaxed">
                         Create a shareable, high-quality receipt for order 
                         <span className="font-mono text-xs font-semibold ml-1">#{order._id.toString().slice(-6).toUpperCase()}</span>.
                     </p>

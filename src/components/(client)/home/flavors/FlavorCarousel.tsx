@@ -14,16 +14,24 @@ import {
 
 interface FlavorCarouselProps {
   flavors: Flavor[];
+  /** When set, scrolls the carousel to this flavor and flips its card. */
+  focusRequest?: { id: string; ts: number } | null;
 }
 
-export const FlavorCarousel = ({ flavors }: FlavorCarouselProps) => {
+export const FlavorCarousel = ({ flavors, focusRequest }: FlavorCarouselProps) => {
   const [activeFlavorId, setActiveFlavorId] = useState<string | null>(null);
   const [api, setApi] = useState<CarouselApi>();
+  const pendingFocusIdRef = React.useRef<string | null>(null);
 
   useEffect(() => {
     if (!api) return;
 
     const handleSelect = () => {
+      if (pendingFocusIdRef.current) {
+        setActiveFlavorId(pendingFocusIdRef.current);
+        pendingFocusIdRef.current = null;
+        return;
+      }
       setActiveFlavorId(null);
     };
 
@@ -33,6 +41,24 @@ export const FlavorCarousel = ({ flavors }: FlavorCarouselProps) => {
       api.off("select", handleSelect);
     };
   }, [api]);
+
+  useEffect(() => {
+    if (!api || !focusRequest || flavors.length === 0) return;
+
+    const flavorId = focusRequest.id;
+    const index = flavors.findIndex((f) => f._id.toString() === flavorId);
+    if (index === -1) return;
+
+    pendingFocusIdRef.current = flavorId;
+
+    if (api.selectedScrollSnap() === index) {
+      setActiveFlavorId(flavorId);
+      pendingFocusIdRef.current = null;
+      return;
+    }
+
+    api.scrollTo(index);
+  }, [api, focusRequest, flavors]);
 
   const handleToggle = (id: string) => {
     setActiveFlavorId((prev) => (prev === id ? null : id));

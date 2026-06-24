@@ -65,6 +65,10 @@ function CustomOrderContent() {
 
   const [categories, setCategories] = useState<any[]>([]);
   const [flavors, setFlavors] = useState<any[]>([]);
+  const [carouselFocusRequest, setCarouselFocusRequest] = useState<{
+    id: string;
+    ts: number;
+  } | null>(null);
 
   // Generate a unique idempotency key once per session to prevent duplicate submissions
   const idempotencyKeyRef = useRef<string>("");
@@ -143,18 +147,13 @@ function CustomOrderContent() {
   }, [flavors, activeCategoryId]);
 
   const handleFlavorInfoClick = (flavorId: string) => {
-    const element = document.getElementById(`flavor-${flavorId}`);
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth", block: "center" });
-      
-     
-      
-      const isAlreadyFlipped = element.querySelector("[class*='rotateY(180deg)']") || element.querySelector("[class*='[transform:rotateY(180deg)]']");
-      if (!isAlreadyFlipped) {
-        element.click();
-      }
+    setCarouselFocusRequest({ id: flavorId, ts: Date.now() });
 
-    }
+    requestAnimationFrame(() => {
+      document
+        .getElementById("custom-order-flavor-carousel")
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
   };
 
   const handleNext = async () => {
@@ -369,13 +368,19 @@ function CustomOrderContent() {
       </div>
 
       {currentStep === 2 && filteredFlavors.length > 0 && (
-        <div className="mt-16 max-w-6xl mx-auto relative z-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
+        <div
+          id="custom-order-flavor-carousel"
+          className="mt-16 max-w-6xl mx-auto relative z-10 animate-in fade-in slide-in-from-bottom-8 duration-700"
+        >
           <div className="text-center mb-10">
             <h2 className="text-2xl sm:text-3xl font-heading font-bold text-primary mb-3">
               Explore Our {categoryName} Flavors
             </h2>
           </div>
-          <FlavorCarousel flavors={filteredFlavors} />
+          <FlavorCarousel
+            flavors={filteredFlavors}
+            focusRequest={carouselFocusRequest}
+          />
         </div>
       )}
       
