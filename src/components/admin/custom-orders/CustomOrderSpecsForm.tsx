@@ -6,10 +6,11 @@ import { Label } from "@/components/ui/Label";
 import { 
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue 
 } from "@/components/ui/Select";
-import { AlertTriangle, Image as ImageIcon, Trash2, Plus, Loader2 } from "lucide-react";
+import { AlertTriangle, Image as ImageIcon, Trash2, Plus, Loader2, X } from "lucide-react";
 import Image from "next/image";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { AddonAdminSelector } from "@/components/admin/addons/AddonAdminSelector";
+import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
 
 interface CustomOrderSpecsFormProps {
   order: any;
@@ -25,11 +26,19 @@ export const CustomOrderSpecsForm = ({
   isUploading
 }: CustomOrderSpecsFormProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [imageToDeleteIndex, setImageToDeleteIndex] = useState<number | null>(null);
 
   const handleRemoveImage = (index: number) => {
     const newImages = [...(order.referenceImages || [])];
     newImages.splice(index, 1);
     onChange("referenceImages", newImages);
+  };
+
+  const handleConfirmDeleteImage = () => {
+    if (imageToDeleteIndex === null) return;
+    handleRemoveImage(imageToDeleteIndex);
+    setImageToDeleteIndex(null);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -154,17 +163,26 @@ export const CustomOrderSpecsForm = ({
           </Label>
           <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-3 xl:grid-cols-4 gap-3 pt-2">
              {order.referenceImages?.map((url: string, idx: number) => (
-                <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-border group shadow-sm">
-                   <Image src={url} alt="Reference" fill className="object-cover" />
-                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <button 
-                        type="button"
-                        onClick={() => handleRemoveImage(idx)}
-                        className="bg-error text-white p-2 rounded-full hover:scale-110 transition-transform shadow-lg"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                   </div>
+                <div
+                  key={idx}
+                  className="relative aspect-square rounded-xl overflow-hidden border border-border shadow-sm"
+                >
+                   <button
+                     type="button"
+                     onClick={() => setSelectedImage(url)}
+                     className="absolute inset-0 w-full h-full cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-inset"
+                     aria-label="View reference image full size"
+                   >
+                     <Image src={url} alt="Reference" fill className="object-cover" />
+                   </button>
+                   <button
+                     type="button"
+                     onClick={() => setImageToDeleteIndex(idx)}
+                     className="absolute top-1.5 right-1.5 z-10 bg-error text-white p-1.5 rounded-full shadow-md hover:scale-105 active:scale-95 transition-transform"
+                     aria-label="Delete reference image"
+                   >
+                     <Trash2 className="w-3.5 h-3.5" />
+                   </button>
                 </div>
              ))}
              <button 
@@ -192,6 +210,43 @@ export const CustomOrderSpecsForm = ({
             onChange={handleFileChange}
           />
        </div>
+
+       {selectedImage && (
+         <div
+           className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+           onClick={() => setSelectedImage(null)}
+         >
+           <button
+             type="button"
+             onClick={() => setSelectedImage(null)}
+             className="absolute top-4 right-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20 transition-colors"
+             aria-label="Close image preview"
+           >
+             <X className="w-6 h-6" />
+           </button>
+           {/* eslint-disable-next-line @next/next/no-img-element */}
+           <img
+             src={selectedImage}
+             alt="Reference full size"
+             className="object-contain max-h-full max-w-full"
+             onClick={(e) => e.stopPropagation()}
+           />
+         </div>
+       )}
+
+       <ConfirmationModal
+         isOpen={imageToDeleteIndex !== null}
+         onClose={() => setImageToDeleteIndex(null)}
+         onConfirm={handleConfirmDeleteImage}
+         title="Remove Reference Image?"
+         confirmText="Delete"
+         variant="danger"
+       >
+         <p>
+           This image will be removed from the custom request. Click Save to
+           persist the change.
+         </p>
+       </ConfirmationModal>
     </div>
   );
 };
