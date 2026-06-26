@@ -22,8 +22,8 @@ const settingsSchema = z.object({
   checkout: z.object({
     isDeliveryEnabled: z.boolean(),
     disabledMessage: z.string().optional(),
-    deliveryFee: z.number().optional(),
-    minOrderForDelivery: z.number().optional(),
+    deliveryFee: z.number().optional().nullable(),
+    minOrderForDelivery: z.number().optional().nullable(),
     deliveryInstructions: z.string().optional(),
     isPickupEnabled: z.boolean().optional(),
     pickupAddress: z.string().optional(),
@@ -42,6 +42,22 @@ const settingsSchema = z.object({
 });
 
 type SettingsFormValues = z.infer<typeof settingsSchema>;
+
+/** Ensures cleared optional fields survive JSON.stringify (undefined is omitted). */
+function buildSettingsPayload(data: SettingsFormValues) {
+  return {
+    ...data,
+    checkout: {
+      ...data.checkout,
+      deliveryFee: data.checkout.deliveryFee ?? null,
+      minOrderForDelivery: data.checkout.minOrderForDelivery ?? null,
+    },
+    eTransferEmail:
+      data.eTransferEmail === "" || data.eTransferEmail === undefined
+        ? null
+        : data.eTransferEmail,
+  };
+}
 
 interface SettingsFormProps {
   initialSettings: AppSettings;
@@ -82,10 +98,12 @@ export default function SettingsForm({ initialSettings }: SettingsFormProps) {
 
   const onSubmit = async (data: SettingsFormValues) => {
     try {
+      const payload = buildSettingsPayload(data);
+
       const res = await fetch("/api/admin/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) throw new Error("Failed to save settings");
@@ -191,7 +209,14 @@ export default function SettingsForm({ initialSettings }: SettingsFormProps) {
                       type="number" 
                       step="0.01" 
                       {...rest} 
-                      onChange={(e) => onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                      onChange={(e) =>
+                        onChange(
+                          e.target.value === ""
+                            ? null
+                            : parseFloat(e.target.value)
+                        )
+                      }
+                      value={rest.value ?? ""}
                     />
                   )}
                 />
@@ -207,7 +232,14 @@ export default function SettingsForm({ initialSettings }: SettingsFormProps) {
                       type="number" 
                       step="0.01" 
                       {...rest} 
-                      onChange={(e) => onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                      onChange={(e) =>
+                        onChange(
+                          e.target.value === ""
+                            ? null
+                            : parseFloat(e.target.value)
+                        )
+                      }
+                      value={rest.value ?? ""}
                     />
                   )}
                 />
