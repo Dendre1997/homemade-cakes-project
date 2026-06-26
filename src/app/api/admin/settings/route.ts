@@ -5,6 +5,45 @@ import { AppSettings } from "@/types";
 import { revalidatePath } from "next/cache";
 import { getAppSettings } from "@/lib/api/settings";
 
+/**
+ * Flattens a nested object into MongoDB dot-notation keys for partial $set updates.
+ * Arrays are kept intact (not flattened) so list fields replace atomically.
+ */
+function flattenForMongoSet(
+  obj: Record<string, unknown>,
+  prefix = ""
+): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(obj)) {
+    if (key === "_id") continue;
+    if (value === undefined) continue;
+
+    const path = prefix ? `${prefix}.${key}` : key;
+
+    if (Array.isArray(value)) {
+      result[path] = value;
+      continue;
+    }
+
+    if (
+      value !== null &&
+      typeof value === "object" &&
+      !(value instanceof Date)
+    ) {
+      Object.assign(
+        result,
+        flattenForMongoSet(value as Record<string, unknown>, path)
+      );
+      continue;
+    }
+
+    result[path] = value;
+  }
+
+  return result;
+}
+
 export async function GET() {
   const auth = await verifyAdminAPI();
   if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
@@ -28,13 +67,20 @@ export async function PUT(req: NextRequest) {
     const db = client.db(process.env.MONGODB_DB_NAME);
 
     const filter = { _id: "global_settings" };
-    
-    // Omit _id from body to prevent MongoDB immutable field error
-    const { _id, ...updateData } = body;
-    
+
+    const { _id, ...updateData } = body as Record<string, unknown>;
+    const flattenedUpdate = flattenForMongoSet(updateData);
+
+    if (Object.keys(flattenedUpdate).length === 0) {
+      return NextResponse.json(
+        { error: "No valid settings fields to update" },
+        { status: 400 }
+      );
+    }
+
     const result = await db.collection<AppSettings>("app_settings").findOneAndUpdate(
       filter,
-      { $set: updateData }, 
+      { $set: flattenedUpdate },
       { upsert: true, returnDocument: "after" }
     );
 
