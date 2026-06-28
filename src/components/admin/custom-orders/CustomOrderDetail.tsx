@@ -8,6 +8,7 @@ import { CustomOrderDetailHeader } from "./CustomOrderDetailHeader";
 import { CustomOrderSpecsForm } from "./CustomOrderSpecsForm";
 import { CustomOrderContactForm } from "./CustomOrderContactForm";
 import { CustomOrderLogisticsForm } from "./CustomOrderLogisticsForm";
+import { QuickMessageCard } from "./QuickMessageCard";
 import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
 import {
   appendCloudinaryUploadPreset,
@@ -168,6 +169,7 @@ export default function CustomOrderDetail({ initialOrder }: CustomOrderDetailPro
             contact={order.contact}
             onChange={handleFieldChange}
           />
+          <QuickMessageCard order={order} />
           <div className="bg-card-background p-lg rounded-large shadow-md border border-border/40">
             <h2 className="font-heading text-h4 text-primary border-b border-border/40 pb-4 mb-4">
               Payment Preference
