@@ -87,7 +87,7 @@ export const botDecisionTree: Record<string, BotNode> = {
     id: 'login_required',
     botText: "To chat directly with Baker please log in or sign up!",
     options: [
-      { label: "Log In / Sign Up", action: 'LINK', url: '/login?callbackUrl=/contact' },
+      { label: "Log In / Sign Up", action: 'LINK', url: '/login?callbackUrl=' + encodeURIComponent('/contact?action=escalate') },
       { label: "Go Back", action: 'NAVIGATE', nextNodeId: 'greeting' }
     ]
   }

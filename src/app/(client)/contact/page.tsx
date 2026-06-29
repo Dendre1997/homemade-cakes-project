@@ -1,9 +1,11 @@
 import { cookies } from "next/headers";
+import { Suspense } from "react";
 import { adminAuth } from "@/lib/firebase/adminApp";
 import ContactClient from "../../../components/chat/ContactClient";
 import { getAppSettings } from "@/lib/api/settings";
 import { ErrorBoundary } from "react-error-boundary";
 import ContactFallback from "./ContactFallback";
+import LoadingSpinner from "@/components/ui/Spinner";
 
 export default async function ContactPage() {
   const settings = await getAppSettings();
@@ -22,7 +24,13 @@ export default async function ContactPage() {
 
   return (
     <ErrorBoundary FallbackComponent={ContactFallback}>
-      <ContactClient initialSettings={settings} isAuthenticated={isAuthenticated} />
+      <Suspense fallback={
+        <div className="flex h-[60vh] items-center justify-center">
+          <LoadingSpinner />
+        </div>
+      }>
+        <ContactClient initialSettings={settings} isAuthenticated={isAuthenticated} />
+      </Suspense>
     </ErrorBoundary>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import LoadingSpinner from "@/components/ui/Spinner";
@@ -12,8 +12,18 @@ import {
 } from "@/lib/firebase/googleSignIn";
 import { completeSessionLogin } from "@/lib/firebase/completeSessionLogin";
 
-const LoginPage = () => {
+function resolveCallbackUrl(searchParams: URLSearchParams): string {
+  const raw = searchParams.get("callbackUrl");
+  if (raw && raw.startsWith("/") && !raw.startsWith("//")) {
+    return raw;
+  }
+  return "/";
+}
+
+const LoginPageContent = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = resolveCallbackUrl(searchParams);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -29,7 +39,7 @@ const LoginPage = () => {
         setError(null);
         const idToken = await result.user.getIdToken();
         await completeSessionLogin(idToken);
-        router.push("/");
+        router.push(callbackUrl);
       } catch (err) {
         if (cancelled) return;
         if (err && typeof err === "object" && "code" in err) {
@@ -50,7 +60,7 @@ const LoginPage = () => {
     return () => {
       cancelled = true;
     };
-  }, [router]);
+  }, [router, callbackUrl]);
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
@@ -60,7 +70,7 @@ const LoginPage = () => {
       const userCredential = await signInWithGoogle();
       const idToken = await userCredential.user.getIdToken();
       await completeSessionLogin(idToken);
-      router.push("/");
+      router.push(callbackUrl);
     } catch (err) {
       if (err && typeof err === "object" && "code" in err) {
         const code = (err as { code: string }).code;
@@ -134,4 +144,14 @@ const LoginPage = () => {
   );
 };
 
-export default LoginPage;
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-screen items-center justify-center">
+        <LoadingSpinner />
+      </div>
+    }>
+      <LoginPageContent />
+    </Suspense>
+  );
+}
