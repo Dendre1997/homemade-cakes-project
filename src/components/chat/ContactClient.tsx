@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { MessageCircle, Send, Loader2, Bot, Cat, ChevronLeft, PlusCircle, Mail, Phone } from "lucide-react";
 import { AppSettings, IChat, IMessage, Flavor, Diameter } from "@/types";
 import PusherClient from "pusher-js";
@@ -10,6 +11,8 @@ import { Input } from "@/components/ui/Input";
 import { Card, CardContent } from "@/components/ui/Card";
 import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
 import { botDecisionTree, BotOption, BotNode } from "@/lib/chat/botLogic";
+import { clearChatStorage } from "@/lib/chat/chatStorage";
+import { useAuthStore } from "@/lib/store/authStore";
 import { TypingIndicator } from "./TypingIndicator";
 import { cn } from "@/lib/utils";
 
@@ -20,7 +23,19 @@ interface PopulatedChat extends Omit<IChat, "createdAt" | "updatedAt"> {
   isLocal?: boolean;
 }
 
+const POST_LOGIN_ESCALATE_BOT_PROMPT =
+  "You are now connected with the baker! Please type your message or question below.";
+
 export default function ContactClient({ initialSettings, isAuthenticated = false }: { initialSettings: AppSettings, isAuthenticated?: boolean }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const escalateAction = searchParams.get("action");
+  const postLoginEscalateRef = useRef(false);
+  const suppressDefaultGreetingRef = useRef(false);
+  const wasLoggedInRef = useRef(false);
+  const { user } = useAuthStore();
+  const isLoggedIn = isAuthenticated && !!user;
+
   const [isLoadingChats, setIsLoadingChats] = useState(true);
   const [chats, setChats] = useState<PopulatedChat[]>([]);
   const [activeChat, setActiveChat] = useState<PopulatedChat | null>(null);
@@ -52,8 +67,36 @@ export default function ContactClient({ initialSettings, isAuthenticated = false
   const localTypingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const pusherRef = useRef<PusherClient | null>(null);
 
   const generateTempId = () => Math.random().toString(36).substring(2, 12);
+
+  const resetToGuestState = useCallback(() => {
+    clearChatStorage();
+
+    if (pusherRef.current) {
+      pusherRef.current.disconnect();
+      pusherRef.current = null;
+    }
+
+    setChats([]);
+    setActiveChat(null);
+    setMessages([]);
+    setIsViewingThread(false);
+    setInputValue("");
+    setCurrentBotNodeId("greeting");
+    setDynamicNode(null);
+    setIsTyping(false);
+    setIsRemoteUserTyping(false);
+    setIsLocallyTyping(false);
+    setIsSending(false);
+    setIsCreating(false);
+    setIsConfirmCloseOpen(false);
+    setIsResolving(false);
+    postLoginEscalateRef.current = false;
+    suppressDefaultGreetingRef.current = false;
+    setIsLoadingChats(false);
+  }, []);
 
   const appendLocalBotMessage = (text: string) => {
     const newMsg: IMessage = { id: generateTempId(), sender: "bot", text, createdAt: new Date() };
@@ -71,18 +114,30 @@ export default function ContactClient({ initialSettings, isAuthenticated = false
     }
   };
 
-  // Load Chats on Mount
+  // Wipe authenticated chat state when the user logs out (client or server session ends).
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (wasLoggedInRef.current && !isLoggedIn) {
+      resetToGuestState();
+    }
+    wasLoggedInRef.current = isLoggedIn;
+  }, [isLoggedIn, resetToGuestState]);
+
+  // Load chats only for authenticated users with a resolved profile.
+  useEffect(() => {
+    if (!isLoggedIn) {
       setIsLoadingChats(false);
       return;
     }
+
+    setIsLoadingChats(true);
     const fetchChats = async () => {
       try {
         const res = await fetch("/api/chat");
         if (res.ok) {
           const data = await res.json();
           setChats(data);
+        } else if (res.status === 401) {
+          resetToGuestState();
         }
       } catch (error) {
         console.error("Failed to load chats:", error);
@@ -91,7 +146,7 @@ export default function ContactClient({ initialSettings, isAuthenticated = false
       }
     };
     fetchChats();
-  }, [isAuthenticated]);
+  }, [isLoggedIn, resetToGuestState]);
 
   // Auto-scroll Feed
   useEffect(() => {
@@ -99,8 +154,6 @@ export default function ContactClient({ initialSettings, isAuthenticated = false
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
-
-  const pusherRef = useRef<PusherClient | null>(null);
 
   // Clean up Pusher on unmount
   useEffect(() => {
@@ -116,7 +169,7 @@ export default function ContactClient({ initialSettings, isAuthenticated = false
     if (!activeChat) return;
 
     if (activeChat.status === "bot_active") {
-        if (messages.length === 0) {
+        if (messages.length === 0 && !suppressDefaultGreetingRef.current) {
            setCurrentBotNodeId("greeting");
            setDynamicNode(null);
            setIsTyping(true);
@@ -126,10 +179,12 @@ export default function ContactClient({ initialSettings, isAuthenticated = false
            }, 800);
         }
     } else {
-        if (messages.length === 0) appendLocalBotMessage("Reconnected securely to active session.");
+        if (messages.length === 0 && !suppressDefaultGreetingRef.current) {
+          appendLocalBotMessage("Reconnected securely to active session.");
+        }
     }
 
-    const shouldConnectToPusher = isAuthenticated && !activeChat.isLocal && activeChat.status !== "bot_active";
+    const shouldConnectToPusher = isLoggedIn && !activeChat.isLocal && activeChat.status !== "bot_active";
 
     if (!shouldConnectToPusher) {
       return;
@@ -177,7 +232,7 @@ export default function ContactClient({ initialSettings, isAuthenticated = false
       if (localTypingTimeoutRef.current) clearTimeout(localTypingTimeoutRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeChat?._id, activeChat?.status, activeChat?.isLocal, isAuthenticated]);
+  }, [activeChat?._id, activeChat?.status, activeChat?.isLocal, isLoggedIn]);
 
   const changeActiveChat = (chat: PopulatedChat) => {
      setActiveChat(chat);
@@ -334,6 +389,192 @@ export default function ContactClient({ initialSettings, isAuthenticated = false
       setIsResolving(false);
     }
   };
+
+  const executeEscalateFlow = useCallback(async (options?: { isPostLoginReturn?: boolean }) => {
+    const isPostLoginReturn = options?.isPostLoginReturn === true;
+
+    if (!isLoggedIn) {
+      setCurrentBotNodeId("login_required");
+      setIsTyping(true);
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      appendLocalBotMessage(botDecisionTree["login_required"].botText);
+      setIsTyping(false);
+      return;
+    }
+
+    if (isPostLoginReturn) {
+      suppressDefaultGreetingRef.current = true;
+    }
+
+    let chatForEscalate = activeChat;
+
+    if (!chatForEscalate) {
+      const existingBotChat = chats.find((c) => c.status === "bot_active");
+      if (existingBotChat) {
+        chatForEscalate = existingBotChat;
+        setActiveChat(existingBotChat);
+        setMessages(existingBotChat.messages || []);
+        setIsViewingThread(true);
+      } else if (chats.length >= 3) {
+        setToastMessage(
+          "You already have 3 active inquiries. Please resolve one before starting another."
+        );
+        setTimeout(() => setToastMessage(null), 4000);
+        if (isPostLoginReturn) suppressDefaultGreetingRef.current = false;
+        return;
+      } else {
+        const newChat: PopulatedChat = {
+          _id: "local_" + generateTempId(),
+          userId: "me",
+          status: "bot_active",
+          hasUnread: false,
+          messages: [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          isLocal: true,
+        };
+        setChats((prev) => [newChat, ...prev]);
+        setActiveChat(newChat);
+        setMessages([]);
+        setIsViewingThread(true);
+        chatForEscalate = newChat;
+      }
+    }
+
+    let targetChatId = chatForEscalate._id;
+
+    if (chatForEscalate.isLocal || !targetChatId) {
+      setIsCreating(true);
+      try {
+        const res = await fetch("/api/chat", { method: "POST" });
+        if (res.status === 429) {
+          setToastMessage(
+            "You already have 3 active inquiries. Please resolve one before starting another."
+          );
+          setTimeout(() => setToastMessage(null), 4000);
+          setIsCreating(false);
+          if (isPostLoginReturn) suppressDefaultGreetingRef.current = false;
+          return;
+        }
+        if (!res.ok) throw new Error("Failed to create chat");
+
+        const data = await res.json();
+        targetChatId = data.chatId as string;
+
+        const updatedActiveChat = {
+          ...chatForEscalate,
+          _id: targetChatId,
+          isLocal: false,
+          status: "waiting_admin" as const,
+        };
+        setActiveChat(updatedActiveChat);
+        setChats((prev) =>
+          prev.map((c) =>
+            c._id === chatForEscalate!._id ? updatedActiveChat : c
+          )
+        );
+      } catch (e) {
+        console.error(e);
+        setToastMessage("Failed to connect to agent.");
+        setTimeout(() => setToastMessage(null), 4000);
+        setIsCreating(false);
+        if (isPostLoginReturn) suppressDefaultGreetingRef.current = false;
+        return;
+      }
+      setIsCreating(false);
+    } else {
+      setActiveChat((prev) =>
+        prev ? { ...prev, status: "waiting_admin" as const } : null
+      );
+      setChats((prev) =>
+        prev.map((c) =>
+          c._id === chatForEscalate!._id
+            ? { ...c, status: "waiting_admin" as const }
+            : c
+        )
+      );
+      setIsViewingThread(true);
+    }
+
+    setIsSending(true);
+    const text =
+      "You're connected with the baker. Replies may take some time, but baker will get back to you as soon as possible";
+    const tempId = generateTempId();
+    const optimisticMsg: IMessage = {
+      id: tempId,
+      sender: "client",
+      text,
+      createdAt: new Date(),
+    };
+    setMessages((prev) => [...prev, optimisticMsg]);
+
+    try {
+      const resMsg = await fetch("/api/chat/message", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chatId: targetChatId,
+          text,
+          sender: "client",
+        }),
+      });
+
+      if (!resMsg.ok) throw new Error("Delivery failed");
+      const serverMessage = await resMsg.json();
+
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === serverMessage.id && m.id !== tempId)) {
+          return prev.filter((m) => m.id !== tempId);
+        }
+        return prev.map((m) => (m.id === tempId ? serverMessage : m));
+      });
+      setChats((prev) =>
+        prev.map((c) => {
+          if (c._id !== targetChatId) return c;
+          const msgs = c.messages || [];
+          if (msgs.some((m) => m.id === serverMessage.id && m.id !== tempId)) {
+            return { ...c, messages: msgs.filter((m) => m.id !== tempId) };
+          }
+          return {
+            ...c,
+            messages: msgs.map((m) => (m.id === tempId ? serverMessage : m)),
+          };
+        })
+      );
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSending(false);
+      if (isPostLoginReturn) {
+        appendLocalBotMessage(POST_LOGIN_ESCALATE_BOT_PROMPT);
+        suppressDefaultGreetingRef.current = false;
+      }
+    }
+  }, [activeChat, appendLocalBotMessage, chats, isLoggedIn]);
+
+  useEffect(() => {
+    if (
+      !isLoggedIn ||
+      escalateAction !== "escalate" ||
+      postLoginEscalateRef.current ||
+      isLoadingChats
+    ) {
+      return;
+    }
+
+    postLoginEscalateRef.current = true;
+
+    void (async () => {
+      await executeEscalateFlow({ isPostLoginReturn: true });
+      router.replace("/contact", { scroll: false });
+    })();
+  }, [
+    isLoggedIn,
+    escalateAction,
+    isLoadingChats,
+    router,
+    executeEscalateFlow,
+  ]);
 
   const handleBotOptionClick = async (option: BotOption) => {
     appendLocalUserMessage(option.label);
@@ -499,89 +740,7 @@ export default function ContactClient({ initialSettings, isAuthenticated = false
         break;
 
       case 'ESCALATE':
-        if (!isAuthenticated) {
-          setCurrentBotNodeId('login_required');
-          setIsTyping(true);
-          await new Promise(resolve => setTimeout(resolve, 800));
-          appendLocalBotMessage(botDecisionTree['login_required'].botText);
-          setIsTyping(false);
-          return;
-        }
-
-        let targetChatId = activeChat?._id;
-        
-        if (activeChat?.isLocal || !targetChatId) {
-          setIsCreating(true);
-          try {
-            const res = await fetch("/api/chat", { method: "POST" });
-            if (res.status === 429) {
-               setToastMessage("You already have 3 active inquiries. Please resolve one before starting another.");
-               setTimeout(() => setToastMessage(null), 4000);
-               setIsCreating(false);
-               return;
-            }
-            if (!res.ok) throw new Error("Failed to create chat");
-            
-            const data = await res.json();
-            targetChatId = data.chatId as string;
-
-            const updatedActiveChat = { ...activeChat!, _id: targetChatId, isLocal: false, status: "waiting_admin" as const };
-            setActiveChat(updatedActiveChat);
-            setChats(prev => prev.map(c => c._id === activeChat?._id ? updatedActiveChat : c));
-
-          } catch (e) {
-             console.error(e);
-             setToastMessage("Failed to connect to agent.");
-             setTimeout(() => setToastMessage(null), 4000);
-             setIsCreating(false);
-             return;
-          }
-          setIsCreating(false);
-        } else {
-            setActiveChat(prev => prev ? { ...prev, status: "waiting_admin" as const } : null);
-            setChats(prev => prev.map(c => c._id === activeChat?._id ? { ...c, status: "waiting_admin" as const } : c));
-        }
-
-        setIsSending(true);
-        const text =
-          "You're connected with the baker. Replies may take some time, but baker will get back to you as soon as possible";
-        const tempId = generateTempId();
-        const optimisticMsg: IMessage = { id: tempId, sender: "client", text, createdAt: new Date() };
-        setMessages(prev => [...prev, optimisticMsg]);
-
-        try {
-           const resMsg = await fetch("/api/chat/message", {
-             method: "POST",
-             headers: { "Content-Type": "application/json" },
-             body: JSON.stringify({
-               chatId: targetChatId,
-               text,
-               sender: "client"
-             })
-           });
-           
-           if (!resMsg.ok) throw new Error("Delivery failed");
-           const serverMessage = await resMsg.json();
-           
-           setMessages(prev => {
-               if (prev.some(m => m.id === serverMessage.id && m.id !== tempId)) {
-                   return prev.filter(m => m.id !== tempId);
-               }
-               return prev.map(m => m.id === tempId ? serverMessage : m);
-           });
-           setChats(prev => prev.map(c => {
-               if (c._id !== targetChatId) return c;
-               const msgs = c.messages || [];
-               if (msgs.some(m => m.id === serverMessage.id && m.id !== tempId)) {
-                   return { ...c, messages: msgs.filter(m => m.id !== tempId) };
-               }
-               return { ...c, messages: msgs.map(m => m.id === tempId ? serverMessage : m) };
-           }));
-        } catch (err) {
-           console.error(err);
-        } finally {
-           setIsSending(false);
-        }
+        await executeEscalateFlow();
         break;
 
       case 'LINK':

@@ -24,6 +24,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { clearChatStorage } from "@/lib/chat/chatStorage";
 import { ProductCategory } from "@/types";
 import HeaderLogo from '@/components/ui/HeaderLogo'
 import SeasonalHeaderBar from "./SeasonalHeaderBar";
@@ -49,7 +50,7 @@ import { Button } from "@/components/ui/Button";
 
 
 const Header = ({ categories }: HeaderProps) => {
-  const { user, isLoading } = useAuthStore();
+  const { user, isLoading, setUser } = useAuthStore();
   const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -84,8 +85,16 @@ const Header = ({ categories }: HeaderProps) => {
   }, []);
 
   const handleLogout = async () => {
-    await signOut(auth);
-    router.push("/");
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      await signOut(auth);
+      setUser(null);
+      clearChatStorage();
+      router.push("/");
+      router.refresh();
+    } catch (error) {
+      console.error("Logout failed", error);
+    }
   };
 
   const navCategories = categories.map((cat) => ({

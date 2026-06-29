@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/Button";
 import { LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { useAuthStore } from "@/lib/store/authStore"; 
+import { useAuthStore } from "@/lib/store/authStore";
+import { clearChatStorage } from "@/lib/chat/chatStorage";
 
 export default function ProfileLogoutButton() {
   const router = useRouter();
@@ -17,6 +18,7 @@ export default function ProfileLogoutButton() {
       await fetch("/api/auth/logout", { method: "POST" });
       
       setUser(null);
+      clearChatStorage();
 
       router.push("/login");
       router.refresh();
