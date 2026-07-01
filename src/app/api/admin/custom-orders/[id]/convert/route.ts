@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { adminAuth } from "@/lib/firebase/adminApp";
 import clientPromise from "@/lib/db";
 import { ObjectId } from "mongodb";
+import { randomBytes } from "crypto";
 import { OrderStatus, User } from "@/types";
 import { resend, DEFAULT_FROM } from "@/lib/email";
 import OrderConfirmationEmail from "@/emails/OrderConfirmationEmail";
@@ -91,8 +92,8 @@ export async function POST(
 
     const newOrderId = new ObjectId();
 
-    // Generate a mocked Payment Link
-    const paymentLink = `https://mock-payment-gateway.com/checkout/${newOrderId.toString()}`;
+    // Secure token for the public Payment Hub link (/pay/[orderId]?token=)
+    const paymentToken = randomBytes(16).toString("hex");
 
     // Prepare Item Object
     const primaryImage =
@@ -205,6 +206,7 @@ export async function POST(
       referenceImages: customOrder.referenceImages || [],
       createdAt: new Date(),
       isPaid: false,
+      paymentToken,
       paymentDetails: {
         expectedMethod: resolvedExpectedMethod as 'cash' | 'e-transfer',
       },
@@ -297,7 +299,7 @@ export async function POST(
     return NextResponse.json({
       success: true,
       newOrderId: newOrderId.toString(),
-      paymentLink,
+      paymentToken,
     });
   } catch (error) {
     console.error("Convert Custom Order Error:", error);

@@ -55,7 +55,7 @@ Structured payment record on Order; method is actual completion form, expectedMe
 method ('cash' | 'e-transfer' | 'square' | 'manual'), expectedMethod?, transactionId?, paidAt?
 Order
 Root order document; financial truth via isPaid + totalAmount; embeds CartItem[] at runtime.
-_id, customerId?, items[], totalAmount, customerInfo, deliveryInfo, status: OrderStatus, isPaid, paymentDetails?, discountInfo?, createdAt, source?, referenceImages?[], notesLog?[], claimedByUid?, paymentLinkToken?, paymentLinkExpiresAt?
+_id, customerId?, items[], totalAmount, customerInfo, deliveryInfo, status: OrderStatus, isPaid, paymentDetails?, discountInfo?, createdAt, source?, referenceImages?[], notesLog?[], claimedByUid?, paymentToken? (secure hex token guarding the public Payment Hub link /pay/[orderId]?token=[token])
 OrderItem
 Persisted line-item shape with ObjectId-typed foreign keys; synced field set with CartItem minus ephemeral client fields.
 id, productId?: ObjectId, categoryId?: ObjectId, diameterId?: ObjectId, price, quantity, rowTotal?, discountId?: ObjectId, selectedConfig?, productType?, customSize?, designInstructions?, addons?[]

@@ -58,10 +58,13 @@ export interface Order {
   referenceImages?: string[];
   notesLog?: { id: string; content: string; createdAt: Date | string; author?: string; }[];
   claimedByUid?: string | null;
-  paymentLinkToken?: string;
-  paymentLinkExpiresAt?: Date;
+  paymentToken?: string;
 }
 The source: 'admin-custom' value in Order is the auditable marker distinguishing converted custom requests from regular web checkout orders.
+
+Payment Hub (manual Interac e-Transfer). On order creation (web checkout and custom-order conversion) a secure `paymentToken` (a hex string from Node's `crypto.randomBytes(16)`) is persisted on the Order. The admin shares a self-serve link of the form `/pay/[orderId]?token=[token]`. The public route at `src/app/pay/[orderId]/page.tsx` strictly matches BOTH `_id` AND `paymentToken` before rendering the Payment Hub, which surfaces the amount, the destination e-Transfer email (from `app_settings.eTransferEmail`), and the order reference with one-tap copy buttons. There is no expiry — persistent by design, since e-Transfers can be delayed.
+
+NOTE: This manual Interac e-Transfer flow and Payment Hub is a temporary solution. It will eventually be replaced by a direct payment gateway integration (e.g., Stripe).
 
 Phase 1 — Client Wizard: Dynamic Option Fetching
 The customer-facing intake lives at 
@@ -255,4 +258,6 @@ The replaceOne is used — not updateOne — so the resulting custom_orders docu
 
 Step 6 — Transactional email. After both writes succeed, the route conditionally dispatches an OrderConfirmationEmail via Resend. The dispatch is skipped if customerInfo.email is empty or contains @placeholder.com. When it fires, the route hydrates the email template by fetching all flavors and diameters from MongoDB into lookup maps (Record<string, string>) — this is required because the OrderConfirmationEmail component resolves ObjectId references to human-readable names. The compiled Order object (with ObjectIds stringified) and both maps are passed to render(OrderConfirmationEmail(...)) from @react-email/render, which produces the raw HTML string sent via resend.emails.send. Email failure is caught and logged but does not affect the HTTP response — the conversion is already persisted.
 
-Response. On success, the route returns { success: true, newOrderId: string, paymentLink: string }. The paymentLink is currently a placeholder URL (https://mock-payment-gateway.com/checkout/${newOrderId}) — it is displayed in the UI as a copyable link for the admin to optionally share with the customer, but it does not connect to a live payment processor. Back in CustomOrderDetail.handleConvertConfirm, the returned paymentLink is stored in component state and surfaced via CustomOrderDetailHeader as a copyable field.
+Response. On success, the route returns { success: true, newOrderId: string, paymentToken: string }. The `paymentToken` is a secure hex string persisted on the new Order. Back in CustomOrderDetail.handleConvertConfirm (and CustomOrderCard.handleConvert), the returned `newOrderId` + `paymentToken` are used to build the Payment Hub link `${window.location.origin}/pay/${orderId}?token=${paymentToken}`, surfaced via CustomOrderDetailHeader as a "Copy Payment Link" button. For already-converted orders opened later, the admin UI resolves the token by fetching the Order from GET /api/admin/orders/[id].
+
+NOTE: This manual Interac e-Transfer flow and Payment Hub is a temporary solution. It will eventually be replaced by a direct payment gateway integration (e.g., Stripe).

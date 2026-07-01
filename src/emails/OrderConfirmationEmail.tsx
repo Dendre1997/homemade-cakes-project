@@ -11,6 +11,7 @@ import {
   Column,
   Hr,
   Link,
+  Button,
 } from "@react-email/components";
 import { Order, CartItem } from "@/types";
 import { format } from "date-fns";
@@ -340,6 +341,17 @@ export const OrderConfirmationEmail = ({
                       <> via e-transfer. Payment details will follow separately.</>
                     )}
                   </Text>
+
+                  {order.paymentToken && (
+                    <Section style={{ textAlign: "center", marginTop: "14px" }}>
+                      <Button
+                        href={`${baseUrl}/pay/${order._id}?token=${order.paymentToken}`}
+                        style={styles.payNowButton}
+                      >
+                        Pay Now via e-Transfer
+                      </Button>
+                    </Section>
+                  )}
                 </Section>
               ) : expectedMethod === "cash" ? (
                 <Section style={styles.paymentBanner}>
@@ -853,6 +865,17 @@ const styles = {
     lineHeight: "1.6",
     wordBreak: "break-word" as const,
     overflowWrap: "break-word" as const,
+  },
+  payNowButton: {
+    backgroundColor: C.primary,
+    color: C.white,
+    fontSize: "14px",
+    fontWeight: "700",
+    textDecoration: "none",
+    textAlign: "center" as const,
+    padding: "12px 28px",
+    borderRadius: "10px",
+    display: "inline-block",
   },
 
   // ── info rows — label column fixed, value column flex

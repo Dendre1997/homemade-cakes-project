@@ -12,6 +12,8 @@ import { cn } from "@/lib/utils";
 
 interface QuickMessageCardProps {
   order: CustomOrder;
+  /** Set once the request is converted; used to inject the Payment Hub link for e-transfer orders. */
+  convertedInfo?: { orderId: string; paymentToken?: string } | null;
 }
 
 function formatPhoneForMessaging(phone: string | undefined): string | null {
@@ -33,7 +35,11 @@ function formatFriendlyDate(dateInput: Date | string | undefined): string | unde
   return format(parsed, "MMMM do");
 }
 
-function buildQuickMessage(order: CustomOrder, priceInput: string): string {
+function buildQuickMessage(
+  order: CustomOrder,
+  priceInput: string,
+  paymentLink?: string | null
+): string {
   const firstName = order.contact?.name?.trim().split(/\s+/)[0] || "there";
   const category = order.category?.trim() || "custom order";
 
@@ -68,14 +74,21 @@ schedulePhrase
   : `We'd be happy to have it ready for ${fulfillment}.`,
 "",
 "Your quote comes to $[Price]. Just reply to this message if you'd like to confirm your order!",
-"",
-"— D&K Creations",
   ];
+
+  if (paymentLink) {
+    bodyLines.push(
+      "",
+      `To secure your order, please send your e-Transfer using this link: ${paymentLink}`
+    );
+  }
+
+  bodyLines.push("", "— D&K Creations");
 
   return bodyLines.join("\n").replace("$[Price]", priceReplacement);
 }
 
-export function QuickMessageCard({ order }: QuickMessageCardProps) {
+export function QuickMessageCard({ order, convertedInfo }: QuickMessageCardProps) {
   const [priceInput, setPriceInput] = useState(() =>
     order.agreedPrice != null && !Number.isNaN(Number(order.agreedPrice))
       ? String(order.agreedPrice)
@@ -84,8 +97,17 @@ export function QuickMessageCard({ order }: QuickMessageCardProps) {
   const [messageText, setMessageText] = useState("");
 
   useEffect(() => {
-    setMessageText(buildQuickMessage(order, priceInput));
-  }, [order, priceInput]);
+    // Inject the secure Payment Hub link only for converted e-transfer orders.
+    const paymentLink =
+      order.paymentPreference === "e-transfer" &&
+      convertedInfo?.orderId &&
+      convertedInfo?.paymentToken &&
+      typeof window !== "undefined"
+        ? `${window.location.origin}/pay/${convertedInfo.orderId}?token=${convertedInfo.paymentToken}`
+        : null;
+
+    setMessageText(buildQuickMessage(order, priceInput, paymentLink));
+  }, [order, priceInput, convertedInfo]);
 
   const formattedPhone = useMemo(
     () => formatPhoneForMessaging(order.contact?.phone),

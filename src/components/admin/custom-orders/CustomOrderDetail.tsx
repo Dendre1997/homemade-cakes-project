@@ -27,7 +27,15 @@ export default function CustomOrderDetail({ initialOrder }: CustomOrderDetailPro
   const [isUploading, setIsUploading] = useState(false);
   const [isConverting, setIsConverting] = useState(false);
   const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
-  const [paymentLink, setPaymentLink] = useState<string | null>(null);
+  // Holds the converted Order's id + secure token so we can build the Payment Hub link.
+  const [convertedInfo, setConvertedInfo] = useState<{
+    orderId: string;
+    paymentToken?: string;
+  } | null>(
+    initialOrder.convertedOrderId
+      ? { orderId: initialOrder.convertedOrderId }
+      : null
+  );
   const [expectedMethod, setExpectedMethod] = useState<'cash' | 'e-transfer'>(
     initialOrder.paymentPreference ?? 'e-transfer'
   );
@@ -64,7 +72,12 @@ export default function CustomOrderDetail({ initialOrder }: CustomOrderDetailPro
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to convert");
 
-      setPaymentLink(data.paymentLink);
+      setConvertedInfo({ orderId: data.newOrderId, paymentToken: data.paymentToken });
+      setOrder((prev) => ({
+        ...prev,
+        status: "converted",
+        convertedOrderId: data.newOrderId,
+      }));
       showAlert("Order converted successfully!", "success");
     } catch (err: any) {
       console.error(err);
@@ -74,12 +87,52 @@ export default function CustomOrderDetail({ initialOrder }: CustomOrderDetailPro
     }
   };
 
-  const copyLinkAndDismiss = () => {
-    if (paymentLink) {
-      navigator.clipboard.writeText(paymentLink);
+  const handleCopyPaymentLink = async () => {
+    // Prefer the freshly-converted order; fall back to a previously converted one.
+    const orderId = convertedInfo?.orderId ?? order.convertedOrderId;
+
+    if (!orderId) {
+      showAlert(
+        "This request hasn't been converted to an order yet. Convert and price it before sharing a payment link.",
+        "error"
+      );
+      return;
+    }
+
+    let token = convertedInfo?.paymentToken;
+
+    // Reload case: token isn't in memory, so pull it from the converted Order document.
+    if (!token) {
+      try {
+        const res = await fetch(`/api/admin/orders/${orderId}`);
+        if (res.ok) {
+          const data = await res.json();
+          token = data?.paymentToken;
+          if (token) {
+            setConvertedInfo({ orderId, paymentToken: token });
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch payment token:", err);
+      }
+    }
+
+    if (!token) {
+      showAlert(
+        "Payment token is missing for this order. Unable to build a secure payment link.",
+        "error"
+      );
+      return;
+    }
+
+    const link = `${window.location.origin}/pay/${orderId}?token=${token}`;
+
+    try {
+      await navigator.clipboard.writeText(link);
       showAlert("Payment link copied to clipboard!", "success");
-      setPaymentLink(null); // Clear after dismissing
-      router.push('/bakery-manufacturing-orders/custom-orders');
+    } catch (err) {
+      console.error("Clipboard write failed:", err);
+      showAlert("Failed to copy the payment link to clipboard.", "error");
     }
   };
 
@@ -150,8 +203,8 @@ export default function CustomOrderDetail({ initialOrder }: CustomOrderDetailPro
         onSave={handleSave}
         isConverting={isConverting}
         onConvert={handleConvertClick}
-        paymentLink={paymentLink}
-        onCopyAndDismiss={copyLinkAndDismiss}
+        isConverted={order.status === "converted"}
+        onCopyPaymentLink={handleCopyPaymentLink}
       />
 
       <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-3 gap-8">
@@ -169,7 +222,7 @@ export default function CustomOrderDetail({ initialOrder }: CustomOrderDetailPro
             contact={order.contact}
             onChange={handleFieldChange}
           />
-          <QuickMessageCard order={order} />
+          <QuickMessageCard order={order} convertedInfo={convertedInfo} />
           <div className="bg-card-background p-lg rounded-large shadow-md border border-border/40">
             <h2 className="font-heading text-h4 text-primary border-b border-border/40 pb-4 mb-4">
               Payment Preference

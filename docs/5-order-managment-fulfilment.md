@@ -39,9 +39,13 @@ export interface Order {
   referenceImages?: string[];
   notesLog?: { id: string; content: string; createdAt: Date | string; author?: string }[];
   claimedByUid?: string | null;
-  paymentLinkToken?: string;
-  paymentLinkExpiresAt?: Date;
+  paymentToken?: string;          // guards the public Payment Hub link: /pay/[orderId]?token=[token]
 }
+
+Payment Hub (manual Interac e-Transfer). Every new Order is created with a secure `paymentToken` (`crypto.randomBytes(16).toString('hex')`). The admin copies a self-serve link `/pay/[orderId]?token=[token]` from the order/custom-order UI. The public server component at `src/app/pay/[orderId]/page.tsx` looks up the order by BOTH `_id` AND `paymentToken`; on mismatch it renders an "Invalid or Expired Payment Link" screen. On success it renders `PaymentHubClient` with the total, the destination e-Transfer email (read from `app_settings.eTransferEmail` via `getAppSettings()`), and the short order reference, each with a copy button.
+
+NOTE: This manual Interac e-Transfer flow and Payment Hub is a temporary solution. It will eventually be replaced by a direct payment gateway integration (e.g., Stripe).
+
 OrderItem — canonical persisted line-item shape (ObjectId-typed references). Mirrors CartItem manufacturing fields but uses ObjectId for productId, categoryId, diameterId, and discountId:
 
 export interface OrderItem {

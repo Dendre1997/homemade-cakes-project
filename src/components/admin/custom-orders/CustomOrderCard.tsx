@@ -34,7 +34,9 @@ export const CustomOrderCard = ({ order }: CustomOrderCardProps) => {
   
   const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
   const [isRejectModalOpen, setIsRejectOpen] = useState(false);
-  const [expectedMethod, setExpectedMethod] = useState<'cash' | 'e-transfer'>('e-transfer');
+  const [expectedMethod, setExpectedMethod] = useState<'cash' | 'e-transfer'>(
+    order.paymentPreference ?? 'e-transfer'
+  );
 
   // Use all reference images
   const images = order.referenceImages || order.referenceImageUrls || [];
@@ -52,8 +54,14 @@ export const CustomOrderCard = ({ order }: CustomOrderCardProps) => {
       
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to convert");
-      
-      setPaymentLink(data.paymentLink);
+
+      if (!data.newOrderId || !data.paymentToken) {
+        throw new Error("Order converted, but the secure payment token is missing.");
+      }
+
+      // Build the public Payment Hub link for the converted Order.
+      const link = `${window.location.origin}/pay/${data.newOrderId}?token=${data.paymentToken}`;
+      setPaymentLink(link);
     } catch (err: any) {
       showAlert("Conversion failed: " + err.message, "error");
     } finally {

@@ -15,8 +15,8 @@ interface CustomOrderDetailHeaderProps {
   onSave: () => void;
   isConverting: boolean;
   onConvert: () => void;
-  paymentLink: string | null;
-  onCopyAndDismiss: () => void;
+  isConverted: boolean;
+  onCopyPaymentLink: () => void;
 }
 
 export const CustomOrderDetailHeader = ({
@@ -28,10 +28,9 @@ export const CustomOrderDetailHeader = ({
   onSave,
   isConverting,
   onConvert,
-  paymentLink,
-  onCopyAndDismiss,
+  isConverted,
+  onCopyPaymentLink,
 }: CustomOrderDetailHeaderProps) => {
-  const isConverted = status === 'converted';
 
   return (
     <div className="flex flex-col gap-6 mb-8">
@@ -63,13 +62,13 @@ export const CustomOrderDetailHeader = ({
       </div>
 
       <div className="flex flex-wrap items-center gap-4 py-4 border-y border-border/40 shrink-0">
-        {paymentLink ? (
-          <Button 
-            onClick={onCopyAndDismiss} 
-            className="shadow-md min-w-[160px] gap-2 text-white"
+        {isConverted ? (
+          <Button
+            onClick={onCopyPaymentLink}
+            className="shadow-md min-w-[180px] gap-2 text-white"
           >
-            <Copy className="w-4 h-4" /> 
-            Copy & Dismiss
+            <Copy className="w-4 h-4" />
+            Copy Payment Link
           </Button>
         ) : (
           <>
