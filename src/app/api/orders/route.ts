@@ -4,6 +4,7 @@ import { adminAuth } from "@/lib/firebase/adminApp";
 import clientPromise from "@/lib/db";
 import { Order, OrderStatus, CartItem, OrderItem, Discount } from "@/types";
 import { ObjectId } from "mongodb";
+import { randomBytes } from "crypto";
 import { resend, DEFAULT_FROM } from "@/lib/email";
 import { NewOrderEmail } from "@/emails/NewOrderEmail";
 import OrderConfirmationEmail from "@/emails/OrderConfirmationEmail";
@@ -223,6 +224,8 @@ export async function POST(request: NextRequest) {
         createdAt: new Date(),
         source: 'web', // Enforce source
         isPaid: false,
+        // Secure token for the public Payment Hub link (/pay/[orderId]?token=)
+        paymentToken: randomBytes(16).toString("hex"),
         discountInfo: pricingResult.discountTotal > 0 ? {
             code: pricingResult.appliedCode || undefined,
             amount: pricingResult.discountTotal,
@@ -488,6 +491,8 @@ export async function POST(request: NextRequest) {
         createdAt: new Date(),
         source: 'web', // Enforce source
         isPaid: false,
+        // Secure token for the public Payment Hub link (/pay/[orderId]?token=)
+        paymentToken: randomBytes(16).toString("hex"),
         discountInfo: pricingResult.discountTotal > 0 ? {
             code: pricingResult.appliedCode || undefined,
             amount: pricingResult.discountTotal,
@@ -508,6 +513,7 @@ export async function POST(request: NextRequest) {
         status: newOrder.status,
         createdAt: newOrder.createdAt,
         isPaid: false,
+        paymentToken: newOrder.paymentToken,
         items: newOrder.items.map((item) => ({
           ...item,
           productId: item.productId?.toString(),

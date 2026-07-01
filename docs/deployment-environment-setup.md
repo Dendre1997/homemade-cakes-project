@@ -215,5 +215,5 @@ Location — create or select a Square location; copy Location ID (SQUARE_LOCATI
 Environment — set SQUARE_ENVIRONMENT=sandbox for non-production. Sandbox Application ID is prefixed sandbox-sq0idb-; production omits the prefix.
 Client SDK — expose Application ID to the browser as NEXT_PUBLIC_SQUARE_APPLICATION_ID for Web Payments SDK initialization. Keep SQUARE_ACCESS_TOKEN server-only for Payments API (CreatePayment, CreatePaymentLink).
 Webhooks — register a webhook subscription pointing to https://<domain>/api/webhooks/square (route does not exist yet). Store the signature key as SQUARE_WEBHOOK_SIGNATURE_KEY for HMAC verification of x-square-hmacsha256-signature.
-Custom-order payment links — POST /api/admin/custom-orders/[id]/convert currently returns <https://mock-payment-gateway.com/checkout/{id}>. Replace with Square Payment Links API or Checkout API when wiring live payments.
+Custom-order payment links — POST /api/admin/custom-orders/[id]/convert returns a secure `paymentToken`; the admin UI builds a manual Payment Hub link `/pay/[orderId]?token=[token]` for Interac e-Transfers. This is a temporary solution — replace with Square Payment Links API / Checkout API (or Stripe) when wiring live payments.
 PCI scope — use Square Web Payments SDK for card tokenization in the browser; never pass raw card data through Next.js API routes.

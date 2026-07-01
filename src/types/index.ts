@@ -312,10 +312,12 @@ export interface Order {
   }[];
   /** UID of the admin who has claimed/locked this order for processing. `null` means unclaimed. */
   claimedByUid?: string | null;
-  /** Opaque token used to generate a self-serve payment link for the customer. */
-  paymentLinkToken?: string;
-  /** Expiry timestamp for the payment link token. */
-  paymentLinkExpiresAt?: Date;
+  /**
+   * Secure random hex token guarding the public Payment Hub route
+   * (`/pay/[orderId]?token=[token]`). Persistent (no expiry) so delayed
+   * e-Transfers can still resolve the payment link.
+   */
+  paymentToken?: string;
 }
 export interface OrderItem {
   id: string;

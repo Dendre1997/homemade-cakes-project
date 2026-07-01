@@ -154,9 +154,11 @@ export interface PaymentDetails {
   transactionId?: string;
   paidAt?: Date;
 }
-The 'square' method value is defined in the type but is not used by any route in the current implementation. The Order interface similarly carries paymentLinkToken?: string and paymentLinkExpiresAt?: Date fields, which exist as schema reservations but are not populated by any current API route. Payment for web checkout orders is confirmed manually by the admin through the admin order management UI.
+The 'square' method value is defined in the type but is not used by any route in the current implementation. The Order interface carries a `paymentToken?: string` field: a secure hex token (`crypto.randomBytes(16).toString('hex')`) generated on every order creation (web checkout and custom-order conversion) and persisted on the document. It guards the public Payment Hub link `/pay/[orderId]?token=[token]`. Payment for web checkout orders is still confirmed manually by the admin through the admin order management UI.
 
-The only operative payment mechanism is for manual cash/e-transfer orders: when the admin confirms a custom order conversion via POST /api/admin/custom-orders/[id]/convert, the expectedMethod ('cash' or 'e-transfer') is stored in paymentDetails and the route returns a placeholder paymentLink URL (https://mock-payment-gateway.com/checkout/${newOrderId}). The admin copies this link from the CustomOrderDetail UI and distributes it to the customer manually.
+The manual payment mechanism works via the Payment Hub: when the admin confirms a custom order conversion via POST /api/admin/custom-orders/[id]/convert, the expectedMethod ('cash' or 'e-transfer') is stored in paymentDetails and the route returns the new `newOrderId` and its `paymentToken`. The admin UI (CustomOrderDetail / CustomOrderCard) builds a link of the form `${window.location.origin}/pay/${orderId}?token=${paymentToken}` and shares it with the customer. The public route at `src/app/pay/[orderId]/page.tsx` strictly matches BOTH `_id` AND `paymentToken`, then renders the amount, the destination e-Transfer email (from `app_settings.eTransferEmail`), and the order reference with copy buttons.
+
+NOTE: This manual Interac e-Transfer flow and Payment Hub is a temporary solution. It will eventually be replaced by a direct payment gateway integration (e.g., Stripe).
 
 Post-Order Success Page — /orders/thank-you
 After POST /api/orders succeeds, CheckoutClientPage.handleSubmit calls clearCart() (wiping the Zustand store and localStorage) and navigates to /orders/thank-you?orderId=${result.orderId}.

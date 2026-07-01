@@ -19,7 +19,7 @@ import { OrderDetailActions } from "@/components/admin/orders/OrderDetailActions
 import { OrderNotesSection } from "@/components/admin/orders/OrderNotesSection";
 import { useConfirmation } from "@/contexts/ConfirmationContext";
 import { ReceiptGeneratorModal } from "@/components/admin/orders/ReceiptGeneratorModal";
-import { Receipt, Printer, DollarSign, CheckCircle2 } from "lucide-react";
+import { Receipt, Printer, DollarSign, CheckCircle2, Copy } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Flavor } from "@/types";
 interface AvailabilityData {
@@ -70,6 +70,7 @@ const OrderDetailsPage = () => {
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
   const [flavorMap, setFlavorMap] = useState<Record<string, string>>({});
   const [isMarkingPaid, setIsMarkingPaid] = useState(false);
+  const [isGeneratingToken, setIsGeneratingToken] = useState(false);
 
   // --- Data Fetching ---
   const fetchOrderAndDiameters = useCallback(async () => {
@@ -251,6 +252,52 @@ const OrderDetailsPage = () => {
     }
   };
 
+
+  const copyLinkToClipboard = async (token: string) => {
+    const link = `${window.location.origin}/pay/${order!._id}?token=${token}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      showAlert("Payment link copied to clipboard!", "success");
+    } catch (err) {
+      console.error("Clipboard write failed:", err);
+      showAlert("Failed to copy the payment link to clipboard.", "error");
+    }
+  };
+
+  const handleCopyPaymentLink = async () => {
+    if (!order) return;
+
+    // Fast path: token already exists — copy immediately.
+    if (order.paymentToken) {
+      await copyLinkToClipboard(order.paymentToken);
+      return;
+    }
+
+    // Lazy generation: legacy order without a token — mint one on demand.
+    setIsGeneratingToken(true);
+    try {
+      const res = await fetch(
+        `/api/admin/orders/${order._id}/generate-payment-token`,
+        { method: "POST" }
+      );
+      const data = await res.json();
+      if (!res.ok || !data.paymentToken) {
+        throw new Error(data.error || "Failed to generate payment token");
+      }
+
+      // Cache the token locally so subsequent clicks skip the API call.
+      setOrder((prev) => (prev ? { ...prev, paymentToken: data.paymentToken } : prev));
+      await copyLinkToClipboard(data.paymentToken);
+    } catch (err) {
+      console.error("Failed to generate payment token:", err);
+      showAlert(
+        err instanceof Error ? err.message : "Failed to generate payment link.",
+        "error"
+      );
+    } finally {
+      setIsGeneratingToken(false);
+    }
+  };
 
   const handleToggleEditDates = () => {
     const enteringEditMode = !isEditingDates;
@@ -754,6 +801,18 @@ const OrderDetailsPage = () => {
               >
                 <CheckCircle2 className="w-4 h-4" />
                 {isMarkingPaid ? "Updating..." : "Mark as Paid"}
+              </Button>
+            )}
+
+            {!order.isPaid && (
+              <Button
+                onClick={handleCopyPaymentLink}
+                disabled={isGeneratingToken}
+                variant="outline"
+                className="w-full font-semibold border-primary/20 bg-white hover:bg-primary hover:text-white transition-colors text-primary flex items-center justify-center gap-2"
+              >
+                <Copy className="w-4 h-4" />
+                {isGeneratingToken ? "Generating..." : "Copy Payment Link"}
               </Button>
             )}
           </div>
