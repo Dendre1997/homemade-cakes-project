@@ -319,6 +319,72 @@ export interface Order {
    */
   paymentToken?: string;
 }
+/**
+ * ── PUBLIC (scrubbed) order shapes ──────────────────────────────────────────
+ * Customer-facing projection of an Order used on the public Payment Hub.
+ * Contains NO sensitive/internal fields (no paymentToken, notesLog, source,
+ * claimedByUid, transactionId, raw contact data). All ids are pre-resolved to
+ * human-readable names and all pricing is derived server-side.
+ */
+export interface PublicOrderAddon {
+  name: string;
+  variantName?: string;
+  price: number;
+  itemQuantity: number;
+}
+
+export interface PublicOrderItem {
+  name: string;
+  quantity: number;
+  rowTotal: number;
+  displaySize?: string;
+  displayFlavor?: string;
+  flavorNote?: string;
+  inscription?: string;
+  designInstructions?: string;
+  imageUrls: string[];
+  isCombo?: boolean;
+  comboCenter?: { flavorName: string; inscription?: string };
+  comboBox?: { label?: string; items: { count: number; flavorName: string }[] };
+  addons: PublicOrderAddon[];
+}
+
+export interface PublicOrderSummary {
+  orderIdShort: string;
+  /** ISO date string or null; formatted for display in the component. */
+  createdAt: string | null;
+  customer: {
+    name?: string;
+    /** e.g. j***@gmail.com */
+    emailMasked?: string;
+    /** e.g. ***-***-1234 */
+    phoneMasked?: string;
+    socialPlatform?: "instagram" | "facebook";
+    socialNickname?: string;
+  };
+  fulfillment: {
+    method: "pickup" | "delivery";
+    deliveryDates: { date: string; timeSlot?: string }[];
+    /** Formatted delivery address (delivery orders only). */
+    addressText?: string;
+  };
+  items: PublicOrderItem[];
+  pricing: {
+    baseCakePrice: number;
+    addons: PublicOrderAddon[];
+    discount?: { code?: string; name?: string; amount: number };
+    total: number;
+  };
+  payment: {
+    isPaid: boolean;
+    expectedMethod?: "cash" | "e-transfer";
+  };
+  /** Pickup location from global settings (pickup orders only). */
+  pickupAddress?: string;
+  /** e-Transfer destination email from global settings. */
+  eTransferEmail?: string;
+}
+
 export interface OrderItem {
   id: string;
   productId?: ObjectId;
