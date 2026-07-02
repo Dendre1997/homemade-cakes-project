@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import clientPromise from "@/lib/db";
 import { getAppSettings } from "@/lib/api/settings";
 import PaymentHubClient from "@/components/payment/PaymentHubClient";
+import type { PublicOrderSummary, PublicOrderAddon } from "@/types";
 
 export const metadata: Metadata = {
   title: "Complete Your Payment | D&K Creations",
@@ -57,6 +58,202 @@ function InvalidLink() {
   );
 }
 
+// ── contact masking helpers ──────────────────────────────────────────────────
+function maskEmail(email?: string): string | undefined {
+  const trimmed = email?.trim();
+  if (!trimmed || trimmed.includes("placeholder.com")) return undefined;
+  const [local, domain] = trimmed.split("@");
+  if (!domain || !local) return undefined;
+  return `${local.charAt(0)}***@${domain}`;
+}
+
+function maskPhone(phone?: string): string | undefined {
+  const digits = phone?.replace(/\D/g, "") ?? "";
+  if (digits.length < 4) return undefined;
+  return `***-***-${digits.slice(-4)}`;
+}
+
+function formatDeliveryAddress(
+  address:
+    | string
+    | { street?: string; unit?: string; city?: string; postalCode?: string }
+    | undefined
+): string {
+  if (!address) return "";
+  if (typeof address === "string") return address.trim();
+  const streetLine = [address.street, address.unit].filter(Boolean).join(", ");
+  return [streetLine, address.city, address.postalCode].filter(Boolean).join(", ");
+}
+
+interface ScrubContext {
+  flavorMap: Record<string, string>;
+  diameterMap: Record<string, string>;
+  pickupAddress?: string;
+  eTransferEmail?: string;
+}
+
+/**
+ * Scrubs a raw Order document into a customer-safe PublicOrderSummary.
+ * STRICTLY drops: notesLog, claimedByUid, paymentToken, source,
+ * paymentDetails.transactionId. Masks contact data and derives pricing here so
+ * the client never sees DB internals or how the total is composed.
+ */
+function mapToPublicOrder(order: any, ctx: ScrubContext): PublicOrderSummary {
+  const { flavorMap, diameterMap, pickupAddress, eTransferEmail } = ctx;
+
+  const resolveFlavor = (id?: unknown): string => {
+    if (!id) return "";
+    const key = String(id);
+    if (key.length === 24 && /^[0-9a-fA-F]+$/.test(key)) return flavorMap[key] || key;
+    return key;
+  };
+  const resolveDiameter = (id?: unknown): string => {
+    if (!id) return "";
+    const key = String(id);
+    return diameterMap[key] || key;
+  };
+
+  const rawItems: any[] = Array.isArray(order.items) ? order.items : [];
+  const referenceImages: string[] = Array.isArray(order.referenceImages)
+    ? order.referenceImages
+    : [];
+
+  const items = rawItems.map((item) => {
+    const isCustom = item.productType === "custom" || item.isCustom;
+
+    const displaySize = isCustom
+      ? item.customSize ||
+        resolveDiameter(item.diameterId || item.selectedConfig?.cake?.diameterId)
+      : resolveDiameter(item.diameterId);
+    const displayFlavor = isCustom
+      ? item.customFlavor ||
+        resolveFlavor(item.selectedConfig?.cake?.flavorId || item.flavor)
+      : resolveFlavor(item.flavor || item.selectedConfig?.cake?.flavorId);
+
+    // Show EVERY image the customer will care about: prefer the item's own
+    // gallery; otherwise fall back to the FULL set of uploaded reference images
+    // (custom orders store all references on the order, not on the item).
+    let imageUrls: string[];
+    if (item.imageUrls?.length) {
+      imageUrls = item.imageUrls;
+    } else if (referenceImages.length) {
+      imageUrls = referenceImages;
+    } else if (item.imageUrl) {
+      imageUrls = [item.imageUrl];
+    } else {
+      imageUrls = [];
+    }
+
+    const addons: PublicOrderAddon[] = (item.addons || []).map((a: any) => ({
+      name: a.name,
+      variantName: a.variantName,
+      price: Number(a.price) || 0,
+      itemQuantity: Number(item.quantity) || 1,
+    }));
+
+    return {
+      name: item.name,
+      quantity: Number(item.quantity) || 0,
+      rowTotal: Number(item.rowTotal ?? item.price * item.quantity) || 0,
+      displaySize: displaySize || undefined,
+      displayFlavor: displayFlavor || undefined,
+      flavorNote: item.flavorNote || undefined,
+      inscription: item.inscription || undefined,
+      designInstructions: item.designInstructions || undefined,
+      imageUrls,
+      isCombo: !!item.isCombo,
+      comboCenter:
+        item.isCombo && item.selectedConfig?.cake
+          ? {
+              flavorName: resolveFlavor(item.selectedConfig.cake.flavorId),
+              inscription: item.selectedConfig.cake.inscription || undefined,
+            }
+          : undefined,
+      comboBox:
+        item.isCombo && item.selectedConfig?.items?.length
+          ? {
+              label: item.selectedConfig.quantityConfigId,
+              items: item.selectedConfig.items.map((si: any) => ({
+                count: Number(si.count) || 0,
+                flavorName: resolveFlavor(si.flavorId),
+              })),
+            }
+          : undefined,
+      addons,
+    };
+  });
+
+  const addonsFlat: PublicOrderAddon[] = rawItems.flatMap((item) =>
+    (item.addons || []).map((a: any) => ({
+      name: a.name,
+      variantName: a.variantName,
+      price: Number(a.price) || 0,
+      itemQuantity: Number(item.quantity) || 1,
+    }))
+  );
+  const addonsCost = rawItems.reduce((acc, item) => {
+    const perItem = (item.addons || []).reduce(
+      (s: number, a: any) => s + (Number(a.price) || 0),
+      0
+    );
+    return acc + perItem * (Number(item.quantity) || 1);
+  }, 0);
+
+  const total = Number(order.totalAmount) || 0;
+  const baseCakePrice = Math.max(0, total - addonsCost);
+
+  const deliveryDates = Array.isArray(order.deliveryInfo?.deliveryDates)
+    ? order.deliveryInfo.deliveryDates.map((d: any) => ({
+        date: d?.date ? new Date(d.date).toISOString() : "",
+        timeSlot: d?.timeSlot || undefined,
+      }))
+    : [];
+
+  const method: "pickup" | "delivery" =
+    order.deliveryInfo?.method === "delivery" ? "delivery" : "pickup";
+
+  return {
+    orderIdShort: String(order._id).slice(-6).toUpperCase(),
+    createdAt: order.createdAt ? new Date(order.createdAt).toISOString() : null,
+    customer: {
+      name: order.customerInfo?.name?.trim() || undefined,
+      emailMasked: maskEmail(order.customerInfo?.email),
+      phoneMasked: maskPhone(order.customerInfo?.phone),
+      socialPlatform: order.customerInfo?.socialPlatform,
+      socialNickname: order.customerInfo?.socialNickname?.trim() || undefined,
+    },
+    fulfillment: {
+      method,
+      deliveryDates,
+      addressText:
+        method === "delivery"
+          ? formatDeliveryAddress(order.deliveryInfo?.address)
+          : undefined,
+    },
+    items,
+    pricing: {
+      baseCakePrice,
+      addons: addonsFlat,
+      discount:
+        order.discountInfo && Number(order.discountInfo.amount) > 0
+          ? {
+              code: order.discountInfo.code,
+              name: order.discountInfo.name,
+              amount: Number(order.discountInfo.amount) || 0,
+            }
+          : undefined,
+      total,
+    },
+    payment: {
+      isPaid: !!order.isPaid,
+      // Only the expected method is exposed — transactionId is intentionally dropped.
+      expectedMethod: order.paymentDetails?.expectedMethod,
+    },
+    pickupAddress,
+    eTransferEmail,
+  };
+}
+
 export default async function PayPage({ params, searchParams }: PayPageProps) {
   const { orderId } = await params;
   const { token } = await searchParams;
@@ -71,6 +268,8 @@ export default async function PayPage({ params, searchParams }: PayPageProps) {
   }
 
   let order;
+  let flavorMap: Record<string, string> = {};
+  let diameterMap: Record<string, string> = {};
   try {
     // (2) Reuse the app-wide cached, pooled client — do NOT instantiate a new MongoClient.
     //     Timed separately so the logs reveal whether the CONNECT or the QUERY stalls.
@@ -88,6 +287,22 @@ export default async function PayPage({ params, searchParams }: PayPageProps) {
     console.log(
       `[/pay] Order query finished in ${Date.now() - tQuery}ms (found=${!!order})`
     );
+
+    // Resolve id → name maps server-side so the public payload carries no raw ids.
+    if (order) {
+      const [flavors, diameters] = await Promise.all([
+        db.collection("flavors").find({}).toArray(),
+        db.collection("diameters").find({}).toArray(),
+      ]);
+      flavorMap = flavors.reduce((acc, f) => {
+        acc[String(f._id)] = f.name;
+        return acc;
+      }, {} as Record<string, string>);
+      diameterMap = diameters.reduce((acc, d) => {
+        acc[String(d._id)] = d.name || `${d.sizeValue ?? ""}"`;
+        return acc;
+      }, {} as Record<string, string>);
+    }
   } catch (err) {
     // (3) Log the REAL error (name/message/code/stack) BEFORE rendering the fallback UI,
     //     so the actual cause is visible in the Vercel / server logs.
@@ -115,13 +330,21 @@ export default async function PayPage({ params, searchParams }: PayPageProps) {
   // getAppSettings() uses the same cached client and safely falls back to defaults on error.
   const settings = await getAppSettings();
   const eTransferEmail = settings.eTransferEmail?.trim() || "";
+  const pickupAddress = settings.checkout?.pickupAddress?.trim() || "";
+
+  const publicOrder = mapToPublicOrder(order, {
+    flavorMap,
+    diameterMap,
+    pickupAddress,
+    eTransferEmail,
+  });
 
   return (
     <PaymentHubClient
-      orderId={orderId}
-      totalAmount={order.totalAmount ?? 0}
+      totalAmount={publicOrder.pricing.total}
       eTransferEmail={eTransferEmail}
-      reference={orderId.slice(-6).toUpperCase()}
+      reference={publicOrder.orderIdShort}
+      order={publicOrder}
     />
   );
 }
