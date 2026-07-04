@@ -398,7 +398,13 @@ const OrderDetailItems = ({
                             id: editingItem.id,
                             price: editingItem.price,
                             quantity: editingItem.quantity,
-                            images: editingItem.imageUrls?.length ? editingItem.imageUrls : (editingItem.imageUrl ? [editingItem.imageUrl] : []),
+                            images: editingItem.imageUrls?.length
+                              ? editingItem.imageUrls
+                              : referenceImages?.length
+                                ? referenceImages
+                                : editingItem.imageUrl
+                                  ? [editingItem.imageUrl]
+                                  : [],
                             selectedImage: editingItem.imageUrl || "",
                             sizeValue: editingItem.customSize || (editingItem.diameterId ? editingItem.diameterId.toString() : "") || "",
                             flavorValue: editingItem.customFlavor || (editingItem.selectedConfig?.cake?.flavorId) || editingItem.flavor || "", 

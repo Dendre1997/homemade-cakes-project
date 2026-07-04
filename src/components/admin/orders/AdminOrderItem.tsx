@@ -133,7 +133,7 @@ export const AdminOrderItem = ({
                              )}
                         </div>
                         
-                         <span className="text-sm text-gray-500 font-mono mt-1 block flex items-center gap-2">
+                         <span className="text-sm text-gray-500 font-mono mt-1  flex items-center gap-2">
                             ${((discountedLineTotal ?? (item.rowTotal || (item.price * item.quantity))) / item.quantity).toFixed(2)} x {item.quantity} = <span className="font-bold text-primary">${(discountedLineTotal ?? (item.rowTotal || (item.price * item.quantity))).toFixed(2)}</span>
                             {item.isManualPrice && (
                                 <span title="Manual Price Set" className="cursor-help text-primary">

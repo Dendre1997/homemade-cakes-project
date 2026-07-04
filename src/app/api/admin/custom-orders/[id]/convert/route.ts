@@ -147,6 +147,7 @@ export async function POST(
       originalPrice: Number(agreedPrice),
       quantity: 1,
       imageUrl: primaryImage,
+      imageUrls: customOrder.referenceImages || [],
       customSize: sizeName, // Keep as string for receipts
       diameterId: resolvedDiameterId, // Assign ID for backend & analytics
       customFlavor: flavorName, // Keep as string for receipts

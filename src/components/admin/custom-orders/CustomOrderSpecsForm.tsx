@@ -6,11 +6,12 @@ import { Label } from "@/components/ui/Label";
 import { 
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue 
 } from "@/components/ui/Select";
-import { AlertTriangle, Image as ImageIcon, Trash2, Plus, Loader2, X } from "lucide-react";
+import { AlertTriangle, Image as ImageIcon, Trash2, Plus, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { useRef, useState } from "react";
 import { AddonAdminSelector } from "@/components/admin/addons/AddonAdminSelector";
 import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
+import ImagePreviewGallery from "@/components/ui/ImagePreviewGallery";
 
 interface CustomOrderSpecsFormProps {
   order: any;
@@ -26,7 +27,7 @@ export const CustomOrderSpecsForm = ({
   isUploading
 }: CustomOrderSpecsFormProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [galleryIndex, setGalleryIndex] = useState<number | null>(null);
   const [imageToDeleteIndex, setImageToDeleteIndex] = useState<number | null>(null);
 
   const handleRemoveImage = (index: number) => {
@@ -39,6 +40,7 @@ export const CustomOrderSpecsForm = ({
     if (imageToDeleteIndex === null) return;
     handleRemoveImage(imageToDeleteIndex);
     setImageToDeleteIndex(null);
+    setGalleryIndex(null);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -169,7 +171,7 @@ export const CustomOrderSpecsForm = ({
                 >
                    <button
                      type="button"
-                     onClick={() => setSelectedImage(url)}
+                     onClick={() => setGalleryIndex(idx)}
                      className="absolute inset-0 w-full h-full cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-inset"
                      aria-label="View reference image full size"
                    >
@@ -211,28 +213,12 @@ export const CustomOrderSpecsForm = ({
           />
        </div>
 
-       {selectedImage && (
-         <div
-           className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
-           onClick={() => setSelectedImage(null)}
-         >
-           <button
-             type="button"
-             onClick={() => setSelectedImage(null)}
-             className="absolute top-4 right-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20 transition-colors"
-             aria-label="Close image preview"
-           >
-             <X className="w-6 h-6" />
-           </button>
-           {/* eslint-disable-next-line @next/next/no-img-element */}
-           <img
-             src={selectedImage}
-             alt="Reference full size"
-             className="object-contain max-h-full max-w-full"
-             onClick={(e) => e.stopPropagation()}
-           />
-         </div>
-       )}
+       <ImagePreviewGallery
+         isOpen={galleryIndex !== null}
+         onClose={() => setGalleryIndex(null)}
+         images={order.referenceImages || []}
+         initialIndex={galleryIndex ?? 0}
+       />
 
        <ConfirmationModal
          isOpen={imageToDeleteIndex !== null}
