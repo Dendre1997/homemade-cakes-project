@@ -162,6 +162,7 @@ export async function POST(request: NextRequest) {
                   // SET DATA:
                   selectedConfig: item.selectedConfig, 
                   diameterId: undefined, // Explicit null for Sets
+                  shapeId: undefined,
                   
                   price: safePrice(finalCalculatedPrice),
                   rowTotal: safePrice(finalCalculatedPrice * item.quantity),
@@ -182,6 +183,7 @@ export async function POST(request: NextRequest) {
                   
                   // STANDARD DATA:
                   diameterId: item.diameterId ? new ObjectId(item.diameterId) : undefined,
+                  shapeId: item.shapeId ? new ObjectId(item.shapeId) : undefined,
                   selectedConfig: undefined, // Explicit null for Standard
                   
                   // PRICING
@@ -251,6 +253,7 @@ export async function POST(request: NextRequest) {
           productId: item.productId?.toString(),
           categoryId: item.categoryId?.toString(),
           diameterId: item.diameterId?.toString(),
+          shapeId: item.shapeId?.toString(),
           discountId: item.discountId?.toString() || null,
         })),
         discountInfo: pendingOrder.discountInfo
@@ -419,6 +422,7 @@ export async function POST(request: NextRequest) {
                   // SET DATA:
                   selectedConfig: item.selectedConfig, 
                   diameterId: undefined, // Explicit null for Sets
+                  shapeId: undefined,
                   
                   // PRICING (Source of Truth: Shared Logic with Discounts)
                   price: safePrice(breakdown ? breakdown.finalPrice / item.quantity : finalCalculatedPrice),
@@ -441,6 +445,7 @@ export async function POST(request: NextRequest) {
                   
                   // STANDARD DATA:
                   diameterId: item.diameterId ? new ObjectId(item.diameterId) : undefined,
+                  shapeId: item.shapeId ? new ObjectId(item.shapeId) : undefined,
                   selectedConfig: undefined, // Explicit null for Standard
                   
                   // PRICING
@@ -519,6 +524,7 @@ export async function POST(request: NextRequest) {
           productId: item.productId?.toString(),
           categoryId: item.categoryId?.toString(),
           diameterId: item.diameterId?.toString(),
+          shapeId: item.shapeId?.toString(),
           discountId: item.discountId?.toString() || null,
         })),
         discountInfo: newOrder.discountInfo
@@ -537,6 +543,12 @@ export async function POST(request: NextRequest) {
             return acc;
         }, {} as Record<string, string>);
 
+        const shapes = await db.collection("shapes").find({}).toArray();
+        const shapeMap = shapes.reduce((acc, s) => {
+            acc[s._id.toString()] = s.name;
+            return acc;
+        }, {} as Record<string, string>);
+
         const settings = await getAppSettings();
         const pickupAddress = settings.checkout?.pickupAddress || "";
 
@@ -551,7 +563,7 @@ export async function POST(request: NextRequest) {
             from: DEFAULT_FROM,
             to: finalOrder.customerInfo.email,
             subject: `Your Order Confirmation #${finalOrder._id.toString().slice(-6).toUpperCase()}`,
-            react: OrderConfirmationEmail({ order: finalOrder, flavorMap, diameterMap, pickupAddress } as any),
+            react: OrderConfirmationEmail({ order: finalOrder, flavorMap, diameterMap, shapeMap, pickupAddress } as any),
           }),
         ]);
         console.log(`Confirmation emails sent for order ${orderId}.`);

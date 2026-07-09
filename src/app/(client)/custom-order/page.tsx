@@ -110,6 +110,7 @@ function CustomOrderContent() {
         flavor: "",
         textOnCake: "",
         designNotes: "",
+        shape: "",
       },
       contact: {
         name: "",

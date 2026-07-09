@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import LoadingSpinner from "@/components/ui/Spinner";
-import { CustomOrder } from "@/types";
+import { CustomOrder, IShape } from "@/types";
 
 const CustomOrderDetail = dynamic(
   () => import("@/components/admin/custom-orders/CustomOrderDetail"),
@@ -18,9 +18,10 @@ const CustomOrderDetail = dynamic(
 
 interface Props {
   initialOrder: CustomOrder;
+  shapes?: IShape[];
 }
 
 /** Entry client for custom order detail (includes QuickMessageCard in sidebar via CustomOrderDetail). */
-export default function CustomOrderDetailClient({ initialOrder }: Props) {
-  return <CustomOrderDetail initialOrder={initialOrder} />;
+export default function CustomOrderDetailClient({ initialOrder, shapes = [] }: Props) {
+  return <CustomOrderDetail initialOrder={initialOrder} shapes={shapes} />;
 }

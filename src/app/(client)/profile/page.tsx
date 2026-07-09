@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { adminAuth } from "@/lib/firebase/adminApp";
 import clientPromise from "@/lib/db";
 import { getUserOrders } from "@/lib/api/orders";
-import { Order, OrderStatus } from "@/types";
+import { Order, OrderStatus, IShape } from "@/types";
 import ClientOrderCard from "@/components/profile/ClientOrderCard";
 import ProfileLogoutButton from "@/components/profile/ProfileLogoutButton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs";
@@ -28,6 +28,7 @@ export default async function ProfilePage() {
   let userEmail = "";
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let diameters: any[] = [];
+  let shapes: IShape[] = [];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let user: any = null;
 
@@ -43,6 +44,9 @@ export default async function ProfilePage() {
     user = await db.collection("users").findOne({ firebaseUid: decodedToken.uid }) as any;
     const diametersData = await db.collection("diameters").find().toArray();
     diameters = JSON.parse(JSON.stringify(diametersData));
+
+    const shapesData = await db.collection("shapes").find({ isActive: { $ne: false } }).toArray();
+    shapes = JSON.parse(JSON.stringify(shapesData));
 
     if (user) {
         userOrders = await getUserOrders(user._id.toString());
@@ -153,7 +157,7 @@ export default async function ProfilePage() {
               <TabsContent value="active" className="space-y-6">
                   {activeOrders.length > 0 ? (
                       activeOrders.map(order => (
-                          <ClientOrderCard key={order._id.toString()} order={order} diameters={diameters} />
+                          <ClientOrderCard key={order._id.toString()} order={order} diameters={diameters} shapes={shapes} />
                       ))
                   ) : (
                       <div className="text-center py-12 bg-white rounded-lg border border-dashed border-gray-300">

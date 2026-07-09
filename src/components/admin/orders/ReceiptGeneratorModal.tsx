@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/Dialog";
 import { Button } from "@/components/ui/Button";
 import { Download, Loader2 } from "lucide-react";
 import { toPng } from "html-to-image";
-import { Order, Diameter } from "@/types";
+import { Order, Diameter, IShape } from "@/types";
 import { ClientReceiptCard } from "./ClientReceiptCard";
 
 interface ReceiptGeneratorModalProps {
@@ -13,10 +13,11 @@ interface ReceiptGeneratorModalProps {
   onClose: () => void;
   order: Order;
   diameters: Diameter[];
+  shapes?: IShape[];
   flavorMap: Record<string, string>;
 }
 
-export function ReceiptGeneratorModal({ isOpen, onClose, order, diameters, flavorMap }: ReceiptGeneratorModalProps) {
+export function ReceiptGeneratorModal({ isOpen, onClose, order, diameters, shapes = [], flavorMap }: ReceiptGeneratorModalProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -143,6 +144,7 @@ export function ReceiptGeneratorModal({ isOpen, onClose, order, diameters, flavo
                     <ClientReceiptCard
                       order={order}
                       diameters={diameters}
+                      shapes={shapes}
                       flavorMap={flavorMap}
                       eTransferEmail={eTransferEmail}
                       pickupAddress={pickupAddress}

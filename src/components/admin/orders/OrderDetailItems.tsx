@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Order, Diameter, CartItem, ProductWithCategory, Flavor } from "@/types";
+import { useState, useEffect, useMemo } from "react";
+import { Order, Diameter, CartItem, ProductWithCategory, Flavor, IShape } from "@/types";
 import { Button } from "@/components/ui/Button";
 import {
   Dialog,
@@ -32,6 +32,7 @@ import { SelectedAddon } from "@/types";
 interface OrderDetailItemsProps {
   items: Order["items"];
   diameters: Diameter[];
+  shapes?: IShape[];
   totalAmount: number;
   onUpdate?: () => void;
   referenceImages?: string[];
@@ -41,6 +42,7 @@ interface OrderDetailItemsProps {
 const OrderDetailItems = ({
   items,
   diameters,
+  shapes = [],
   totalAmount,
   onUpdate,
   referenceImages,
@@ -59,6 +61,7 @@ const OrderDetailItems = ({
   const [draftProduct, setDraftProduct] = useState<ProductWithCategory | null>(null);
   const [draftFlavorId, setDraftFlavorId] = useState("");
   const [draftDiameterId, setDraftDiameterId] = useState("");
+  const [draftShapeId, setDraftShapeId] = useState("");
   const [draftQuantity, setDraftQuantity] = useState(1);
   const [draftInscription, setDraftInscription] = useState("");
   const [draftPriceOverride, setDraftPriceOverride] = useState(""); 
@@ -90,7 +93,8 @@ const OrderDetailItems = ({
     setEditingItem(item);
     setIsCustomMode(!!(item.productType === 'custom' || item.isCustom));
     setDraftFlavorId(""); 
-    setDraftDiameterId(item.diameterId || "");
+    setDraftDiameterId(item.diameterId ? item.diameterId.toString() : "");
+    setDraftShapeId(item.shapeId ? item.shapeId.toString() : "");
     setDraftQuantity(item.quantity);
     setDraftInscription(item.inscription || "");
     setDraftPriceOverride(""); 
@@ -136,6 +140,7 @@ const OrderDetailItems = ({
               setAvailableDiameters(fullProduct.availableDiameters || []);
               setDraftFlavorId("");
               setDraftDiameterId("");
+              setDraftShapeId("");
               setDraftPriceOverride("");
           }
       } catch (e) {
@@ -183,8 +188,34 @@ const OrderDetailItems = ({
           })
     : 0;
 
+  // Shapes linked to the drafted diameter (fallback to all active shapes)
+  const availableShapes = useMemo(() => {
+      if (!draftDiameterId) return [];
+      const diam = diameters.find(d => d._id === draftDiameterId);
+      const linkedIds = diam?.shapeIds;
+      if (linkedIds && linkedIds.length > 0) {
+          return shapes.filter(s => linkedIds.includes(s._id));
+      }
+      return shapes;
+  }, [draftDiameterId, diameters, shapes]);
+
+  // Cascade reset: keep the drafted shape valid when the diameter changes
+  useEffect(() => {
+      if (availableShapes.length === 0) {
+          if (draftShapeId) setDraftShapeId("");
+          return;
+      }
+      const stillValid = availableShapes.some(s => s._id === draftShapeId);
+      if (!stillValid) {
+          const fallback = availableShapes.find(s => s.isDefault) || availableShapes[0];
+          setDraftShapeId(fallback?._id || "");
+      }
+  }, [availableShapes]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const currentShapeSurcharge = availableShapes.find(s => s._id === draftShapeId)?.priceSurcharge || 0;
+
   const currentAddonsTotal = draftAddons.reduce((sum, d) => sum + d.price, 0);
-  const currentTotalUnitCost = currentUnitCost + currentAddonsTotal;
+  const currentTotalUnitCost = currentUnitCost + currentAddonsTotal + currentShapeSurcharge;
     
   const handleSaveChanges = async () => {
     if (!editingItem) return;
@@ -192,6 +223,9 @@ const OrderDetailItems = ({
     
     try {
         const isSet = draftProduct?.productType === 'set';
+        const baseUnit = draftPriceOverride
+            ? parseFloat(draftPriceOverride)
+            : currentUnitCost + (isSet ? 0 : currentShapeSurcharge);
         
         const updatedItem: CartItem = {
             ...editingItem,
@@ -200,15 +234,17 @@ const OrderDetailItems = ({
             name: draftProduct?.name || editingItem.name,
             quantity: draftQuantity,
             inscription: draftInscription,
-            price: draftPriceOverride ? parseFloat(draftPriceOverride) : currentUnitCost, 
+            price: baseUnit, 
             imageUrl: draftProduct?.imageUrls?.[0] || editingItem.imageUrl,
-            rowTotal: (draftPriceOverride ? parseFloat(draftPriceOverride) : currentUnitCost) * draftQuantity,
+            rowTotal: baseUnit * draftQuantity,
             ...(isSet ? {
                 flavor: isSet ? `Set: ${draftSelectedConfig?.quantityConfigId}` : "Set Product", 
-                selectedConfig: draftSelectedConfig
+                selectedConfig: draftSelectedConfig,
+                shapeId: undefined,
             } : {
                 flavor: availableFlavors.find(f => f._id === draftFlavorId)?.name || (draftProduct ? "Standard" : editingItem.flavor),
                 diameterId: draftDiameterId,
+                shapeId: draftShapeId || undefined,
                 selectedConfig: undefined // Strict undefined for Standard
             }),
             addons: draftAddons
@@ -315,6 +351,7 @@ const OrderDetailItems = ({
                     item={item}
                     flavorMap={externalFlavorMap || flavorMap}
                     diameters={diameters}
+                    shapes={shapes}
                     onEdit={handleEditClick}
                     referenceImages={referenceImages}
                     discountedLineTotal={getDiscountedLineTotal(item)}
@@ -392,6 +429,7 @@ const OrderDetailItems = ({
                       <CustomOrderItemForm 
                          flavors={allFlavors} 
                          diameters={diameters}
+                         shapes={shapes}
                         submitLabel="Save Changes"
                         
                         initialValues={{
@@ -408,6 +446,7 @@ const OrderDetailItems = ({
                             selectedImage: editingItem.imageUrl || "",
                             sizeValue: editingItem.customSize || (editingItem.diameterId ? editingItem.diameterId.toString() : "") || "",
                             flavorValue: editingItem.customFlavor || (editingItem.selectedConfig?.cake?.flavorId) || editingItem.flavor || "", 
+                            shapeId: (editingItem.shapeId || editingItem.selectedConfig?.cake?.shapeId)?.toString() || "",
                             designInstructions: editingItem.designInstructions || "",
                             inscription: editingItem.inscription || "",
                             addons: editingItem.addons || [],
@@ -562,6 +601,24 @@ const OrderDetailItems = ({
                                     </SelectContent>
                                  </Select>
                              </div>
+
+                             {availableShapes.length > 0 && (
+                             <div className="space-y-2">
+                                 <Label>Shape</Label>
+                                 <Select value={draftShapeId} onValueChange={setDraftShapeId}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select Shape" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {availableShapes.map(s => (
+                                            <SelectItem key={s._id} value={s._id}>
+                                                {s.name}{s.priceSurcharge > 0 ? ` (+$${s.priceSurcharge})` : ""}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                 </Select>
+                             </div>
+                             )}
                         </div>
                     )}
 

@@ -8,6 +8,7 @@ import {
   Circle,
   AlertTriangle,
   Cake,
+  Shapes,
 } from "lucide-react";
 
 const catalogSections = [
@@ -40,6 +41,12 @@ const catalogSections = [
     description: "Configure cake sizes, servings, and prices.",
     icon: <Circle className="h-8 w-8" />,
     href: "/bakery-manufacturing-orders/catalog/diameters",
+  },
+  {
+    title: "Shapes",
+    description: "Manage cake shapes, surcharges, and default options.",
+    icon: <Shapes className="h-8 w-8" />,
+    href: "/bakery-manufacturing-orders/catalog/shapes",
   },
   {
     title: "Allergens",

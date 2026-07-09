@@ -88,6 +88,7 @@ function formatDeliveryAddress(
 interface ScrubContext {
   flavorMap: Record<string, string>;
   diameterMap: Record<string, string>;
+  shapeMap: Record<string, string>;
   pickupAddress?: string;
   eTransferEmail?: string;
 }
@@ -99,7 +100,7 @@ interface ScrubContext {
  * the client never sees DB internals or how the total is composed.
  */
 function mapToPublicOrder(order: any, ctx: ScrubContext): PublicOrderSummary {
-  const { flavorMap, diameterMap, pickupAddress, eTransferEmail } = ctx;
+  const { flavorMap, diameterMap, shapeMap, pickupAddress, eTransferEmail } = ctx;
 
   const resolveFlavor = (id?: unknown): string => {
     if (!id) return "";
@@ -111,6 +112,12 @@ function mapToPublicOrder(order: any, ctx: ScrubContext): PublicOrderSummary {
     if (!id) return "";
     const key = String(id);
     return diameterMap[key] || key;
+  };
+  const resolveShape = (id?: unknown): string => {
+    if (!id) return "";
+    const key = String(id);
+    if (key.length === 24 && /^[0-9a-fA-F]+$/.test(key)) return shapeMap[key] || "";
+    return key;
   };
 
   const rawItems: any[] = Array.isArray(order.items) ? order.items : [];
@@ -125,6 +132,10 @@ function mapToPublicOrder(order: any, ctx: ScrubContext): PublicOrderSummary {
       ? item.customSize ||
         resolveDiameter(item.diameterId || item.selectedConfig?.cake?.diameterId)
       : resolveDiameter(item.diameterId);
+    const displayShape = isCustom
+      ? item.customShape ||
+        resolveShape(item.shapeId || item.selectedConfig?.cake?.shapeId)
+      : resolveShape(item.shapeId);
     const displayFlavor = isCustom
       ? item.customFlavor ||
         resolveFlavor(item.selectedConfig?.cake?.flavorId || item.flavor)
@@ -156,6 +167,7 @@ function mapToPublicOrder(order: any, ctx: ScrubContext): PublicOrderSummary {
       quantity: Number(item.quantity) || 0,
       rowTotal: Number(item.rowTotal ?? item.price * item.quantity) || 0,
       displaySize: displaySize || undefined,
+      displayShape: displayShape || undefined,
       displayFlavor: displayFlavor || undefined,
       flavorNote: item.flavorNote || undefined,
       inscription: item.inscription || undefined,
@@ -270,6 +282,7 @@ export default async function PayPage({ params, searchParams }: PayPageProps) {
   let order;
   let flavorMap: Record<string, string> = {};
   let diameterMap: Record<string, string> = {};
+  let shapeMap: Record<string, string> = {};
   try {
     // (2) Reuse the app-wide cached, pooled client — do NOT instantiate a new MongoClient.
     //     Timed separately so the logs reveal whether the CONNECT or the QUERY stalls.
@@ -290,9 +303,10 @@ export default async function PayPage({ params, searchParams }: PayPageProps) {
 
     // Resolve id → name maps server-side so the public payload carries no raw ids.
     if (order) {
-      const [flavors, diameters] = await Promise.all([
+      const [flavors, diameters, shapes] = await Promise.all([
         db.collection("flavors").find({}).toArray(),
         db.collection("diameters").find({}).toArray(),
+        db.collection("shapes").find({}).toArray(),
       ]);
       flavorMap = flavors.reduce((acc, f) => {
         acc[String(f._id)] = f.name;
@@ -300,6 +314,10 @@ export default async function PayPage({ params, searchParams }: PayPageProps) {
       }, {} as Record<string, string>);
       diameterMap = diameters.reduce((acc, d) => {
         acc[String(d._id)] = d.name || `${d.sizeValue ?? ""}"`;
+        return acc;
+      }, {} as Record<string, string>);
+      shapeMap = shapes.reduce((acc, s) => {
+        acc[String(s._id)] = s.name;
         return acc;
       }, {} as Record<string, string>);
     }
@@ -335,6 +353,7 @@ export default async function PayPage({ params, searchParams }: PayPageProps) {
   const publicOrder = mapToPublicOrder(order, {
     flavorMap,
     diameterMap,
+    shapeMap,
     pickupAddress,
     eTransferEmail,
   });

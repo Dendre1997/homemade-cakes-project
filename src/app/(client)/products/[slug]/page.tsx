@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 
 import { notFound, useParams, useRouter } from "next/navigation";
-import { ProductWithCategory, Flavor, AvailableDiameterConfig, Discount, SelectedAddon, Addon } from "@/types";
+import { ProductWithCategory, Flavor, AvailableDiameterConfig, Discount, SelectedAddon, Addon, IShape } from "@/types";
 import Link from "next/link";
 import { useCartStore } from "@/lib/store/cartStore";
 import { useAlert } from "@/contexts/AlertContext";
@@ -23,6 +23,8 @@ import { EightInchCakeIcon } from "@/components/icons/cake-sizes/EightInchCakeIc
 import DiameterSelector, {
   DiameterOption,
 } from "@/components/ui/DiameterSelector";
+import ShapeSelector from "@/components/ui/ShapeSelector";
+import { buildCartItemId } from "@/lib/cartItemId";
 import { Input } from "@/components/ui/Input";
 import { FlavorCarousel } from "@/components/(client)/home/flavors/FlavorCarousel";
 import ImageCarousel from "@/components/ui/ImageCarousel";
@@ -91,6 +93,7 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
   const [flavorNote, setFlavorNote] = useState<string>("");
   const [showFlavorNoteInput, setShowFlavorNoteInput] = useState<boolean | null>(null);
   const [selectedDiameterConfig, setSelectedDiameterConfig] = useState<AvailableDiameterConfig | null>(null);
+  const [selectedShapeId, setSelectedShapeId] = useState<string>("");
   
   // Sets & Combo State
   const [selectedQtyConfigId, setSelectedQtyConfigId] = useState<string | null>(null);
@@ -104,6 +107,7 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
   const [activeAccordion, setActiveAccordion] = useState<string | null>('set-flavors'); 
   
   const [allDiameters, setAllDiameters] = useState<any[]>([]); 
+  const [allShapes, setAllShapes] = useState<IShape[]>([]);
   const [relatedFlavors, setRelatedFlavors] = useState<Flavor[]>([]); 
   const [allAddons, setAllAddons] = useState<Addon[]>([]);
   const hasHydratedAddons = useRef(false);
@@ -143,9 +147,10 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
   useEffect(() => {
      const fetchData = async () => {
          try {
-             const [diamRes, addonsRes] = await Promise.all([
+             const [diamRes, addonsRes, shapesRes] = await Promise.all([
                  fetch("/api/diameters"),
-                 fetch("/api/addons")
+                 fetch("/api/addons"),
+                 fetch("/api/shapes"),
              ]);
              if(diamRes.ok) {
                  const data = await diamRes.json();
@@ -154,6 +159,15 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
              if(addonsRes.ok) {
                  const data = await addonsRes.json();
                  setAllAddons(data);
+             }
+             if(shapesRes.ok) {
+                 const data = await shapesRes.json();
+                 setAllShapes(
+                   data.map((shape: IShape & { _id: unknown }) => ({
+                     ...shape,
+                     _id: typeof shape._id === "string" ? shape._id : String(shape._id),
+                   }))
+                 );
              }
          } catch(e) {
              console.error("Failed to fetch reference data", e);
@@ -216,6 +230,51 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
         } as DiameterOption;
       })
       .filter((d): d is DiameterOption => d !== null) || [];
+
+  const selectedDiameterDetails = useMemo(() => {
+    if (!selectedDiameterConfig || !product) return null;
+    return product.availableDiameters.find(
+      (d) => d._id.toString() === selectedDiameterConfig.diameterId.toString()
+    ) ?? null;
+  }, [selectedDiameterConfig, product]);
+
+  const availableShapes = useMemo(() => {
+    if (!selectedDiameterDetails) return [];
+    const allowedIds = (selectedDiameterDetails.shapeIds || []).map((id) =>
+      String(id)
+    );
+    // Fallback: if this diameter has no linked shapes yet, show all active
+    // shapes so the selector is testable before admin links them in the DB.
+    if (allowedIds.length === 0) return allShapes;
+    return allShapes.filter((shape) => allowedIds.includes(String(shape._id)));
+  }, [selectedDiameterDetails, allShapes]);
+
+  // Cascade reset: auto-select default or first shape when diameter changes
+  useEffect(() => {
+    if (!selectedDiameterConfig) {
+      setSelectedShapeId("");
+      return;
+    }
+
+    if (availableShapes.length === 0) {
+      setSelectedShapeId("");
+      return;
+    }
+
+    setSelectedShapeId((prev) => {
+      if (prev && availableShapes.some((shape) => shape._id === prev)) {
+        return prev;
+      }
+      const defaultShape =
+        availableShapes.find((shape) => shape.isDefault) || availableShapes[0];
+      return defaultShape?._id || "";
+    });
+  }, [selectedDiameterConfig, availableShapes]);
+
+  const selectedShapeSurcharge = useMemo(() => {
+    if (!selectedShapeId) return 0;
+    return allShapes.find((s) => s._id === selectedShapeId)?.priceSurcharge ?? 0;
+  }, [selectedShapeId, allShapes]);
 
   // Hydrate Addons
   useEffect(() => {
@@ -328,9 +387,9 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
 
         if (selectedDiameterConfig) {
           if (selectedDiameterConfig.price && selectedDiameterConfig.price > 0) {
-            calculatedPrice = selectedDiameterConfig.price + flavorPrice + inscriptionFee;
+            calculatedPrice = selectedDiameterConfig.price + flavorPrice + inscriptionFee + selectedShapeSurcharge;
           } else {
-            calculatedPrice = (product.structureBasePrice + flavorPrice + inscriptionFee) * (selectedDiameterConfig.multiplier || 1);
+            calculatedPrice = (product.structureBasePrice + flavorPrice + inscriptionFee) * (selectedDiameterConfig.multiplier || 1) + selectedShapeSurcharge;
           }
         } else {
           calculatedPrice = product.structureBasePrice + flavorPrice + inscriptionFee;
@@ -491,15 +550,20 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
           (f) => f._id.toString() === selectedFlavorId
         );
         const cartItem = {
-          id: `${product._id.toString()}-${selectedFlavorId}-${
-            selectedDiameterConfig.diameterId
-          }-${inscription}`,
+          id: buildCartItemId({
+            productId: product._id.toString(),
+            flavorId: selectedFlavorId,
+            diameterId: selectedDiameterConfig.diameterId,
+            shapeId: selectedShapeId || undefined,
+            inscription,
+          }),
           productId: product._id.toString(),
           categoryId: product.category._id.toString(),
           name: product.name,
           flavor: selectedFlavor?.name || "N/A",
           flavorNote: flavorNote ? flavorNote : undefined,
           diameterId: selectedDiameterConfig.diameterId,
+          shapeId: selectedShapeId || undefined,
           price: finalPrice, // Discounted Price
           quantity: quantity,
           imageUrl: product.imageUrls[0] || "/placeholder.png",
@@ -516,6 +580,7 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
     if (!isSet) {
         setSelectedFlavorId(null);
         setSelectedDiameterConfig(product.availableDiameterConfigs[0] || null);
+        setSelectedShapeId("");
     } else {
         setSelectedSetFlavorIds([]);
         // Keep config selected
@@ -713,6 +778,15 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
                     }
                     onSelectDiameter={handleSelectDiameter}
                   />
+
+                  {availableShapes.length > 0 && (
+                    <ShapeSelector
+                      shapes={availableShapes}
+                      selectedShapeId={selectedShapeId}
+                      onChange={setSelectedShapeId}
+                      className="mt-md"
+                    />
+                  )}
                 </>
               ) : (
                 /* --- SETS / COMBOS UI --- */

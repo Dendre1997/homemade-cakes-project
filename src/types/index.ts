@@ -37,6 +37,15 @@ export interface Allergen {
   name: string;
 }
 
+export interface IShape {
+  _id: string;
+  name: string;
+  priceSurcharge: number;
+  isDefault: boolean;
+  isActive: boolean;
+  imageUrl?: string;
+}
+
 export interface Diameter {
   _id: string;
   name: string;
@@ -46,6 +55,7 @@ export interface Diameter {
   imageUrl?: string;
   categoryIds?: string[];
   basePrice?: number;
+  shapeIds?: string[];
 }
 
 export interface AvailableDiameterConfig {
@@ -203,6 +213,7 @@ export interface CartItem {
   name: string;
   flavor?: string;
   diameterId?: string;
+  shapeId?: string;
   price: number;
   quantity: number;
   imageUrl?: string;
@@ -222,6 +233,7 @@ export interface CartItem {
     cake?: {
       flavorId: string;
       diameterId: string;
+      shapeId?: string;
       inscription?: string;
     };
     items?: { flavorId: string; count: number }[];
@@ -230,6 +242,7 @@ export interface CartItem {
   // Custom Order Fields
   productType?: 'cake' | 'set' | 'combo' | 'custom';
   customSize?: string;
+  customShape?: string;
   customFlavor?: string;
   flavorNote?: string;
   isManualPrice?: boolean;
@@ -338,6 +351,7 @@ export interface PublicOrderItem {
   quantity: number;
   rowTotal: number;
   displaySize?: string;
+  displayShape?: string;
   displayFlavor?: string;
   flavorNote?: string;
   inscription?: string;
@@ -392,6 +406,7 @@ export interface OrderItem {
   name: string;
   flavor?: string;
   diameterId?: ObjectId;
+  shapeId?: ObjectId;
   price: number;
   quantity: number;
   imageUrl?: string;
@@ -409,6 +424,7 @@ export interface OrderItem {
     cake?: {
       flavorId: string;
       diameterId: string;
+      shapeId?: string;
       inscription?: string;
     };
     items?: { flavorId: string; count: number }[];
@@ -417,6 +433,7 @@ export interface OrderItem {
   // Custom Order Fields
   productType?: 'cake' | 'set' | 'combo' | 'custom';
   customSize?: string;
+  customShape?: string;
   customFlavor?: string;
   flavorNote?: string;
   isManualPrice?: boolean;

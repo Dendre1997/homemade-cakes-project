@@ -2,11 +2,12 @@
 
 import { useState, useRef, useEffect, useMemo } from "react";
 import Image from "next/image";
-import { Flavor, Diameter, OrderItem, ProductCategory, IGalleryImage } from "@/types";
+import { Flavor, Diameter, OrderItem, ProductCategory, IGalleryImage, IShape } from "@/types";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
 import { Textarea } from "@/components/ui/Textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/Select";
 import HybridSelector from "@/components/admin/custom-orders/HybridSelector";
 import ImageSelector from "@/components/admin/custom-orders/ImageSelector";
 import { getPublicIdFromUrl } from "@/lib/cloudinaryUtils";
@@ -49,6 +50,7 @@ const getIllustrationForSize = (sizeValue: number) => {
 interface CustomOrderItemFormProps {
   flavors: Flavor[];
   diameters: Diameter[];
+  shapes?: IShape[];
   onSubmit: (item: OrderItem) => void;
   onCancel?: () => void;
   initialValues?: {
@@ -57,6 +59,7 @@ interface CustomOrderItemFormProps {
       selectedImage: string;
       sizeValue: string;
       flavorValue: string;
+      shapeId?: string;
       designInstructions?: string;
       inscription?: string;
       addons?: SelectedAddon[];
@@ -71,6 +74,7 @@ interface CustomOrderItemFormProps {
 export default function CustomOrderItemForm({
   flavors,
   diameters,
+  shapes = [],
   onSubmit,
   onCancel,
   initialValues,
@@ -106,6 +110,7 @@ export default function CustomOrderItemForm({
   const [selectedImage, setSelectedImage] = useState<string>(initialValues?.selectedImage || "");
   const [sizeValue, setSizeValue] = useState<string>(initialValues?.sizeValue || "");
   const [flavorValue, setFlavorValue] = useState<string>(initialValues?.flavorValue || "");
+  const [selectedShapeId, setSelectedShapeId] = useState<string>(initialValues?.shapeId || "");
   const [designInstructions, setDesignInstructions] = useState<string>(initialValues?.designInstructions || "");
   const [inscription, setInscription] = useState<string>(initialValues?.inscription || "");
   const [flavorNote, setFlavorNote] = useState<string>(initialValues?.flavorNote || "");
@@ -138,6 +143,36 @@ export default function CustomOrderItemForm({
       .filter(d => Array.isArray(d.categoryIds) && d.categoryIds.includes(selectedCategoryId))
       .sort((a, b) => (a.sizeValue || 0) - (b.sizeValue || 0));
   }, [diameters, selectedCategoryId]);
+
+  // The size field is hybrid (diameter _id, box value, or free text).
+  // Shape selection only applies when the size is an actual diameter.
+  const selectedDiameterId = useMemo(() => {
+    return diameters.some(d => d._id === sizeValue) ? sizeValue : "";
+  }, [diameters, sizeValue]);
+
+  // Shapes linked to the chosen diameter (fallback to all active shapes for testing)
+  const availableShapes = useMemo(() => {
+    if (!selectedDiameterId) return [];
+    const diam = diameters.find(d => d._id === selectedDiameterId);
+    const linkedIds = diam?.shapeIds;
+    if (linkedIds && linkedIds.length > 0) {
+      return shapes.filter(s => linkedIds.includes(s._id));
+    }
+    return shapes;
+  }, [selectedDiameterId, diameters, shapes]);
+
+  // Cascade reset: keep the selected shape valid whenever the diameter changes
+  useEffect(() => {
+    if (availableShapes.length === 0) {
+      if (selectedShapeId) setSelectedShapeId("");
+      return;
+    }
+    const stillValid = availableShapes.some(s => s._id === selectedShapeId);
+    if (!stillValid) {
+      const fallback = availableShapes.find(s => s.isDefault) || availableShapes[0];
+      setSelectedShapeId(fallback?._id || "");
+    }
+  }, [availableShapes]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (activeCategoryObj?.categoryType === 'set') {
@@ -289,13 +324,15 @@ export default function CustomOrderItemForm({
           // Hybrid Logic
           customSize: isCustomSize ? sizeValue : undefined,
           diameterId: !isCustomSize ? sizeValue : undefined,
+          shapeId: !isCustomSize && selectedShapeId ? selectedShapeId : undefined,
           
           customFlavor: isCustomFlavor ? flavorValue : undefined,
           flavor: isCustomFlavor ? flavorValue : undefined,
           selectedConfig: (!isCustomFlavor || !isCustomSize) ? {
               cake: {
                   flavorId: !isCustomFlavor ? flavorValue : "",
-                  diameterId: !isCustomSize ? sizeValue : ""
+                  diameterId: !isCustomSize ? sizeValue : "",
+                  shapeId: !isCustomSize && selectedShapeId ? selectedShapeId : ""
               }
           } : undefined
       };
@@ -309,6 +346,7 @@ export default function CustomOrderItemForm({
           setSelectedImage("");
           setSizeValue("");
           setFlavorValue("");
+          setSelectedShapeId("");
           setFlavorNote("");
           setDesignInstructions("");
           setInscription("");
@@ -506,6 +544,25 @@ export default function CustomOrderItemForm({
                         </div>
                      
                  </div>
+
+                 {/* SHAPE SELECTION UI (only when a real diameter is chosen) */}
+                 {availableShapes.length > 0 && (
+                     <div className="space-y-2">
+                         <Label className="block text-md border-b pb-2">Shape</Label>
+                         <Select value={selectedShapeId} onValueChange={setSelectedShapeId}>
+                             <SelectTrigger className="bg-white">
+                                 <SelectValue placeholder="Select Shape" />
+                             </SelectTrigger>
+                             <SelectContent>
+                                 {availableShapes.map(s => (
+                                     <SelectItem key={s._id} value={s._id}>
+                                         {s.name}{s.priceSurcharge > 0 ? ` (+$${s.priceSurcharge})` : ""}
+                                     </SelectItem>
+                                 ))}
+                             </SelectContent>
+                         </Select>
+                     </div>
+                 )}
 
                  {/* FLAVOR SELECTION UI */}
                  <div className="pt-2">

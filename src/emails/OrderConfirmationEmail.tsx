@@ -21,6 +21,7 @@ export interface OrderConfirmationEmailProps {
   order: Order;
   flavorMap?: Record<string, string>;
   diameterMap?: Record<string, string>;
+  shapeMap?: Record<string, string>;
   pickupAddress?: string;
   eTransferEmail?: string;
 }
@@ -57,6 +58,7 @@ export const OrderConfirmationEmail = ({
   order,
   flavorMap = {},
   diameterMap = {},
+  shapeMap = {},
   pickupAddress,
   eTransferEmail,
 }: OrderConfirmationEmailProps) => {
@@ -80,6 +82,13 @@ export const OrderConfirmationEmail = ({
     if (!id) return "";
     if (id.length === 24 && /^[0-9a-fA-F]+$/.test(id))
       return diameterMap[id] || id;
+    return id;
+  };
+
+  const getShapeName = (id?: string) => {
+    if (!id) return "";
+    if (id.length === 24 && /^[0-9a-fA-F]+$/.test(id))
+      return shapeMap[id] || "";
     return id;
   };
 
@@ -177,6 +186,10 @@ export const OrderConfirmationEmail = ({
                   ? item.customSize ||
                     getDiameterName(item.selectedConfig?.cake?.diameterId)
                   : getDiameterName(item.diameterId);
+                const displayShape = isCustom
+                  ? item.customShape ||
+                    getShapeName(item.selectedConfig?.cake?.shapeId)
+                  : getShapeName(item.shapeId as any);
 
                 const itemImages = item.imageUrls?.length
                   ? item.imageUrls
@@ -233,10 +246,11 @@ export const OrderConfirmationEmail = ({
                           </Column>
                         </Row>
 
-                        {(displaySize || displayFlavor) && (
+                        {(displaySize || displayShape || displayFlavor) && (
                           <Text style={styles.itemMeta}>
                             {[
                               displaySize && `Size: ${displaySize}`,
+                              displayShape && `Shape: ${displayShape}`,
                               displayFlavor && `Flavor: ${displayFlavor}`,
                             ]
                               .filter(Boolean)
