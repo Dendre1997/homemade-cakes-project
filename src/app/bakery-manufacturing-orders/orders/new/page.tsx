@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { StandardProductForm } from "@/components/admin/orders/StandardProductForm";
 import { SetProductForm } from "@/components/admin/orders/SetProductForm";
 import { ComboProductForm } from "@/components/admin/orders/ComboProductForm";
-import { ProductCategory, ProductWithCategory, Flavor, Diameter, OrderItem } from "@/types";
+import { ProductCategory, ProductWithCategory, Flavor, Diameter, OrderItem, IShape } from "@/types";
 import CustomOrderItemForm from "@/components/admin/orders/CustomOrderItemForm";
 
 export default function ManualOrderPage() {
@@ -27,6 +27,7 @@ export default function ManualOrderPage() {
   const [products, setProducts] = useState<ProductWithCategory[]>([]);
   const [allFlavors, setAllFlavors] = useState<Flavor[]>([]);
   const [allDiameters, setAllDiameters] = useState<Diameter[]>([]); 
+  const [allShapes, setAllShapes] = useState<IShape[]>([]);
   const [allCategories, setAllCategories] = useState<ProductCategory[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
 
@@ -66,10 +67,11 @@ export default function ManualOrderPage() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const [prodRes, flavRes, diamRes, catRes] = await Promise.all([
+        const [prodRes, flavRes, diamRes, shapeRes, catRes] = await Promise.all([
             fetch("/api/admin/products?context=admin"), 
             fetch("/api/admin/flavors"), 
             fetch("/api/admin/diameters"),
+            fetch("/api/admin/shapes"),
             fetch("/api/categories")
         ]);
         
@@ -79,6 +81,7 @@ export default function ManualOrderPage() {
         }
         if (flavRes.ok) setAllFlavors(await flavRes.json());
         if (diamRes.ok) setAllDiameters(await diamRes.json());
+        if (shapeRes.ok) setAllShapes(await shapeRes.json());
         if (catRes.ok) setAllCategories(await catRes.json());
       } catch (e) {
         console.error("Failed to load catalog data", e);
@@ -492,6 +495,7 @@ export default function ManualOrderPage() {
                              product={selectedProduct}
                              allFlavors={allFlavors}
                              allDiameters={allDiameters}
+                             allShapes={allShapes}
                              onAdd={(newItem) => {
                                  setItems([...items, newItem]);
                              }}
@@ -505,6 +509,7 @@ export default function ManualOrderPage() {
               <CustomOrderItemForm
                   flavors={allFlavors}
                   diameters={allDiameters}
+                  shapes={allShapes}
                   onSubmit={(newItem: OrderItem) => {
                     setItems([...items, newItem]);
                     showAlert("Custom item added!", "success");

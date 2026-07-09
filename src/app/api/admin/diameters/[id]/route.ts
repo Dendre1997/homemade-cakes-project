@@ -47,7 +47,7 @@ export async function PUT(
 
   try {
     const { id } = await params;
-    const { sizeValue, categoryIds, name, servings, illustration, imageUrl, basePrice } =
+    const { sizeValue, categoryIds, shapeIds, name, servings, illustration, imageUrl, basePrice } =
       await request.json();
 
     if (!name || typeof sizeValue !== "number" || !servings || !illustration) {
@@ -68,6 +68,7 @@ export async function PUT(
         illustration,
         imageUrl,
         categoryIds: categoryIds || [],
+        shapeIds: shapeIds || [],
       }
     };
 

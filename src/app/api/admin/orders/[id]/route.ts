@@ -140,6 +140,7 @@ export async function PUT(request: NextRequest, { params }: Context) {
         productId: item.productId ? new ObjectId(String(item.productId)) : undefined,
         categoryId: item.categoryId ? new ObjectId(String(item.categoryId)) : undefined,
         diameterId: item.diameterId ? new ObjectId(String(item.diameterId)) : undefined,
+        shapeId: item.shapeId && ObjectId.isValid(String(item.shapeId)) ? new ObjectId(String(item.shapeId)) : undefined,
       }));
       updateFields.$set.items = itemsForDb;
     }

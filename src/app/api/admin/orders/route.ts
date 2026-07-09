@@ -122,6 +122,7 @@ export async function POST(request: NextRequest) {
             productId: item.productId ? new ObjectId(String(item.productId)) : undefined,
             categoryId: item.categoryId ? new ObjectId(String(item.categoryId)) : undefined,
             diameterId: item.diameterId ? new ObjectId(String(item.diameterId)) : undefined,
+            shapeId: item.shapeId && ObjectId.isValid(String(item.shapeId)) ? new ObjectId(String(item.shapeId)) : undefined,
             
             // Explicitly cast numbers
             price: Number(item.price),
@@ -173,6 +174,7 @@ export async function POST(request: NextRequest) {
                     productId: item.productId?.toString(),
                     categoryId: item.categoryId?.toString(),
                     diameterId: item.diameterId?.toString(),
+                    shapeId: item.shapeId?.toString(),
                 }))
             };
 
@@ -188,10 +190,16 @@ export async function POST(request: NextRequest) {
                 return acc;
             }, {} as Record<string, string>);
 
+            const shapes = await db.collection("shapes").find({}).toArray();
+            const shapeMap = shapes.reduce((acc, s) => {
+                acc[s._id.toString()] = s.name;
+                return acc;
+            }, {} as Record<string, string>);
+
             const settings = await getAppSettings();
             const pickupAddress = settings.checkout?.pickupAddress || "";
 
-            const htmlContent = await render(OrderConfirmationEmail({ order: finalOrder as any, flavorMap, diameterMap, pickupAddress } as any));
+            const htmlContent = await render(OrderConfirmationEmail({ order: finalOrder as any, flavorMap, diameterMap, shapeMap, pickupAddress } as any));
 
             await resend.emails.send({
                 from: DEFAULT_FROM,

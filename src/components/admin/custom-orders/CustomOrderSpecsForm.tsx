@@ -12,9 +12,11 @@ import { useRef, useState } from "react";
 import { AddonAdminSelector } from "@/components/admin/addons/AddonAdminSelector";
 import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
 import ImagePreviewGallery from "@/components/ui/ImagePreviewGallery";
+import { IShape } from "@/types";
 
 interface CustomOrderSpecsFormProps {
   order: any;
+  shapes?: IShape[];
   onChange: (field: string, value: any) => void;
   onImageUpload: (files: FileList) => Promise<void>;
   isUploading: boolean;
@@ -22,6 +24,7 @@ interface CustomOrderSpecsFormProps {
 
 export const CustomOrderSpecsForm = ({ 
   order, 
+  shapes = [],
   onChange, 
   onImageUpload,
   isUploading
@@ -105,6 +108,36 @@ export const CustomOrderSpecsForm = ({
                 placeholder="e.g. Vanilla, Chocolate"
              />
           </div>
+       </div>
+
+       <div className="space-y-sm">
+          <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Shape</Label>
+          <Select
+             value={order.details?.shape || "__none__"}
+             onValueChange={(val) =>
+                onChange("details", { ...order.details, shape: val === "__none__" ? "" : val })
+             }
+          >
+             <SelectTrigger className="h-11">
+                <SelectValue placeholder="Select Shape" />
+             </SelectTrigger>
+             <SelectContent>
+                <SelectItem value="__none__">— No shape —</SelectItem>
+                {/* Preserve an existing free-text value that is not in the active shape list */}
+                {order.details?.shape &&
+                   !shapes.some((s) => s.name === order.details.shape) && (
+                      <SelectItem value={order.details.shape}>
+                         {order.details.shape} (custom)
+                      </SelectItem>
+                   )}
+                {shapes.map((s) => (
+                   <SelectItem key={s._id} value={s.name}>
+                      {s.name}
+                      {s.priceSurcharge > 0 ? ` (+$${s.priceSurcharge})` : ""}
+                   </SelectItem>
+                ))}
+             </SelectContent>
+          </Select>
        </div>
 
        <div className="space-y-sm">

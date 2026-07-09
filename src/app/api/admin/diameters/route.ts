@@ -14,6 +14,7 @@ export async function POST(request: NextRequest) {
     const {
       sizeValue,
       categoryIds,
+      shapeIds,
       name,
       servings,
       illustration,
@@ -38,6 +39,7 @@ export async function POST(request: NextRequest) {
       illustration,
       imageUrl,
       categoryIds: categoryIds || [],
+      shapeIds: shapeIds || [],
     };
     
     if (basePrice !== undefined && basePrice !== null) {

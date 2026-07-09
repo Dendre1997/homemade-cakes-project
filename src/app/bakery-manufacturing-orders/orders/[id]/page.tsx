@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
-import { Order, Diameter, OrderStatus, ScheduleSettings } from "@/types"; // Import OrderStatus
+import { Order, Diameter, OrderStatus, ScheduleSettings, IShape } from "@/types"; // Import OrderStatus
 import Link from "next/link";
 import LoadingSpinner from "@/components/ui/Spinner";
 import OrderDetailAssignedDates from "@/components/admin/orders/OrderDetailAssignedDates";
@@ -42,6 +42,7 @@ const OrderDetailsPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [diameters, setDiameters] = useState<Diameter[]>([]);
+  const [shapes, setShapes] = useState<IShape[]>([]);
   const [newStatus, setNewStatus] = useState<OrderStatus | "">("");
   const [isEditingDates, setIsEditingDates] = useState(false);
   const [availabilityData, setAvailabilityData] =
@@ -78,9 +79,10 @@ const OrderDetailsPage = () => {
     try {
       setIsLoading(true);
       setError(null);
-      const [orderRes, diametersRes] = await Promise.all([
+      const [orderRes, diametersRes, shapesRes] = await Promise.all([
         fetch(`/api/admin/orders/${id}`),
         fetch("/api/admin/diameters"),
+        fetch("/api/admin/shapes"),
       ]);
 
       if (!orderRes.ok)
@@ -94,6 +96,7 @@ const OrderDetailsPage = () => {
       setOrder(orderData);
       setNewStatus(orderData.status);
       setDiameters(await diametersRes.json());
+      if (shapesRes.ok) setShapes(await shapesRes.json());
 
       setAdminSelectedSingleDate(null);
       setIsConfirmingDate(false);
@@ -737,6 +740,7 @@ const OrderDetailsPage = () => {
           <OrderDetailItems
             items={order.items}
             diameters={diameters}
+            shapes={shapes}
             totalAmount={order.totalAmount}
             onUpdate={fetchOrderAndDiameters}
             referenceImages={order.referenceImages}
@@ -902,6 +906,7 @@ const OrderDetailsPage = () => {
         onClose={() => setIsReceiptModalOpen(false)}
         order={order}
         diameters={diameters}
+        shapes={shapes}
         flavorMap={flavorMap}
       />
     </section>

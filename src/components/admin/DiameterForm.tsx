@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect} from "react";
-import { Diameter, ProductCategory } from "@/types";
+import { Diameter, ProductCategory, IShape } from "@/types";
 import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";;
 import { ChipCheckbox } from "../ui/ChipCheckbox";
@@ -62,14 +62,41 @@ const DiameterForm = ({
     illustration: "",
     imageUrl: "",
     categoryIds: [],
+    shapeIds: [],
     basePrice: undefined,
   });
+
+  const [shapes, setShapes] = useState<IShape[]>([]);
+  const [isLoadingShapes, setIsLoadingShapes] = useState(true);
 
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [orphanedImageUrl, setOrphanedImageUrl] = useState<string | null>(null);
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const fetchShapes = async () => {
+      try {
+        const res = await fetch("/api/admin/shapes");
+        if (!res.ok) throw new Error("Failed to fetch shapes");
+        const data = await res.json();
+        setShapes(
+          data.map((shape: IShape & { _id: unknown }) => ({
+            ...shape,
+            _id:
+              typeof shape._id === "string" ? shape._id : String(shape._id),
+          }))
+        );
+      } catch (err) {
+        console.error("Failed to load shapes for diameter form:", err);
+      } finally {
+        setIsLoadingShapes(false);
+      }
+    };
+
+    fetchShapes();
+  }, []);
 
   useEffect(() => {
     if (existingDiameter) {
@@ -80,6 +107,7 @@ const DiameterForm = ({
         illustration: existingDiameter.illustration || "",
         imageUrl: existingDiameter.imageUrl || "",
         categoryIds: existingDiameter.categoryIds || [],
+        shapeIds: existingDiameter.shapeIds || [],
         basePrice: existingDiameter.basePrice,
       });
     } else if (!isSubmitting) {
@@ -90,6 +118,7 @@ const DiameterForm = ({
         illustration: "",
         imageUrl: "",
         categoryIds: [],
+        shapeIds: [],
         basePrice: undefined,
       });
     }
@@ -134,6 +163,18 @@ const DiameterForm = ({
         categoryIds: currentCategoryIds.includes(categoryId)
           ? currentCategoryIds.filter((id) => id !== categoryId)
           : [...currentCategoryIds, categoryId],
+      };
+    });
+  };
+
+  const handleShapeChange = (shapeId: string) => {
+    setFormData((prev) => {
+      const currentShapeIds = prev.shapeIds || [];
+      return {
+        ...prev,
+        shapeIds: currentShapeIds.includes(shapeId)
+          ? currentShapeIds.filter((id) => id !== shapeId)
+          : [...currentShapeIds, shapeId],
       };
     });
   };
@@ -337,6 +378,38 @@ const DiameterForm = ({
             </ChipCheckbox>
           ))}
         </div>
+      </div>
+
+      <div className="space-y-sm">
+        <h3 className="font-body text-body font-bold text-primary">Shapes</h3>
+        {isLoadingShapes ? (
+          <p className="text-sm text-primary/60 p-md border border-border rounded-medium">
+            Loading shapes...
+          </p>
+        ) : shapes.length === 0 ? (
+          <p className="text-sm text-primary/60 p-md border border-border rounded-medium">
+            No shapes available. Create shapes in the catalog first.
+          </p>
+        ) : (
+          <div
+            className="p-md border border-border rounded-medium 
+            grid gap-md
+            grid-cols-[repeat(auto-fit,minmax(150px,1fr))]"
+          >
+            {shapes.map((shape) => (
+              <ChipCheckbox
+                key={shape._id}
+                checked={(formData.shapeIds || []).includes(shape._id)}
+                onCheckedChange={() => handleShapeChange(shape._id)}
+              >
+                {shape.name}
+                {shape.priceSurcharge > 0
+                  ? ` (+$${shape.priceSurcharge})`
+                  : ""}
+              </ChipCheckbox>
+            ))}
+          </div>
+        )}
       </div>
 
       <div>

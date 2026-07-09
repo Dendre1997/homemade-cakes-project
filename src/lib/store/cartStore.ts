@@ -10,6 +10,7 @@ export interface CartItem {
   flavor?: string;
   flavorId?: string;
   diameterId?: string;
+  shapeId?: string;
   price: number;
   quantity: number;
   imageUrl: string;
@@ -22,6 +23,7 @@ export interface CartItem {
     cake?: {
       flavorId: string;
       diameterId: string;
+      shapeId?: string;
       inscription?: string;
     };
   };

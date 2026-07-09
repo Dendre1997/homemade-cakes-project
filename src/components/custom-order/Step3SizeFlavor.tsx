@@ -7,11 +7,13 @@ import { Loader2 } from "lucide-react";
 import LoadingSpinner from "../ui/Spinner";
 
 import DiameterSelector, { DiameterOption } from "@/components/ui/DiameterSelector";
+import ShapeSelector from "@/components/ui/ShapeSelector";
 import FlavorSelector from "@/components/ui/FlavorSelector";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
+import { IShape } from "@/types";
 
 import { FourInchBentoIcon } from "@/components/icons/cake-sizes/FourInchBentoIcon";
 import { FiveInchBentoIcon } from "@/components/icons/cake-sizes/FiveInchBentoIcon";
@@ -53,6 +55,7 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick }: { onNext:
   const [categories, setCategories] = useState<any[]>([]);
   const [allDiameters, setAllDiameters] = useState<any[]>([]);
   const [allFlavors, setAllFlavors] = useState<any[]>([]);
+  const [allShapes, setAllShapes] = useState<IShape[]>([]);
 
   const activeCategoryObj = useMemo(() => {
     if (!categoryName) return null;
@@ -73,6 +76,7 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick }: { onNext:
   // If isStandard
   const [standardDiameterId, setStandardDiameterId] = useState<string | null>(null);
   const [standardFlavorId, setStandardFlavorId] = useState<string | null>(null);
+  const [standardShapeId, setStandardShapeId] = useState<string>("");
   
   // If isDiscrete (Cupcakes) — default to smallest box
   const [discreteQuantity, setDiscreteQuantity] = useState<string>(BOX_SIZES[0].value);
@@ -88,15 +92,25 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick }: { onNext:
     async function fetchDBDocs() {
       setIsLoading(true);
       try {
-        const [catRes, diamRes, flavRes] = await Promise.all([
+        const [catRes, diamRes, flavRes, shapesRes] = await Promise.all([
           fetch("/api/categories"),
           fetch("/api/diameters"),
-          fetch("/api/flavors")
+          fetch("/api/flavors"),
+          fetch("/api/shapes"),
         ]);
 
         if (catRes.ok) setCategories(await catRes.json());
         if (diamRes.ok) setAllDiameters(await diamRes.json());
         if (flavRes.ok) setAllFlavors(await flavRes.json());
+        if (shapesRes.ok) {
+          const shapesData = await shapesRes.json();
+          setAllShapes(
+            shapesData.map((shape: IShape & { _id: unknown }) => ({
+              ...shape,
+              _id: typeof shape._id === "string" ? shape._id : String(shape._id),
+            }))
+          );
+        }
       } catch (e) {
         console.error("Failed to load options", e);
       } finally {
@@ -160,6 +174,51 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick }: { onNext:
     }));
   }, [filteredDiameters]);
 
+  const selectedStandardDiameter = useMemo(() => {
+    if (!standardDiameterId) return null;
+    return (
+      filteredDiameters.find(
+        (d: { _id: unknown }) => String(d._id) === String(standardDiameterId)
+      ) ?? null
+    );
+  }, [filteredDiameters, standardDiameterId]);
+
+  const availableShapesForDiameter = useMemo(() => {
+    if (!selectedStandardDiameter) return [];
+    const allowedIds = (selectedStandardDiameter.shapeIds || []).map((id: unknown) =>
+      String(id)
+    );
+    if (allowedIds.length === 0) return allShapes;
+    return allShapes.filter((shape) => allowedIds.includes(String(shape._id)));
+  }, [selectedStandardDiameter, allShapes]);
+
+  useEffect(() => {
+    if (!isStandard || !standardDiameterId) {
+      setStandardShapeId("");
+      return;
+    }
+
+    if (availableShapesForDiameter.length === 0) {
+      setStandardShapeId("");
+      return;
+    }
+
+    setStandardShapeId((prev) => {
+      if (prev && availableShapesForDiameter.some((shape) => shape._id === prev)) {
+        return prev;
+      }
+      const defaultShape =
+        availableShapesForDiameter.find((shape) => shape.isDefault) ||
+        availableShapesForDiameter[0];
+      return defaultShape?._id || "";
+    });
+  }, [isStandard, standardDiameterId, availableShapesForDiameter]);
+
+  const standardShapeSurcharge = useMemo(() => {
+    if (!standardShapeId) return 0;
+    return allShapes.find((s) => s._id === standardShapeId)?.priceSurcharge ?? 0;
+  }, [standardShapeId, allShapes]);
+
   // ── Price computation ──────────────────────────────────────────────────────
   // Formula: basePrice × (1 + diameterIndex × 0.30)
   // Index 0 (smallest diameter) = no markup; each subsequent size adds 30%.
@@ -171,14 +230,14 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick }: { onNext:
     const selectedDiameter = filteredDiameters.find((d: any) => d._id === standardDiameterId);
     // Use fixed diameter base price if set
     if (selectedDiameter?.basePrice && selectedDiameter.basePrice > 0) {
-      return selectedDiameter.basePrice;
+      return selectedDiameter.basePrice + standardShapeSurcharge;
     }
     // Fallback to existing index-based calculation
     const idx = filteredDiameters.findIndex((d: any) => d._id === standardDiameterId);
-    if (idx < 0) return basePrice;
-    if (idx <= 0) return basePrice; // smallest size — keep exact base price
-    return Math.ceil(basePrice * (1 + idx * 0.30) / 10) * 10;
-  }, [isStandard, basePrice, standardDiameterId, filteredDiameters]);
+    if (idx < 0) return basePrice + standardShapeSurcharge;
+    if (idx <= 0) return basePrice + standardShapeSurcharge; // smallest size — keep exact base price
+    return Math.ceil(basePrice * (1 + idx * 0.30) / 10) * 10 + standardShapeSurcharge;
+  }, [isStandard, basePrice, standardDiameterId, filteredDiameters, standardShapeSurcharge]);
 
   // Discrete: basePrice × quantity
   const discretePrice = useMemo(() => {
@@ -250,10 +309,15 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick }: { onNext:
           finalFlavor = filteredFlavors.find(f => f._id === standardFlavorId)?.name || "";
       }
 
+      const finalShape = isStandard
+        ? allShapes.find((s) => s._id === standardShapeId)?.name || ""
+        : "";
+
       setValue("details.size", finalSize, { shouldValidate: true });
       setValue("details.flavor", finalFlavor, { shouldValidate: true });
+      setValue("details.shape", finalShape, { shouldValidate: true });
 
-  }, [isCombo, isDiscrete, comboPieceQuantity, comboTreatFlavorIds, comboCakeFlavorId, discreteQuantity, discreteFlavorIds, standardDiameterId, standardFlavorId, filteredFlavors, filteredDiameters, setValue]);
+  }, [isCombo, isDiscrete, comboPieceQuantity, comboTreatFlavorIds, comboCakeFlavorId, discreteQuantity, discreteFlavorIds, standardDiameterId, standardFlavorId, standardShapeId, filteredFlavors, filteredDiameters, allShapes, isStandard, setValue]);
 
   // Sync back local state compilation
   useEffect(() => {
@@ -520,6 +584,14 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick }: { onNext:
                     selectedDiameterId={standardDiameterId}
                     onSelectDiameter={setStandardDiameterId}
                   />
+                  {availableShapesForDiameter.length > 0 && (
+                    <ShapeSelector
+                      shapes={availableShapesForDiameter}
+                      selectedShapeId={standardShapeId}
+                      onChange={setStandardShapeId}
+                      className="mt-md"
+                    />
+                  )}
                 </div>
               ) : (
                 <div data-field-name="details.size">

@@ -139,6 +139,18 @@ export async function POST(
       }
     }
 
+    // Resolve shape name -> ObjectId (fallback to the free-text customShape)
+    const shapeName = (customOrder.details?.shape || "").trim();
+    let resolvedShapeId: ObjectId | null = null;
+    if (shapeName) {
+      const shapeDoc = await db.collection("shapes").findOne({
+        name: { $regex: new RegExp(`^${shapeName}$`, "i") },
+      });
+      if (shapeDoc) {
+        resolvedShapeId = new ObjectId(shapeDoc._id);
+      }
+    }
+
     const item = {
       id: `${newOrderId.toString()}-custom-1`,
       name: `Custom ${customOrder.category}`,
@@ -150,6 +162,8 @@ export async function POST(
       imageUrls: customOrder.referenceImages || [],
       customSize: sizeName, // Keep as string for receipts
       diameterId: resolvedDiameterId, // Assign ID for backend & analytics
+      customShape: !resolvedShapeId ? (shapeName || undefined) : undefined, // Keep as string for receipts when no DB match
+      shapeId: resolvedShapeId, // Assign ID for backend & analytics
       customFlavor: flavorName, // Keep as string for receipts
       flavorId: resolvedFlavorId, // Assign ID for backend & analytics
       isManualPrice: true,
@@ -258,6 +272,8 @@ export async function POST(
                 items: newOrder.items.map((item: any) => ({
                     ...item,
                     categoryId: item.categoryId?.toString(),
+                    diameterId: item.diameterId?.toString(),
+                    shapeId: item.shapeId?.toString(),
                 }))
             };
 
@@ -273,6 +289,12 @@ export async function POST(
                 return acc;
             }, {} as Record<string, string>);
 
+            const shapes = await db.collection("shapes").find({}).toArray();
+            const shapeMap = shapes.reduce((acc, s) => {
+                acc[s._id.toString()] = s.name;
+                return acc;
+            }, {} as Record<string, string>);
+
             const settings = await getAppSettings();
             const pickupAddress = settings.checkout?.pickupAddress || "";
             const eTransferEmail = settings.eTransferEmail?.trim() || "";
@@ -281,6 +303,7 @@ export async function POST(
               order: finalOrder as any,
               flavorMap,
               diameterMap,
+              shapeMap,
               pickupAddress,
               eTransferEmail,
             } as any));

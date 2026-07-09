@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { CustomOrder } from "@/types";
+import { CustomOrder, IShape } from "@/types";
 import { useAlert } from "@/contexts/AlertContext";
 import { CustomOrderDetailHeader } from "./CustomOrderDetailHeader";
 import { CustomOrderSpecsForm } from "./CustomOrderSpecsForm";
@@ -17,9 +17,10 @@ import {
 
 interface CustomOrderDetailProps {
   initialOrder: CustomOrder;
+  shapes?: IShape[];
 }
 
-export default function CustomOrderDetail({ initialOrder }: CustomOrderDetailProps) {
+export default function CustomOrderDetail({ initialOrder, shapes = [] }: CustomOrderDetailProps) {
   const router = useRouter();
   const { showAlert } = useAlert();
   const [order, setOrder] = useState<CustomOrder>(initialOrder);
@@ -211,6 +212,7 @@ export default function CustomOrderDetail({ initialOrder }: CustomOrderDetailPro
         <div className="lg:col-span-2 space-y-8">
           <CustomOrderSpecsForm
             order={order}
+            shapes={shapes}
             onChange={handleFieldChange}
             onImageUpload={handleImageUpload}
             isUploading={isUploading}

@@ -241,6 +241,9 @@ export const OrderSummaryDisplay = ({
               {item.displaySize && item.displaySize.trim() !== "" && (
                 <p>Size: {item.displaySize}</p>
               )}
+              {item.displayShape && item.displayShape.trim() !== "" && (
+                <p>Shape: {item.displayShape}</p>
+              )}
               {item.displayFlavor && item.displayFlavor.trim() !== "" && (
                 <p>Flavor: {item.displayFlavor}</p>
               )}

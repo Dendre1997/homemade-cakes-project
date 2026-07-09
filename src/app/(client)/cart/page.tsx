@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import LoadingSpinner from "@/components/ui/Spinner";
-import { Diameter, Flavor } from "@/types";
+import { Diameter, Flavor, IShape } from "@/types";
 import { Button } from "@/components/ui/Button";
 import { Trash2 } from "lucide-react";
 import QuantityStepper from "@/components/ui/QuantityStepper";
@@ -13,6 +13,7 @@ import QuantityStepper from "@/components/ui/QuantityStepper";
 const CartPage = () => {
   const { items, removeItem, increaseQuantity, decreaseQuantity } = useCartStore();
   const [diameters, setDiameters] = useState<Diameter[]>([]);
+  const [shapes, setShapes] = useState<IShape[]>([]);
   const [flavors, setFlavors] = useState<Flavor[]>([]);
   // This state is used to prevent hydration mismatches with the client side cart
   const [isMounted, setIsMounted] = useState(false);
@@ -26,6 +27,23 @@ const CartPage = () => {
       }
     } catch (error) {
       console.error("Failed to fetch diameters", error);
+    }
+  };
+
+  const fetchShapes = async () => {
+    try {
+      const res = await fetch("/api/shapes");
+      if (res.ok) {
+        const data = await res.json();
+        setShapes(
+          data.map((shape: IShape & { _id: unknown }) => ({
+            ...shape,
+            _id: typeof shape._id === "string" ? shape._id : String(shape._id),
+          }))
+        );
+      }
+    } catch (error) {
+      console.error("Failed to fetch shapes", error);
     }
   };
 
@@ -43,6 +61,7 @@ const CartPage = () => {
   useEffect(() => {
     setIsMounted(true);
     fetchDiameters();
+    fetchShapes();
     fetchFlavors();
   }, []);
 
@@ -80,6 +99,10 @@ const CartPage = () => {
                   // Safe Diameter Lookup (Only for Standard Cakes)
                   const diameter = item.diameterId 
                     ? diameters.find(d => d._id.toString() === item.diameterId!.toString())
+                    : null;
+
+                  const shape = item.shapeId
+                    ? shapes.find((s) => s._id === String(item.shapeId))
                     : null;
 
                   // Main Flavor Lookup (Standard Cakes)
@@ -125,7 +148,9 @@ const CartPage = () => {
                                     </p>
                                     {diameter && (
                                       <p className="font-body text-body text-primary/80">
-                                        {diameter.name} ({diameter.sizeValue}")
+                                        Size: {diameter.name}
+                                        {shape ? ` (${shape.name})` : ""}
+                                        {diameter.sizeValue ? ` · ${diameter.sizeValue}"` : ""}
                                       </p>
                                     )}
                                 </>

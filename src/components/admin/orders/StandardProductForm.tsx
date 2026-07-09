@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { ProductWithCategory, Flavor, Diameter, CartItem } from "@/types";
+import { useState, useEffect, useMemo } from "react";
+import { ProductWithCategory, Flavor, Diameter, CartItem, IShape } from "@/types";
 import { Button } from "@/components/ui/Button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/Select";
 import { calculateUnitPrice, calculateItemPrice } from "@/utils/priceCalculator";
@@ -14,6 +14,7 @@ interface StandardProductFormProps {
   product: ProductWithCategory;
   allFlavors: Flavor[]; // Global list if product-specific missing
   allDiameters: Diameter[]; // Global list
+  allShapes?: IShape[]; // Active shapes for optional shape selection
   onAdd: (item: any) => void;
   onCancel: () => void;
 }
@@ -22,6 +23,7 @@ export const StandardProductForm = ({
   product,
   allFlavors,
   allDiameters,
+  allShapes = [],
   onAdd,
   onCancel
 }: StandardProductFormProps) => {
@@ -30,6 +32,7 @@ export const StandardProductForm = ({
   // --- Local State ---
   const [selectedFlavorId, setSelectedFlavorId] = useState("");
   const [selectedDiameterId, setSelectedDiameterId] = useState("");
+  const [selectedShapeId, setSelectedShapeId] = useState("");
   const [qty, setQty] = useState(1);
   const [priceOverride, setPriceOverride] = useState("");
   const [inscription, setInscription] = useState("");
@@ -44,6 +47,33 @@ export const StandardProductForm = ({
   const availableDiameters = product.availableDiameters && Array.isArray(product.availableDiameters) && product.availableDiameters.length > 0
      ? product.availableDiameters
      : allDiameters.filter(d => product.availableDiameterConfigs?.some(c => c.diameterId === d._id));
+
+  // Shapes linked to the currently selected diameter (fallback to all active shapes)
+  const availableShapes = useMemo(() => {
+      if (!selectedDiameterId) return [];
+      const diam = allDiameters.find(d => d._id === selectedDiameterId)
+         || availableDiameters.find(d => d._id === selectedDiameterId);
+      const linkedIds = diam?.shapeIds;
+      if (linkedIds && linkedIds.length > 0) {
+          return allShapes.filter(s => linkedIds.includes(s._id));
+      }
+      return allShapes;
+  }, [selectedDiameterId, allDiameters, availableDiameters, allShapes]);
+
+  // Cascade reset: keep the selected shape valid whenever the diameter changes
+  useEffect(() => {
+      if (availableShapes.length === 0) {
+          if (selectedShapeId) setSelectedShapeId("");
+          return;
+      }
+      const stillValid = availableShapes.some(s => s._id === selectedShapeId);
+      if (!stillValid) {
+          const fallback = availableShapes.find(s => s.isDefault) || availableShapes[0];
+          setSelectedShapeId(fallback?._id || "");
+      }
+  }, [availableShapes]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const selectedShapeSurcharge = availableShapes.find(s => s._id === selectedShapeId)?.priceSurcharge || 0;
 
 
   const handleAdd = () => {
@@ -67,7 +97,7 @@ export const StandardProductForm = ({
          });
 
       const AddonsTotal = selectedAddons.reduce((sum, d) => sum + d.price, 0);
-      const finalUnitPrice = priceOverride ? unitPrice : unitPrice + AddonsTotal;
+      const finalUnitPrice = priceOverride ? unitPrice : unitPrice + AddonsTotal + selectedShapeSurcharge;
 
       const flavName = availableFlavors.find(f => f._id === selectedFlavorId)?.name || "Standard";
 
@@ -78,6 +108,7 @@ export const StandardProductForm = ({
           productName: product.name,
           categoryId: product.categoryId,
           diameterId: selectedDiameterId,
+          shapeId: selectedShapeId || undefined,
           name: product.name,
           flavor: flavName,
           flavorNote: flavorNote,
@@ -144,6 +175,25 @@ export const StandardProductForm = ({
                     </SelectContent>
                 </Select>
              </div>
+
+             {/* Shape (only when the selected size has shapes) */}
+             {availableShapes.length > 0 && (
+             <div>
+                <label className="block text-sm font-medium mb-1">Shape</label>
+                <Select value={selectedShapeId} onValueChange={setSelectedShapeId}>
+                    <SelectTrigger>
+                        <SelectValue placeholder="Select Shape" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {availableShapes.map(s => (
+                            <SelectItem key={s._id} value={s._id}>
+                                {s.name}{s.priceSurcharge > 0 ? ` (+$${s.priceSurcharge})` : ""}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+             </div>
+             )}
 
              {/* Quantity */}
              <div>

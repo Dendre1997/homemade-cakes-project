@@ -257,6 +257,16 @@ export default function Step6Success({ orderData, customOrderId, onMakeAnotherRe
                   </span>
                 </div>
               )}
+              {orderData.details?.shape && (
+                <div className="flex gap-2">
+                  <span className="text-primary/40 w-20 shrink-0 font-semibold">
+                    Shape:
+                  </span>
+                  <span className="text-primary/80 font-medium break-words min-w-0 flex-1">
+                    {orderData.details.shape}
+                  </span>
+                </div>
+              )}
               {orderData.details?.flavor && (
                 <div className="flex gap-2">
                   <span className="text-primary/40 w-20 shrink-0 font-semibold">

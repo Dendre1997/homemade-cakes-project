@@ -12,6 +12,7 @@ export const customOrderSchema = z.object({
     flavorNote: z.string().optional(),
     textOnCake: z.string().optional(),
     designNotes: z.string().min(1, "Please provide overall design notes").max(1000, "Notes are too long"),
+    shape: z.string().optional(),
   }),
   allergies: z.string().min(2, "Please indicate if you have any allergies"),
   referenceImages: z

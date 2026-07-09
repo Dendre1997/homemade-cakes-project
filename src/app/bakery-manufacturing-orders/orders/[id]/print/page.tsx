@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams } from "next/navigation";
 import { format } from "date-fns";
-import { Order, Diameter, Flavor } from "@/types";
+import { Order, Diameter, Flavor, IShape } from "@/types";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -35,6 +35,7 @@ export default function PrintOrderPage() {
   const [order, setOrder] = useState<Order | null>(null);
   const [diameters, setDiameters] = useState<Diameter[]>([]);
   const [flavorMap, setFlavorMap] = useState<Record<string, string>>({});
+  const [shapeMap, setShapeMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [imgLoaded, setImgLoaded] = useState<Record<number, boolean>>({});
   const printTriggered = useRef(false);
@@ -47,18 +48,30 @@ export default function PrintOrderPage() {
     return id; 
   };
 
+  const getShapeName = (id?: string) => {
+    if (!id) return "";
+    if (id.length === 24 && /^[0-9a-fA-F]+$/.test(id)) {
+         return shapeMap[id] || "";
+    }
+    return id;
+  };
+
   useEffect(() => {
     if (!id) return;
     Promise.all([
       fetch(`/api/admin/orders/${id}`).then((r) => r.json()),
       fetch("/api/admin/diameters").then((r) => r.json()),
       fetch("/api/admin/flavors").then((r) => r.json()),
-    ]).then(([orderData, diametersData, flavorsData]) => {
+      fetch("/api/admin/shapes").then((r) => r.json()),
+    ]).then(([orderData, diametersData, flavorsData, shapesData]) => {
       setOrder(orderData);
       setDiameters(diametersData);
       const map: Record<string, string> = {};
       (flavorsData as Flavor[]).forEach((f) => (map[f._id] = f.name));
       setFlavorMap(map);
+      const sMap: Record<string, string> = {};
+      (shapesData as IShape[]).forEach((s) => (sMap[s._id] = s.name));
+      setShapeMap(sMap);
       setLoading(false);
     });
   }, [id]);
@@ -614,6 +627,12 @@ export default function PrintOrderPage() {
               item.selectedConfig?.quantityConfigId ||
               getDiameterLabel(item.diameterId?.toString(), diameters);
 
+            const shapeLabel =
+              item.customShape ||
+              getShapeName(
+                (item.shapeId || item.selectedConfig?.cake?.shapeId)?.toString(),
+              );
+
             const primaryFlavor =
               item.customFlavor ||
               (isComboSet ? getFlavorName(item.selectedConfig?.cake?.flavorId) : getFlavorName(item.flavor));
@@ -691,6 +710,12 @@ export default function PrintOrderPage() {
                         {sizeLabel ?? "—"}
                       </div>
                     </div>
+                    {shapeLabel && shapeLabel.trim() !== "" && (
+                      <div className="spec-item">
+                        <div className="spec-label">Shape</div>
+                        <div className="spec-value">{shapeLabel}</div>
+                      </div>
+                    )}
                     {!isSimpleSet && (
                       <div className="spec-item">
                         <div className="spec-label">{isComboSet ? "Bento Flavor" : "Flavour"}</div>

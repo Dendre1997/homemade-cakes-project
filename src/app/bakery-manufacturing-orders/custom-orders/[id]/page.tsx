@@ -41,9 +41,25 @@ export default async function CustomOrderPage({ params }: PageProps) {
       updatedAt: customOrder.updatedAt ? new Date(customOrder.updatedAt).toISOString() : undefined,
     };
 
+    // Active shapes so the admin can view/edit the requested shape before converting.
+    const shapesRaw = await db
+      .collection("shapes")
+      .find({ isActive: { $ne: false } })
+      .sort({ isDefault: -1, name: 1 })
+      .toArray();
+    const shapes = shapesRaw.map((s: any) => ({
+      _id: s._id.toString(),
+      name: s.name,
+      priceSurcharge: s.priceSurcharge ?? 0,
+      isDefault: !!s.isDefault,
+      isActive: s.isActive !== false,
+      imageUrl: s.imageUrl,
+    }));
+
     return (
       <CustomOrderDetailClient 
         initialOrder={serializedOrder} 
+        shapes={shapes}
       />
     );
   } catch (error) {

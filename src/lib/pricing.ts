@@ -1,5 +1,6 @@
 import { Db, ObjectId } from "mongodb";
-import { CartItem, Discount, Product, Flavor, Addon } from "@/types";
+import { CartItem, Discount, Product, Flavor, Addon, IShape } from "@/types";
+import { parseCartItemId, OBJECT_ID_RE } from "@/lib/cartItemId";
 
 interface PriceResult {
   subtotal: number;
@@ -33,7 +34,10 @@ export async function calculateOrderPricing(
 
   // 2. Fetch Fresh Flavor Data (Required for price reconstruction)
   const flavorIds = items
-    .map((i) => (i.flavor ? i.id.split("-")[1] : null)) 
+    .map((i) => {
+      const parsed = parseCartItemId(i.id);
+      return parsed.flavorId || null;
+    })
     .filter(Boolean);
 
   const allFlavorIds = dbProducts.flatMap((p) => p.availableFlavorIds || []);
@@ -42,6 +46,25 @@ export async function calculateOrderPricing(
     .find({ _id: { $in: allFlavorIds.map((id) => new ObjectId(id)) } as any })
     .toArray();
   const flavorMap = new Map(dbFlavors.map((f) => [f._id.toString(), f]));
+
+  // 2.5 Fetch shapes for surcharge lookup
+  const shapeIdsFromItems = items
+    .map((i) => {
+      const parsed = parseCartItemId(i.id);
+      return i.shapeId || parsed.shapeId || null;
+    })
+    .filter((id): id is string => !!id && OBJECT_ID_RE.test(id));
+
+  let shapeMap = new Map<string, IShape>();
+  if (shapeIdsFromItems.length > 0) {
+    const dbShapes = await db
+      .collection<IShape>("shapes")
+      .find({
+        _id: { $in: shapeIdsFromItems.map((id) => new ObjectId(id)) } as any,
+      })
+      .toArray();
+    shapeMap = new Map(dbShapes.map((s) => [s._id.toString(), s]));
+  }
 
   // 3. Fetch Active Discounts
   const activeDiscounts = await db
@@ -184,9 +207,10 @@ export async function calculateOrderPricing(
 
     } else {
         // --- SCENARIO B: STANDARD CAKE ---
+        const { flavorId, diameterId, shapeId: parsedShapeId } = parseCartItemId(item.id);
+        const resolvedShapeId = item.shapeId || parsedShapeId;
+
         // A. Flavor Price
-        const idParts = item.id.split("-");
-        const flavorId = idParts[1];
         const dbFlavor = flavorMap.get(flavorId);
         const flavorPrice = dbFlavor ? dbFlavor.price : 0;
 
@@ -196,17 +220,21 @@ export async function calculateOrderPricing(
             ? dbProduct.inscriptionSettings.price
             : 0;
 
-        // C. Diameter Logic
-        const diameterId = idParts[2]; // From your ID structure
+        // C. Shape surcharge
+        const shapeSurcharge = resolvedShapeId
+          ? safePrice(shapeMap.get(resolvedShapeId)?.priceSurcharge ?? 0)
+          : 0;
+
+        // D. Diameter Logic
         const diamConfig = dbProduct.availableDiameterConfigs?.find(
           (c) => c.diameterId.toString() === diameterId
         );
 
         if (diamConfig?.price && diamConfig.price > 0) {
-          unitPrice = diamConfig.price + flavorPrice + inscriptionPrice + addonCost;
+          unitPrice = diamConfig.price + flavorPrice + inscriptionPrice + shapeSurcharge + addonCost;
         } else {
           const multiplier = diamConfig?.multiplier ?? 1;
-          unitPrice = (dbProduct.structureBasePrice + flavorPrice + inscriptionPrice) * multiplier + addonCost;
+          unitPrice = (dbProduct.structureBasePrice + flavorPrice + inscriptionPrice) * multiplier + shapeSurcharge + addonCost;
         }
     }
 

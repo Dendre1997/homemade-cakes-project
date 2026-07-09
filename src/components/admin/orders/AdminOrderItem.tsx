@@ -1,4 +1,4 @@
-import { CartItem, Diameter } from "@/types";
+import { CartItem, Diameter, IShape } from "@/types";
 import { PenTool, Edit2, Scroll, Star, AlertCircle, AlertTriangle, X } from "lucide-react";
 import { useState } from "react";
 import Image from "next/image";
@@ -9,6 +9,7 @@ import { theme } from "@/styles/theme";
 interface AdminOrderItemProps {
   item: CartItem;
   diameters?: Diameter[];
+  shapes?: IShape[];
   flavorMap: Record<string, string>;
   onEdit?: (item: CartItem) => void;
   referenceImages?: string[];
@@ -19,6 +20,7 @@ export const AdminOrderItem = ({
   item,
   flavorMap,
   diameters = [],
+  shapes = [],
   onEdit,
   referenceImages = [],
   discountedLineTotal,
@@ -38,6 +40,12 @@ export const AdminOrderItem = ({
     if (!id) return "";
     const d = diameters.find((dia) => dia._id === id);
     return d ? d.name : id; // Fallback to ID/String if not found
+  };
+
+  const getShapeName = (id?: string) => {
+    if (!id) return "";
+    const s = shapes.find((sh) => sh._id === id);
+    return s ? s.name : ""; // Only show a resolvable shape name
   };
 
   const isComboSet =
@@ -98,6 +106,7 @@ export const AdminOrderItem = ({
   // -- CUSTOM RENDERER --
   if (isCustom) {
       const displaySize = item.customSize || getDiameterName(item.diameterId || item.selectedConfig?.cake?.diameterId);
+      const displayShape = item.customShape || getShapeName((item.shapeId || item.selectedConfig?.cake?.shapeId)?.toString());
       const displayFlavor = item.customFlavor || getFlavorName(item.selectedConfig?.cake?.flavorId || item.flavor);
 
       return (
@@ -119,6 +128,11 @@ export const AdminOrderItem = ({
                              {displaySize && (
                                 <span className="flex items-center gap-1">
                                     <span className="font-semibold text-primary">Size:</span> {displaySize}
+                                </span>
+                             )}
+                             {displayShape && (
+                                <span className="flex items-center gap-1">
+                                    <span className="font-semibold text-primary">Shape:</span> {displayShape}
                                 </span>
                              )}
                              {displayFlavor && (
@@ -251,6 +265,9 @@ export const AdminOrderItem = ({
             {isStandard && item.diameterId && (
               <span className="text-md font-medium text-primary block">
                 {getDiameterName(item.diameterId.toString())}
+                {getShapeName(item.shapeId?.toString()) && (
+                  <span className="text-primary/70"> · {getShapeName(item.shapeId?.toString())}</span>
+                )}
               </span>
             )}
             {/* Set Size Display */}

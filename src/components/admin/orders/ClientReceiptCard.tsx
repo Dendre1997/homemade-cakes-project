@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
-import { Order, CartItem, Diameter } from "@/types";
+import { Order, CartItem, Diameter, IShape } from "@/types";
 import { format } from "date-fns";
 import { Truck, Store, DollarSign } from "lucide-react";
 import HeaderLogo from "@/components/ui/HeaderLogo";
@@ -11,6 +11,7 @@ import { SocialHandleAnchor } from "@/components/ui/SocialHandleAnchor";
 interface ClientReceiptCardProps {
   order: Order;
   diameters: Diameter[];
+  shapes?: IShape[];
   flavorMap: Record<string, string>;
   eTransferEmail?: string;
   pickupAddress?: string;
@@ -89,6 +90,7 @@ const ReceiptItemImage = ({ effectiveImageUrl, alt }: { effectiveImageUrl: strin
 export const ClientReceiptCard = ({
   order,
   diameters,
+  shapes = [],
   flavorMap,
   eTransferEmail = "",
   pickupAddress,
@@ -115,6 +117,13 @@ export const ClientReceiptCard = ({
     if (!id) return "";
     const d = diameters.find((dia) => dia._id === id);
     return d ? d.name : id;
+  };
+
+  // Get shape name (only returns a resolvable name; blank otherwise)
+  const getShapeName = (id?: string) => {
+    if (!id) return "";
+    const s = shapes.find((sh) => sh._id === id);
+    return s ? s.name : "";
   };
 
   // 1. Extras (Addons) separation across all items
@@ -256,6 +265,7 @@ export const ClientReceiptCard = ({
         {order.items.map((item: CartItem, idx: number) => {
           const isCustom = item.productType === 'custom' || item.isCustom;
           const displaySize = isCustom ? item.customSize || getDiameterName(item.diameterId || item.selectedConfig?.cake?.diameterId) : getDiameterName(item.diameterId);
+          const displayShape = isCustom ? item.customShape || getShapeName((item.shapeId || item.selectedConfig?.cake?.shapeId)?.toString()) : getShapeName(item.shapeId?.toString());
           const displayFlavor = isCustom ? item.customFlavor || getFlavorName(item.selectedConfig?.cake?.flavorId || item.flavor) : getFlavorName(item.flavor || item.selectedConfig?.cake?.flavorId);
 
           const fallbackIdx = order.referenceImages ? Math.min(idx, Math.max(0, order.referenceImages.length - 1)) : 0;
@@ -281,6 +291,7 @@ export const ClientReceiptCard = ({
                   </div>
                   <div className="mt-1 text-xs text-primary/40 font-medium space-y-0.5">
                     {displaySize && displaySize.trim() !== "" && <p>Size: {displaySize}</p>}
+                    {displayShape && displayShape.trim() !== "" && <p>Shape: {displayShape}</p>}
                     {displayFlavor && displayFlavor.trim() !== "" && <p>Flavor: {displayFlavor}</p>}
                     {item.isCombo && item.selectedConfig?.cake && (
                       <div className="text-sm text-muted-foreground">

@@ -1,6 +1,6 @@
 "use client";
 
-import { Order, OrderStatus, Diameter } from "@/types";
+import { Order, OrderStatus, Diameter, IShape } from "@/types";
 import { formatOrderItemDescription } from "@/lib/utils";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -38,6 +38,7 @@ const SIZE_ICONS: Record<string, React.FC<any>> = {
 interface ClientOrderCardProps {
   order: Order;
   diameters?: Diameter[]; // Optional to avoid breaking if parent not updated immediately, but we updated parent.
+  shapes?: IShape[];
 }
 
 const steps = [
@@ -47,8 +48,15 @@ const steps = [
   { id: "enjoy", label: "Enjoy", icon: Truck, statuses: [OrderStatus.DELIVERED] },
 ];
 
-export default function ClientOrderCard({ order, diameters = [] }: ClientOrderCardProps) {
+export default function ClientOrderCard({ order, diameters = [], shapes = [] }: ClientOrderCardProps) {
   const isCancelled = order.status === OrderStatus.CANCELLED;
+
+  const getShapeName = (id?: string) => {
+    if (!id) return "";
+    const key = String(id);
+    const s = shapes.find((sh) => String(sh._id) === key);
+    return s ? s.name : "";
+  };
 
   const getCurrentStepIndex = () => {
     if (steps[3].statuses.includes(order.status)) return 3;
@@ -200,6 +208,13 @@ export default function ClientOrderCard({ order, diameters = [] }: ClientOrderCa
                       }
                   }
 
+                  // Resolve Shape (custom free-text takes priority, else map id -> name)
+                  const displayShape =
+                    item.customShape ||
+                    getShapeName(
+                      (item.shapeId || item.selectedConfig?.cake?.shapeId)?.toString(),
+                    );
+
                   return (
                     <div key={idx} className="flex gap-4 p-3 bg-subtleBackground/20 rounded-lg border border-transparent hover:border-gray-200 transition-colors">
                         <div className="flex-1 flex flex-col justify-between">
@@ -224,6 +239,13 @@ export default function ClientOrderCard({ order, diameters = [] }: ClientOrderCa
                                             <span>Size: {sizeName}</span>
                                         </div>
                                     ) : null}
+
+                                    {displayShape && displayShape.trim() !== "" && (
+                                        <div className="flex items-center gap-2 text-primary font-medium">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-gray-300 flex-shrink-0" />
+                                            <span>Shape: {displayShape}</span>
+                                        </div>
+                                    )}
                                     
                                     <p className="leading-relaxed pl-3 border-l-2 border-primary">
                                         {formatOrderItemDescription(item).replace(item.name, "").replace(/^\s*-\s*/, "").trim() || "Standard Configuration"}
