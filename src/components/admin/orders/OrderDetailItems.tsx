@@ -367,7 +367,7 @@ const OrderDetailItems = ({
 
       {/* EDIT MODAL */}
       <Dialog open={!!editingItem} onOpenChange={(open) => !open && setEditingItem(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-2xl max-h-[90vh] min-w-0 overflow-x-hidden overflow-y-auto">
             <DialogHeader className="flex flex-row items-center justify-between">
                 <DialogTitle>Edit Item: {editingItem?.name}</DialogTitle>
                 {editingItem && (
@@ -388,7 +388,7 @@ const OrderDetailItems = ({
             </DialogHeader>
             
              {editingItem?.isCombo === true ? (
-                <div className="py-4">
+                <div className="py-4 w-full min-w-0 max-w-full overflow-hidden">
                   <ComboProductForm
                     allCategories={allCategories}
                     allFlavors={allFlavors}
@@ -425,7 +425,7 @@ const OrderDetailItems = ({
                   />
                 </div>
             ) : editingItem && isCustomMode ? (
-                  <div className="py-4">
+                  <div className="py-4 w-full min-w-0 max-w-full overflow-hidden">
                       <CustomOrderItemForm 
                          flavors={allFlavors} 
                          diameters={diameters}

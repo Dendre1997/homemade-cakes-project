@@ -360,7 +360,7 @@ export default function CustomOrderItemForm({
   const isIconPicked = activeDiameters.some(d => d._id === sizeValue) || BOX_SIZES.some(b => b.value === sizeValue);
 
   return (
-    <div className="p-4 rounded-lg bg-background/50 border">
+    <div className="p-4 rounded-lg bg-background/50 border w-full min-w-0 max-w-full overflow-hidden">
        <div className="flex justify-between items-center mb-6 border-b pb-4">
            <h3 className="text-lg font-bold text-primary">New Custom Item Design</h3>
        </div>
@@ -388,7 +388,7 @@ export default function CustomOrderItemForm({
 
        {selectedCategoryId && (
            (activeCategoryObj?.categoryType as string) === 'combo' ? (
-               <div className="mt-6 border-t border-primary/10 pt-8">
+               <div className="mt-6 border-t border-primary/10 pt-8 w-full min-w-0 max-w-full overflow-hidden">
                    <ComboProductForm
                        allCategories={categories}
                        allFlavors={flavors}
