@@ -242,7 +242,7 @@ export default function ManualOrderPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 min-w-0">
         {/* LEFT COLUMN: Customer & Meta */}
         <div className="space-y-6">
           <div className="bg-white p-6 rounded-xl shadow-sm border border-border">
@@ -434,9 +434,9 @@ export default function ManualOrderPage() {
         </div>
 
         {/* RIGHT COLUMN: Item Builder & Cart */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-6 min-w-0 max-w-full">
           {/* BUILDER */}
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-border">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-border min-w-0 max-w-full overflow-hidden">
             <h3 className="font-bold text-lg mb-4 text-primary">
               3. Order Items
             </h3>

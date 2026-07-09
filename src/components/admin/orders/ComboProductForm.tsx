@@ -339,14 +339,14 @@ export const ComboProductForm = ({
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-top-2 border p-3 sm:p-6 rounded-lg bg-gray-50 relative">
-        <h3 className="font-bold text-gray-800 text-lg flex items-center justify-between">
-            <span>Configure Combo Item</span>
+    <div className="w-full min-w-0 max-w-full overflow-hidden space-y-6 animate-in fade-in slide-in-from-top-2 border p-3 sm:p-6 rounded-lg bg-gray-50 relative">
+        <h3 className="font-bold text-gray-800 text-lg flex items-center justify-between min-w-0 gap-2">
+            <span className="min-w-0 truncate">Configure Combo Item</span>
             <span className="text-xs bg-accent text-white px-2 py-1 rounded">Combo</span>
         </h3>
 
         {step === 1 ? (
-          <div className="space-y-4">
+          <div className="w-full min-w-0 max-w-full overflow-hidden space-y-4">
               <h4 className="font-bold text-gray-700 uppercase text-sm">Step 1: Center Cake</h4>
               
               <div>
@@ -368,8 +368,8 @@ export const ComboProductForm = ({
               </div>
 
               {selectedSingleCategoryId && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 min-w-0 max-w-full w-full">
+                      <div className="min-w-0">
                           <label className="block text-sm font-medium mb-1">Cake Size</label>
                           <Select value={selectedSingleDiameterId} onValueChange={setSelectedSingleDiameterId}>
                               <SelectTrigger className="bg-white">
@@ -383,7 +383,7 @@ export const ComboProductForm = ({
                           </Select>
                       </div>
 
-                      <div>
+                      <div className="min-w-0">
                           <label className="block text-sm font-medium mb-1">Cake Flavor</label>
                           <Select value={selectedSingleFlavorId} onValueChange={setSelectedSingleFlavorId}>
                               <SelectTrigger className="bg-white">
@@ -400,28 +400,30 @@ export const ComboProductForm = ({
               )}
 
               {selectedSingleCategoryId && (
-                  <>
-                  <div className="space-y-3 mt-4">
+                  <div className="w-full min-w-0 max-w-full overflow-hidden">
+                  <div className="space-y-3 mt-4 min-w-0 max-w-full w-full overflow-hidden">
                      <Label className="block border-b pb-2">Integrated Portfolio Gallery</Label>
                      {singleGalleryImages.length > 0 ? (
-                         <div className="flex overflow-x-auto gap-3 pb-2 custom-scrollbar">
+                         <div className="min-w-0 w-full max-w-full overflow-hidden">
+                           <div className="flex w-full min-w-0 overflow-x-auto whitespace-nowrap scrollbar-thin pb-2 gap-3">
                             {singleGalleryImages.map(img => (
                                 <div 
                                    key={img._id.toString()}
                                    onClick={() => handlePickFromGallery(img.imageUrl)}
-                                   className="w-20 h-20 shrink-0 relative rounded-md overflow-hidden cursor-pointer hover:border-accent hover:border-2 hover:scale-105 transition-all"
+                                   className="relative shrink-0 w-24 h-24 overflow-hidden rounded-md border border-border cursor-pointer hover:border-accent hover:border-2 hover:scale-105 transition-all"
                                    title="Click to add as reference"
                                 >
-                                   <Image src={img.imageUrl} alt={img.title} fill className="object-cover" />
+                                   <Image src={img.imageUrl} alt={img.title} fill className="object-cover" sizes="96px" />
                                 </div>
                             ))}
+                           </div>
                          </div>
                      ) : (
                          <p className="text-xs text-gray-400 italic">No gallery images available for this category.</p>
                      )}
                   </div>
-                  <div className="pt-4 border-t mt-4 mb-6">
-                      <Label className="mb-2 flex items-center justify-between">
+                  <div className="pt-4 border-t mt-4 mb-6 min-w-0 max-w-full w-full overflow-hidden">
+                      <Label className="mb-2 flex items-center justify-between min-w-0">
                          Active Order References
                          <span className="text-xs font-normal text-muted-foreground">{images.length} images</span>
                       </Label>
@@ -442,7 +444,7 @@ export const ComboProductForm = ({
                       />
                       {isUploading && <p className="text-xs text-primary mt-1 animate-pulse">Uploading...</p>}
                   </div>
-                  </>
+                  </div>
               )}
 
               <div>
@@ -461,7 +463,7 @@ export const ComboProductForm = ({
                   onChange={setSingleAddons}
               />
 
-              <div className="flex gap-2 pt-4">
+              <div className="flex gap-2 pt-4 min-w-0 w-full">
                   <Button variant="outline" onClick={onCancel} className="flex-1">
                       Cancel
                   </Button>
@@ -471,9 +473,9 @@ export const ComboProductForm = ({
               </div>
           </div>
         ) : (
-          <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 bg-white p-3 rounded border">
-                  <div className="text-sm">
+          <div className="w-full min-w-0 max-w-full overflow-hidden space-y-4">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 bg-white p-3 rounded border min-w-0 max-w-full">
+                  <div className="text-sm min-w-0">
                       <span className="font-bold block">Cake Selected:</span>
                       <span className="text-gray-600">
                           {allDiameters.find(d => d._id === selectedSingleDiameterId)?.name} • {allFlavors.find(f => f._id === selectedSingleFlavorId)?.name}
@@ -504,29 +506,31 @@ export const ComboProductForm = ({
               </div>
 
               {selectedSetCategoryId && (
-                <>
-                  <div className="space-y-3 mt-4">
+                <div className="w-full min-w-0 max-w-full overflow-hidden">
+                  <div className="space-y-3 mt-4 min-w-0 max-w-full w-full overflow-hidden">
                      <Label className="block border-b pb-2">Integrated Portfolio Gallery</Label>
                      {setGalleryImagesList.length > 0 ? (
-                         <div className="flex overflow-x-auto gap-3 pb-2 custom-scrollbar">
+                         <div className="min-w-0 w-full max-w-full overflow-hidden">
+                           <div className="flex w-full min-w-0 overflow-x-auto whitespace-nowrap scrollbar-thin pb-2 gap-3">
                             {setGalleryImagesList.map(img => (
                                 <div 
                                    key={img._id.toString()}
                                    onClick={() => handlePickFromGallery(img.imageUrl)}
-                                   className="w-20 h-20 shrink-0 relative rounded-md overflow-hidden cursor-pointer hover:border-accent hover:border-2 hover:scale-105 transition-all"
+                                   className="relative shrink-0 w-24 h-24 overflow-hidden rounded-md border border-border cursor-pointer hover:border-accent hover:border-2 hover:scale-105 transition-all"
                                    title="Click to add as reference"
                                 >
-                                   <Image src={img.imageUrl} alt={img.title} fill className="object-cover" />
+                                   <Image src={img.imageUrl} alt={img.title} fill className="object-cover" sizes="96px" />
                                 </div>
                             ))}
+                           </div>
                          </div>
                      ) : (
                          <p className="text-xs text-gray-400 italic">No gallery images available for this category.</p>
                      )}
                   </div>
 
-                  <div className="pt-4 border-t mt-4 mb-6">
-                      <Label className="mb-2 flex items-center justify-between">
+                  <div className="pt-4 border-t mt-4 mb-6 min-w-0 max-w-full w-full overflow-hidden">
+                      <Label className="mb-2 flex items-center justify-between min-w-0">
                          Active Order References
                          <span className="text-xs font-normal text-muted-foreground">{images.length} images</span>
                       </Label>
@@ -670,10 +674,10 @@ export const ComboProductForm = ({
                            />
                       </div>
                   </div>
-                </>
+                </div>
               )}
 
-              <div className="flex gap-2 pt-6">
+              <div className="flex gap-2 pt-6 min-w-0 w-full">
                   <Button variant="outline" onClick={onCancel} className="flex-1">
                       Cancel
                   </Button>
