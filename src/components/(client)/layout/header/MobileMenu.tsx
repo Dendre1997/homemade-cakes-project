@@ -31,6 +31,7 @@ interface MobileMenuProps {
   user: User | null;
   handleLogout: () => void;
   activeSeasonalEvent: SeasonalEvent | null;
+  collections: Collection[];
 }
 
 const MobileMenu = ({
@@ -41,23 +42,10 @@ const MobileMenu = ({
   user,
   handleLogout,
   activeSeasonalEvent,
+  collections,
 }: MobileMenuProps) => {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
-  const [collections, setCollections] = useState<Collection[]>([]);
 
-  useEffect(() => {
-    const fetchCollections = async () => {
-      try {
-        const res = await fetch("/api/collections");
-        if (res.ok) {
-          setCollections(await res.json());
-        }
-      } catch (error) {
-        console.error("Failed to fetch collections:", error);
-      }
-    };
-    fetchCollections();
-  }, []);
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";

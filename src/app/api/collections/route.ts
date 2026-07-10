@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { getActiveCollections } from "@/lib/data";
+import { getCollections } from "@/lib/db/collections";
 
 export async function GET() {
   try {
-    const collections = await getActiveCollections();
+    const collections = await getCollections();
     return NextResponse.json(collections);
   } catch (error) {
     console.error("Error fetching collections:", error);

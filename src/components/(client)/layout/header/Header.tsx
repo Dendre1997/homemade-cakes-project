@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { clearChatStorage } from "@/lib/chat/chatStorage";
-import { ProductCategory, SeasonalEvent } from "@/types";
+import { ProductCategory, SeasonalEvent, Collection } from "@/types";
 import HeaderLogo from '@/components/ui/HeaderLogo'
 import SeasonalHeaderBar from "./SeasonalHeaderBar";
 import OfferBar from "./OfferBar";
@@ -46,11 +46,12 @@ const MiniCart = dynamic(
 interface HeaderProps {
   categories: ProductCategory[];
   activeSeasonalEvent: SeasonalEvent | null;
+  collections: Collection[];
 }
 import { Button } from "@/components/ui/Button";
 
 
-const Header = ({ categories, activeSeasonalEvent }: HeaderProps) => {
+const Header = ({ categories, activeSeasonalEvent, collections }: HeaderProps) => {
   const { user, isLoading, setUser } = useAuthStore();
   const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -258,6 +259,7 @@ const Header = ({ categories, activeSeasonalEvent }: HeaderProps) => {
                   <CatalogDropdown
                     categories={navCategories}
                     activeSeasonalEvent={activeSeasonalEvent}
+                    collections={collections}
                   />
                 </div>
 
@@ -315,6 +317,7 @@ const Header = ({ categories, activeSeasonalEvent }: HeaderProps) => {
         user={user}
         handleLogout={handleLogout}
         activeSeasonalEvent={activeSeasonalEvent}
+        collections={collections}
       />
     </>
   );

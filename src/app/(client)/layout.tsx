@@ -1,15 +1,17 @@
 import ClientHeader from "@/components/(client)/layout/header/Header";
 import Footer from "@/components/(client)/layout/Footer";
 import { getCategories } from "@/lib/data";
+import { getCollections } from "@/lib/db/collections";
 import { getActiveSeasonals } from "@/lib/db/seasonals";
-import { ProductCategory, SeasonalEvent } from "@/types";
+import { Collection, ProductCategory, SeasonalEvent } from "@/types";
 
 export const revalidate = 300;
 
 export default async function ClientLayout({ children }: { children: React.ReactNode }) {
-  const [categories, seasonals] = await Promise.all([
+  const [categories, seasonals, collections] = await Promise.all([
     getCategories(),
     getActiveSeasonals(),
+    getCollections(),
   ]);
 
   const activeSeasonalEvent: SeasonalEvent | null =
@@ -21,6 +23,7 @@ export default async function ClientLayout({ children }: { children: React.React
         <ClientHeader
           categories={categories}
           activeSeasonalEvent={activeSeasonalEvent}
+          collections={collections}
         />
         <main className="flex-1">
           {children}
