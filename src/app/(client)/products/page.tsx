@@ -4,6 +4,7 @@ import {
   getActiveCategories
 } from "@/lib/data";
 import { getActiveFlavors as getDbActiveFlavors } from "@/lib/db/data";
+import { getProducts } from "@/lib/db/products";
 import { FlavorCarousel } from "@/components/(client)/home/flavors/FlavorCarousel";
 
 const Section = ({
@@ -25,17 +26,12 @@ const Container = ({
 );
 
 async function getInitialProducts() {
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL
-  const res = await fetch(`${baseUrl}/api/products?page=1&limit=8`, {
-    cache: "no-store",
-  });
-
-  if (!res.ok) {
-    console.error("Failed to fetch initial products");
+  try {
+    return await getProducts({ page: 1, limit: 8 });
+  } catch (error) {
+    console.error("Failed to fetch initial products", error);
     return { products: [], totalCount: 0 };
   }
-
-  return res.json();
 }
 
 const ProductsPage = async () => {
