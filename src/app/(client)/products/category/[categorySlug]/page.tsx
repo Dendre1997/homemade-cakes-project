@@ -2,36 +2,8 @@ import ProductCard from "@/components/(client)/ProductCard";
 import { ProductWithCategory, ProductCategory } from "@/types";
 import { notFound } from "next/navigation";
 import { getActiveDiscounts } from "@/lib/data";
-
-
-const baseUrl = process.env.NEXT_PUBLIC_API_URL;
-
-async function getCategoryBySlug(slug: string) {
-  const res = await fetch(`${baseUrl}/api/categories/slug/${slug}`, {
-    cache: "no-store",
-  });
-  if (res.status === 404) {
-    notFound();
-  }
-  if (!res.ok) throw new Error("Failed to fetch category details");
-  return res.json();
-}
-
-async function getProductsByCategory(categoryId: string) {
-  const res = await fetch(
-    `${baseUrl}/api/products?categoryId=${categoryId}`,
-    {
-      cache: "no-store",
-    }
-  );
-  if (!res.ok) {
-    console.error("Failed to fetch products for category");
-    return [];
-  }
-  const data = await res.json();
-  return data.products || [];
-}
-
+import { getCategoryBySlug } from "@/lib/db/categories";
+import { getProducts } from "@/lib/db/products";
 
 const CategoryPage = async ({
   params,
@@ -39,11 +11,22 @@ const CategoryPage = async ({
   params: Promise<{ categorySlug: string }>;
 }) => {
   const { categorySlug } = await params;
-  const category: ProductCategory = await getCategoryBySlug(categorySlug);
+  const category = await getCategoryBySlug(categorySlug);
 
-  const products: ProductWithCategory[] = await getProductsByCategory(
-    category._id
-  );
+  if (!category) {
+    notFound();
+  }
+
+  const categoryId =
+    typeof category._id === "string" ? category._id : category._id.toString();
+
+  let products: ProductWithCategory[] = [];
+  try {
+    const result = await getProducts({ categoryId });
+    products = result.products as ProductWithCategory[];
+  } catch (error) {
+    console.error("Failed to fetch products for category", error);
+  }
 
   const discounts = await getActiveDiscounts();
 
@@ -51,7 +34,9 @@ const CategoryPage = async ({
     <div className="bg-background min-h-screen">
       <div className="mx-auto max-w-7xl px-lg py-xl">
         <div className="text-center">
-          <h1 className="font-heading text-h1 text-primary">{category.name}</h1>
+          <h1 className="font-heading text-h1 text-primary">
+            {(category as ProductCategory).name}
+          </h1>
         </div>
 
         {products.length > 0 ? (
