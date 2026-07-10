@@ -4,11 +4,12 @@ import { FC } from "react";
 
 interface LogoProps {
   size?: number | string;
+  prefetch?: boolean;
 }
 
-const Logo: FC<LogoProps> = ({ size = "100%" }) => {
+const Logo: FC<LogoProps> = ({ size = "100%", prefetch }) => {
   return (
-    <Link href={"/"}>
+    <Link href={"/"} prefetch={prefetch}>
       <svg
         version="1.1"
         xmlns="http://www.w3.org/2000/svg"

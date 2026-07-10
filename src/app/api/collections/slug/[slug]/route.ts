@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import clientPromise from "@/lib/db";
+import { getCollectionBySlug } from "@/lib/db/collections";
 
 export async function GET(
   _request: Request,
@@ -7,12 +7,7 @@ export async function GET(
 ) {
   try {
     const { slug } = await params;
-    const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB_NAME);
-
-    const collection = await db
-      .collection("collections")
-      .findOne({ slug });
+    const collection = await getCollectionBySlug(slug);
 
     if (!collection) {
       return NextResponse.json(

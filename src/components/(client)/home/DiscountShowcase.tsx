@@ -172,7 +172,8 @@ export default function DiscountShowcase({ products, validDiscounts }: DiscountS
             >
               <ProductCard 
                 product={product} 
-                validDiscounts={validDiscounts} 
+                validDiscounts={validDiscounts}
+                linkPrefetch={false}
               />
             </div>
           ))}

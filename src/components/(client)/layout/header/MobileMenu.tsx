@@ -140,8 +140,10 @@ const MobileMenu = ({
                 label="Full Menu"
                 onClick={onClose}
                 badge="All products"
+                prefetch={false}
               />
               <MenuItem
+                prefetch={false}
                 href="/custom-order"
                 icon={WandSparkles}
                 label="Start Your Custom Order"
@@ -149,6 +151,7 @@ const MobileMenu = ({
                 badge="Custom Form"
               />
               <MenuItem
+                prefetch={false}
                 href="/gallery"
                 icon={GalleryHorizontalEnd}
                 label="See Designs"
@@ -158,6 +161,7 @@ const MobileMenu = ({
 
               {activeEvent && (
                 <MenuItem
+                  prefetch={false}
                   href={`/specials/${activeEvent.slug}`}
                   icon={Sparkles}
                   label={activeEvent.name}
@@ -179,6 +183,7 @@ const MobileMenu = ({
               </div>
               {categories.map((cat) => (
                 <MenuItem
+                  prefetch={false}
                   key={cat.href}
                   href={cat.href}
                   icon={LayoutGrid}
@@ -198,6 +203,7 @@ const MobileMenu = ({
                   </div>
                   {collections.map((col) => (
                     <MenuItem
+                      prefetch={false}
                       key={col._id.toString()}
                       href={`/products/collections/${col.slug}`}
                       icon={Crown}
@@ -217,6 +223,7 @@ const MobileMenu = ({
                 const Icon = link.icon;
                 return (
                   <MenuItem
+                    prefetch={false}
                     key={link.href}
                     href={link.href}
                     icon={Icon}
@@ -229,6 +236,7 @@ const MobileMenu = ({
               {user ? (
                 <>
                   <MenuItem
+                    prefetch={false}
                     href="/profile"
                     icon={UserCircle}
                     label="Profile"
@@ -253,6 +261,7 @@ const MobileMenu = ({
                 </>
               ) : (
                 <MenuItem
+                  prefetch={false}
                   href="/login"
                   icon={UserCircle}
                   label="Login"
@@ -264,6 +273,7 @@ const MobileMenu = ({
                 <>
                   <div className="h-px w-full bg-border/50 my-2" />
                   <MenuItem
+                    prefetch={false}
                     href="/bakery-manufacturing-orders"
                     icon={ShieldCheck}
                     label="Dashboard"
