@@ -8,7 +8,7 @@ if (!process.env.MONGODB_URI) {
 
 const uri = process.env.MONGODB_URI;
 const options = {
-  maxPoolSize: 10,           // Keep pool size small in serverless
+  maxPoolSize: 3,            // Shared Atlas tier: limit per serverless instance
   minPoolSize: 0,            // Allow idle connections to close
   connectTimeoutMS: 15000,   // Prevent timing out on cold starts
   socketTimeoutMS: 45000,
