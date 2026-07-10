@@ -2,36 +2,8 @@ import ProductCard from "@/components/(client)/ProductCard";
 import { ProductWithCategory, Collection } from "@/types";
 import { notFound } from "next/navigation";
 import { getActiveDiscounts } from "@/lib/data";
-
-const baseUrl = process.env.NEXT_PUBLIC_API_URL;
-async function getCollectionBySlug(slug: string) {
-  const res = await fetch(
-    `${baseUrl}/api/collections/slug/${slug}`,
-    {
-      cache: "no-store",
-    }
-  );
-  if (res.status === 404) {
-    notFound();
-  }
-  if (!res.ok) throw new Error("Failed to fetch collection details");
-  return res.json();
-}
-
-async function getProductsByCollection(collectionId: string) {
-  const res = await fetch(
-    `${baseUrl}/api/products?collectionId=${collectionId}`,
-    {
-      cache: "no-store",
-    }
-  );
-  if (!res.ok) {
-    console.error("Failed to fetch products for collection");
-    return [];
-  }
-  const data = await res.json();
-  return data.products || [];
-}
+import { getCollectionBySlug } from "@/lib/db/collections";
+import { getProducts } from "@/lib/db/products";
 
 const CollectionPage = async ({
   params,
@@ -39,11 +11,24 @@ const CollectionPage = async ({
   params: Promise<{ collectionSlug: string }>;
 }) => {
   const { collectionSlug } = await params;
-  const collection: Collection = await getCollectionBySlug(collectionSlug);
+  const collection = await getCollectionBySlug(collectionSlug);
 
-  const products: ProductWithCategory[] = await getProductsByCollection(
-    collection._id.toString()
-  );
+  if (!collection) {
+    notFound();
+  }
+
+  const collectionId =
+    typeof collection._id === "string"
+      ? collection._id
+      : collection._id.toString();
+
+  let products: ProductWithCategory[] = [];
+  try {
+    const result = await getProducts({ collectionId });
+    products = result.products as ProductWithCategory[];
+  } catch (error) {
+    console.error("Failed to fetch products for collection", error);
+  }
 
   const discounts = await getActiveDiscounts();
 
@@ -52,7 +37,7 @@ const CollectionPage = async ({
       <div className="mx-auto max-w-7xl px-lg py-xl">
         <div className="text-center">
           <h1 className="font-heading text-h1 text-primary">
-            {collection.name}
+            {(collection as Collection).name}
           </h1>
         </div>
 
