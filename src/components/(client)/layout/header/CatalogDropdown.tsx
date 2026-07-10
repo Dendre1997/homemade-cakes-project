@@ -16,19 +16,18 @@ import {
   LayoutGrid,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {  Collection } from "@/types";
-import { useActiveSeasonal } from "@/hooks/useActiveSeasonal";
+import {  Collection, SeasonalEvent } from "@/types";
 import { useAuthStore } from "@/lib/store/authStore";
 import { MenuItem } from "./MenuItem";
 
 interface CatalogDropdownProps {
   categories: { name: string; href: string; imageUrl?: string }[];
+  activeSeasonalEvent: SeasonalEvent | null;
 }
 
-export const CatalogDropdown = ({ categories }: CatalogDropdownProps) => {
+export const CatalogDropdown = ({ categories, activeSeasonalEvent }: CatalogDropdownProps) => {
   const [isOpen, setIsOpen] = React.useState(false);
   const [mounted, setMounted] = React.useState(false);
-  const { activeEvent } = useActiveSeasonal();
   const [collections, setCollections] = React.useState<Collection[]>([]);
   const { user } = useAuthStore();
   const isAdmin = user?.role === 'admin';
@@ -117,11 +116,11 @@ export const CatalogDropdown = ({ categories }: CatalogDropdownProps) => {
                 badge="Refereces"
               />
 
-              {activeEvent && (
+              {activeSeasonalEvent && (
                 <MenuItem
-                  href={`/specials/${activeEvent.slug}`}
+                  href={`/specials/${activeSeasonalEvent.slug}`}
                   icon={Sparkles}
-                  label={activeEvent.name}
+                  label={activeSeasonalEvent.name}
                   onClick={() => setIsOpen(false)}
                   badge="Limited"
                   highlight={true}

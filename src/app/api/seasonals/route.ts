@@ -1,23 +1,9 @@
 import { NextResponse } from "next/server";
-import clientPromise from "@/lib/db";
+import { getActiveSeasonals } from "@/lib/db/seasonals";
 
 export async function GET() {
   try {
-    const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB_NAME);
-
-    const now = new Date();
-
-    const activeSeasonals = await db
-      .collection("seasonals")
-      .find({
-        isActive: true,
-        startDate: { $lte: now },
-        endDate: { $gte: now },
-      })
-      .sort({ endDate: 1 })
-      .toArray();
-
+    const activeSeasonals = await getActiveSeasonals();
     return NextResponse.json(activeSeasonals);
   } catch (error) {
     return NextResponse.json(

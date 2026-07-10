@@ -15,12 +15,11 @@ import {
   Crown,
   LayoutGrid,
 } from "lucide-react";
-import { User, Collection } from "@/types";
+import { User, Collection, SeasonalEvent } from "@/types";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import SearchInput from "./SearchInput";
 import HeaderLogo from "@/components/ui/HeaderLogo";
-import { useActiveSeasonal } from "@/hooks/useActiveSeasonal";
 import { Sparkles } from "lucide-react";
 import { MenuItem } from "./MenuItem";
 
@@ -31,6 +30,7 @@ interface MobileMenuProps {
   secondaryLinks: { name: string; href: string; icon: React.ElementType }[];
   user: User | null;
   handleLogout: () => void;
+  activeSeasonalEvent: SeasonalEvent | null;
 }
 
 const MobileMenu = ({
@@ -40,9 +40,9 @@ const MobileMenu = ({
   secondaryLinks,
   user,
   handleLogout,
+  activeSeasonalEvent,
 }: MobileMenuProps) => {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
-  const { activeEvent } = useActiveSeasonal();
   const [collections, setCollections] = useState<Collection[]>([]);
 
   useEffect(() => {
@@ -159,12 +159,12 @@ const MobileMenu = ({
                 badge="References"
               />
 
-              {activeEvent && (
+              {activeSeasonalEvent && (
                 <MenuItem
                   prefetch={false}
-                  href={`/specials/${activeEvent.slug}`}
+                  href={`/specials/${activeSeasonalEvent.slug}`}
                   icon={Sparkles}
-                  label={activeEvent.name}
+                  label={activeSeasonalEvent.name}
                   onClick={onClose}
                   badge="Limited"
                   highlight={true}
