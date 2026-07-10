@@ -11,7 +11,7 @@ const Footer: React.FC = () => {
           <div className="space-y-md">
             <div className="flex justify-start w-full">
               <div className="w-32 md:w-48 lg:w-56 pointer-events-auto">
-                <HeaderLogo size="100%" />
+                <HeaderLogo size="100%" prefetch={false} />
               </div>
             </div>
             <p className="font-body text-body max-w-xs">
@@ -36,6 +36,7 @@ const Footer: React.FC = () => {
               <li>
                 <Link
                   href="/products"
+                  prefetch={false}
                   className="transition-colors hover:text-accent"
                 >
                   Catalog
@@ -44,6 +45,7 @@ const Footer: React.FC = () => {
               <li>
                 <Link
                   href="/blog"
+                  prefetch={false}
                   className="transition-colors hover:text-accent"
                 >
                   Blog
@@ -52,6 +54,7 @@ const Footer: React.FC = () => {
               <li>
                 <Link
                   href="/contact"
+                  prefetch={false}
                   className="transition-colors hover:text-accent"
                 >
                   Contact
@@ -60,6 +63,7 @@ const Footer: React.FC = () => {
               <li>
                 <Link
                   href="/custom-order"
+                  prefetch={false}
                   className="transition-colors hover:text-accent"
                 >
                   Custom Orders

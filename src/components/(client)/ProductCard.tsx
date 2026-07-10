@@ -10,9 +10,10 @@ import { calculateProductPrice } from "@/lib/discountUtils";
 interface ProductCardProps {
   product: ProductWithCategory;
   validDiscounts?: Discount[];
+  linkPrefetch?: boolean;
 }
 
-const ProductCard = ({ product, validDiscounts = [] }: ProductCardProps) => {
+const ProductCard = ({ product, validDiscounts = [], linkPrefetch }: ProductCardProps) => {
   const firstImage = product.imageUrls[0] || "/placeholder.png";
   const flavorCount = product.availableFlavors?.length || 0;
 
@@ -24,6 +25,7 @@ const ProductCard = ({ product, validDiscounts = [] }: ProductCardProps) => {
   return (
     <Link
       href={`/products/${product.slug || product._id.toString()}`}
+      prefetch={linkPrefetch}
       className="group block h-full pt-md"
     >
       <div className="flex h-full flex-col overflow-hidden rounded-xl bg-white transition-all duration-300 hover:-translate-y-1 border border-gray-100 transform-gpu">

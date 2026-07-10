@@ -160,6 +160,7 @@ const Homepage = async () => {
             <div className="mt-6 text-center sm:hidden">
               <Link
                 href="/blog"
+                prefetch={false}
                 className="text-sm font-bold text-accent hover:underline"
               >
                 View All Articles

@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
-export const MenuItem = ({ href, icon: Icon, imageUrl, label, badge, onClick, highlight = false }: any) => (
+export const MenuItem = ({ href, icon: Icon, imageUrl, label, badge, onClick, highlight = false, prefetch }: any) => (
   <Link
     href={href}
+    prefetch={prefetch}
     onClick={onClick}
     className={cn(
       "group flex items-center justify-between p-2.5 rounded-[16px] transition-all duration-300",

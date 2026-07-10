@@ -146,6 +146,7 @@ const HeroSlider = ({ slides }: HeroSliderProps) => {
 
                   <Link
                     href={slide.link || "/products"}
+                    prefetch={index === 0 ? undefined : false}
                     className="absolute right-2/1  bottom-3"
                   >
                     <Button
