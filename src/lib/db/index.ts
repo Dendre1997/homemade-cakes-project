@@ -1,5 +1,6 @@
 import { MongoClient, Collection } from 'mongodb';
 import { IGalleryImage } from '@/types';
+import { withMongoRetry } from '@/lib/db/withMongoRetry';
 
 if (!process.env.MONGODB_URI) {
   throw new Error('Invalid/Missing Environment variable: "MONGODB_URI"');
@@ -7,7 +8,7 @@ if (!process.env.MONGODB_URI) {
 
 const uri = process.env.MONGODB_URI;
 const options = {
-  maxPoolSize: 10,           // Keep pool size small in serverless
+  maxPoolSize: 3,            // Shared Atlas tier: limit per serverless instance
   minPoolSize: 0,            // Allow idle connections to close
   connectTimeoutMS: 15000,   // Prevent timing out on cold starts
   socketTimeoutMS: 45000,
@@ -38,8 +39,10 @@ clientPromise = globalWithMongo._mongoClientPromise!;
  * Type-safe helper to get the gallery_images collection
  */
 export async function getGalleryCollection(): Promise<Collection<IGalleryImage>> {
-  const client = await clientPromise;
-  return client.db(process.env.MONGODB_DB_NAME).collection<IGalleryImage>("gallery_images");
+  return withMongoRetry(async () => {
+    const client = await clientPromise;
+    return client.db(process.env.MONGODB_DB_NAME).collection<IGalleryImage>("gallery_images");
+  });
 }
 
 export default clientPromise;

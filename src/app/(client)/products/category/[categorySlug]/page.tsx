@@ -1,9 +1,11 @@
 import ProductCard from "@/components/(client)/ProductCard";
+import DatabaseUnavailable from "@/components/ui/DatabaseUnavailable";
 import { ProductWithCategory, ProductCategory } from "@/types";
 import { notFound } from "next/navigation";
 import { getActiveDiscounts } from "@/lib/data";
 import { getCategoryBySlug } from "@/lib/db/categories";
 import { getProducts } from "@/lib/db/products";
+import { MongoUnavailableError } from "@/lib/db/withMongoRetry";
 
 const CategoryPage = async ({
   params,
@@ -11,7 +13,16 @@ const CategoryPage = async ({
   params: Promise<{ categorySlug: string }>;
 }) => {
   const { categorySlug } = await params;
-  const category = await getCategoryBySlug(categorySlug);
+
+  let category;
+  try {
+    category = await getCategoryBySlug(categorySlug);
+  } catch (error) {
+    if (error instanceof MongoUnavailableError) {
+      return <DatabaseUnavailable />;
+    }
+    throw error;
+  }
 
   if (!category) {
     notFound();
@@ -21,14 +32,26 @@ const CategoryPage = async ({
     typeof category._id === "string" ? category._id : category._id.toString();
 
   let products: ProductWithCategory[] = [];
+  let productsUnavailable = false;
+
   try {
     const result = await getProducts({ categoryId });
     products = result.products as ProductWithCategory[];
   } catch (error) {
-    console.error("Failed to fetch products for category", error);
+    if (error instanceof MongoUnavailableError) {
+      productsUnavailable = true;
+      console.error("Failed to fetch products for category after retries", error);
+    } else {
+      throw error;
+    }
   }
 
-  const discounts = await getActiveDiscounts();
+  let discounts: Awaited<ReturnType<typeof getActiveDiscounts>> = [];
+  try {
+    discounts = await getActiveDiscounts();
+  } catch (error) {
+    console.error("Failed to fetch discounts for category page", error);
+  }
 
   return (
     <div className="bg-background min-h-screen">
@@ -39,7 +62,14 @@ const CategoryPage = async ({
           </h1>
         </div>
 
-        {products.length > 0 ? (
+        {productsUnavailable ? (
+          <div className="mt-xl">
+            <DatabaseUnavailable
+              title="Products temporarily unavailable"
+              message="We couldn't load products for this category right now. Please try again in a moment."
+            />
+          </div>
+        ) : products.length > 0 ? (
           <div className="mt-xl grid grid-cols-1 gap-md sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {products.map((product) => (
               <ProductCard key={product._id} product={product} validDiscounts={discounts} />

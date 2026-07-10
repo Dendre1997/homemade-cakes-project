@@ -1,4 +1,5 @@
 import clientPromise from "@/lib/db";
+import { withMongoRetry } from "@/lib/db/withMongoRetry";
 import { ObjectId } from "mongodb";
 
 export interface GetProductsParams {
@@ -24,6 +25,7 @@ export async function getProducts({
   limit = 100,
   context,
 }: GetProductsParams) {
+  return withMongoRetry(async () => {
   const skip = (page - 1) * limit;
 
   const matchFilter: Record<string, unknown> = {};
@@ -126,4 +128,5 @@ export async function getProducts({
   }));
 
   return { products: productsWithStrings, totalCount };
+  });
 }
