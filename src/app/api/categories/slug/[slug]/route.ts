@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import clientPromise from "@/lib/db";
+import { getCategoryBySlug } from "@/lib/db/categories";
 
 export async function GET(
   _request: Request,
@@ -7,12 +7,7 @@ export async function GET(
 ) {
   try {
     const { slug } = await params;
-    const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB_NAME);
-
-    const category = await db
-      .collection("categories")
-      .findOne({ slug });
+    const category = await getCategoryBySlug(slug);
 
     if (!category) {
       return NextResponse.json(
