@@ -1,5 +1,6 @@
 import ClientHeader from "@/components/(client)/layout/header/Header";
 import Footer from "@/components/(client)/layout/Footer";
+import { Analytics } from "@vercel/analytics/next";
 import { getCategories } from "@/lib/data";
 import { getCollections } from "@/lib/db/collections";
 import { getActiveSeasonals } from "@/lib/db/seasonals";
@@ -55,6 +56,7 @@ export default async function ClientLayout({ children }: { children: React.React
         </main>
         <Footer />
       </div>
+      <Analytics />
     </>
   );
 }
