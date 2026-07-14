@@ -176,6 +176,7 @@ const OrderSummary = () => {
                       src={item.imageUrl}
                       alt={item.name}
                       fill
+                      quality={90}
                       className="object-cover"
                     />
                   </div>

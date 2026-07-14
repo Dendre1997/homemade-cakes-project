@@ -73,6 +73,7 @@ const HeroSlider = ({ slides }: HeroSliderProps) => {
           src={slide.imageUrl}
           alt={slide.title}
           fill
+          quality={90}
           sizes="(max-width: 768px) 100vw, 80vw"
           className="object-cover"
           priority
@@ -119,6 +120,7 @@ const HeroSlider = ({ slides }: HeroSliderProps) => {
                   src={slide.imageUrl}
                   alt={slide.title}
                   fill
+                  quality={90}
                   sizes="(max-width: 768px) 100vw, 80vw"
                   className="object-cover"
                   priority={isActive}

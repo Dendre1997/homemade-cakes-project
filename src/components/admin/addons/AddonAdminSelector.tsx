@@ -105,6 +105,7 @@ export function AddonAdminSelector({
                   src={deco.imageUrl}
                   alt={deco.name}
                   fill
+                  quality={90}
                   className="object-cover opacity-90"
                 />
               ) : (
@@ -168,6 +169,7 @@ export function AddonAdminSelector({
                               src={variant.imageUrl || activeDeco.imageUrl!}
                               alt={variant.name}
                               fill
+                              quality={90}
                               className="object-cover"
                             />
                           </div>

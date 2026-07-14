@@ -632,3 +632,14 @@ export interface IGalleryImage {
   updatedAt: Date | string;
   defaultAddons?: { addonId: string; variantId: string }[];
 }
+
+/** Virtual or catalog collection card for the gallery landing page. */
+export interface GalleryCollectionCard {
+  _id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  latestImageUrl: string;
+  latestImageId: string;
+  imageCount: number;
+}

@@ -298,6 +298,7 @@ export default function Step4Design() {
                         alt={collection.name}
                         width={96}
                         height={80}
+                        quality={90}
                         className="object-cover w-full h-full"
                       />
                     </div>
@@ -349,6 +350,7 @@ export default function Step4Design() {
                         src={imgUrl}
                         alt="Catalog Inspiration"
                         fill
+                        quality={90}
                         className={`object-cover ${isSelected ? "" : "opacity-90"}`}
                       />
                       {isSelected && (

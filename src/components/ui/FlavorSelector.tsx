@@ -90,6 +90,7 @@ const FlavorSelector = (props: FlavorSelectorProps) => {
                   src={flavor.imageUrl || "/placeholder-flavor.png"}
                   alt={flavor.name}
                   fill
+                  quality={90}
                   className="object-center"
                 />
                 {isSelected && (

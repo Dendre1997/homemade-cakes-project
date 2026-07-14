@@ -433,11 +433,12 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick }: { onNext:
                     const bentoImage = filteredDiameters.find((d: any) => d.sizeValue <= 4)?.imageUrl || filteredDiameters[0]?.imageUrl;
                     return bentoImage ? (
                       <div className="relative w-full h-full">
-                        <Image 
-                          src={bentoImage} 
-                          alt="Combo Cake" 
+                        <Image
+                          src={bentoImage}
+                          alt="Combo Cake"
                           fill
-                          className="object-contain" 
+                          quality={90}
+                          className="object-contain"
                         />
                       </div>
                     ) : (

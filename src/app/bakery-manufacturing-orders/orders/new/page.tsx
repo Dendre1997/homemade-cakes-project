@@ -543,6 +543,7 @@ export default function ManualOrderPage() {
                           src={item.imageUrl || "/placeholder.png"}
                           alt={item.name}
                           fill
+                          quality={90}
                           className="object-cover"
                         />
                         {(item.imageUrls?.length || 0) > 1 && (

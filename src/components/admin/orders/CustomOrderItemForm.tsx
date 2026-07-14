@@ -414,7 +414,7 @@ export default function CustomOrderItemForm({
                                   className="w-20 h-20 shrink-0 relative rounded-md overflow-hidden cursor-pointer hover:border-accent hover:border-2 hover:scale-105 transition-all"
                                   title="Click to add as reference"
                                >
-                                  <Image src={img.imageUrl} alt={img.title} fill className="object-cover" />
+                                  <Image src={img.imageUrl} alt={img.title} fill quality={90} className="object-cover" />
                                </div>
                            ))}
                         </div>

@@ -324,6 +324,7 @@ export default function ImagePreviewGallery({
                 src={images[currentIndex]}
                 alt={`Gallery Image ${currentIndex + 1}`}
                 fill
+                quality={90}
                 className="object-contain select-none"
                 sizes="100vw"
                 priority

@@ -30,6 +30,7 @@ const FeatureCard = ({
           src={imageUrl || "/placeholder.png"}
           alt={title}
           fill
+          quality={90}
           sizes="(max-width: 768px) 50vw, (max-width: 1280px) 33vw, 400px"
           className="object-cover transition-transform duration-500 group-hover:scale-105"
         />

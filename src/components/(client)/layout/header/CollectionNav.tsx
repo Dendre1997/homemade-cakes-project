@@ -74,6 +74,7 @@ const CollectionNav = () => {
                     alt={collection.name}
                     width={96}
                     height={96}
+                    quality={90}
                     className="object-cover w-full h-full"
                   />
                 </div>

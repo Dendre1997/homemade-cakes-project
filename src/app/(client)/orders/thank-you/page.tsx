@@ -115,6 +115,7 @@ const ThankYouPage = () => {
                       src={item.imageUrl || "/placeholder.png"}
                       alt={item.name}
                       fill
+                      quality={90}
                       className="object-cover"
                     />
                   </div>

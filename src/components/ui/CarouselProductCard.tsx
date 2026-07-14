@@ -33,6 +33,7 @@ export function CarouselProductCard({
           src={image}
           alt={name}
           fill
+          quality={90}
           className="object-cover transition-transform duration-500 group-hover:scale-110"
         />
       </div>

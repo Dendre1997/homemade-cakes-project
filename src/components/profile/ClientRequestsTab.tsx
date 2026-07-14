@@ -178,6 +178,7 @@ export default function ClientRequestsTab({ userId }: { userId: string }) {
                                src={url}
                                alt={`Reference image ${idx + 1}`}
                                fill
+                               quality={90}
                                className="object-cover"
                              />
                            </div>

@@ -309,6 +309,7 @@ export const OrderCard = ({
                 src={displayImage}
                 alt="Reference"
                 fill
+                quality={90}
                 className="object-cover"
               />
             </div>
@@ -321,6 +322,7 @@ export const OrderCard = ({
                   src={img}
                   alt={`Ref ${idx + 2}`}
                   fill
+                  quality={90}
                   className="object-cover"
                 />
               </div>

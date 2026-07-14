@@ -208,7 +208,7 @@ export const CustomOrderSpecsForm = ({
                      className="absolute inset-0 w-full h-full cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-inset"
                      aria-label="View reference image full size"
                    >
-                     <Image src={url} alt="Reference" fill className="object-cover" />
+                     <Image src={url} alt="Reference" fill quality={90} className="object-cover" />
                    </button>
                    <button
                      type="button"

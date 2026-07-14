@@ -29,6 +29,7 @@ const SeasonalPage = async ({ params }: PageProps) => {
             src={event.heroBannerUrl}
             alt={event.name}
             fill
+            quality={90}
             className="object-cover"
             priority
           />

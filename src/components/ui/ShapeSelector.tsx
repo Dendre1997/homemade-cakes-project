@@ -46,6 +46,7 @@ const ShapeSelector = ({
                       src={shape.imageUrl}
                       alt={shape.name}
                       fill
+                      quality={90}
                       className="object-contain"
                     />
                   </div>

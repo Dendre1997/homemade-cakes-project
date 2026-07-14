@@ -46,6 +46,7 @@ export const AdminListItem = ({
               alt={title}
               width={64}
               height={64}
+              quality={90}
               className="w-16 h-16 rounded-medium object-cover border border-border flex-shrink-0"
             />
           ) : icon ? (
@@ -101,6 +102,7 @@ export const AdminListItem = ({
                 src={imageUrl}
                 alt={title}
                 layout="fill"
+                quality={90}
                 className="object-contain"
                 sizes="(max-width: 640px) 100vw, 448px"
               />

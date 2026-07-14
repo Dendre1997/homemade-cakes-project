@@ -90,6 +90,7 @@ export const AdminOrderItem = ({
                     src={imgObj.src}
                     alt={imgObj.isMain ? item.name : `Reference ${idx}`}
                     fill
+                    quality={90}
                     className="object-cover"
                 />
                 {imgObj.isMain && (

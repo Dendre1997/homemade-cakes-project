@@ -105,6 +105,7 @@ function ProductPickerCard({ product, isSelected, themeColor, onToggle }: Produc
                     src={product.imageUrls?.[0] || "/placeholder.png"}
                     alt={product.name}
                     fill
+                    quality={90}
                     className={cn(
                         "object-cover transition-all duration-300",
                         !isImageLoaded ? "opacity-0 scale-95" : "opacity-100 scale-100",

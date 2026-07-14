@@ -310,10 +310,11 @@ export default function ClientOrderCard({ order, diameters = [], shapes = [] }: 
                          <div className="flex-shrink-0">
                             <div className="relative w-20 h-20 rounded-md overflow-hidden bg-gray-100 border border-gray-200">
                                 {item.imageUrl ? (
-                                    <Image 
-                                        src={item.imageUrl} 
+                                    <Image
+                                        src={item.imageUrl}
                                         alt={item.name}
                                         fill
+                                        quality={90}
                                         className="object-cover"
                                     />
                                 ) : (
@@ -359,6 +360,7 @@ export default function ClientOrderCard({ order, diameters = [], shapes = [] }: 
                                     src={url}
                                     alt={`Reference image ${idx + 1}`}
                                     fill
+                                    quality={90}
                                     className="object-cover"
                                   />
                                 </div>

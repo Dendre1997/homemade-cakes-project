@@ -77,6 +77,7 @@ export const FlavorCard = ({
             src={flavor.imageUrl || "/placeholder-flavor.png"}
             alt={flavor.name}
             fill
+            quality={90}
             className={cn(
               "object-cover transition-transform duration-[1200ms] ease-[cubic-bezier(0.23,1,0.32,1)]",
               isFlipped ? "scale-110" : "scale-100",

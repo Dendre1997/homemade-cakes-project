@@ -26,6 +26,7 @@ function SortableImage({ url, index, handleRemoveImage }: { url: string, index: 
         src={url}
         alt="Uploaded image"
         layout="fill"
+        quality={90}
         className="object-cover"
       />
       <button

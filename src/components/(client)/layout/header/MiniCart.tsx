@@ -81,6 +81,7 @@ export const MiniCart = ({ isOpen, onClose }: MiniCartProps) => {
                     alt={lastItemAdded.name}
                     width={64}
                     height={64}
+                    quality={90}
                     className="h-16 w-16 rounded-medium border border-border object-cover"
                   />
                   <div className="flex-1">

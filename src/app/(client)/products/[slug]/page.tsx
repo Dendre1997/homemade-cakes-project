@@ -837,11 +837,12 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
                         <div className="mb-4 p-3 bg-subtleBackground rounded-md border border-primary/20 flex gap-3">
                           <div className="h-24 w-24 flex items-center justify-center pb-4 relative">
                             {comboCakeDiameters[0]?.imageUrl ? (
-                              <Image 
-                                src={comboCakeDiameters[0].imageUrl} 
-                                alt="Combo Cake" 
+                              <Image
+                                src={comboCakeDiameters[0].imageUrl}
+                                alt="Combo Cake"
                                 fill
-                                className="object-contain" 
+                                quality={90}
+                                className="object-contain"
                               />
                             ) : (
                               <FourInchBentoIcon className="h-16 w-16 text-primary" />

@@ -40,6 +40,7 @@ const AdminProductCard = ({
           src={firstImage}
           alt={product.name}
           fill
+          quality={90}
           className={cn(
             "object-cover transition-all duration-300",
             !product.isActive && "grayscale opacity-70"

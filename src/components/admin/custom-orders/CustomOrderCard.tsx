@@ -165,11 +165,11 @@ export const CustomOrderCard = ({ order }: CustomOrderCardProps) => {
         {displayImage && (
           <div className="px-5 py-3 flex gap-2 overflow-x-auto custom-scrollbar no-scrollbar" onClick={stopPropagation}>
              <div className="relative w-20 h-20 rounded-lg overflow-hidden shrink-0 border border-black/5 shadow-sm">
-                <Image src={displayImage} alt="Reference" fill className="object-cover" />
+                <Image src={displayImage} alt="Reference" fill quality={90} className="object-cover" />
              </div>
              {images.slice(1).map((img: string, idx: number) => (
                 <div key={idx} className="relative w-20 h-20 rounded-lg overflow-hidden shrink-0 border border-black/5 shadow-sm">
-                   <Image src={img} alt={`Ref ${idx+2}`} fill className="object-cover" />
+                   <Image src={img} alt={`Ref ${idx+2}`} fill quality={90} className="object-cover" />
                 </div>
              ))}
           </div>

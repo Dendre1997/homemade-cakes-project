@@ -39,6 +39,7 @@ export default function BlogCarousel({ blogs }: BlogCarouselProps) {
                   src={blog.imageUrl}
                   alt={blog.title}
                   fill
+                  quality={90}
                   className="object-cover transition-transform duration-500 group-hover:scale-105"
                   sizes="(max-width: 640px) 85vw, (max-width: 1024px) 45vw, 25vw"
                 />

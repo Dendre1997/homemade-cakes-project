@@ -413,7 +413,7 @@ export const ComboProductForm = ({
                                    className="relative shrink-0 w-24 h-24 overflow-hidden rounded-md border border-border cursor-pointer hover:border-accent hover:border-2 hover:scale-105 transition-all"
                                    title="Click to add as reference"
                                 >
-                                   <Image src={img.imageUrl} alt={img.title} fill className="object-cover" sizes="96px" />
+                                   <Image src={img.imageUrl} alt={img.title} fill quality={90} className="object-cover" sizes="96px" />
                                 </div>
                             ))}
                            </div>
@@ -519,7 +519,7 @@ export const ComboProductForm = ({
                                    className="relative shrink-0 w-24 h-24 overflow-hidden rounded-md border border-border cursor-pointer hover:border-accent hover:border-2 hover:scale-105 transition-all"
                                    title="Click to add as reference"
                                 >
-                                   <Image src={img.imageUrl} alt={img.title} fill className="object-cover" sizes="96px" />
+                                   <Image src={img.imageUrl} alt={img.title} fill quality={90} className="object-cover" sizes="96px" />
                                 </div>
                             ))}
                            </div>

@@ -137,6 +137,7 @@ export const ProductSelectorModal = ({
                               src={product.imageUrls[0] || "/placeholder.png"}
                               alt={product.name}
                               fill
+                              quality={90}
                               className="object-cover"
                               sizes="48px"
                             />

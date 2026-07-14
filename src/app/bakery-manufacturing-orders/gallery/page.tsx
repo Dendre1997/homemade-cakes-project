@@ -280,6 +280,7 @@ export default function GalleryAdminPage() {
               src={item.imageUrl}
               alt={item.title}
               fill
+              quality={90}
               className="object-cover transition-transform duration-500 group-hover:scale-110"
               sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 16vw"
             />
@@ -310,6 +311,7 @@ export default function GalleryAdminPage() {
                     src={editingItem.imageUrl}
                     alt="Preview"
                     fill
+                    quality={90}
                     className="object-contain"
                     sizes="(max-width: 768px) 100vw, 60vw"
                     priority

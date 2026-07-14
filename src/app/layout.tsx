@@ -83,7 +83,7 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://res.cloudinary.com" />
       </head>
       <body className="font-body bg-background text-text-main h-full min-h-screen">
-        <Script
+        {/* <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-2NJ0YC4YNT"
           strategy="afterInteractive"
         />
@@ -94,7 +94,7 @@ export default function RootLayout({
             gtag('js', new Date());
             gtag('config', 'G-2NJ0YC4YNT');
           `}
-        </Script>
+        </Script> */}
         <AuthProvider>
           <AlertProvider>
             <ConfirmationProvider>

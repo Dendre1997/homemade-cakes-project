@@ -61,6 +61,7 @@ const DiameterSelector = ({
                       src={diameter.imageUrl}
                       alt={diameter.name}
                       fill
+                      quality={90}
                       className="object-contain"
                     />
                   </div>

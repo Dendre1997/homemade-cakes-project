@@ -141,6 +141,7 @@ export function AddonSelector({
                   src={deco.imageUrl}
                   alt={deco.name}
                   fill
+                  quality={90}
                   className="object-cover opacity-90"
                 />
               ) : (
@@ -205,10 +206,11 @@ export function AddonSelector({
                       >
                         {(variant.imageUrl || activeDeco.imageUrl) && (
                           <div className="w-24 h-24 rounded-xl overflow-hidden shrink-0 relative bg-subtleBackground shadow-sm">
-                            <Image 
-                              src={variant.imageUrl || activeDeco.imageUrl!} 
+                            <Image
+                              src={variant.imageUrl || activeDeco.imageUrl!}
                               alt={variant.name}
                               fill
+                              quality={90}
                               className="object-cover"
                             />
                           </div>

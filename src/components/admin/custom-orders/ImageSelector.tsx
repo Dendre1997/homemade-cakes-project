@@ -52,10 +52,11 @@ export default function ImageSelector({
             >
               {/* Image */}
               <div className="absolute inset-0 bg-gray-100">
-                  <Image 
-                     src={url} 
-                     alt={`Reference ${idx + 1}`} 
-                     fill 
+                  <Image
+                     src={url}
+                     alt={`Reference ${idx + 1}`}
+                     fill
+                     quality={90}
                      className="object-cover"
                   />
               </div>

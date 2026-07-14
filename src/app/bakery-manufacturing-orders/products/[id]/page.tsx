@@ -275,6 +275,7 @@ const SingleProductPage = () => {
                                             src={url}
                                             alt={`${product.name} ${idx + 1}`}
                                             fill
+                                            quality={90}
                                             className="object-cover"
                                         />
                                     </div>
@@ -282,10 +283,11 @@ const SingleProductPage = () => {
                             </div>
                         ) : (
                              <div className="relative aspect-square w-full">
-                                <Image 
-                                    src={product.imageUrls[0] || "/placeholder.png"} 
-                                    alt={product.name} 
-                                    fill 
+                                <Image
+                                    src={product.imageUrls[0] || "/placeholder.png"}
+                                    alt={product.name}
+                                    fill
+                                    quality={90}
                                     className="object-contain"
                                     priority
                                 />

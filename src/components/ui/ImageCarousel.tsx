@@ -61,6 +61,7 @@ const ImageCarousel = ({ imageUrls, alt }: ImageCarouselProps) => {
           src="/placeholder.png"
           alt="Placeholder"
           fill
+          quality={90}
           className="object-cover opacity-50"
         />
       </div>
@@ -85,6 +86,7 @@ const ImageCarousel = ({ imageUrls, alt }: ImageCarouselProps) => {
               src={url}
               alt={`${alt} ${index + 1}`}
               fill
+              quality={90}
               className="object-cover"
               priority={index === 0}
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"

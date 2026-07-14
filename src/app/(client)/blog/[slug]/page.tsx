@@ -132,6 +132,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
               alt={blog.title}
               width={0}
               height={0}
+              quality={90}
               sizes="(min-width: 1024px) 420px, 100vw"
               className="w-full h-auto rounded-2xl shadow-xl object-contain"
               priority

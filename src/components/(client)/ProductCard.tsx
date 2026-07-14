@@ -35,6 +35,7 @@ const ProductCard = ({ product, validDiscounts = [], linkPrefetch }: ProductCard
             alt={product.name}
             fill
             priority
+            quality={90}
             className="object-cover transition-transform duration-700 group-hover:scale-110"
           />
 

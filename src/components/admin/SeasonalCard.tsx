@@ -56,6 +56,7 @@ export const SeasonalCard = ({
               src={event.heroBannerUrl}
               alt={event.name}
               fill
+              quality={90}
               className="object-cover"
               sizes="(max-width: 768px) 100vw, 400px"
             />
@@ -150,6 +151,7 @@ export const SeasonalCard = ({
                   src={event.heroBannerUrl}
                   alt={event.name}
                   fill
+                  quality={90}
                   className="object-cover"
                   priority
                 />
