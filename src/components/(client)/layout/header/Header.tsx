@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { clearChatStorage } from "@/lib/chat/chatStorage";
-import { ProductCategory } from "@/types";
+import { ProductCategory, SeasonalEvent, Collection } from "@/types";
 import HeaderLogo from '@/components/ui/HeaderLogo'
 import SeasonalHeaderBar from "./SeasonalHeaderBar";
 import OfferBar from "./OfferBar";
@@ -45,11 +45,13 @@ const MiniCart = dynamic(
 
 interface HeaderProps {
   categories: ProductCategory[];
+  activeSeasonalEvent: SeasonalEvent | null;
+  collections: Collection[];
 }
 import { Button } from "@/components/ui/Button";
 
 
-const Header = ({ categories }: HeaderProps) => {
+const Header = ({ categories, activeSeasonalEvent, collections }: HeaderProps) => {
   const { user, isLoading, setUser } = useAuthStore();
   const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -143,7 +145,7 @@ const Header = ({ categories }: HeaderProps) => {
         )}
       >
         <div className="bg-white/80 backdrop-blur-md border-b border-white/20 shadow-sm">
-          <SeasonalHeaderBar />
+          <SeasonalHeaderBar activeSeasonalEvent={activeSeasonalEvent} />
 
           {/* Custom Orders Only Notice Banner */}
           {pathname !== "/custom-order" && (
@@ -254,7 +256,11 @@ const Header = ({ categories }: HeaderProps) => {
               </div>
               <div className="flex items-center gap-md justify-end">
                 <div className="hidden md:block">
-                  <CatalogDropdown categories={navCategories} />
+                  <CatalogDropdown
+                    categories={navCategories}
+                    activeSeasonalEvent={activeSeasonalEvent}
+                    collections={collections}
+                  />
                 </div>
 
                 <div className="hidden md:flex items-center gap-md">
@@ -310,6 +316,8 @@ const Header = ({ categories }: HeaderProps) => {
         secondaryLinks={secondaryLinks}
         user={user}
         handleLogout={handleLogout}
+        activeSeasonalEvent={activeSeasonalEvent}
+        collections={collections}
       />
     </>
   );

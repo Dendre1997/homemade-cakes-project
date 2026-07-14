@@ -1,18 +1,21 @@
 import clientPromise from "@/lib/db";
+import { withMongoRetry } from "@/lib/db/withMongoRetry";
 
 /**
  * Fetches a category document by slug.
  * Returns the same BSON-serialized shape as GET /api/categories/slug/[slug].
  */
 export async function getCategoryBySlug(slug: string) {
-  const client = await clientPromise;
-  const db = client.db(process.env.MONGODB_DB_NAME);
+  return withMongoRetry(async () => {
+    const client = await clientPromise;
+    const db = client.db(process.env.MONGODB_DB_NAME);
 
-  const category = await db.collection("categories").findOne({ slug });
+    const category = await db.collection("categories").findOne({ slug });
 
-  if (!category) {
-    return null;
-  }
+    if (!category) {
+      return null;
+    }
 
-  return JSON.parse(JSON.stringify(category));
+    return JSON.parse(JSON.stringify(category));
+  });
 }

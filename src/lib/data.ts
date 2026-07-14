@@ -1,5 +1,6 @@
 import { ProductCategory, Discount, Collection, HeroSlide, SeasonalEvent, ProductWithCategory } from "@/types";
 import clientPromise from "@/lib/db";
+import { getCollections } from "@/lib/db/collections";
 import { calculateProductPrice } from "@/lib/discountUtils";
 import { ObjectId } from "mongodb";
 
@@ -39,42 +40,7 @@ export async function getCategories(): Promise<ProductCategory[]> {
 }
 
 export async function getActiveCollections(): Promise<Collection[]> {
-  try {
-    const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB_NAME);
-
-    // 1. Fetch all collections
-    const collections = await db
-      .collection("collections")
-      .find({})
-      .sort({ name: 1 })
-      .toArray();
-
-    // 2. Fetch all unique collectionIds from ACTIVE products
-    const activeProducts = await db.collection("products")
-        .find({ isActive: true }, { projection: { collectionIds: 1 } })
-        .toArray();
-
-    const activeCollectionIds = new Set<string>();
-    activeProducts.forEach(p => {
-        if (Array.isArray(p.collectionIds)) {
-            p.collectionIds.forEach((id: any) => activeCollectionIds.add(id.toString()));
-        }
-    });
-
-    // 3. Filter collections
-    const filteredCollections = collections.filter(col => 
-        activeCollectionIds.has(col._id.toString())
-    );
-
-    return filteredCollections.map((col) => ({
-      ...col,
-      _id: col._id.toString(),
-    })) as Collection[];
-  } catch (error) {
-    console.error("Error fetching active collections:", error);
-    return [];
-  }
+  return getCollections();
 }
 
 export async function getActiveSeasonalEvent(): Promise<SeasonalEvent | null> {

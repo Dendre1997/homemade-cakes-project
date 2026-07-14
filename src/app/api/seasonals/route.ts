@@ -1,25 +1,18 @@
 import { NextResponse } from "next/server";
-import clientPromise from "@/lib/db";
+import { getActiveSeasonals } from "@/lib/db/seasonals";
+import { MongoUnavailableError } from "@/lib/db/withMongoRetry";
 
 export async function GET() {
   try {
-    const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB_NAME);
-
-    const now = new Date();
-
-    const activeSeasonals = await db
-      .collection("seasonals")
-      .find({
-        isActive: true,
-        startDate: { $lte: now },
-        endDate: { $gte: now },
-      })
-      .sort({ endDate: 1 })
-      .toArray();
-
+    const activeSeasonals = await getActiveSeasonals();
     return NextResponse.json(activeSeasonals);
   } catch (error) {
+    if (error instanceof MongoUnavailableError) {
+      return NextResponse.json(
+        { error: "Database temporarily unavailable. Please try again shortly." },
+        { status: 503 }
+      );
+    }
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 }
