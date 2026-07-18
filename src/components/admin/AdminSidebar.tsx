@@ -102,8 +102,20 @@ const AdminSidebar = ({ isOpen, onClose }: SidebarProps) => {
   };
 
   // ─── Data fetching ────────────────────────────────────────────────────────
+  // Batch in-flight guard: one tick runs custom-orders → orders → chats sequentially;
+  // skip the whole tick if the previous batch has not finished.
+  const countsInFlightRef = React.useRef(false);
+
   React.useEffect(() => {
     const fetchCounts = async () => {
+      if (countsInFlightRef.current) {
+        console.debug(
+          "[AdminSidebar] Skipping poll; previous badge-count fetch still in flight"
+        );
+        return;
+      }
+
+      countsInFlightRef.current = true;
       try {
         const customRes = await fetch("/api/admin/custom-orders");
         if (customRes.ok) {
@@ -134,6 +146,8 @@ const AdminSidebar = ({ isOpen, onClose }: SidebarProps) => {
         }
       } catch (error) {
         console.error("Failed to fetch sidebar counts", error);
+      } finally {
+        countsInFlightRef.current = false;
       }
     };
 
