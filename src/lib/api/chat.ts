@@ -1,11 +1,13 @@
-import clientPromise from "@/lib/db";
+import { getMongoClient } from "@/lib/db";
 import { IChat } from "@/types";
 
 /**
- * Retrieves the chats collection with proper typing
+ * Retrieves the chats collection with proper typing.
+ * Acquire is deadline-bounded; callers should wrap multi-step query work
+ * in withMongoClient / withMongoDeadline when the full path must fail fast.
  */
 export async function getChatCollection() {
-  const client = await clientPromise;
+  const client = await getMongoClient();
   const db = client.db(process.env.MONGODB_DB_NAME);
   return db.collection<IChat>("chats");
 }

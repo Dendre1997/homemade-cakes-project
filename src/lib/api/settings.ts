@@ -1,4 +1,4 @@
-import clientPromise from "@/lib/db";
+import { withMongoClient } from "@/lib/db";
 import { AppSettings } from "@/types";
 
 // Reliable default settings
@@ -27,25 +27,26 @@ const DEFAULT_SETTINGS: AppSettings = {
 
 export async function getAppSettings(): Promise<AppSettings> {
   try {
-    const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB_NAME);
+    return await withMongoClient(async (client) => {
+      const db = client.db(process.env.MONGODB_DB_NAME);
 
-    const settings = await db.collection<AppSettings>("app_settings").findOne({ _id: "global_settings" });
+      const settings = await db.collection<AppSettings>("app_settings").findOne({ _id: "global_settings" });
 
-    // Merge database settings with defaults to ensure all nested objects exist
-    return {
-      ...DEFAULT_SETTINGS,
-      ...settings,
-      store: settings?.store 
-        ? { ...DEFAULT_SETTINGS.store!, ...settings.store } 
-        : DEFAULT_SETTINGS.store,
-      checkout: settings?.checkout 
-        ? { ...DEFAULT_SETTINGS.checkout, ...settings.checkout } 
-        : DEFAULT_SETTINGS.checkout,
-      support: settings?.support 
-        ? { ...DEFAULT_SETTINGS.support!, ...settings.support } 
-        : DEFAULT_SETTINGS.support,
-    };
+      // Merge database settings with defaults to ensure all nested objects exist
+      return {
+        ...DEFAULT_SETTINGS,
+        ...settings,
+        store: settings?.store
+          ? { ...DEFAULT_SETTINGS.store!, ...settings.store }
+          : DEFAULT_SETTINGS.store,
+        checkout: settings?.checkout
+          ? { ...DEFAULT_SETTINGS.checkout, ...settings.checkout }
+          : DEFAULT_SETTINGS.checkout,
+        support: settings?.support
+          ? { ...DEFAULT_SETTINGS.support!, ...settings.support }
+          : DEFAULT_SETTINGS.support,
+      };
+    });
   } catch (error) {
     console.error("Failed to fetch app settings from DB, returning defaults:", error);
     return DEFAULT_SETTINGS;

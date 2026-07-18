@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import clientPromise from "@/lib/db";
+import { withMongoClient } from "@/lib/db";
 import { Blog } from "@/types";
 import { format, isValid } from "date-fns";
 import { Button } from "@/components/ui/Button";
@@ -10,15 +10,16 @@ export const revalidate = 3600;
 
 async function getBlogs() {
   try {
-    const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB_NAME);
-    // Only active blogs for public view
-    const blogs = await db
-      .collection<Blog>("blogs")
-      .find({ isActive: true })
-      .sort({ publishedAt: -1 })
-      .toArray();
-    return JSON.parse(JSON.stringify(blogs)) as Blog[];
+    return await withMongoClient(async (client) => {
+      const db = client.db(process.env.MONGODB_DB_NAME);
+      // Only active blogs for public view
+      const blogs = await db
+        .collection<Blog>("blogs")
+        .find({ isActive: true })
+        .sort({ publishedAt: -1 })
+        .toArray();
+      return JSON.parse(JSON.stringify(blogs)) as Blog[];
+    });
   } catch (error) {
     console.error("Error fetching blogs for SSR:", error);
     // Return empty array to fallback gracefully instead of crashing the page

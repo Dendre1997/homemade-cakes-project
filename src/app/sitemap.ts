@@ -1,5 +1,5 @@
 import { MetadataRoute } from "next";
-import clientPromise from "@/lib/db";
+import { withMongoClient } from "@/lib/db";
 import { Blog, Product } from "@/types";
 
 export const revalidate = 86400;
@@ -16,37 +16,45 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${baseUrl}/contact`, lastModified: new Date(), changeFrequency: "yearly", priority: 0.7 },
   ];
 
-  const client = await clientPromise;
-  const db = client.db(process.env.MONGODB_DB_NAME);
+  try {
+    const { blogs, products } = await withMongoClient(async (client) => {
+      const db = client.db(process.env.MONGODB_DB_NAME);
 
-  // Fetch active blogs
-  const blogs = await db
-    .collection<Blog>("blogs")
-    .find({ isActive: true }, { projection: { slug: 1, updatedAt: 1 } })
-    .toArray();
+      // Fetch active blogs
+      const blogs = await db
+        .collection<Blog>("blogs")
+        .find({ isActive: true }, { projection: { slug: 1, updatedAt: 1 } })
+        .toArray();
 
-  const blogRoutes: MetadataRoute.Sitemap = blogs.map((blog) => ({
-    url: `${baseUrl}/blog/${blog.slug}`,
-    lastModified: blog.updatedAt ? new Date(blog.updatedAt) : new Date(),
-    changeFrequency: "weekly",
-    priority: 0.8,
-  }));
+      // Fetch active products
+      const products = await db
+        .collection<Product>("products")
+        .find({ isActive: true }, { projection: { _id: 1, updatedAt: 1, createdAt: 1 } })
+        .toArray();
 
-  // Fetch active products
-  const products = await db
-    .collection<Product>("products")
-    .find({ isActive: true }, { projection: { _id: 1, updatedAt: 1, createdAt: 1 } })
-    .toArray();
+      return { blogs, products };
+    });
 
-  const productRoutes: MetadataRoute.Sitemap = products.map((product) => {
-    const p = product as any;
-    return {
-      url: `${baseUrl}/products/${product._id.toString()}`,
-      lastModified: p.updatedAt ? new Date(p.updatedAt) : (p.createdAt ? new Date(p.createdAt) : undefined),
+    const blogRoutes: MetadataRoute.Sitemap = blogs.map((blog) => ({
+      url: `${baseUrl}/blog/${blog.slug}`,
+      lastModified: blog.updatedAt ? new Date(blog.updatedAt) : new Date(),
       changeFrequency: "weekly",
       priority: 0.8,
-    };
-  });
+    }));
 
-  return [...routes, ...blogRoutes, ...productRoutes];
+    const productRoutes: MetadataRoute.Sitemap = products.map((product) => {
+      const p = product as any;
+      return {
+        url: `${baseUrl}/products/${product._id.toString()}`,
+        lastModified: p.updatedAt ? new Date(p.updatedAt) : (p.createdAt ? new Date(p.createdAt) : undefined),
+        changeFrequency: "weekly",
+        priority: 0.8,
+      };
+    });
+
+    return [...routes, ...blogRoutes, ...productRoutes];
+  } catch (error) {
+    console.error("Sitemap MongoDB fetch failed, returning static routes only:", error);
+    return routes;
+  }
 }

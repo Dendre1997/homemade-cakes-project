@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import clientPromise from "@/lib/db";
+import { withMongoClient } from "@/lib/db";
 import { Blog } from "@/types";
 import { format, isValid } from "date-fns";
 import { ArrowLeft } from "lucide-react";
@@ -12,48 +12,49 @@ import { cache } from 'react';
 export const revalidate = 3600;
 
 const getBlog = cache(async (slug: string) => {
-  const client = await clientPromise;
-  const db = client.db(process.env.MONGODB_DB_NAME);
-  const blog = await db.collection<Blog>("blogs").findOne({ 
-    slug: slug,
-    isActive: true 
+  return withMongoClient(async (client) => {
+    const db = client.db(process.env.MONGODB_DB_NAME);
+    const blog = await db.collection<Blog>("blogs").findOne({
+      slug: slug,
+      isActive: true
+    });
+
+    if (!blog) return null;
+
+    // Populate related products (Server Side)
+    if (blog.relatedProductIds && blog.relatedProductIds.length > 0) {
+      const { ObjectId } = require("mongodb");
+      const pIds = blog.relatedProductIds.reduce((acc: any[], id: string) => {
+        try {
+          if (id && ObjectId.isValid(id)) {
+            acc.push(new ObjectId(id));
+          }
+        } catch (e) {
+          // Ignore invalid ObjectId
+        }
+        return acc;
+      }, []);
+
+      const products = await db.collection("products").aggregate([
+        { $match: { _id: { $in: pIds }, isActive: true } },
+        {
+          $lookup: {
+            from: "categories",
+             let: { catId: "$categoryId" },
+             pipeline: [
+               { $match: { $expr: { $eq: ["$_id", { $toObjectId: "$$catId" }] } } }
+             ],
+            as: "category"
+          }
+        },
+        { $unwind: { path: "$category", preserveNullAndEmptyArrays: true } }
+      ]).toArray();
+
+      blog.relatedProducts = products as any;
+    }
+
+    return JSON.parse(JSON.stringify(blog)) as Blog;
   });
-  
-  if (!blog) return null;
-
-  // Populate related products (Server Side)
-  if (blog.relatedProductIds && blog.relatedProductIds.length > 0) {
-    const { ObjectId } = require("mongodb");
-    const pIds = blog.relatedProductIds.reduce((acc: any[], id: string) => {
-      try {
-        if (id && ObjectId.isValid(id)) {
-          acc.push(new ObjectId(id));
-        }
-      } catch (e) {
-        // Ignore invalid ObjectId
-      }
-      return acc;
-    }, []);
-    
-    const products = await db.collection("products").aggregate([
-      { $match: { _id: { $in: pIds }, isActive: true } },
-      {
-        $lookup: {
-          from: "categories",
-           let: { catId: "$categoryId" },
-           pipeline: [
-             { $match: { $expr: { $eq: ["$_id", { $toObjectId: "$$catId" }] } } }
-           ],
-          as: "category"
-        }
-      },
-      { $unwind: { path: "$category", preserveNullAndEmptyArrays: true } }
-    ]).toArray();
-    
-    blog.relatedProducts = products as any;
-  }
-
-  return JSON.parse(JSON.stringify(blog)) as Blog;
 });
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {

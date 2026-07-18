@@ -2,7 +2,7 @@ import { ObjectId } from "mongodb";
 import Link from "next/link";
 import { AlertTriangle } from "lucide-react";
 import type { Metadata } from "next";
-import clientPromise from "@/lib/db";
+import { withMongoClient } from "@/lib/db";
 import { getAppSettings } from "@/lib/api/settings";
 import PaymentHubClient from "@/components/payment/PaymentHubClient";
 import type { PublicOrderSummary, PublicOrderAddon } from "@/types";
@@ -54,6 +54,15 @@ function InvalidLink() {
     <PayNotice
       title="Invalid or Expired Payment Link"
       message="This payment link is not valid. It may have been mistyped, or the order it points to could not be found. Please contact us and we'll be happy to send you a fresh link."
+    />
+  );
+}
+
+function OrderLoadUnavailable() {
+  return (
+    <PayNotice
+      title="We couldn't load your order right now"
+      message="Please try again in a moment. No payment has been taken — you haven't been charged, and nothing was submitted from this page."
     />
   );
 }
@@ -284,43 +293,59 @@ export default async function PayPage({ params, searchParams }: PayPageProps) {
   let diameterMap: Record<string, string> = {};
   let shapeMap: Record<string, string> = {};
   try {
-    // (2) Reuse the app-wide cached, pooled client — do NOT instantiate a new MongoClient.
-    //     Timed separately so the logs reveal whether the CONNECT or the QUERY stalls.
-    const tConnect = Date.now();
-    const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB_NAME);
-    console.log(`[/pay] Mongo client acquired in ${Date.now() - tConnect}ms`);
+    // (2) Reuse the app-wide cached, pooled client under the shared 15s deadline.
+    const loaded = await withMongoClient(async (client) => {
+      const tConnect = Date.now();
+      const db = client.db(process.env.MONGODB_DB_NAME);
+      console.log(`[/pay] Mongo client acquired in ${Date.now() - tConnect}ms`);
 
-    // STRICT match: both the id AND the secure token must line up.
-    const tQuery = Date.now();
-    order = await db.collection("orders").findOne({
-      _id: new ObjectId(orderId),
-      paymentToken: token,
+      // STRICT match: both the id AND the secure token must line up.
+      const tQuery = Date.now();
+      const foundOrder = await db.collection("orders").findOne({
+        _id: new ObjectId(orderId),
+        paymentToken: token,
+      });
+      console.log(
+        `[/pay] Order query finished in ${Date.now() - tQuery}ms (found=${!!foundOrder})`
+      );
+
+      let nextFlavorMap: Record<string, string> = {};
+      let nextDiameterMap: Record<string, string> = {};
+      let nextShapeMap: Record<string, string> = {};
+
+      // Resolve id → name maps server-side so the public payload carries no raw ids.
+      if (foundOrder) {
+        const [flavors, diameters, shapes] = await Promise.all([
+          db.collection("flavors").find({}).toArray(),
+          db.collection("diameters").find({}).toArray(),
+          db.collection("shapes").find({}).toArray(),
+        ]);
+        nextFlavorMap = flavors.reduce((acc, f) => {
+          acc[String(f._id)] = f.name;
+          return acc;
+        }, {} as Record<string, string>);
+        nextDiameterMap = diameters.reduce((acc, d) => {
+          acc[String(d._id)] = d.name || `${d.sizeValue ?? ""}"`;
+          return acc;
+        }, {} as Record<string, string>);
+        nextShapeMap = shapes.reduce((acc, s) => {
+          acc[String(s._id)] = s.name;
+          return acc;
+        }, {} as Record<string, string>);
+      }
+
+      return {
+        order: foundOrder,
+        flavorMap: nextFlavorMap,
+        diameterMap: nextDiameterMap,
+        shapeMap: nextShapeMap,
+      };
     });
-    console.log(
-      `[/pay] Order query finished in ${Date.now() - tQuery}ms (found=${!!order})`
-    );
 
-    // Resolve id → name maps server-side so the public payload carries no raw ids.
-    if (order) {
-      const [flavors, diameters, shapes] = await Promise.all([
-        db.collection("flavors").find({}).toArray(),
-        db.collection("diameters").find({}).toArray(),
-        db.collection("shapes").find({}).toArray(),
-      ]);
-      flavorMap = flavors.reduce((acc, f) => {
-        acc[String(f._id)] = f.name;
-        return acc;
-      }, {} as Record<string, string>);
-      diameterMap = diameters.reduce((acc, d) => {
-        acc[String(d._id)] = d.name || `${d.sizeValue ?? ""}"`;
-        return acc;
-      }, {} as Record<string, string>);
-      shapeMap = shapes.reduce((acc, s) => {
-        acc[String(s._id)] = s.name;
-        return acc;
-      }, {} as Record<string, string>);
-    }
+    order = loaded.order;
+    flavorMap = loaded.flavorMap;
+    diameterMap = loaded.diameterMap;
+    shapeMap = loaded.shapeMap;
   } catch (err) {
     // (3) Log the REAL error (name/message/code/stack) BEFORE rendering the fallback UI,
     //     so the actual cause is visible in the Vercel / server logs.
@@ -333,12 +358,8 @@ export default async function PayPage({ params, searchParams }: PayPageProps) {
       dbName: process.env.MONGODB_DB_NAME ?? "(undefined)",
       stack: e?.stack,
     });
-    return (
-      <PayNotice
-        title="Payment Page Temporarily Unavailable"
-        message="We couldn't load your payment details right now. Please refresh the page in a moment, or contact us if the problem persists."
-      />
-    );
+    // Load failure only — payment UI was never shown, so no payment was attempted.
+    return <OrderLoadUnavailable />;
   }
 
   if (!order) {

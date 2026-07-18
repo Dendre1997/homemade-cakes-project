@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { ObjectId } from "mongodb";
-import clientPromise from "@/lib/db";
+import { withMongoClient } from "@/lib/db";
 import CustomOrderDetailClient from "@/components/admin/custom-orders/CustomOrderDetailClient";
 
 interface PageProps {
@@ -19,47 +19,54 @@ export default async function CustomOrderPage({ params }: PageProps) {
   }
 
   try {
-    const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB_NAME);
+    const loaded = await withMongoClient(async (client) => {
+      const db = client.db(process.env.MONGODB_DB_NAME);
 
-    // Fetch the Custom Order
-    const customOrder = await db
-      .collection("custom_orders")
-      .findOne({ _id: new ObjectId(id) });
+      // Fetch the Custom Order
+      const customOrder = await db
+        .collection("custom_orders")
+        .findOne({ _id: new ObjectId(id) });
 
-    if (!customOrder) {
+      if (!customOrder) {
+        return null;
+      }
+
+      // Serialize MongoDB objects (convert dates and IDs for Client Component)
+      const serializedOrder: any = {
+        ...customOrder,
+        _id: customOrder._id.toString(),
+        date: customOrder.date ? new Date(customOrder.date).toISOString() : undefined,
+        eventDate: customOrder.eventDate ? new Date(customOrder.eventDate).toISOString() : undefined,
+        createdAt: customOrder.createdAt ? new Date(customOrder.createdAt).toISOString() : undefined,
+        updatedAt: customOrder.updatedAt ? new Date(customOrder.updatedAt).toISOString() : undefined,
+      };
+
+      // Active shapes so the admin can view/edit the requested shape before converting.
+      const shapesRaw = await db
+        .collection("shapes")
+        .find({ isActive: { $ne: false } })
+        .sort({ isDefault: -1, name: 1 })
+        .toArray();
+      const shapes = shapesRaw.map((s: any) => ({
+        _id: s._id.toString(),
+        name: s.name,
+        priceSurcharge: s.priceSurcharge ?? 0,
+        isDefault: !!s.isDefault,
+        isActive: s.isActive !== false,
+        imageUrl: s.imageUrl,
+      }));
+
+      return { serializedOrder, shapes };
+    });
+
+    if (!loaded) {
       return notFound();
     }
 
-    // Serialize MongoDB objects (convert dates and IDs for Client Component)
-    const serializedOrder: any = {
-      ...customOrder,
-      _id: customOrder._id.toString(),
-      date: customOrder.date ? new Date(customOrder.date).toISOString() : undefined,
-      eventDate: customOrder.eventDate ? new Date(customOrder.eventDate).toISOString() : undefined,
-      createdAt: customOrder.createdAt ? new Date(customOrder.createdAt).toISOString() : undefined,
-      updatedAt: customOrder.updatedAt ? new Date(customOrder.updatedAt).toISOString() : undefined,
-    };
-
-    // Active shapes so the admin can view/edit the requested shape before converting.
-    const shapesRaw = await db
-      .collection("shapes")
-      .find({ isActive: { $ne: false } })
-      .sort({ isDefault: -1, name: 1 })
-      .toArray();
-    const shapes = shapesRaw.map((s: any) => ({
-      _id: s._id.toString(),
-      name: s.name,
-      priceSurcharge: s.priceSurcharge ?? 0,
-      isDefault: !!s.isDefault,
-      isActive: s.isActive !== false,
-      imageUrl: s.imageUrl,
-    }));
-
     return (
-      <CustomOrderDetailClient 
-        initialOrder={serializedOrder} 
-        shapes={shapes}
+      <CustomOrderDetailClient
+        initialOrder={loaded.serializedOrder}
+        shapes={loaded.shapes}
       />
     );
   } catch (error) {

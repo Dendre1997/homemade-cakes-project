@@ -1,4 +1,4 @@
-import clientPromise from "@/lib/db";
+import { withMongoClient } from "@/lib/db";
 import { MessageCircle } from "lucide-react";
 import { CustomOrder } from "@/types";
 import { CustomOrderCard } from "@/components/admin/custom-orders/CustomOrderCard";
@@ -25,36 +25,37 @@ export default async function CustomOrdersListPage() {
   let errorMsg: string | null = null;
 
   try {
-    const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB_NAME);
+    customOrders = await withMongoClient(async (client) => {
+      const db = client.db(process.env.MONGODB_DB_NAME);
 
-    const rawOrders = await db
-      .collection("custom_orders")
-      .find({})
-      .sort({ date: 1 }) // Upcoming first
-      .toArray();
+      const rawOrders = await db
+        .collection("custom_orders")
+        .find({})
+        .sort({ date: 1 }) // Upcoming first
+        .toArray();
 
-    customOrders = rawOrders.map((order) => {
-      return {
-        ...order,
-        _id: order._id.toString(),
-        // Legacy schema fallbacks to prevent undefined UI errors
-        contact: order.contact || {
-          name: order.customerName || "Legacy Customer",
-          email: order.customerEmail || "",
-          phone: order.customerPhone || ""
-        },
-        date: order.date || order.eventDate,
-        category: order.category || order.eventType || "Unknown",
-        details: order.details || {
-          size: order.servingSize || "",
-          flavor: order.flavorPreferences || "",
-          textOnCake: "",
-          designNotes: order.description || ""
-        },
-        referenceImages: order.referenceImages || order.referenceImageUrls || []
-      };
-    }) as unknown as CustomOrder[];
+      return rawOrders.map((order) => {
+        return {
+          ...order,
+          _id: order._id.toString(),
+          // Legacy schema fallbacks to prevent undefined UI errors
+          contact: order.contact || {
+            name: order.customerName || "Legacy Customer",
+            email: order.customerEmail || "",
+            phone: order.customerPhone || ""
+          },
+          date: order.date || order.eventDate,
+          category: order.category || order.eventType || "Unknown",
+          details: order.details || {
+            size: order.servingSize || "",
+            flavor: order.flavorPreferences || "",
+            textOnCake: "",
+            designNotes: order.description || ""
+          },
+          referenceImages: order.referenceImages || order.referenceImageUrls || []
+        };
+      }) as unknown as CustomOrder[];
+    });
 
     pendingOrders = customOrders.filter(o => o.status === 'pending_review' || !o.status);
     convertedOrders = customOrders.filter(o => o.status === 'converted');

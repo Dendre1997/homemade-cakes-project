@@ -1,7 +1,8 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { adminAuth } from "@/lib/firebase/adminApp";
-import clientPromise from "@/lib/db";
+import { withMongoClient } from "@/lib/db";
+import { MongoUnavailableError } from "@/lib/db/withMongoRetry";
 import { getUserOrders } from "@/lib/api/orders";
 import { Order, OrderStatus, IShape } from "@/types";
 import ClientOrderCard from "@/components/profile/ClientOrderCard";
@@ -13,6 +14,7 @@ import ProductCard from "@/components/(client)/ProductCard";
 import { ObjectId } from "mongodb";
 import ProfileGuard from "@/components/auth/ProfileGuard";
 import ClientRequestsTab from "@/components/profile/ClientRequestsTab";
+import DatabaseUnavailable from "@/components/ui/DatabaseUnavailable";
 
 export const dynamic = "force-dynamic";
 
@@ -36,17 +38,25 @@ export default async function ProfilePage() {
     const decodedToken = await adminAuth.verifySessionCookie(sessionCookie, true);
     userEmail = decodedToken.email || "";
 
-    const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB_NAME);
-    
-    // Convert Firebase UID to Mongo User ID
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    user = await db.collection("users").findOne({ firebaseUid: decodedToken.uid }) as any;
-    const diametersData = await db.collection("diameters").find().toArray();
-    diameters = JSON.parse(JSON.stringify(diametersData));
+    const profile = await withMongoClient(async (client) => {
+      const db = client.db(process.env.MONGODB_DB_NAME);
 
-    const shapesData = await db.collection("shapes").find({ isActive: { $ne: false } }).toArray();
-    shapes = JSON.parse(JSON.stringify(shapesData));
+      // Convert Firebase UID to Mongo User ID
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const foundUser = await db.collection("users").findOne({ firebaseUid: decodedToken.uid }) as any;
+      const diametersData = await db.collection("diameters").find().toArray();
+      const shapesData = await db.collection("shapes").find({ isActive: { $ne: false } }).toArray();
+
+      return {
+        user: foundUser,
+        diameters: JSON.parse(JSON.stringify(diametersData)),
+        shapes: JSON.parse(JSON.stringify(shapesData)) as IShape[],
+      };
+    });
+
+    user = profile.user;
+    diameters = profile.diameters;
+    shapes = profile.shapes;
 
     if (user) {
         userOrders = await getUserOrders(user._id.toString());
@@ -56,6 +66,10 @@ export default async function ProfilePage() {
     }
 
   } catch (error) {
+    if (error instanceof MongoUnavailableError) {
+      console.error("Profile Page database unavailable:", error);
+      return <DatabaseUnavailable />;
+    }
     console.error("Profile Page Auth Error:", error);
     redirect("/login");
   }
@@ -84,26 +98,25 @@ export default async function ProfilePage() {
 
   if (purchasedProductIds.length > 0) {
       try {
-          const client = await clientPromise;
-          const db = client.db(process.env.MONGODB_DB_NAME);
-          
-          const idsArray = purchasedProductIds.map((id: string) => new ObjectId(id));
-          const productsRaw = await db.collection("products").aggregate([
-              { $match: { _id: { $in: idsArray } } },
-              {
-                  $lookup: {
-                      from: "categories",
-                      localField: "categoryId",
-                      foreignField: "_id",
-                      as: "category"
-                  }
-              },
-              { $unwind: "$category" }
-          ]).toArray();
-          
-          // Serialize for Client Component (ProductCard)
-          pastProducts = JSON.parse(JSON.stringify(productsRaw));
+          pastProducts = await withMongoClient(async (client) => {
+            const db = client.db(process.env.MONGODB_DB_NAME);
+            const idsArray = purchasedProductIds.map((id: string) => new ObjectId(id));
+            const productsRaw = await db.collection("products").aggregate([
+                { $match: { _id: { $in: idsArray } } },
+                {
+                    $lookup: {
+                        from: "categories",
+                        localField: "categoryId",
+                        foreignField: "_id",
+                        as: "category"
+                    }
+                },
+                { $unwind: "$category" }
+            ]).toArray();
 
+            // Serialize for Client Component (ProductCard)
+            return JSON.parse(JSON.stringify(productsRaw));
+          });
       } catch (err) {
           console.error("Error fetching history products:", err);
       }
@@ -115,20 +128,20 @@ export default async function ProfilePage() {
                 if (item.productId) productIds.add(item.productId);
             });
         });
-      
+
       if (productIds.size > 0) {
         try {
-            const client = await clientPromise;
-            const db = client.db(process.env.MONGODB_DB_NAME);
-            const idsArray = Array.from(productIds).map(id => new ObjectId(id));
-            const productsRaw = await db.collection("products").aggregate([
-                { $match: { _id: { $in: idsArray } } },
-                { $lookup: { from: "categories", localField: "categoryId", foreignField: "_id", as: "category" } },
-                { $unwind: "$category" }
-            ]).toArray();
-            
-            pastProducts = JSON.parse(JSON.stringify(productsRaw));
-            
+            pastProducts = await withMongoClient(async (client) => {
+              const db = client.db(process.env.MONGODB_DB_NAME);
+              const idsArray = Array.from(productIds).map(id => new ObjectId(id));
+              const productsRaw = await db.collection("products").aggregate([
+                  { $match: { _id: { $in: idsArray } } },
+                  { $lookup: { from: "categories", localField: "categoryId", foreignField: "_id", as: "category" } },
+                  { $unwind: "$category" }
+              ]).toArray();
+
+              return JSON.parse(JSON.stringify(productsRaw));
+            });
         } catch(err) { console.error("Error fetching fallback history:", err); }
       }
   }

@@ -1,4 +1,4 @@
-import clientPromise from "@/lib/db";
+import { withMongoClient } from "@/lib/db";
 import { Order, OrderStatus } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -25,88 +25,89 @@ export const revalidate = 0;
 
 async function getDashboardData() {
   try {
-    const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB_NAME);
-    const collection = db.collection<Order>("orders");
+    return await withMongoClient(async (client) => {
+      const db = client.db(process.env.MONGODB_DB_NAME);
+      const collection = db.collection<Order>("orders");
 
-    const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const now = new Date();
+      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-    const revenueOrders = await collection.find({
-      createdAt: { $gte: startOfToday },
-      status: { $ne: OrderStatus.CANCELLED }
-    }).toArray();
+      const revenueOrders = await collection.find({
+        createdAt: { $gte: startOfToday },
+        status: { $ne: OrderStatus.CANCELLED }
+      }).toArray();
 
-    const revenueToday = revenueOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+      const revenueToday = revenueOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
 
-    const pendingConfirmationOrders = await collection.find({
-      status: OrderStatus.PENDING_CONFIRMATION
-    })
-    .sort({ createdAt: 1 }) 
-    .toArray();
+      const pendingConfirmationOrders = await collection.find({
+        status: OrderStatus.PENDING_CONFIRMATION
+      })
+      .sort({ createdAt: 1 })
+      .toArray();
 
-    const inboxOrdersRaw = await collection.find({
-       status: { $in: [OrderStatus.NEW, OrderStatus.PAID] }
-    })
-    .sort({ createdAt: 1 })
-    .toArray();
-    
-    const inboxOrders = inboxOrdersRaw.map(order => ({
-        ...order,
-        _id: order._id.toString(),
-        deliveryInfo: {
-            ...order.deliveryInfo,
-            deliveryDates: order.deliveryInfo.deliveryDates.map(d => ({
-                ...d,
-                date: new Date(d.date)
-            }))
-        }
-    }));
+      const inboxOrdersRaw = await collection.find({
+         status: { $in: [OrderStatus.NEW, OrderStatus.PAID] }
+      })
+      .sort({ createdAt: 1 })
+      .toArray();
 
-    const nextDeliveries = await collection.find({
-      "deliveryInfo.deliveryDates.date": { $gte: startOfToday },
-      status: { $in: [OrderStatus.NEW, OrderStatus.PAID, OrderStatus.IN_PROGRESS, OrderStatus.READY] }
-    })
-    .sort({ "deliveryInfo.deliveryDates.date": 1 })
-    .limit(5)
-    .toArray();
-
-    const productionQueue = nextDeliveries.map(order => {
-       const sortedDates = order.deliveryInfo.deliveryDates
-          .map(d => ({ ...d, dateObj: new Date(d.date) }))
-          .sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime());
-       
-       const upcoming = sortedDates.filter(d => d.dateObj >= startOfToday);
-       const past = sortedDates.filter(d => d.dateObj < startOfToday);
-       
-       const reorderedDates = [...upcoming, ...past].map(d => ({
-           ...d,
-           date: d.dateObj
-       }));
-       
-       return {
+      const inboxOrders = inboxOrdersRaw.map(order => ({
           ...order,
           _id: order._id.toString(),
           deliveryInfo: {
               ...order.deliveryInfo,
-              deliveryDates: reorderedDates
+              deliveryDates: order.deliveryInfo.deliveryDates.map(d => ({
+                  ...d,
+                  date: new Date(d.date)
+              }))
           }
-       };
+      }));
+
+      const nextDeliveries = await collection.find({
+        "deliveryInfo.deliveryDates.date": { $gte: startOfToday },
+        status: { $in: [OrderStatus.NEW, OrderStatus.PAID, OrderStatus.IN_PROGRESS, OrderStatus.READY] }
+      })
+      .sort({ "deliveryInfo.deliveryDates.date": 1 })
+      .limit(5)
+      .toArray();
+
+      const productionQueue = nextDeliveries.map(order => {
+         const sortedDates = order.deliveryInfo.deliveryDates
+            .map(d => ({ ...d, dateObj: new Date(d.date) }))
+            .sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime());
+
+         const upcoming = sortedDates.filter(d => d.dateObj >= startOfToday);
+         const past = sortedDates.filter(d => d.dateObj < startOfToday);
+
+         const reorderedDates = [...upcoming, ...past].map(d => ({
+             ...d,
+             date: d.dateObj
+         }));
+
+         return {
+            ...order,
+            _id: order._id.toString(),
+            deliveryInfo: {
+                ...order.deliveryInfo,
+                deliveryDates: reorderedDates
+            }
+         };
+      });
+
+      const flavors = await db.collection("flavors").find({}).toArray();
+      const flavorMap: Record<string, string> = {};
+      flavors.forEach(f => flavorMap[f._id.toString()] = f.name);
+
+      return {
+        revenueToday,
+        ordersCountToday: revenueOrders.length,
+        pendingConfirmationOrders: JSON.parse(JSON.stringify(pendingConfirmationOrders)),
+        inboxOrders: JSON.parse(JSON.stringify(inboxOrders)),
+        productionQueue: JSON.parse(JSON.stringify(productionQueue)),
+        flavorMap,
+        errorMsg: null
+      };
     });
-
-    const flavors = await db.collection("flavors").find({}).toArray();
-    const flavorMap: Record<string, string> = {};
-    flavors.forEach(f => flavorMap[f._id.toString()] = f.name);
-
-    return {
-      revenueToday,
-      ordersCountToday: revenueOrders.length,
-      pendingConfirmationOrders: JSON.parse(JSON.stringify(pendingConfirmationOrders)),
-      inboxOrders: JSON.parse(JSON.stringify(inboxOrders)),
-      productionQueue: JSON.parse(JSON.stringify(productionQueue)),
-      flavorMap,
-      errorMsg: null
-    };
   } catch (error) {
     console.error("Dashboard database fetch failed:", error);
     return {
