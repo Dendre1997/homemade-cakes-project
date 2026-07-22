@@ -33,12 +33,13 @@ export async function calculateOrderPricing(
   const productMap = new Map(dbProducts.map((p) => [p._id.toString(), p]));
 
   // 2. Fetch Fresh Flavor Data (Required for price reconstruction)
-  const flavorIds = items
-    .map((i) => {
-      const parsed = parseCartItemId(i.id);
-      return parsed.flavorId || null;
-    })
-    .filter(Boolean);
+  const flavorIds = items.flatMap((i) => {
+    if (i.tiers?.length) {
+      return i.tiers.map((t) => t.flavorId);
+    }
+    const parsed = parseCartItemId(i.id);
+    return parsed.flavorIds.length > 0 ? parsed.flavorIds : parsed.flavorId ? [parsed.flavorId] : [];
+  }).filter(Boolean);
 
   const allFlavorIds = dbProducts.flatMap((p) => p.availableFlavorIds || []);
   const dbFlavors = await db
@@ -207,12 +208,17 @@ export async function calculateOrderPricing(
 
     } else {
         // --- SCENARIO B: STANDARD CAKE ---
-        const { flavorId, diameterId, shapeId: parsedShapeId } = parseCartItemId(item.id);
+        const { flavorIds, diameterId, shapeId: parsedShapeId } = parseCartItemId(item.id);
         const resolvedShapeId = item.shapeId || parsedShapeId;
 
-        // A. Flavor Price
-        const dbFlavor = flavorMap.get(flavorId);
-        const flavorPrice = dbFlavor ? dbFlavor.price : 0;
+        // A. Flavor Price (sum all tier flavor upcharges)
+        const idsForPricing =
+          item.tiers?.map((t) => t.flavorId) ??
+          (flavorIds.length > 0 ? flavorIds : []);
+        const flavorPrice = idsForPricing.reduce((sum, id) => {
+          const dbFlavor = flavorMap.get(id);
+          return sum + (dbFlavor ? dbFlavor.price : 0);
+        }, 0);
 
         // B. Inscription Price
         const inscriptionPrice =

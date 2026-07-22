@@ -3,6 +3,7 @@ import { Info, Sparkles, DollarSign, MapPin } from "lucide-react";
 import { format } from "date-fns";
 import HeaderLogo from "@/components/ui/HeaderLogo";
 import { SocialHandleAnchor } from "@/components/ui/SocialHandleAnchor";
+import { OrderItemTiersDisplay } from "@/components/shared/OrderItemTiersDisplay";
 import { socialPlatformLabel } from "@/lib/socialLinks";
 import { Button } from "@/components/ui/Button"
 
@@ -267,14 +268,19 @@ export default function Step6Success({ orderData, customOrderId, onMakeAnotherRe
                   </span>
                 </div>
               )}
-              {orderData.details?.flavor && (
+              {(orderData.details?.tiers?.length || orderData.details?.flavor) && (
                 <div className="flex gap-2">
                   <span className="text-primary/40 w-20 shrink-0 font-semibold">
                     Flavor:
                   </span>
-                  <span className="text-primary/80 font-medium break-words min-w-0 flex-1">
-                    {orderData.details.flavor}
-                  </span>
+                  <div className="text-primary/80 font-medium break-words min-w-0 flex-1">
+                    <OrderItemTiersDisplay
+                      tiers={orderData.details?.tiers}
+                      flavor={orderData.details?.flavor}
+                      variant="compact"
+                      className="text-primary/80"
+                    />
+                  </div>
                 </div>
               )}
               {orderData.details?.flavorNote && orderData.details.flavorNote !== "No" && (

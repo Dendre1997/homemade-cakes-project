@@ -16,6 +16,8 @@ import {
 import { Order, CartItem } from "@/types";
 import { format } from "date-fns";
 import { SENDER_EMAIL } from "@/lib/email";
+import { EmailOrderItemFlavor } from "@/emails/EmailOrderItemFlavor";
+import { hasTierSelections } from "@/lib/orderItemDisplay";
 
 export interface OrderConfirmationEmailProps {
   order: Order;
@@ -246,16 +248,27 @@ export const OrderConfirmationEmail = ({
                           </Column>
                         </Row>
 
-                        {(displaySize || displayShape || displayFlavor) && (
+                        {(displaySize || displayShape || displayFlavor || hasTierSelections(item)) && (
                           <Text style={styles.itemMeta}>
                             {[
                               displaySize && `Size: ${displaySize}`,
                               displayShape && `Shape: ${displayShape}`,
-                              displayFlavor && `Flavor: ${displayFlavor}`,
+                              !hasTierSelections(item) &&
+                                displayFlavor &&
+                                `Flavor: ${displayFlavor}`,
                             ]
                               .filter(Boolean)
                               .join("  ·  ")}
                           </Text>
+                        )}
+
+                        {hasTierSelections(item) && (
+                          <EmailOrderItemFlavor
+                            item={item}
+                            getFlavorName={getFlavorName}
+                            labelStyle={{ color: C.primary60, margin: "4px 0 0" }}
+                            flavorStyle={{ color: C.primary60 }}
+                          />
                         )}
 
                         {item.flavorNote && item.flavorNote !== "No" && (

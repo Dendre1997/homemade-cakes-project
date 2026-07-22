@@ -8,23 +8,51 @@ export function isObjectIdString(id: string): boolean {
 
 export interface ParsedCartItemId {
   productId: string;
+  /** First flavor id (backward compatibility for single-tier / legacy). */
   flavorId: string;
+  /** All flavor ids — multiple entries when multi-tier (comma-separated in cart id). */
+  flavorIds: string[];
   diameterId: string;
   /** Resolved shape ObjectId, or empty when legacy / placeholder */
   shapeId: string;
   inscription: string;
 }
 
+/** Parse the flavor segment of a composite cart id into ordered flavor ObjectIds. */
+export function parseFlavorIdsFromSegment(flavorSegment: string): string[] {
+  if (!flavorSegment) return [];
+  return flavorSegment
+    .split(",")
+    .map((id) => id.trim())
+    .filter((id) => id.length > 0);
+}
+
 /** Build a composite cart line ID (standard cakes). */
 export function buildCartItemId(params: {
   productId: string;
-  flavorId: string;
+  /** Single-tier flavor (legacy). Ignored when tierFlavorIds is provided. */
+  flavorId?: string;
+  /** Ordered flavor ids per tier (multi-tier). */
+  tierFlavorIds?: string[];
   diameterId: string;
   shapeId?: string;
   inscription?: string;
 }): string {
-  const { productId, flavorId, diameterId, shapeId, inscription = "" } = params;
-  return `${productId}-${flavorId}-${diameterId}-${shapeId || "default"}-${inscription}`;
+  const {
+    productId,
+    flavorId,
+    tierFlavorIds,
+    diameterId,
+    shapeId,
+    inscription = "",
+  } = params;
+
+  const flavorSegment =
+    tierFlavorIds && tierFlavorIds.length > 0
+      ? tierFlavorIds.join(",")
+      : (flavorId ?? "");
+
+  return `${productId}-${flavorSegment}-${diameterId}-${shapeId || "default"}-${inscription}`;
 }
 
 /**
@@ -32,11 +60,14 @@ export function buildCartItemId(params: {
  *
  * Legacy:  productId-flavorId-diameterId-inscription
  * Current: productId-flavorId-diameterId-shapeId|default-inscription
+ * Multi-tier: productId-flavA,flavB-diameterId-shapeId|default-inscription
  */
 export function parseCartItemId(id: string): ParsedCartItemId {
   const parts = id.split("-");
   const productId = parts[0] ?? "";
-  const flavorId = parts[1] ?? "";
+  const flavorSegment = parts[1] ?? "";
+  const flavorIds = parseFlavorIdsFromSegment(flavorSegment);
+  const flavorId = flavorIds[0] ?? flavorSegment;
   const diameterId = parts[2] ?? "";
   const fourth = parts[3];
 
@@ -44,6 +75,7 @@ export function parseCartItemId(id: string): ParsedCartItemId {
     return {
       productId,
       flavorId,
+      flavorIds,
       diameterId,
       shapeId: fourth === "default" ? "" : fourth,
       inscription: parts.slice(4).join("-"),
@@ -53,6 +85,7 @@ export function parseCartItemId(id: string): ParsedCartItemId {
   return {
     productId,
     flavorId,
+    flavorIds,
     diameterId,
     shapeId: "",
     inscription: parts.slice(3).join("-"),

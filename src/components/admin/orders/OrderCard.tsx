@@ -15,6 +15,7 @@ import {
   Layers,
   AlertTriangle,
 } from "lucide-react";
+import { OrderItemTiersDisplay } from "@/components/shared/OrderItemTiersDisplay";
 import Image from "next/image";
 import {
   Select,
@@ -197,6 +198,33 @@ export const OrderCard = ({
     }
 
     const flavorDisplay = resolveCakeFlavor(item);
+
+    if (item.tiers?.length) {
+      return (
+        <>
+          <OrderItemTiersDisplay
+            tiers={item.tiers}
+            flavor={item.flavor}
+            variant="compact"
+            className="text-xs leading-tight"
+            resolveFlavorName={resolveFlavorName}
+          />
+          {!item.selectedConfig?.cake?.inscription && item.inscription && (
+            <div className="flex items-start gap-2 p-1.5 bg-white/50 rounded border border-[#764a4d]/10">
+              <ScrollText className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+              <span className="text-[11px] italic text-[#231416] leading-tight">
+                &ldquo;{item.inscription}&rdquo;
+              </span>
+            </div>
+          )}
+          {item.flavorNote && item.flavorNote !== "No" && (
+            <p className="text-[11px] text-gray-500 pl-5 leading-snug">
+              Note: {item.flavorNote}
+            </p>
+          )}
+        </>
+      );
+    }
 
     return (
       <>

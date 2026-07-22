@@ -716,7 +716,7 @@ export default function PrintOrderPage() {
                         <div className="spec-value">{shapeLabel}</div>
                       </div>
                     )}
-                    {!isSimpleSet && (
+                    {!isSimpleSet && !item.tiers?.length && (
                       <div className="spec-item">
                         <div className="spec-label">{isComboSet ? "Bento Flavor" : "Flavour"}</div>
                         <div
@@ -724,6 +724,18 @@ export default function PrintOrderPage() {
                         >
                           {primaryFlavor}
                         </div>
+                      </div>
+                    )}
+                    {item.tiers && item.tiers.length > 0 && (
+                      <div className="spec-item" style={{ gridColumn: "1 / -1" }}>
+                        <div className="spec-label">Tier Flavors</div>
+                        <ul style={{ margin: "6px 0 0", paddingLeft: 18, listStyle: "disc" }}>
+                          {item.tiers.map((tier) => (
+                            <li key={tier.tierIndex} className="spec-value" style={{ marginBottom: 4 }}>
+                              <strong>{tier.sizeLabel}</strong> — {tier.flavorName || getFlavorName(tier.flavorId)}
+                            </li>
+                          ))}
+                        </ul>
                       </div>
                     )}
                     <div className="spec-item">

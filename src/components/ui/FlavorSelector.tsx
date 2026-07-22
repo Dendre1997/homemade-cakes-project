@@ -4,6 +4,7 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { Check } from "lucide-react";
 import { Flavor } from "@/types";
+import { useEffect, useRef } from "react";
 
 type MultiSelectProps = {
   mode: "multiple";
@@ -22,33 +23,68 @@ type FlavorSelectorProps = {
   flavors: Flavor[];
   className?: string;
   hidePrice?: boolean;
+  hideHeading?: boolean;
+  /** Scroll the selected flavor card into view once on mount (when a saved selection exists) */
+  autoScrollToSelected?: boolean;
   onInfoClick?: (id: string) => void;
 } & (MultiSelectProps | SingleSelectProps);
 
 const FlavorSelector = (props: FlavorSelectorProps) => {
-  const { flavors, className } = props;
+  const {
+    flavors,
+    className,
+    autoScrollToSelected = true,
+  } = props;
+
+  const itemRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+  const hasScrolledRef = useRef(false);
+
+  useEffect(() => {
+    if (!autoScrollToSelected || hasScrolledRef.current) return;
+
+    const selectedId =
+      props.mode === "single" ? props.selectedId : props.selectedIds[0];
+    if (!selectedId || flavors.length === 0) return;
+
+    const frame = requestAnimationFrame(() => {
+      if (hasScrolledRef.current) return;
+      const el = itemRefs.current.get(String(selectedId));
+      if (!el) return;
+      el.scrollIntoView({ block: "nearest", behavior: "auto" });
+      hasScrolledRef.current = true;
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [autoScrollToSelected, flavors.length, props.mode]);
 
   return (
-    <div className={cn("space-y-sm", className)}>
-      <div className="flex items-center justify-between px-md pb-sm">
-        <h3 className="font-heading text-h3 text-primary">
-          {props.mode === "multiple"
-            ? "Available Flavors"
-            : "Choose your Flavor"}
-        </h3>
-        {props.mode === "multiple" && props.maxSelection && (
-             <span className="text-sm font-medium text-primary/70">
-                 Selected: {props.selectedIds.length} / {props.maxSelection}
-             </span>
-        )}
-      </div>
+    <div className={cn("w-full space-y-sm", className)}>
+      {!props.hideHeading && (
+        <div className="flex items-center justify-between px-md pb-sm">
+          <h3 className="font-heading text-h3 text-primary">
+            {props.mode === "multiple"
+              ? "Available Flavors"
+              : "Choose your Flavor"}
+          </h3>
+          {props.mode === "multiple" && props.maxSelection && (
+               <span className="text-sm font-medium text-primary/70">
+                   Selected: {props.selectedIds.length} / {props.maxSelection}
+               </span>
+          )}
+        </div>
+      )}
 
-      <div className="space-y-xs max-h-96 overflow-y-auto rounded-medium  p-sm custom-scrollbar">
+      <div
+        role="listbox"
+        aria-label="Flavor options"
+        className="w-full space-y-xs max-h-96 overflow-y-auto rounded-medium p-sm custom-scrollbar"
+      >
         {flavors.map((flavor) => {
+          const flavorId = String(flavor._id);
           const isSelected =
             props.mode === "multiple"
-              ? props.selectedIds.includes(flavor._id)
-              : props.selectedId === flavor._id;
+              ? props.selectedIds.some((id) => String(id) === flavorId)
+              : String(props.selectedId) === flavorId;
 
           const isDisabled = 
                props.mode === "multiple" && 
@@ -61,7 +97,7 @@ const FlavorSelector = (props: FlavorSelectorProps) => {
                  // Prevent adding if max reached and not already selected
                 if (props.maxSelection && 
                     props.selectedIds.length >= props.maxSelection && 
-                    !props.selectedIds.includes(flavor._id)) {
+                    !props.selectedIds.some((id) => String(id) === flavorId)) {
                     return;
                 }
                props.onToggleId(flavor._id);
@@ -72,8 +108,18 @@ const FlavorSelector = (props: FlavorSelectorProps) => {
 
           return (
             <button
-              key={flavor._id}
+              key={flavorId}
+              ref={(node) => {
+                if (node) {
+                  itemRefs.current.set(flavorId, node);
+                } else {
+                  itemRefs.current.delete(flavorId);
+                }
+              }}
               type="button"
+              data-flavor-id={flavorId}
+              role="option"
+              aria-selected={isSelected}
               onClick={handleClick}
               disabled={!!isDisabled}
               className={cn(

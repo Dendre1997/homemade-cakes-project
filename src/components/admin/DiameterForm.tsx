@@ -9,6 +9,7 @@ import {
   appendCloudinaryUploadPreset,
   cloudinaryUploadUrl,
 } from "@/lib/cloudinaryClient";
+import { cn } from "@/lib/utils";
 
 
 // ---Icon Components ---
@@ -25,6 +26,29 @@ const availableIcons = [
   { name: "SevenInchCakeIcon", size: 7, component: SevenInchCakeIcon },
   { name: "EightInchCakeIcon", size: 8, component: EightInchCakeIcon },
 ].sort((a, b) => a.size - b.size);
+
+const TIER_COUNT_OPTIONS = [1, 2, 3, 4, 5] as const;
+
+function getTierSizeLabel(index: number, total: number): string {
+  if (total === 1) return "Tier Size";
+  if (index === 0) return "Tier 1 (Top) Size";
+  if (index === total - 1) return `Tier ${index + 1} (Bottom) Size`;
+  return `Tier ${index + 1} Size`;
+}
+
+/** Extract the first integer from a tier size label; returns 0 if none found. */
+function extractFirstInteger(value: string): number {
+  const match = value.match(/\d+/);
+  return match ? parseInt(match[0], 10) : 0;
+}
+
+/** Sum of extracted integers across all tier size labels (Approach 1). */
+function sumTierSizeValues(tierSizes: string[] | undefined): number {
+  return (tierSizes ?? []).reduce(
+    (sum, label) => sum + extractFirstInteger(label),
+    0
+  );
+}
 
 const FormLabel = ({
   htmlFor,
@@ -64,6 +88,8 @@ const DiameterForm = ({
     categoryIds: [],
     shapeIds: [],
     basePrice: undefined,
+    tiersCount: 1,
+    tierSizes: undefined,
   });
 
   const [shapes, setShapes] = useState<IShape[]>([]);
@@ -100,6 +126,7 @@ const DiameterForm = ({
 
   useEffect(() => {
     if (existingDiameter) {
+      const tiersCount = existingDiameter.tiersCount ?? 1;
       setFormData({
         name: existingDiameter.name || "",
         sizeValue: existingDiameter.sizeValue || 0,
@@ -109,6 +136,13 @@ const DiameterForm = ({
         categoryIds: existingDiameter.categoryIds || [],
         shapeIds: existingDiameter.shapeIds || [],
         basePrice: existingDiameter.basePrice,
+        tiersCount,
+        tierSizes:
+          tiersCount > 1
+            ? existingDiameter.tierSizes?.length === tiersCount
+              ? [...existingDiameter.tierSizes]
+              : Array.from({ length: tiersCount }, () => "")
+            : undefined,
       });
     } else if (!isSubmitting) {
       setFormData({
@@ -120,9 +154,22 @@ const DiameterForm = ({
         categoryIds: [],
         shapeIds: [],
         basePrice: undefined,
+        tiersCount: 1,
+        tierSizes: undefined,
       });
     }
   }, [existingDiameter, isSubmitting]);
+
+  // Auto-calculate sizeValue as sum of tier diameters when multi-tier
+  useEffect(() => {
+    const count = formData.tiersCount ?? 1;
+    if (count <= 1) return;
+
+    const sum = sumTierSizeValues(formData.tierSizes);
+    if (formData.sizeValue !== sum) {
+      setFormData((prev) => ({ ...prev, sizeValue: sum }));
+    }
+  }, [formData.tiersCount, formData.tierSizes, formData.sizeValue]);
 
   useEffect(() => {
     const numericSize = formData.sizeValue;
@@ -176,6 +223,28 @@ const DiameterForm = ({
           ? currentShapeIds.filter((id) => id !== shapeId)
           : [...currentShapeIds, shapeId],
       };
+    });
+  };
+
+  const handleTiersCountChange = (count: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      tiersCount: count,
+      tierSizes:
+        count > 1
+          ? Array.from({ length: count }, (_, index) => prev.tierSizes?.[index] ?? "")
+          : undefined,
+    }));
+  };
+
+  const handleTierSizeChange = (index: number, value: string) => {
+    setFormData((prev) => {
+      const count = prev.tiersCount ?? 1;
+      const nextSizes = Array.from(
+        { length: count },
+        (_, i) => (i === index ? value : prev.tierSizes?.[i] ?? "")
+      );
+      return { ...prev, tierSizes: nextSizes };
     });
   };
 
@@ -235,8 +304,21 @@ const DiameterForm = ({
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setOrphanedImageUrl(null);
-    onSubmit(formData);
+
+    const tiersCount = formData.tiersCount ?? 1;
+    const payload: DiameterFormData = {
+      ...formData,
+      tiersCount,
+      tierSizes:
+        tiersCount > 1
+          ? (formData.tierSizes ?? []).map((size) => size.trim())
+          : undefined,
+    };
+
+    onSubmit(payload);
   };
+
+  const tiersCount = formData.tiersCount ?? 1;
 
   const SelectedIcon = availableIcons.find(
     (icon) => icon.name === formData.illustration
@@ -275,6 +357,8 @@ const DiameterForm = ({
             placeholder="0"
             required
             step="0.5"
+            readOnly={tiersCount > 1}
+            className={cn(tiersCount > 1 && "bg-muted/50 cursor-not-allowed")}
           />
           {SelectedIcon && (
             <div className="h-10 w-10 p-2 border border-border rounded-medium shrink-0">
@@ -282,6 +366,11 @@ const DiameterForm = ({
             </div>
           )}
         </div>
+        {tiersCount > 1 && (
+          <p className="text-xs text-primary/60 mt-1">
+            Auto-calculated sum of tier sizes.
+          </p>
+        )}
       </div>
 
       <div>
@@ -319,6 +408,58 @@ const DiameterForm = ({
           If set, this price will be used directly in the custom order form instead of calculating from category base price.
         </p>
       </div>
+
+      <div className="space-y-sm">
+        <FormLabel htmlFor="tiersCount">Number of Tiers</FormLabel>
+        <div
+          className="flex flex-wrap gap-sm"
+          role="group"
+          aria-label="Number of tiers"
+        >
+          {TIER_COUNT_OPTIONS.map((count) => (
+            <button
+              key={count}
+              type="button"
+              onClick={() => handleTiersCountChange(count)}
+              className={cn(
+                "min-w-[2.75rem] px-md py-sm rounded-medium border font-body text-small transition-colors",
+                tiersCount === count
+                  ? "bg-primary text-white border-primary"
+                  : "bg-card-background text-primary border-border hover:border-primary/40"
+              )}
+            >
+              {count}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-primary/60">
+          Single-tier diameters behave exactly as before. Multi-tier diameters
+          require a size label for each tier.
+        </p>
+      </div>
+
+      {tiersCount > 1 && (
+        <div className="space-y-sm">
+          <h3 className="font-body text-body font-bold text-primary">
+            Tier Sizes
+          </h3>
+          {Array.from({ length: tiersCount }, (_, index) => (
+            <div key={index}>
+              <FormLabel htmlFor={`tierSize-${index}`}>
+                {getTierSizeLabel(index, tiersCount)}
+              </FormLabel>
+              <Input
+                type="text"
+                id={`tierSize-${index}`}
+                value={formData.tierSizes?.[index] ?? ""}
+                onChange={(e) => handleTierSizeChange(index, e.target.value)}
+                placeholder='e.g. 6 inch'
+                required
+              />
+            </div>
+          ))}
+        </div>
+      )}
 
       <div>
         <FormLabel htmlFor="image">Diameter Image (Optional)</FormLabel>

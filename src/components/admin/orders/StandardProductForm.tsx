@@ -9,6 +9,14 @@ import { Plus } from "lucide-react";
 import { useAlert } from "@/contexts/AlertContext";
 import { AddonAdminSelector } from "@/components/admin/addons/AddonAdminSelector";
 import { SelectedAddon } from "@/types";
+import { AdminTierFlavorEditor } from "@/components/admin/shared/AdminTierFlavorEditor";
+import {
+  allTierFlavorsSelected,
+  buildTierSelections,
+  compileCatalogFlavorLabel,
+  getTierSizeLabels,
+  sumFlavorUpcharges,
+} from "@/lib/tierSelections";
 
 interface StandardProductFormProps {
   product: ProductWithCategory;
@@ -31,6 +39,7 @@ export const StandardProductForm = ({
   
   // --- Local State ---
   const [selectedFlavorId, setSelectedFlavorId] = useState("");
+  const [tierFlavorIds, setTierFlavorIds] = useState<Record<number, string>>({});
   const [selectedDiameterId, setSelectedDiameterId] = useState("");
   const [selectedShapeId, setSelectedShapeId] = useState("");
   const [qty, setQty] = useState(1);
@@ -48,7 +57,27 @@ export const StandardProductForm = ({
      ? product.availableDiameters
      : allDiameters.filter(d => product.availableDiameterConfigs?.some(c => c.diameterId === d._id));
 
-  // Shapes linked to the currently selected diameter (fallback to all active shapes)
+  const selectedDiameter = useMemo(
+    () =>
+      allDiameters.find((d) => d._id === selectedDiameterId) ||
+      availableDiameters.find((d) => d._id === selectedDiameterId),
+    [allDiameters, availableDiameters, selectedDiameterId]
+  );
+
+  const tiersCount = selectedDiameter?.tiersCount ?? 1;
+  const isMultiTier = tiersCount > 1;
+  const tierSizes = useMemo(
+    () => getTierSizeLabels(selectedDiameter),
+    [selectedDiameter]
+  );
+
+  // Reset tier flavors when diameter changes
+  useEffect(() => {
+    setTierFlavorIds({});
+    if (!isMultiTier) {
+      setSelectedFlavorId("");
+    }
+  }, [selectedDiameterId]); // eslint-disable-line react-hooks/exhaustive-deps
   const availableShapes = useMemo(() => {
       if (!selectedDiameterId) return [];
       const diam = allDiameters.find(d => d._id === selectedDiameterId)
@@ -82,24 +111,49 @@ export const StandardProductForm = ({
           return;
       }
 
+      if (isMultiTier && !allTierFlavorsSelected(tiersCount, tierFlavorIds)) {
+          showAlert("Please select a flavor for each tier.", "warning");
+          return;
+      }
+
+      if (!isMultiTier && !selectedFlavorId && availableFlavors.length > 0) {
+          showAlert("Please select a flavor.", "warning");
+          return;
+      }
+
+      const tierUpcharge = isMultiTier
+        ? sumFlavorUpcharges(Object.values(tierFlavorIds), availableFlavors)
+        : 0;
+
       // Unit Price Calculation
       const unitPrice = priceOverride 
          ? parseFloat(priceOverride)
          : calculateUnitPrice({
             product,
-            flavorId: selectedFlavorId,
+            flavorId: isMultiTier ? undefined : selectedFlavorId,
             diameterId: selectedDiameterId,
             quantity: qty,
             availableFlavors: availableFlavors,
             inscriptionAvailable: product.inscriptionSettings?.isAvailable,
             inscriptionPrice: product.inscriptionSettings?.price,
             hasInscription: !!(inscription && product.inscriptionSettings?.isAvailable)
-         });
+         }) + (isMultiTier ? tierUpcharge : 0);
 
       const AddonsTotal = selectedAddons.reduce((sum, d) => sum + d.price, 0);
-      const finalUnitPrice = priceOverride ? unitPrice : unitPrice + AddonsTotal + selectedShapeSurcharge;
+      const finalUnitPrice = priceOverride ? unitPrice : unitPrice + AddonsTotal + (isMultiTier ? 0 : selectedShapeSurcharge);
 
-      const flavName = availableFlavors.find(f => f._id === selectedFlavorId)?.name || "Standard";
+      let flavName = availableFlavors.find(f => f._id === selectedFlavorId)?.name || "Standard";
+      let tiers = undefined;
+
+      if (isMultiTier) {
+        tiers = buildTierSelections(
+          tiersCount,
+          tierSizes,
+          tierFlavorIds,
+          availableFlavors
+        );
+        flavName = compileCatalogFlavorLabel(tiers, tiersCount);
+      }
 
       // Construct Payload
       const newItem = {
@@ -108,9 +162,10 @@ export const StandardProductForm = ({
           productName: product.name,
           categoryId: product.categoryId,
           diameterId: selectedDiameterId,
-          shapeId: selectedShapeId || undefined,
+          shapeId: isMultiTier ? undefined : selectedShapeId || undefined,
           name: product.name,
           flavor: flavName,
+          tiers,
           flavorNote: flavorNote,
           price: finalUnitPrice,
           quantity: qty,
@@ -118,7 +173,6 @@ export const StandardProductForm = ({
           inscription: inscription,
           isCustom: false,
           addons: selectedAddons,
-          // Explicit nulls for strict typing
           selectedConfig: null
       };
 
@@ -131,8 +185,21 @@ export const StandardProductForm = ({
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
              {/* Flavor */}
-             <div>
-                <label className="block text-sm font-medium mb-1">Flavor</label>
+             <div className={isMultiTier ? "md:col-span-2" : ""}>
+                <label className="block text-sm font-medium mb-1">
+                  {isMultiTier ? "Tier Flavors" : "Flavor"}
+                </label>
+                {isMultiTier ? (
+                  <AdminTierFlavorEditor
+                    tiersCount={tiersCount}
+                    tierSizes={tierSizes}
+                    tierFlavors={tierFlavorIds}
+                    flavors={availableFlavors}
+                    onTierFlavorChange={(index, id) =>
+                      setTierFlavorIds((prev) => ({ ...prev, [index]: id }))
+                    }
+                  />
+                ) : (
                 <Select value={selectedFlavorId} onValueChange={setSelectedFlavorId}>
                     <SelectTrigger>
                         <SelectValue placeholder={availableFlavors.length ? "Select Flavor" : "No flavors"} />
@@ -143,6 +210,7 @@ export const StandardProductForm = ({
                         ))}
                     </SelectContent>
                 </Select>
+                )}
              </div>
              
              {/* Flavor Note */}
@@ -176,8 +244,8 @@ export const StandardProductForm = ({
                 </Select>
              </div>
 
-             {/* Shape (only when the selected size has shapes) */}
-             {availableShapes.length > 0 && (
+             {/* Shape (only when the selected size has shapes and is single-tier) */}
+             {!isMultiTier && availableShapes.length > 0 && (
              <div>
                 <label className="block text-sm font-medium mb-1">Shape</label>
                 <Select value={selectedShapeId} onValueChange={setSelectedShapeId}>

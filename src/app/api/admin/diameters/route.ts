@@ -2,6 +2,7 @@ import { verifyAdminAPI } from "@/lib/auth/adminOnly";
 import { NextRequest, NextResponse } from 'next/server';
 import clientPromise from '@/lib/db';
 import { Diameter} from '@/types';
+import { normalizeDiameterTierFields } from '@/lib/validation/diameterTierFields';
 
 
 export async function POST(request: NextRequest) {
@@ -20,6 +21,8 @@ export async function POST(request: NextRequest) {
       illustration,
       imageUrl,
       basePrice,
+      tiersCount,
+      tierSizes,
     }: Partial<Diameter> = body;
 
     if (!name || typeof sizeValue !== "number" || !servings || !illustration) {
@@ -29,10 +32,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const tierFields = normalizeDiameterTierFields(tiersCount, tierSizes);
+    if (!tierFields.ok) {
+      return NextResponse.json({ error: tierFields.error }, { status: 400 });
+    }
+
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
 
-    const newDiameterData: any = {
+    const newDiameterData: Record<string, unknown> = {
       name,
       sizeValue,
       servings,
@@ -40,10 +48,15 @@ export async function POST(request: NextRequest) {
       imageUrl,
       categoryIds: categoryIds || [],
       shapeIds: shapeIds || [],
+      tiersCount: tierFields.data.tiersCount,
     };
     
     if (basePrice !== undefined && basePrice !== null) {
       newDiameterData.basePrice = basePrice;
+    }
+
+    if (tierFields.data.tierSizes) {
+      newDiameterData.tierSizes = tierFields.data.tierSizes;
     }
 
     const result = await db.collection('diameters').insertOne(newDiameterData);

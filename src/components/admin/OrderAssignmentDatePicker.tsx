@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { CartItem } from "@/types";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
 import { Button } from "@/components/ui/Button";
+import { OrderItemTiersDisplay } from "@/components/shared/OrderItemTiersDisplay";
 
 interface OrderAssignmentDatePickerProps {
   // Data for display
@@ -220,9 +221,12 @@ export const OrderAssignmentDatePicker = ({
                                 <p className="font-body text-small font-bold text-primary">
                                   {item.name}
                                 </p>
-                                <p className="font-body text-xs text-primary/80">
-                                  {item.flavor}
-                                </p>
+                                <OrderItemTiersDisplay
+                                  tiers={item.tiers}
+                                  flavor={item.flavor}
+                                  variant="compact"
+                                  className="font-body text-xs text-primary/80"
+                                />
                               </div>
                               <Button
                                 type="button"

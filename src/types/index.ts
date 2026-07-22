@@ -46,6 +46,13 @@ export interface IShape {
   imageUrl?: string;
 }
 
+export interface CakeTierSelection {
+  tierIndex: number;
+  sizeLabel: string;
+  flavorId: string;
+  flavorName?: string;
+}
+
 export interface Diameter {
   _id: string;
   name: string;
@@ -56,6 +63,10 @@ export interface Diameter {
   categoryIds?: string[];
   basePrice?: number;
   shapeIds?: string[];
+  /** Number of cake tiers (defaults to 1 for legacy diameters). Max 5. */
+  tiersCount?: number;
+  /** Human-readable size label per tier; length must equal tiersCount when tiersCount > 1. */
+  tierSizes?: string[];
 }
 
 export interface AvailableDiameterConfig {
@@ -248,6 +259,8 @@ export interface CartItem {
   isManualPrice?: boolean;
   designInstructions?: string;
   addons?: SelectedAddon[];
+  /** Per-tier flavor selections (multi-tier cakes). */
+  tiers?: CakeTierSelection[];
 }
 export type UniqueCartItem = CartItem & {
   uniqueId: string;
@@ -353,6 +366,8 @@ export interface PublicOrderItem {
   displaySize?: string;
   displayShape?: string;
   displayFlavor?: string;
+  /** Resolved multi-tier flavor breakdown for display. */
+  displayTiers?: { sizeLabel: string; flavorName: string }[];
   flavorNote?: string;
   inscription?: string;
   designInstructions?: string;
@@ -439,6 +454,8 @@ export interface OrderItem {
   isManualPrice?: boolean;
   designInstructions?: string;
   addons?: SelectedAddon[];
+  /** Per-tier flavor selections (multi-tier cakes). */
+  tiers?: CakeTierSelection[];
 }
 
 export interface Address {
@@ -556,6 +573,9 @@ export interface CustomOrder {
     flavorNote?: string;
     textOnCake?: string;
     designNotes?: string;
+    diameterId?: string;
+    /** Per-tier flavor selections (multi-tier cakes). */
+    tiers?: CakeTierSelection[];
     [key: string]: any;
   };
   referenceImages: string[];

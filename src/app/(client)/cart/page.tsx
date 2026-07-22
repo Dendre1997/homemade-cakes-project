@@ -9,6 +9,7 @@ import { Diameter, Flavor, IShape } from "@/types";
 import { Button } from "@/components/ui/Button";
 import { Trash2 } from "lucide-react";
 import QuantityStepper from "@/components/ui/QuantityStepper";
+import { OrderItemTiersDisplay } from "@/components/shared/OrderItemTiersDisplay";
 
 const CartPage = () => {
   const { items, removeItem, increaseQuantity, decreaseQuantity } = useCartStore();
@@ -144,9 +145,17 @@ const CartPage = () => {
                             {/* SCENARIO A: Standard Cake Details */}
                             {!item.selectedConfig && (
                                 <>
-                                    <p className="mt-sm font-body text-body text-primary/80">
-                                      {item.flavor || standardFlavor?.name} {standardFlavor && standardFlavor.price > 0 ? `(+${standardFlavor.price})` : ''}
-                                    </p>
+                                    <OrderItemTiersDisplay
+                                      tiers={item.tiers}
+                                      flavor={item.flavor || standardFlavor?.name}
+                                      variant="compact"
+                                      className="mt-sm font-body text-body text-primary/80"
+                                    />
+                                    {standardFlavor && standardFlavor.price > 0 && !item.tiers?.length && (
+                                      <p className="mt-sm font-body text-body text-primary/80">
+                                        (+${standardFlavor.price})
+                                      </p>
+                                    )}
                                     {diameter && (
                                       <p className="font-body text-body text-primary/80">
                                         Size: {diameter.name}

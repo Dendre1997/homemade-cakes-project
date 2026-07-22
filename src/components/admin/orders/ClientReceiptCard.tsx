@@ -7,6 +7,7 @@ import { format } from "date-fns";
 import { Truck, Store, DollarSign } from "lucide-react";
 import HeaderLogo from "@/components/ui/HeaderLogo";
 import { SocialHandleAnchor } from "@/components/ui/SocialHandleAnchor";
+import { OrderItemTiersDisplay } from "@/components/shared/OrderItemTiersDisplay";
 
 interface ClientReceiptCardProps {
   order: Order;
@@ -267,6 +268,7 @@ export const ClientReceiptCard = ({
           const displaySize = isCustom ? item.customSize || getDiameterName(item.diameterId || item.selectedConfig?.cake?.diameterId) : getDiameterName(item.diameterId);
           const displayShape = isCustom ? item.customShape || getShapeName((item.shapeId || item.selectedConfig?.cake?.shapeId)?.toString()) : getShapeName(item.shapeId?.toString());
           const displayFlavor = isCustom ? item.customFlavor || getFlavorName(item.selectedConfig?.cake?.flavorId || item.flavor) : getFlavorName(item.flavor || item.selectedConfig?.cake?.flavorId);
+          const hasTierBreakdown = (item.tiers?.length ?? 0) > 0;
 
           const fallbackIdx = order.referenceImages ? Math.min(idx, Math.max(0, order.referenceImages.length - 1)) : 0;
           const effectiveImageUrl = item.imageUrl || (order.referenceImages && order.referenceImages.length > 0 ? order.referenceImages[fallbackIdx] : undefined);
@@ -292,7 +294,17 @@ export const ClientReceiptCard = ({
                   <div className="mt-1 text-xs text-primary/40 font-medium space-y-0.5">
                     {displaySize && displaySize.trim() !== "" && <p>Size: {displaySize}</p>}
                     {displayShape && displayShape.trim() !== "" && <p>Shape: {displayShape}</p>}
-                    {displayFlavor && displayFlavor.trim() !== "" && <p>Flavor: {displayFlavor}</p>}
+                    {hasTierBreakdown ? (
+                      <OrderItemTiersDisplay
+                        tiers={item.tiers}
+                        flavor={item.flavor}
+                        customFlavor={item.customFlavor}
+                        variant="receipt"
+                        resolveFlavorName={(id) => getFlavorName(id)}
+                      />
+                    ) : (
+                      displayFlavor && displayFlavor.trim() !== "" && <p>Flavor: {displayFlavor}</p>
+                    )}
                     {item.isCombo && item.selectedConfig?.cake && (
                       <div className="text-sm text-muted-foreground">
                         <span className="font-medium">Center Cake:</span>{' '}
