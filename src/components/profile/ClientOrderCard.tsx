@@ -2,6 +2,7 @@
 
 import { Order, OrderStatus, Diameter, IShape } from "@/types";
 import { formatOrderItemDescription } from "@/lib/utils";
+import { OrderItemTiersDisplay } from "@/components/shared/OrderItemTiersDisplay";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { 
@@ -247,9 +248,19 @@ export default function ClientOrderCard({ order, diameters = [], shapes = [] }: 
                                         </div>
                                     )}
                                     
+                                    {item.tiers?.length ? (
+                                      <OrderItemTiersDisplay
+                                        tiers={item.tiers}
+                                        flavor={item.flavor}
+                                        customFlavor={item.customFlavor}
+                                        variant="compact"
+                                        className="pl-3 border-l-2 border-primary"
+                                      />
+                                    ) : (
                                     <p className="leading-relaxed pl-3 border-l-2 border-primary">
                                         {formatOrderItemDescription(item).replace(item.name, "").replace(/^\s*-\s*/, "").trim() || "Standard Configuration"}
                                     </p>
+                                    )}
                                     
                                     {item.inscription && (
                                         <div className="mt-2 text-xs bg-yellow-50 text-yellow-800 p-1.5 rounded inline-block">

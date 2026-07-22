@@ -8,11 +8,18 @@ import {
 } from "@/components/ui/Select";
 import { AlertTriangle, Image as ImageIcon, Trash2, Plus, Loader2 } from "lucide-react";
 import Image from "next/image";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect, useMemo } from "react";
 import { AddonAdminSelector } from "@/components/admin/addons/AddonAdminSelector";
 import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
 import ImagePreviewGallery from "@/components/ui/ImagePreviewGallery";
-import { IShape } from "@/types";
+import { AdminTierFlavorEditor } from "@/components/admin/shared/AdminTierFlavorEditor";
+import { Flavor, IShape } from "@/types";
+import {
+  buildTierSelections,
+  compileCustomOrderFlavorLabel,
+  getTierSizeLabels,
+  tierFlavorsFromSelections,
+} from "@/lib/tierSelections";
 
 interface CustomOrderSpecsFormProps {
   order: any;
@@ -32,6 +39,65 @@ export const CustomOrderSpecsForm = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [galleryIndex, setGalleryIndex] = useState<number | null>(null);
   const [imageToDeleteIndex, setImageToDeleteIndex] = useState<number | null>(null);
+  const [flavors, setFlavors] = useState<Flavor[]>([]);
+  const [diameters, setDiameters] = useState<any[]>([]);
+  const [tierFlavors, setTierFlavors] = useState<Record<number, string>>({});
+
+  useEffect(() => {
+    Promise.all([
+      fetch("/api/admin/flavors").then((r) => (r.ok ? r.json() : [])),
+      fetch("/api/diameters").then((r) => (r.ok ? r.json() : [])),
+    ])
+      .then(([flavData, diamData]) => {
+        setFlavors(Array.isArray(flavData) ? flavData : []);
+        setDiameters(Array.isArray(diamData) ? diamData : []);
+      })
+      .catch(console.error);
+  }, []);
+
+  const resolvedDiameter = useMemo(() => {
+    if (order.details?.diameterId) {
+      return diameters.find(
+        (d) => String(d._id) === String(order.details.diameterId)
+      );
+    }
+    return diameters.find((d) => d.name === order.details?.size);
+  }, [diameters, order.details?.diameterId, order.details?.size]);
+
+  const tiersCount =
+    order.details?.tiers?.length ?? resolvedDiameter?.tiersCount ?? 1;
+  const isMultiTier = tiersCount > 1;
+
+  const tierSizes = useMemo(() => {
+    if (order.details?.tiers?.length) {
+      return order.details.tiers.map((t: { sizeLabel: string }) => t.sizeLabel);
+    }
+    return getTierSizeLabels(resolvedDiameter);
+  }, [order.details?.tiers, resolvedDiameter]);
+
+  useEffect(() => {
+    if (order.details?.tiers?.length) {
+      setTierFlavors(tierFlavorsFromSelections(order.details.tiers));
+    }
+  }, [order.details?.tiers]);
+
+  const handleTierFlavorChange = (tierIndex: number, flavorId: string) => {
+    const nextTierFlavors = { ...tierFlavors, [tierIndex]: flavorId };
+    setTierFlavors(nextTierFlavors);
+
+    const tiers = buildTierSelections(
+      tiersCount,
+      tierSizes,
+      nextTierFlavors,
+      flavors
+    );
+    onChange("details", {
+      ...order.details,
+      tiers,
+      flavor: compileCustomOrderFlavorLabel(tiers),
+      diameterId: order.details?.diameterId ?? resolvedDiameter?._id?.toString(),
+    });
+  };
 
   const handleRemoveImage = (index: number) => {
     const newImages = [...(order.referenceImages || [])];
@@ -99,16 +165,33 @@ export const CustomOrderSpecsForm = ({
                 placeholder="e.g. 8 inch, Box of 12"
              />
           </div>
+          {!isMultiTier && (
           <div className="space-y-sm">
              <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Flavor Profile</Label>
              <Input 
                 value={order.details?.flavor || ""} 
-                onChange={(e) => onChange("details", { ...order.details, flavor: e.target.value })}
+                onChange={(e) => onChange("details", { ...order.details, flavor: e.target.value, tiers: undefined })}
                 className="h-11"
                 placeholder="e.g. Vanilla, Chocolate"
              />
           </div>
+          )}
        </div>
+
+       {isMultiTier && (
+       <div className="flex w-full flex-col gap-3">
+          <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Flavor Profile — Tier Selection</Label>
+          <AdminTierFlavorEditor
+            tiersCount={tiersCount}
+            tierSizes={tierSizes}
+            tierFlavors={tierFlavors}
+            flavors={flavors}
+            onTierFlavorChange={handleTierFlavorChange}
+            variant="cards"
+            className="grid w-full grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"
+          />
+       </div>
+       )}
 
        <div className="space-y-sm">
           <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Shape</Label>

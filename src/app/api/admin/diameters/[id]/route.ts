@@ -2,6 +2,7 @@ import { verifyAdminAPI } from "@/lib/auth/adminOnly";
 import { NextRequest, NextResponse } from 'next/server';
 import clientPromise from '@/lib/db';
 import { ObjectId } from 'mongodb';
+import { normalizeDiameterTierFields } from '@/lib/validation/diameterTierFields';
 
 
 export async function GET(
@@ -47,8 +48,19 @@ export async function PUT(
 
   try {
     const { id } = await params;
-    const { sizeValue, categoryIds, shapeIds, name, servings, illustration, imageUrl, basePrice } =
-      await request.json();
+    const body = await request.json();
+    const {
+      sizeValue,
+      categoryIds,
+      shapeIds,
+      name,
+      servings,
+      illustration,
+      imageUrl,
+      basePrice,
+      tiersCount,
+      tierSizes,
+    } = body;
 
     if (!name || typeof sizeValue !== "number" || !servings || !illustration) {
       return NextResponse.json(
@@ -57,10 +69,18 @@ export async function PUT(
       );
     }
 
+    const tierFields = normalizeDiameterTierFields(tiersCount, tierSizes);
+    if (!tierFields.ok) {
+      return NextResponse.json({ error: tierFields.error }, { status: 400 });
+    }
+
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
 
-    const updateDoc: any = {
+    const updateDoc: {
+      $set: Record<string, unknown>;
+      $unset?: Record<string, "">;
+    } = {
       $set: {
         name,
         sizeValue,
@@ -69,13 +89,20 @@ export async function PUT(
         imageUrl,
         categoryIds: categoryIds || [],
         shapeIds: shapeIds || [],
-      }
+        tiersCount: tierFields.data.tiersCount,
+      },
     };
 
     if (basePrice !== undefined && basePrice !== null) {
       updateDoc.$set.basePrice = basePrice;
     } else {
       updateDoc.$unset = { basePrice: "" };
+    }
+
+    if (tierFields.data.tierSizes) {
+      updateDoc.$set.tierSizes = tierFields.data.tierSizes;
+    } else {
+      updateDoc.$unset = { ...updateDoc.$unset, tierSizes: "" };
     }
 
     const result = await db.collection("diameters").updateOne(

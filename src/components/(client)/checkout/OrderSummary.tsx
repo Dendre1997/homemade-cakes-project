@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useCartStore } from "@/lib/store/cartStore";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { OrderItemTiersDisplay } from "@/components/shared/OrderItemTiersDisplay";
 import { Loader2, Tag } from "lucide-react";
 
 // Types for the pricing data we get from the server
@@ -187,7 +188,11 @@ const OrderSummary = () => {
                     {!item.selectedConfig && (
                          <div className="text-small text-primary/80">
                             <p>{item.quantity} x ${item.price.toFixed(2)}</p>
-                            {item.flavor && <p className="text-xs text-muted-foreground">{item.flavor}</p>}
+                            <OrderItemTiersDisplay
+                              tiers={item.tiers}
+                              flavor={item.flavor}
+                              variant="compact"
+                            />
                          </div>
                     )}
 

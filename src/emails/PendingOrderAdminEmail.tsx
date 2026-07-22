@@ -15,6 +15,7 @@ import {
   Link,
 } from "@react-email/components";
 import { Order, CartItem } from "@/types";
+import { EmailOrderItemFlavor } from "@/emails/EmailOrderItemFlavor";
 
 interface PendingOrderAdminEmailProps {
   order: Order;
@@ -80,11 +81,12 @@ export const PendingOrderAdminEmail = ({
           {order.items.map((item: CartItem) => (
             <Row key={item.id} style={itemRow}>
               <Column>
-                <Text style={itemText}>
-                  {item.name} (x{item.quantity})
-                  <br />
-                  <span style={itemFlavor}>{item.flavor}</span>
-                </Text>
+                <Text style={itemText}>{item.name} (x{item.quantity})</Text>
+                <EmailOrderItemFlavor
+                  item={item}
+                  getFlavorName={(id) => id || ""}
+                  flavorStyle={itemFlavor}
+                />
               </Column>
               <Column align="right">
                 <Text style={itemPrice}>

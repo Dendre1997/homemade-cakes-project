@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 
 import { notFound, useParams, useRouter } from "next/navigation";
-import { ProductWithCategory, Flavor, AvailableDiameterConfig, Discount, SelectedAddon, Addon, IShape } from "@/types";
+import { ProductWithCategory, Flavor, AvailableDiameterConfig, Discount, SelectedAddon, Addon, IShape, CakeTierSelection } from "@/types";
 import Link from "next/link";
 import { useCartStore } from "@/lib/store/cartStore";
 import { useAlert } from "@/contexts/AlertContext";
@@ -81,6 +81,35 @@ const SingleProductPage = () => {
     return <SingleProductContent product={product} />;
 };
 
+function buildTierSelections(
+  tiersCount: number,
+  tierSizes: string[],
+  tierFlavorIds: Record<number, string>,
+  flavors: Flavor[]
+): CakeTierSelection[] {
+  return Array.from({ length: tiersCount }, (_, index) => {
+    const flavorId = tierFlavorIds[index];
+    const flavor = flavors.find((f) => f._id.toString() === flavorId);
+    return {
+      tierIndex: index,
+      sizeLabel: tierSizes[index] ?? `Tier ${index + 1}`,
+      flavorId,
+      flavorName: flavor?.name,
+    };
+  });
+}
+
+function compileCatalogFlavorLabel(
+  tiers: CakeTierSelection[],
+  tiersCount: number,
+  singleFlavorName?: string
+): string {
+  if (tiersCount > 1) {
+    return tiers.map((t) => `${t.sizeLabel}: ${t.flavorName ?? ""}`).join(" | ");
+  }
+  return singleFlavorName ?? "";
+}
+
 
 const SingleProductContent = ({ product }: { product: ProductWithCategory }) => {
   const { showAlert } = useAlert();
@@ -89,7 +118,7 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
 
 
 
-  const [selectedFlavorId, setSelectedFlavorId] = useState<string | null>(null);
+  const [tierFlavorIds, setTierFlavorIds] = useState<Record<number, string>>({});
   const [flavorNote, setFlavorNote] = useState<string>("");
   const [showFlavorNoteInput, setShowFlavorNoteInput] = useState<boolean | null>(null);
   const [selectedDiameterConfig, setSelectedDiameterConfig] = useState<AvailableDiameterConfig | null>(null);
@@ -238,6 +267,50 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
     ) ?? null;
   }, [selectedDiameterConfig, product]);
 
+  const standardTiersCount = selectedDiameterDetails?.tiersCount ?? 1;
+
+  const standardTierSizes = useMemo((): string[] => {
+    if (!selectedDiameterDetails || standardTiersCount <= 1) return [];
+    const sizes = selectedDiameterDetails.tierSizes;
+    if (Array.isArray(sizes) && sizes.length === standardTiersCount) {
+      return sizes;
+    }
+    return Array.from({ length: standardTiersCount }, (_, index) => `Tier ${index + 1}`);
+  }, [selectedDiameterDetails, standardTiersCount]);
+
+  useEffect(() => {
+    setTierFlavorIds({});
+  }, [selectedDiameterConfig?.diameterId]);
+
+  const allTierFlavorsSelected = useMemo(() => {
+    if (standardTiersCount > 1) {
+      return Array.from({ length: standardTiersCount }, (_, index) => tierFlavorIds[index]).every(
+        Boolean
+      );
+    }
+    return !!tierFlavorIds[0];
+  }, [standardTiersCount, tierFlavorIds]);
+
+  const totalFlavorUpcharge = useMemo(() => {
+    const indices =
+      standardTiersCount > 1
+        ? Array.from({ length: standardTiersCount }, (_, index) => index)
+        : [0];
+
+    return indices.reduce((sum, index) => {
+      const flavorId = tierFlavorIds[index];
+      if (!flavorId) return sum;
+      const flavor = product.availableFlavors.find(
+        (f) => f._id.toString() === flavorId
+      );
+      return sum + (flavor?.price ?? 0);
+    }, 0);
+  }, [product.availableFlavors, standardTiersCount, tierFlavorIds]);
+
+  const handleTierFlavorSelect = (tierIndex: number, flavorId: string) => {
+    setTierFlavorIds((prev) => ({ ...prev, [tierIndex]: flavorId }));
+  };
+
   const availableShapes = useMemo(() => {
     if (!selectedDiameterDetails) return [];
     const allowedIds = (selectedDiameterDetails.shapeIds || []).map((id) =>
@@ -249,9 +322,9 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
     return allShapes.filter((shape) => allowedIds.includes(String(shape._id)));
   }, [selectedDiameterDetails, allShapes]);
 
-  // Cascade reset: auto-select default or first shape when diameter changes
+  // Cascade reset: auto-select default or first shape when diameter changes (single-tier only)
   useEffect(() => {
-    if (!selectedDiameterConfig) {
+    if (!selectedDiameterConfig || standardTiersCount > 1) {
       setSelectedShapeId("");
       return;
     }
@@ -269,12 +342,12 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
         availableShapes.find((shape) => shape.isDefault) || availableShapes[0];
       return defaultShape?._id || "";
     });
-  }, [selectedDiameterConfig, availableShapes]);
+  }, [selectedDiameterConfig, availableShapes, standardTiersCount]);
 
   const selectedShapeSurcharge = useMemo(() => {
-    if (!selectedShapeId) return 0;
+    if (standardTiersCount > 1 || !selectedShapeId) return 0;
     return allShapes.find((s) => s._id === selectedShapeId)?.priceSurcharge ?? 0;
-  }, [selectedShapeId, allShapes]);
+  }, [standardTiersCount, selectedShapeId, allShapes]);
 
   // Hydrate Addons
   useEffect(() => {
@@ -379,20 +452,16 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
         }
         
      } else {
-        const selectedFlavor = product.availableFlavors.find(
-          (f) => f._id.toString() === selectedFlavorId
-        );
-        const flavorPrice = selectedFlavor ? selectedFlavor.price : 0;
         const inscriptionFee = (product.inscriptionSettings?.isAvailable && inscription.trim() !== "") ? product.inscriptionSettings.price : 0;
 
         if (selectedDiameterConfig) {
           if (selectedDiameterConfig.price && selectedDiameterConfig.price > 0) {
-            calculatedPrice = selectedDiameterConfig.price + flavorPrice + inscriptionFee + selectedShapeSurcharge;
+            calculatedPrice = selectedDiameterConfig.price + totalFlavorUpcharge + inscriptionFee + selectedShapeSurcharge;
           } else {
-            calculatedPrice = (product.structureBasePrice + flavorPrice + inscriptionFee) * (selectedDiameterConfig.multiplier || 1) + selectedShapeSurcharge;
+            calculatedPrice = (product.structureBasePrice + totalFlavorUpcharge + inscriptionFee) * (selectedDiameterConfig.multiplier || 1) + selectedShapeSurcharge;
           }
         } else {
-          calculatedPrice = product.structureBasePrice + flavorPrice + inscriptionFee;
+          calculatedPrice = product.structureBasePrice + totalFlavorUpcharge + inscriptionFee;
         }
      }
   }
@@ -535,8 +604,13 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
 
     } else {
         // --- STANDARD CAKE VALIDATION ---
-        if (!selectedFlavorId || !selectedDiameterConfig) {
-          showAlert("Please select a flavor and size.", "error");
+        if (!selectedDiameterConfig || !allTierFlavorsSelected) {
+          showAlert(
+            standardTiersCount > 1
+              ? "Please select a flavor for every tier."
+              : "Please select a flavor and size.",
+            "error"
+          );
           return;
         }
         if (showInscriptionInput && inscription.trim() === "") {
@@ -546,25 +620,52 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
           );
           return;
         }
-        const selectedFlavor = product.availableFlavors.find(
-          (f) => f._id.toString() === selectedFlavorId
+
+        const orderedTierFlavorIds =
+          standardTiersCount > 1
+            ? Array.from({ length: standardTiersCount }, (_, index) => tierFlavorIds[index])
+            : undefined;
+
+        const tiers =
+          standardTiersCount > 1 && orderedTierFlavorIds
+            ? buildTierSelections(
+                standardTiersCount,
+                standardTierSizes,
+                tierFlavorIds,
+                product.availableFlavors
+              )
+            : undefined;
+
+        const singleFlavor = product.availableFlavors.find(
+          (f) => f._id.toString() === tierFlavorIds[0]
         );
+
+        const flavorLabel = compileCatalogFlavorLabel(
+          tiers ?? [],
+          standardTiersCount,
+          singleFlavor?.name
+        );
+
         const cartItem = {
           id: buildCartItemId({
             productId: product._id.toString(),
-            flavorId: selectedFlavorId,
+            flavorId: standardTiersCount <= 1 ? tierFlavorIds[0] : undefined,
+            tierFlavorIds: orderedTierFlavorIds,
             diameterId: selectedDiameterConfig.diameterId,
-            shapeId: selectedShapeId || undefined,
+            shapeId:
+              standardTiersCount > 1 ? undefined : selectedShapeId || undefined,
             inscription,
           }),
           productId: product._id.toString(),
           categoryId: product.category._id.toString(),
           name: product.name,
-          flavor: selectedFlavor?.name || "N/A",
+          flavor: flavorLabel || "N/A",
           flavorNote: flavorNote ? flavorNote : undefined,
           diameterId: selectedDiameterConfig.diameterId,
-          shapeId: selectedShapeId || undefined,
-          price: finalPrice, // Discounted Price
+          shapeId:
+            standardTiersCount > 1 ? undefined : selectedShapeId || undefined,
+          tiers,
+          price: finalPrice,
           quantity: quantity,
           imageUrl: product.imageUrls[0] || "/placeholder.png",
           inscription: inscription,
@@ -578,7 +679,7 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
     // Reset Logic
     setQuantity(1);
     if (!isSet) {
-        setSelectedFlavorId(null);
+        setTierFlavorIds({});
         setSelectedDiameterConfig(product.availableDiameterConfigs[0] || null);
         setSelectedShapeId("");
     } else {
@@ -694,20 +795,67 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
               {!isSet ? (
                 /* --- STANDARD CAKE UI --- */
                 <>
-                  {/* Flavor Selector */}
-                  <div>
-                    <FlavorSelector
-                      mode="single"
-                      flavors={product.availableFlavors}
-                      selectedId={selectedFlavorId}
-                      onSelectId={setSelectedFlavorId}
+                  {/* Size Selector */}
+                  <DiameterSelector
+                    diameters={displayableDiameters}
+                    selectedDiameterId={
+                      selectedDiameterConfig?.diameterId.toString() || null
+                    }
+                    onSelectDiameter={handleSelectDiameter}
+                  />
+
+                  {availableShapes.length > 0 && standardTiersCount <= 1 && (
+                    <ShapeSelector
+                      shapes={availableShapes}
+                      selectedShapeId={selectedShapeId}
+                      onChange={setSelectedShapeId}
+                      className="mt-md"
                     />
-                    
+                  )}
+
+                  {/* Flavor Selector(s) */}
+                  <div>
+                    {standardTiersCount > 1 ? (
+                      <div className="space-y-6">
+                        <div>
+                          <h3 className="font-heading text-h3 text-primary mb-1">
+                            Choose a flavor for each tier
+                          </h3>
+                          <p className="text-sm text-primary/60 mb-4">
+                            Select one flavor per tier before adding to cart.
+                          </p>
+                        </div>
+                        {Array.from({ length: standardTiersCount }, (_, index) => (
+                          <div key={index}>
+                            <h4 className="text-sm font-semibold mb-2 text-primary">
+                              Tier {index + 1} ({standardTierSizes[index]})
+                            </h4>
+                            <div className="bg-background rounded-2xl shadow-sm border p-4">
+                              <FlavorSelector
+                                mode="single"
+                                flavors={product.availableFlavors}
+                                selectedId={tierFlavorIds[index] ?? null}
+                                onSelectId={(id) => handleTierFlavorSelect(index, id)}
+                                hideHeading={true}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <FlavorSelector
+                        mode="single"
+                        flavors={product.availableFlavors}
+                        selectedId={tierFlavorIds[0] ?? null}
+                        onSelectId={(id) => handleTierFlavorSelect(0, id)}
+                      />
+                    )}
+
                     {/* Flavor Note UI */}
                     <div
                       className={cn(
                         "grid transition-all duration-300 ease-in-out overflow-hidden",
-                        selectedFlavorId
+                        allTierFlavorsSelected
                           ? "grid-rows-[1fr] opacity-100 mt-4 border-t border-border"
                           : "grid-rows-[0fr] opacity-0"
                       )}
@@ -715,7 +863,9 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
                       <div className="min-h-0">
                         <div className="pt-4">
                           <Label className="font-medium mb-2 block">
-                            Do you have any inquiries/notes for the picked flavor?
+                            {standardTiersCount > 1
+                              ? "Do you have any inquiries/notes for your tier flavors?"
+                              : "Do you have any inquiries/notes for the picked flavor?"}
                           </Label>
                           <div className="flex gap-3 mb-2">
                             <Button
@@ -769,24 +919,6 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
                       </div>
                     </div>
                   </div>
-
-                  {/* Size Selector */}
-                  <DiameterSelector
-                    diameters={displayableDiameters}
-                    selectedDiameterId={
-                      selectedDiameterConfig?.diameterId.toString() || null
-                    }
-                    onSelectDiameter={handleSelectDiameter}
-                  />
-
-                  {availableShapes.length > 0 && (
-                    <ShapeSelector
-                      shapes={availableShapes}
-                      selectedShapeId={selectedShapeId}
-                      onChange={setSelectedShapeId}
-                      className="mt-md"
-                    />
-                  )}
                 </>
               ) : (
                 /* --- SETS / COMBOS UI --- */
@@ -953,7 +1085,7 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
                 disabled={
                   isSet
                     ? selectedSetFlavorIds.length === 0 || !selectedQtyConfig
-                    : !selectedFlavorId || !selectedDiameterConfig
+                    : !selectedDiameterConfig || !allTierFlavorsSelected
                 }
                 className="w-full"
               >

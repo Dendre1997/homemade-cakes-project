@@ -8,6 +8,7 @@ import LoadingSpinner from "@/components/ui/Spinner";
 import { Order } from "@/types";
 import Image from "next/image";
 import { Tag } from "lucide-react"; // Tag icon for discount
+import { OrderItemTiersDisplay } from "@/components/shared/OrderItemTiersDisplay";
 
 const ThankYouPage = () => {
   const searchParams = useSearchParams();
@@ -126,9 +127,12 @@ const ThankYouPage = () => {
                         x{item.quantity}
                       </span>
                     </span>
-                    <span className="text-xs text-primary/70">
-                      {item.flavor}
-                    </span>
+                    <OrderItemTiersDisplay
+                      tiers={item.tiers}
+                      flavor={item.flavor}
+                      variant="compact"
+                      className="text-xs text-primary/70"
+                    />
                   </div>
                 </div>
                 <span className="font-semibold text-primary">

@@ -4,7 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/Button";
 import ImagePreviewGallery from "@/components/ui/ImagePreviewGallery";
-import { theme } from "@/styles/theme";
+import { OrderItemTiersDisplay } from "@/components/shared/OrderItemTiersDisplay";
 
 interface AdminOrderItemProps {
   item: CartItem;
@@ -136,11 +136,18 @@ export const AdminOrderItem = ({
                                     <span className="font-semibold text-primary">Shape:</span> {displayShape}
                                 </span>
                              )}
-                             {displayFlavor && (
+                             {item.tiers?.length ? (
+                                <OrderItemTiersDisplay
+                                  tiers={item.tiers}
+                                  flavor={item.flavor}
+                                  customFlavor={item.customFlavor}
+                                  resolveFlavorName={(id) => getFlavorName(id)}
+                                />
+                             ) : displayFlavor ? (
                                 <span className="flex items-center gap-1">
                                     <span className="font-semibold text-primary">Flavor:</span> {displayFlavor}
                                 </span>
-                             )}
+                             ) : null}
                              {item.flavorNote && item.flavorNote !== "No" && (
                                 <span className="flex items-center gap-1">
                                     <span className="font-semibold text-primary">Flavor Note:</span> {item.flavorNote}
@@ -299,15 +306,10 @@ export const AdminOrderItem = ({
           <div className="mt-2 rounded-md border border-gray-200 overflow-hidden flex flex-col md:flex-row shadow-sm">
             {/* Panel A: Bento Zone */}
             <div 
-              className="border-l-4 p-3 md:w-1/2 flex flex-col gap-2"
-              style={{ 
-                  backgroundColor: `${theme.colors.text}0d`, // 5% opacity
-                  borderColor: `${theme.colors.text}33` // 20% opacity 
-              }}
+              className="border-l-4 border-[#231416]/20 bg-[#231416]/5 p-3 md:w-1/2 flex flex-col gap-2"
             >
               <div 
-                className="flex items-center gap-2 font-bold text-xs uppercase tracking-wide"
-                style={{ color: theme.colors.text }}
+                className="flex items-center gap-2 font-bold text-xs uppercase tracking-wide text-[#231416]"
               >
                 <span>🎂 Bento Component</span>
               </div>
@@ -376,11 +378,19 @@ export const AdminOrderItem = ({
         {isStandard && (
             <div className="mt-1 flex flex-col gap-2">
                 <div className="text-sm font-medium text-gray-700 flex flex-col gap-1">
+                    {item.tiers?.length ? (
+                      <OrderItemTiersDisplay
+                        tiers={item.tiers}
+                        flavor={item.flavor}
+                        resolveFlavorName={(id) => getFlavorName(id)}
+                      />
+                    ) : (
                     <div className="flex items-center gap-2">
                         <span className="bg-gray-100 px-2 py-0.5 rounded text-gray-800 border">
                             {item.flavor || "Standard Flavor"}
                         </span>
                     </div>
+                    )}
                     {item.flavorNote && item.flavorNote !== "No" && (
                         <div className="text-gray-600 text-xs mt-1">
                             <span className="font-bold">Flavor Note:</span> {item.flavorNote}

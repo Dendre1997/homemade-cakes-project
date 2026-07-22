@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { CustomOrder } from "@/types";
 import { Button } from "@/components/ui/Button";
+import { OrderItemTiersDisplay } from "@/components/shared/OrderItemTiersDisplay";
 import Link from "next/link";
 import LoadingSpinner from "@/components/ui/Spinner";
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/Card";
@@ -123,7 +124,11 @@ export default function ClientRequestsTab({ userId }: { userId: string }) {
                      <div className="space-y-1 text-sm">
                        <p className="text-muted-foreground uppercase tracking-wider text-xs font-semibold">Size & Flavor</p>
                        <p className="text-primary font-medium">{req.details?.size || "Standard Size"}</p>
-                       {req.details?.flavor && <p className="text-primary text-muted-foreground">{req.details.flavor}</p>}
+                       <OrderItemTiersDisplay
+                         tiers={req.details?.tiers}
+                         flavor={req.details?.flavor}
+                         variant="compact"
+                       />
                      </div>
                      {(req.details?.flavorNote || req.details?.textOnCake) && (
                        <div className="space-y-2 text-sm">

@@ -17,6 +17,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
 import { useAlert } from "@/contexts/AlertContext";
+import { OrderItemTiersDisplay } from "@/components/shared/OrderItemTiersDisplay";
 import { SocialHandleAnchor } from "@/components/ui/SocialHandleAnchor";
 
 interface CustomOrderCardProps {
@@ -190,7 +191,20 @@ export const CustomOrderCard = ({ order }: CustomOrderCardProps) => {
               <div className="flex flex-col gap-1.5 text-[#764a4d]">
                  <div className="flex items-start gap-2">
                     <Layers className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                    <span className="text-xs leading-tight">{order.details?.flavor || "Flavor TBD"}</span>
+                    <div className="flex-1 min-w-0">
+                      <OrderItemTiersDisplay
+                        tiers={order.details?.tiers}
+                        flavor={order.details?.flavor}
+                        variant="compact"
+                        className="text-xs leading-tight text-[#764a4d]"
+                        label="Tiers:"
+                      />
+                      {!order.details?.tiers?.length && (
+                        <span className="text-xs leading-tight">
+                          {order.details?.flavor || "Flavor TBD"}
+                        </span>
+                      )}
+                    </div>
                  </div>
                  
                  {order.details?.textOnCake && (

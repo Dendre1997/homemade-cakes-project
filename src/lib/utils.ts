@@ -27,6 +27,8 @@ export function createUnitId(itemId: string, unitIndex: number): string {
     return `${itemId}-${unitIndex}`;
 }
 
+import { formatTiersInline } from "@/lib/orderItemDisplay";
+
 export function formatOrderItemDescription(item: any): string {
   const parts: string[] = [];
 
@@ -38,8 +40,10 @@ export function formatOrderItemDescription(item: any): string {
      parts.push(`(${item.customSize})`);
   }
 
-  // 3. Flavors (Simple)
-  if (item.flavor && item.flavor !== "N/A" && !item.selectedConfig) {
+  // 3. Multi-tier flavors
+  if (item.tiers?.length && !item.selectedConfig) {
+      parts.push(`- ${formatTiersInline(item.tiers)}`);
+  } else if (item.flavor && item.flavor !== "N/A" && !item.selectedConfig) {
       parts.push(`- ${item.flavor}`);
   }
 

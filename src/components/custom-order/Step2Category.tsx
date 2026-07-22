@@ -42,6 +42,8 @@ export default function Step2Category({ onNext }: { onNext: () => void }) {
     setValue("category", name, { shouldValidate: true });
     setValue("details.size", "");
     setValue("details.flavor", "");
+    setValue("details.diameterId", undefined);
+    setValue("details.tiers", undefined);
   };
 
   return (

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { Truck, Store } from "lucide-react";
 import HeaderLogo from "@/components/ui/HeaderLogo";
+import { OrderItemTiersDisplay } from "@/components/shared/OrderItemTiersDisplay";
 import { PublicOrderSummary } from "@/types";
 
 interface OrderSummaryDisplayProps {
@@ -244,8 +245,21 @@ export const OrderSummaryDisplay = ({
               {item.displayShape && item.displayShape.trim() !== "" && (
                 <p>Shape: {item.displayShape}</p>
               )}
-              {item.displayFlavor && item.displayFlavor.trim() !== "" && (
-                <p>Flavor: {item.displayFlavor}</p>
+              {item.displayTiers?.length ? (
+                <OrderItemTiersDisplay
+                  tiers={item.displayTiers.map((tier, index) => ({
+                    tierIndex: index,
+                    sizeLabel: tier.sizeLabel,
+                    flavorId: "",
+                    flavorName: tier.flavorName,
+                  }))}
+                  variant="receipt"
+                />
+              ) : (
+                item.displayFlavor &&
+                item.displayFlavor.trim() !== "" && (
+                  <p>Flavor: {item.displayFlavor}</p>
+                )
               )}
               {item.isCombo && item.comboCenter && (
                 <div className="text-sm text-muted-foreground">

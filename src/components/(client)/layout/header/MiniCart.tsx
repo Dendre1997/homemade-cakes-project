@@ -7,6 +7,7 @@ import { useCartStore } from "@/lib/store/cartStore";
 import { Button } from "@/components/ui/Button";
 import { X, ShoppingBag } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { OrderItemTiersDisplay } from "@/components/shared/OrderItemTiersDisplay";
 
 interface MiniCartProps {
   isOpen: boolean;
@@ -88,9 +89,12 @@ export const MiniCart = ({ isOpen, onClose }: MiniCartProps) => {
                     <p className="font-body font-bold text-primary">
                       {lastItemAdded.name}
                     </p>
-                    <p className="font-body text-small text-primary/80">
-                      {lastItemAdded.flavor}
-                    </p>
+                    <OrderItemTiersDisplay
+                      tiers={lastItemAdded.tiers}
+                      flavor={lastItemAdded.flavor}
+                      variant="compact"
+                      className="font-body text-small text-primary/80"
+                    />
                     {lastItemAdded.addons && lastItemAdded.addons.length > 0 && (
                       <ul className="mt-0.5 space-y-0">
                         {lastItemAdded.addons.map((d, i) => (

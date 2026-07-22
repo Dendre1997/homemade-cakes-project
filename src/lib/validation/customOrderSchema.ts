@@ -1,5 +1,12 @@
 import { z } from "zod";
 
+const cakeTierSelectionSchema = z.object({
+  tierIndex: z.number(),
+  sizeLabel: z.string(),
+  flavorId: z.string(),
+  flavorName: z.string().optional(),
+});
+
 export const customOrderSchema = z.object({
   status: z.enum(["pending_review", "converted", "rejected"]).optional().default("pending_review"),
   date: z.date(),
@@ -13,6 +20,8 @@ export const customOrderSchema = z.object({
     textOnCake: z.string().optional(),
     designNotes: z.string().min(1, "Please provide overall design notes").max(1000, "Notes are too long"),
     shape: z.string().optional(),
+    diameterId: z.string().optional(),
+    tiers: z.array(cakeTierSelectionSchema).optional(),
   }),
   allergies: z.string().min(2, "Please indicate if you have any allergies"),
   referenceImages: z

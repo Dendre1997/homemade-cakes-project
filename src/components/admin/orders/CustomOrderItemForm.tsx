@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo } from "react";
 import Image from "next/image";
-import { Flavor, Diameter, OrderItem, ProductCategory, IGalleryImage, IShape } from "@/types";
+import { Flavor, Diameter, OrderItem, ProductCategory, IGalleryImage, IShape, CakeTierSelection } from "@/types";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
@@ -20,6 +20,14 @@ import { useAlert } from "@/contexts/AlertContext";
 import { AddonAdminSelector } from "@/components/admin/addons/AddonAdminSelector";
 import { SelectedAddon } from "@/types";
 import { ComboProductForm } from "@/components/admin/orders/ComboProductForm";
+import { AdminTierFlavorEditor } from "@/components/admin/shared/AdminTierFlavorEditor";
+import {
+  allTierFlavorsSelected,
+  buildTierSelections,
+  compileCustomOrderFlavorLabel,
+  getTierSizeLabels,
+  tierFlavorsFromSelections,
+} from "@/lib/tierSelections";
 
 // Icons Imports
 import { FourInchBentoIcon } from "@/components/icons/cake-sizes/FourInchBentoIcon";
@@ -67,6 +75,7 @@ interface CustomOrderItemFormProps {
       flavorNote?: string;
       quantity?: number;
       categoryId?: string;
+      tiers?: CakeTierSelection[];
   };
   submitLabel?: string;
 }
@@ -110,6 +119,9 @@ export default function CustomOrderItemForm({
   const [selectedImage, setSelectedImage] = useState<string>(initialValues?.selectedImage || "");
   const [sizeValue, setSizeValue] = useState<string>(initialValues?.sizeValue || "");
   const [flavorValue, setFlavorValue] = useState<string>(initialValues?.flavorValue || "");
+  const [tierFlavors, setTierFlavors] = useState<Record<number, string>>(() =>
+    tierFlavorsFromSelections(initialValues?.tiers)
+  );
   const [selectedShapeId, setSelectedShapeId] = useState<string>(initialValues?.shapeId || "");
   const [designInstructions, setDesignInstructions] = useState<string>(initialValues?.designInstructions || "");
   const [inscription, setInscription] = useState<string>(initialValues?.inscription || "");
@@ -150,6 +162,32 @@ export default function CustomOrderItemForm({
     return diameters.some(d => d._id === sizeValue) ? sizeValue : "";
   }, [diameters, sizeValue]);
 
+  const selectedDiameter = useMemo(
+    () => diameters.find((d) => d._id === selectedDiameterId),
+    [diameters, selectedDiameterId]
+  );
+
+  const tiersCount = useMemo(() => {
+    if (selectedDiameter?.tiersCount && selectedDiameter.tiersCount > 1) {
+      return selectedDiameter.tiersCount;
+    }
+    if (initialValues?.tiers?.length && initialValues.tiers.length > 1) {
+      return initialValues.tiers.length;
+    }
+    return 1;
+  }, [selectedDiameter, initialValues?.tiers]);
+  const isMultiTier = tiersCount > 1;
+  const tierSizes = useMemo(() => {
+    if (
+      initialValues?.tiers?.length &&
+      initialValues.tiers.length > 1 &&
+      (!selectedDiameterId || selectedDiameterId === (initialValues.sizeValue || ""))
+    ) {
+      return initialValues.tiers.map((t) => t.sizeLabel);
+    }
+    return getTierSizeLabels(selectedDiameter);
+  }, [initialValues?.tiers, initialValues?.sizeValue, selectedDiameter, selectedDiameterId]);
+
   // Shapes linked to the chosen diameter (fallback to all active shapes for testing)
   const availableShapes = useMemo(() => {
     if (!selectedDiameterId) return [];
@@ -163,6 +201,10 @@ export default function CustomOrderItemForm({
 
   // Cascade reset: keep the selected shape valid whenever the diameter changes
   useEffect(() => {
+    if (isMultiTier) {
+      if (selectedShapeId) setSelectedShapeId("");
+      return;
+    }
     if (availableShapes.length === 0) {
       if (selectedShapeId) setSelectedShapeId("");
       return;
@@ -173,6 +215,18 @@ export default function CustomOrderItemForm({
       setSelectedShapeId(fallback?._id || "");
     }
   }, [availableShapes]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (initialValues?.tiers?.length) {
+      setTierFlavors(tierFlavorsFromSelections(initialValues.tiers));
+    }
+  }, [initialValues?.tiers]);
+
+  useEffect(() => {
+    if (!isMultiTier) {
+      setTierFlavors({});
+    }
+  }, [selectedDiameterId, isMultiTier]);
 
   useEffect(() => {
     if (activeCategoryObj?.categoryType === 'set') {
@@ -285,13 +339,18 @@ export default function CustomOrderItemForm({
           showAlert("Please specify a size or quantity", "error");
           return;
       }
-      if (!flavorValue) {
+      if (isMultiTier) {
+        if (!allTierFlavorsSelected(tiersCount, tierFlavors)) {
+          showAlert("Please select a flavor for each tier", "error");
+          return;
+        }
+      } else if (!flavorValue) {
           showAlert("Please specify a flavor", "error");
           return;
       }
 
       const isCustomSize = !diameters.some(d => d._id === sizeValue);
-      const isCustomFlavor = !flavors.some(f => f._id === flavorValue);
+      const isCustomFlavor = !isMultiTier && !flavors.some(f => f._id === flavorValue);
       
       let sizeName = sizeValue;
       if (!isCustomSize) {
@@ -300,6 +359,19 @@ export default function CustomOrderItemForm({
           // Check if it's a Box size match
           const boxMatch = BOX_SIZES.find(b => b.value === sizeValue);
           if (boxMatch) sizeName = `${boxMatch.label} ${boxMatch.value}`;
+      }
+
+      let compiledFlavor = flavorValue;
+      let itemTiers: CakeTierSelection[] | undefined;
+
+      if (isMultiTier) {
+        itemTiers = buildTierSelections(
+          tiersCount,
+          tierSizes,
+          tierFlavors,
+          activeFlavors
+        );
+        compiledFlavor = compileCustomOrderFlavorLabel(itemTiers);
       }
 
       const newItem: any = {
@@ -324,11 +396,12 @@ export default function CustomOrderItemForm({
           // Hybrid Logic
           customSize: isCustomSize ? sizeValue : undefined,
           diameterId: !isCustomSize ? sizeValue : undefined,
-          shapeId: !isCustomSize && selectedShapeId ? selectedShapeId : undefined,
+          shapeId: !isCustomSize && !isMultiTier && selectedShapeId ? selectedShapeId : undefined,
+          tiers: itemTiers,
           
           customFlavor: isCustomFlavor ? flavorValue : undefined,
-          flavor: isCustomFlavor ? flavorValue : undefined,
-          selectedConfig: (!isCustomFlavor || !isCustomSize) ? {
+          flavor: isMultiTier ? compiledFlavor : (isCustomFlavor ? flavorValue : compiledFlavor),
+          selectedConfig: (!isMultiTier && (!isCustomFlavor || !isCustomSize)) ? {
               cake: {
                   flavorId: !isCustomFlavor ? flavorValue : "",
                   diameterId: !isCustomSize ? sizeValue : "",
@@ -337,7 +410,9 @@ export default function CustomOrderItemForm({
           } : undefined
       };
       
-      newItem.flavor = flavorValue; 
+      if (!isMultiTier) {
+        newItem.flavor = flavorValue;
+      }
       
       onSubmit(newItem);
       
@@ -346,6 +421,7 @@ export default function CustomOrderItemForm({
           setSelectedImage("");
           setSizeValue("");
           setFlavorValue("");
+          setTierFlavors({});
           setSelectedShapeId("");
           setFlavorNote("");
           setDesignInstructions("");
@@ -545,8 +621,8 @@ export default function CustomOrderItemForm({
                      
                  </div>
 
-                 {/* SHAPE SELECTION UI (only when a real diameter is chosen) */}
-                 {availableShapes.length > 0 && (
+                 {/* SHAPE SELECTION UI (only when a real diameter is chosen and single-tier) */}
+                 {!isMultiTier && availableShapes.length > 0 && (
                      <div className="space-y-2">
                          <Label className="block text-md border-b pb-2">Shape</Label>
                          <Select value={selectedShapeId} onValueChange={setSelectedShapeId}>
@@ -628,6 +704,22 @@ export default function CustomOrderItemForm({
                                       );
                                  })}
                              </div>
+                         </div>
+                     ) : isMultiTier ? (
+                         <div className="space-y-2">
+                             <Label className="block text-md border-b pb-2">
+                               Tier Flavors ({activeFlavors.length} available)
+                             </Label>
+                             <AdminTierFlavorEditor
+                               tiersCount={tiersCount}
+                               tierSizes={tierSizes}
+                               tierFlavors={tierFlavors}
+                               flavors={activeFlavors}
+                               onTierFlavorChange={(index, id) =>
+                                 setTierFlavors((prev) => ({ ...prev, [index]: id }))
+                               }
+                               variant="cards"
+                             />
                          </div>
                      ) : (
                          <HybridSelector 

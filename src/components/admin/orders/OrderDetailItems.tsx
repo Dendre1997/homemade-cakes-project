@@ -28,6 +28,15 @@ import CustomOrderItemForm from "./CustomOrderItemForm";
 import { ComboProductForm } from "@/components/admin/orders/ComboProductForm";
 import { AddonAdminSelector } from "@/components/admin/addons/AddonAdminSelector";
 import { SelectedAddon } from "@/types";
+import { AdminTierFlavorEditor } from "@/components/admin/shared/AdminTierFlavorEditor";
+import {
+  allTierFlavorsSelected,
+  buildTierSelections,
+  compileCatalogFlavorLabel,
+  getTierSizeLabels,
+  sumFlavorUpcharges,
+  tierFlavorsFromSelections,
+} from "@/lib/tierSelections";
 
 interface OrderDetailItemsProps {
   items: Order["items"];
@@ -60,6 +69,7 @@ const OrderDetailItems = ({
   // Edit Form Data
   const [draftProduct, setDraftProduct] = useState<ProductWithCategory | null>(null);
   const [draftFlavorId, setDraftFlavorId] = useState("");
+  const [draftTierFlavors, setDraftTierFlavors] = useState<Record<number, string>>({});
   const [draftDiameterId, setDraftDiameterId] = useState("");
   const [draftShapeId, setDraftShapeId] = useState("");
   const [draftQuantity, setDraftQuantity] = useState(1);
@@ -93,6 +103,7 @@ const OrderDetailItems = ({
     setEditingItem(item);
     setIsCustomMode(!!(item.productType === 'custom' || item.isCustom));
     setDraftFlavorId(""); 
+    setDraftTierFlavors(item.tiers?.length ? tierFlavorsFromSelections(item.tiers) : {});
     setDraftDiameterId(item.diameterId ? item.diameterId.toString() : "");
     setDraftShapeId(item.shapeId ? item.shapeId.toString() : "");
     setDraftQuantity(item.quantity);
@@ -116,8 +127,12 @@ const OrderDetailItems = ({
            setAvailableFlavors(fullProduct.availableFlavors || []);
            setAvailableDiameters(diameters); 
 
-           const matchedFlavor = fullProduct.availableFlavors?.find(f => f.name === item.flavor);
-           if (matchedFlavor) setDraftFlavorId(matchedFlavor._id);
+           if (item.tiers?.length) {
+             setDraftTierFlavors(tierFlavorsFromSelections(item.tiers));
+           } else {
+             const matchedFlavor = fullProduct.availableFlavors?.find(f => f.name === item.flavor);
+             if (matchedFlavor) setDraftFlavorId(matchedFlavor._id);
+           }
         }
       } catch (e) {
         console.error("Error loading product details for edit", e);
@@ -139,6 +154,7 @@ const OrderDetailItems = ({
               setAvailableFlavors(fullProduct.availableFlavors || []);
               setAvailableDiameters(fullProduct.availableDiameters || []);
               setDraftFlavorId("");
+              setDraftTierFlavors({});
               setDraftDiameterId("");
               setDraftShapeId("");
               setDraftPriceOverride("");
@@ -147,6 +163,21 @@ const OrderDetailItems = ({
           console.error(e);
       }
   };
+
+  const draftDiameter = diameters.find((d) => d._id === draftDiameterId);
+  const draftTiersCount = draftDiameter?.tiersCount ?? (editingItem?.tiers?.length ?? 1);
+  const isDraftMultiTier = draftTiersCount > 1;
+  const draftTierSizes = useMemo(
+    () =>
+      editingItem?.tiers?.length && editingItem.tiers.length > 1 && draftDiameterId === editingItem.diameterId?.toString()
+        ? editingItem.tiers.map((t) => t.sizeLabel)
+        : getTierSizeLabels(draftDiameter),
+    [editingItem?.tiers, editingItem?.diameterId, draftDiameter, draftDiameterId]
+  );
+
+  const draftTierUpcharge = isDraftMultiTier
+    ? sumFlavorUpcharges(Object.values(draftTierFlavors), availableFlavors)
+    : 0;
 
   const currentUnitCost = draftProduct
     ? (draftProduct.productType === 'set' && draftSelectedConfig)
@@ -178,26 +209,26 @@ const OrderDetailItems = ({
         })()
         : calculateUnitPrice({
             product: draftProduct,
-            flavorId: draftFlavorId,
+            flavorId: isDraftMultiTier ? undefined : draftFlavorId,
             diameterId: draftDiameterId,
             quantity: draftQuantity,
             availableFlavors,
             inscriptionAvailable: draftProduct.inscriptionSettings?.isAvailable,
             inscriptionPrice: draftProduct.inscriptionSettings?.price,
             hasInscription: !!draftInscription,
-          })
+          }) + draftTierUpcharge
     : 0;
 
-  // Shapes linked to the drafted diameter (fallback to all active shapes)
+  // Shapes linked to the drafted diameter (fallback to all active shapes; hidden for multi-tier)
   const availableShapes = useMemo(() => {
-      if (!draftDiameterId) return [];
+      if (!draftDiameterId || isDraftMultiTier) return [];
       const diam = diameters.find(d => d._id === draftDiameterId);
       const linkedIds = diam?.shapeIds;
       if (linkedIds && linkedIds.length > 0) {
           return shapes.filter(s => linkedIds.includes(s._id));
       }
       return shapes;
-  }, [draftDiameterId, diameters, shapes]);
+  }, [draftDiameterId, diameters, shapes, isDraftMultiTier]);
 
   // Cascade reset: keep the drafted shape valid when the diameter changes
   useEffect(() => {
@@ -219,13 +250,45 @@ const OrderDetailItems = ({
     
   const handleSaveChanges = async () => {
     if (!editingItem) return;
+
+    if (isDraftMultiTier && !allTierFlavorsSelected(draftTiersCount, draftTierFlavors)) {
+      showAlert("Please select a flavor for each tier.", "warning");
+      return;
+    }
+
     setIsSaving(true);
     
     try {
         const isSet = draftProduct?.productType === 'set';
         const baseUnit = draftPriceOverride
             ? parseFloat(draftPriceOverride)
-            : currentUnitCost + (isSet ? 0 : currentShapeSurcharge);
+            : currentUnitCost + (isSet || isDraftMultiTier ? 0 : currentShapeSurcharge);
+
+        let standardFlavorFields: Partial<CartItem> = {};
+
+        if (isDraftMultiTier) {
+          const tiers = buildTierSelections(
+            draftTiersCount,
+            draftTierSizes,
+            draftTierFlavors,
+            availableFlavors
+          );
+          standardFlavorFields = {
+            flavor: compileCatalogFlavorLabel(tiers, draftTiersCount),
+            tiers,
+            diameterId: draftDiameterId,
+            shapeId: undefined,
+            selectedConfig: undefined,
+          };
+        } else {
+          standardFlavorFields = {
+            flavor: availableFlavors.find(f => f._id === draftFlavorId)?.name || (draftProduct ? "Standard" : editingItem.flavor),
+            tiers: undefined,
+            diameterId: draftDiameterId,
+            shapeId: draftShapeId || undefined,
+            selectedConfig: undefined,
+          };
+        }
         
         const updatedItem: CartItem = {
             ...editingItem,
@@ -241,12 +304,8 @@ const OrderDetailItems = ({
                 flavor: isSet ? `Set: ${draftSelectedConfig?.quantityConfigId}` : "Set Product", 
                 selectedConfig: draftSelectedConfig,
                 shapeId: undefined,
-            } : {
-                flavor: availableFlavors.find(f => f._id === draftFlavorId)?.name || (draftProduct ? "Standard" : editingItem.flavor),
-                diameterId: draftDiameterId,
-                shapeId: draftShapeId || undefined,
-                selectedConfig: undefined // Strict undefined for Standard
-            }),
+                tiers: undefined,
+            } : standardFlavorFields),
             addons: draftAddons
         };
         
@@ -446,6 +505,7 @@ const OrderDetailItems = ({
                             selectedImage: editingItem.imageUrl || "",
                             sizeValue: editingItem.customSize || (editingItem.diameterId ? editingItem.diameterId.toString() : "") || "",
                             flavorValue: editingItem.customFlavor || (editingItem.selectedConfig?.cake?.flavorId) || editingItem.flavor || "", 
+                            tiers: editingItem.tiers,
                             shapeId: (editingItem.shapeId || editingItem.selectedConfig?.cake?.shapeId)?.toString() || "",
                             designInstructions: editingItem.designInstructions || "",
                             inscription: editingItem.inscription || "",
@@ -574,8 +634,19 @@ const OrderDetailItems = ({
                     ) : (
                         /* STANDARD CAKE FORM */
                         <div className="grid grid-cols-2 gap-4">
-                             <div className="space-y-2">
-                                 <Label>Flavor</Label>
+                             <div className={`space-y-2 ${isDraftMultiTier ? "col-span-2" : ""}`}>
+                                 <Label>{isDraftMultiTier ? "Tier Flavors" : "Flavor"}</Label>
+                                 {isDraftMultiTier ? (
+                                   <AdminTierFlavorEditor
+                                     tiersCount={draftTiersCount}
+                                     tierSizes={draftTierSizes}
+                                     tierFlavors={draftTierFlavors}
+                                     flavors={availableFlavors}
+                                     onTierFlavorChange={(index, id) =>
+                                       setDraftTierFlavors((prev) => ({ ...prev, [index]: id }))
+                                     }
+                                   />
+                                 ) : (
                                  <Select value={draftFlavorId} onValueChange={setDraftFlavorId} disabled={!draftProduct || availableFlavors.length === 0}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select Flavor" />
@@ -586,11 +657,22 @@ const OrderDetailItems = ({
                                         ))}
                                     </SelectContent>
                                  </Select>
+                                 )}
                              </div>
 
                              <div className="space-y-2">
                                  <Label>Size</Label>
-                                 <Select value={draftDiameterId} onValueChange={setDraftDiameterId} disabled={!draftProduct || availableDiameters.length === 0}>
+                                 <Select
+                                   value={draftDiameterId}
+                                   onValueChange={(val) => {
+                                     setDraftDiameterId(val);
+                                     const diam = diameters.find((d) => d._id === val);
+                                     if ((diam?.tiersCount ?? 1) <= 1) {
+                                       setDraftTierFlavors({});
+                                     }
+                                   }}
+                                   disabled={!draftProduct || availableDiameters.length === 0}
+                                 >
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select Size" />
                                     </SelectTrigger>

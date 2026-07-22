@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { SelectedAddon } from "@/types";
+import { SelectedAddon, CakeTierSelection } from "@/types";
 
 export interface CartItem {
   id: string;
@@ -29,6 +29,9 @@ export interface CartItem {
   };
   addons?: SelectedAddon[];
   isCombo?: boolean;
+  flavorNote?: string;
+  /** Per-tier flavor selections (multi-tier standard cakes). */
+  tiers?: CakeTierSelection[];
 }
 
 interface CartState {

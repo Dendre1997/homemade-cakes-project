@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
-import { IShape } from "@/types";
+import { IShape, CakeTierSelection } from "@/types";
 
 import { FourInchBentoIcon } from "@/components/icons/cake-sizes/FourInchBentoIcon";
 import { FiveInchBentoIcon } from "@/components/icons/cake-sizes/FiveInchBentoIcon";
@@ -75,7 +75,7 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick }: { onNext:
   // --- LOCAL STATE FOR COMPLEX RUNDOWNS ---
   // If isStandard
   const [standardDiameterId, setStandardDiameterId] = useState<string | null>(null);
-  const [standardFlavorId, setStandardFlavorId] = useState<string | null>(null);
+  const [tierFlavors, setTierFlavors] = useState<Record<number, string>>({});
   const [standardShapeId, setStandardShapeId] = useState<string>("");
   
   // If isDiscrete (Cupcakes) — default to smallest box
@@ -183,6 +183,21 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick }: { onNext:
     );
   }, [filteredDiameters, standardDiameterId]);
 
+  const standardTiersCount = selectedStandardDiameter?.tiersCount ?? 1;
+
+  const standardTierSizes = useMemo((): string[] => {
+    if (!selectedStandardDiameter || standardTiersCount <= 1) return [];
+    const sizes = selectedStandardDiameter.tierSizes;
+    if (Array.isArray(sizes) && sizes.length === standardTiersCount) {
+      return sizes;
+    }
+    return Array.from({ length: standardTiersCount }, (_, index) => `Tier ${index + 1}`);
+  }, [selectedStandardDiameter, standardTiersCount]);
+
+  useEffect(() => {
+    setTierFlavors({});
+  }, [standardDiameterId]);
+
   const availableShapesForDiameter = useMemo(() => {
     if (!selectedStandardDiameter) return [];
     const allowedIds = (selectedStandardDiameter.shapeIds || []).map((id: unknown) =>
@@ -193,7 +208,7 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick }: { onNext:
   }, [selectedStandardDiameter, allShapes]);
 
   useEffect(() => {
-    if (!isStandard || !standardDiameterId) {
+    if (!isStandard || !standardDiameterId || standardTiersCount > 1) {
       setStandardShapeId("");
       return;
     }
@@ -212,12 +227,12 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick }: { onNext:
         availableShapesForDiameter[0];
       return defaultShape?._id || "";
     });
-  }, [isStandard, standardDiameterId, availableShapesForDiameter]);
+  }, [isStandard, standardDiameterId, standardTiersCount, availableShapesForDiameter]);
 
   const standardShapeSurcharge = useMemo(() => {
-    if (!standardShapeId) return 0;
+    if (standardTiersCount > 1 || !standardShapeId) return 0;
     return allShapes.find((s) => s._id === standardShapeId)?.priceSurcharge ?? 0;
-  }, [standardShapeId, allShapes]);
+  }, [standardTiersCount, standardShapeId, allShapes]);
 
   // ── Price computation ──────────────────────────────────────────────────────
   // Formula: basePrice × (1 + diameterIndex × 0.30)
@@ -246,6 +261,20 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick }: { onNext:
     return basePrice * qty;
   }, [isDiscrete, basePrice, discreteQuantity]);
 
+  const standardFlavorUpcharge = useMemo(() => {
+    if (!isStandard) return 0;
+    const indices =
+      standardTiersCount > 1
+        ? Array.from({ length: standardTiersCount }, (_, index) => index)
+        : [0];
+
+    return indices.reduce((sum, index) => {
+      const flavorId = tierFlavors[index];
+      if (!flavorId) return sum;
+      return sum + (filteredFlavors.find((f: any) => f._id === flavorId)?.price ?? 0);
+    }, 0);
+  }, [isStandard, standardTiersCount, tierFlavors, filteredFlavors]);
+
   // ── Price Sync: Forward Math Engine ────────────────────────────────────────────
   // Called whenever size, flavor, or step-3-visible state changes.
   // Addons (Step 4) are read via getValues() — non-reactive — so they are
@@ -255,15 +284,12 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick }: { onNext:
     if (isStandard) {
       // cakeSizePrice = the size-multiplied cake price (the existing useMemo formula)
       const cakeSizePrice = approximatePrice > 0 ? approximatePrice : (basePrice || 0);
-      const flavorPrice = standardFlavorId
-        ? (filteredFlavors.find((f: any) => f._id === standardFlavorId)?.price ?? 0)
-        : 0;
       // Read existing addons non-reactively so they're included in the grand total
       const existingAddons = (getValues("addons") as any[]) ?? [];
 
       const result = calculateCustomOrderTotal({
         cakeSizePrice,
-        flavorPrice,
+        flavorPrice: standardFlavorUpcharge,
         addons: existingAddons,
       });
 
@@ -283,13 +309,15 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick }: { onNext:
       setValue("approximatePrice", result.grandTotal > 0 ? result.grandTotal : undefined);
       setValue("priceBreakdown", result);
     }
-  }, [approximatePrice, discretePrice, isStandard, isDiscrete, standardFlavorId, filteredFlavors, basePrice, getValues, setValue]);
+  }, [approximatePrice, discretePrice, isStandard, isDiscrete, standardFlavorUpcharge, basePrice, getValues, setValue]);
 
 
   // --- COMPILATION LOGIC ---
   const compilePayload = useCallback(() => {
       let finalSize = "";
       let finalFlavor = "";
+      let finalTiers: CakeTierSelection[] | undefined;
+      let finalDiameterId: string | undefined;
 
       if (isCombo) {
           finalSize = `Combo Box: ${comboPieceQuantity || "TBD"} pieces + 4" Pick`;
@@ -305,19 +333,74 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick }: { onNext:
           
       } else {
           // Standard
-          finalSize = filteredDiameters.find(d => d._id === standardDiameterId)?.name || "";
-          finalFlavor = filteredFlavors.find(f => f._id === standardFlavorId)?.name || "";
+          const diameter = filteredDiameters.find(
+            (d: { _id: unknown }) => String(d._id) === String(standardDiameterId)
+          );
+          finalSize = diameter?.name || "";
+          const tiersCount = diameter?.tiersCount ?? 1;
+          const tierSizes: string[] =
+            tiersCount > 1 && Array.isArray(diameter?.tierSizes)
+              ? diameter.tierSizes
+              : Array.from({ length: tiersCount }, (_, index) => `Tier ${index + 1}`);
+
+          const allTiersSelected = Array.from(
+            { length: tiersCount },
+            (_, index) => tierFlavors[index]
+          ).every(Boolean);
+
+          if (standardDiameterId) {
+            finalDiameterId = String(standardDiameterId);
+          }
+
+          if (tiersCount > 1) {
+            if (allTiersSelected) {
+              finalTiers = Array.from({ length: tiersCount }, (_, index) => {
+                const flavorId = tierFlavors[index];
+                const flavorDoc = filteredFlavors.find((f: any) => f._id === flavorId);
+                const sizeLabel = tierSizes[index] ?? `Tier ${index + 1}`;
+                return {
+                  tierIndex: index,
+                  sizeLabel,
+                  flavorId,
+                  flavorName: flavorDoc?.name,
+                };
+              });
+              finalFlavor = finalTiers
+                .map(
+                  (tier) =>
+                    `Tier ${tier.tierIndex + 1} (${tier.sizeLabel}): ${tier.flavorName ?? ""}`
+                )
+                .join(" | ");
+            } else {
+              finalFlavor = "";
+              finalTiers = undefined;
+            }
+          } else {
+            const flavorId = tierFlavors[0];
+            finalFlavor =
+              filteredFlavors.find((f: any) => f._id === flavorId)?.name || "";
+            finalTiers = undefined;
+          }
       }
 
-      const finalShape = isStandard
-        ? allShapes.find((s) => s._id === standardShapeId)?.name || ""
-        : "";
+      const finalShape =
+        isStandard && standardTiersCount <= 1
+          ? allShapes.find((s) => s._id === standardShapeId)?.name || ""
+          : "";
 
       setValue("details.size", finalSize, { shouldValidate: true });
       setValue("details.flavor", finalFlavor, { shouldValidate: true });
       setValue("details.shape", finalShape, { shouldValidate: true });
 
-  }, [isCombo, isDiscrete, comboPieceQuantity, comboTreatFlavorIds, comboCakeFlavorId, discreteQuantity, discreteFlavorIds, standardDiameterId, standardFlavorId, standardShapeId, filteredFlavors, filteredDiameters, allShapes, isStandard, setValue]);
+      if (isStandard) {
+        setValue("details.diameterId", finalDiameterId, { shouldValidate: true });
+        setValue("details.tiers", finalTiers, { shouldValidate: true });
+      } else {
+        setValue("details.diameterId", undefined, { shouldValidate: false });
+        setValue("details.tiers", undefined, { shouldValidate: false });
+      }
+
+  }, [isCombo, isDiscrete, comboPieceQuantity, comboTreatFlavorIds, comboCakeFlavorId, discreteQuantity, discreteFlavorIds, standardDiameterId, tierFlavors, standardShapeId, standardTiersCount, filteredFlavors, filteredDiameters, allShapes, isStandard, setValue, treatFlavors, bentoFlavors]);
 
   // Sync back local state compilation
   useEffect(() => {
@@ -338,6 +421,10 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick }: { onNext:
      });
   };
 
+  const handleTierFlavorSelect = (tierIndex: number, flavorId: string) => {
+    setTierFlavors((prev) => ({ ...prev, [tierIndex]: flavorId }));
+  };
+
   const isFlavorSelected = useMemo(() => {
     if (isCombo) {
       return !!comboCakeFlavorId || comboTreatFlavorIds.length > 0;
@@ -345,8 +432,23 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick }: { onNext:
     if (isDiscrete) {
       return discreteFlavorIds.length > 0;
     }
-    return !!standardFlavorId || (filteredFlavors.length === 0 && !!currentFlavor);
-  }, [isCombo, isDiscrete, comboCakeFlavorId, comboTreatFlavorIds, discreteFlavorIds, standardFlavorId, filteredFlavors.length, currentFlavor]);
+    if (standardTiersCount > 1) {
+      return Array.from({ length: standardTiersCount }, (_, index) => tierFlavors[index]).every(
+        Boolean
+      );
+    }
+    return !!tierFlavors[0] || (filteredFlavors.length === 0 && !!currentFlavor);
+  }, [
+    isCombo,
+    isDiscrete,
+    comboCakeFlavorId,
+    comboTreatFlavorIds,
+    discreteFlavorIds,
+    standardTiersCount,
+    tierFlavors,
+    filteredFlavors.length,
+    currentFlavor,
+  ]);
 
   if (isLoading) {
       return (
@@ -585,7 +687,7 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick }: { onNext:
                     selectedDiameterId={standardDiameterId}
                     onSelectDiameter={setStandardDiameterId}
                   />
-                  {availableShapesForDiameter.length > 0 && (
+                  {availableShapesForDiameter.length > 0 && standardTiersCount <= 1 && (
                     <ShapeSelector
                       shapes={availableShapesForDiameter}
                       selectedShapeId={standardShapeId}
@@ -624,15 +726,48 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick }: { onNext:
 
             <div data-field-name="details.flavor">
               {filteredFlavors.length > 0 ? (
-                <div className="bg-background rounded-2xl shadow-sm border p-4">
-                  <FlavorSelector
-                    mode="single"
-                    flavors={filteredFlavors}
-                    selectedId={standardFlavorId}
-                    onSelectId={setStandardFlavorId}
-                    hidePrice={true}
-                    onInfoClick={onFlavorInfoClick}
-                  />
+                <div className="space-y-6">
+                  {standardTiersCount > 1 ? (
+                    <>
+                      <div>
+                        <h3 className="font-heading text-xl text-primary mb-1">
+                          Choose a flavor for each tier
+                        </h3>
+                        <p className="text-sm text-primary/60 mb-4">
+                          Select one flavor per tier. Notes about flavors can be added below once all tiers are chosen.
+                        </p>
+                      </div>
+                      {Array.from({ length: standardTiersCount }, (_, index) => (
+                        <div key={index}>
+                          <h4 className="text-sm font-semibold mb-2 text-primary">
+                            Tier {index + 1} ({standardTierSizes[index]})
+                          </h4>
+                          <div className="bg-background rounded-2xl shadow-sm border p-4">
+                            <FlavorSelector
+                              mode="single"
+                              flavors={filteredFlavors}
+                              selectedId={tierFlavors[index] ?? null}
+                              onSelectId={(id) => handleTierFlavorSelect(index, id)}
+                              hidePrice={true}
+                              hideHeading={true}
+                              onInfoClick={onFlavorInfoClick}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </>
+                  ) : (
+                    <div className="bg-background rounded-2xl shadow-sm border p-4">
+                      <FlavorSelector
+                        mode="single"
+                        flavors={filteredFlavors}
+                        selectedId={tierFlavors[0] ?? null}
+                        onSelectId={(id) => handleTierFlavorSelect(0, id)}
+                        hidePrice={true}
+                        onInfoClick={onFlavorInfoClick}
+                      />
+                    </div>
+                  )}
                 </div>
               ) : (
                 <Input
@@ -656,7 +791,10 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick }: { onNext:
           </div>
         )}
 
-        <FlavorNoteSection isVisible={isFlavorSelected} />
+        <FlavorNoteSection
+          isVisible={isFlavorSelected}
+          isMultiTier={isStandard && standardTiersCount > 1}
+        />
         <AllergySection />
       </div>
     </div>
@@ -773,7 +911,13 @@ function AllergySection() {
   );
 }
 
-function FlavorNoteSection({ isVisible }: { isVisible: boolean }) {
+function FlavorNoteSection({
+  isVisible,
+  isMultiTier = false,
+}: {
+  isVisible: boolean;
+  isMultiTier?: boolean;
+}) {
   const { setValue, watch } = useFormContext<CustomOrderFormData>();
   const currentFlavorNote = watch("details.flavorNote");
 
@@ -826,11 +970,14 @@ function FlavorNoteSection({ isVisible }: { isVisible: boolean }) {
         <div className="pt-8 space-y-4">
           <div>
             <h3 className="font-heading text-xl text-primary mb-1">
-              Any notes about your selected flavor?
+              {isMultiTier
+                ? "Any notes about your tier flavors?"
+                : "Any notes about your selected flavor?"}
             </h3>
             <p className="text-sm text-primary/60 mb-4">
-              Optional — add notes like sweetness level, ingredients to include
-              or avoid, or any special requests.
+              {isMultiTier
+                ? "Optional — one note for the whole cake (e.g. less sweet overall, or tier-specific requests in one message)."
+                : "Optional — add notes like sweetness level, ingredients to include or avoid, or any special requests."}
             </p>
 
             <div className="flex gap-3">

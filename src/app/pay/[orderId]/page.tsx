@@ -4,6 +4,10 @@ import { AlertTriangle } from "lucide-react";
 import type { Metadata } from "next";
 import { withMongoClient } from "@/lib/db";
 import { getAppSettings } from "@/lib/api/settings";
+import {
+  getLegacyFlavorDisplay,
+  resolveOrderItemTiers,
+} from "@/lib/orderItemDisplay";
 import PaymentHubClient from "@/components/payment/PaymentHubClient";
 import type { PublicOrderSummary, PublicOrderAddon } from "@/types";
 
@@ -145,10 +149,19 @@ function mapToPublicOrder(order: any, ctx: ScrubContext): PublicOrderSummary {
       ? item.customShape ||
         resolveShape(item.shapeId || item.selectedConfig?.cake?.shapeId)
       : resolveShape(item.shapeId);
-    const displayFlavor = isCustom
-      ? item.customFlavor ||
-        resolveFlavor(item.selectedConfig?.cake?.flavorId || item.flavor)
-      : resolveFlavor(item.flavor || item.selectedConfig?.cake?.flavorId);
+    const resolvedTiers = resolveOrderItemTiers(item, (id) => resolveFlavor(id));
+    const displayTiers = resolvedTiers?.map((tier) => ({
+      sizeLabel: tier.sizeLabel,
+      flavorName: tier.flavorName || resolveFlavor(tier.flavorId),
+    }));
+
+    const displayFlavor = resolvedTiers?.length
+      ? undefined
+      : isCustom
+        ? item.customFlavor ||
+          resolveFlavor(item.selectedConfig?.cake?.flavorId || item.flavor)
+        : resolveFlavor(item.flavor || item.selectedConfig?.cake?.flavorId) ||
+          getLegacyFlavorDisplay(item);
 
     // Show EVERY image the customer will care about: prefer the item's own
     // gallery; otherwise fall back to the FULL set of uploaded reference images
@@ -178,6 +191,7 @@ function mapToPublicOrder(order: any, ctx: ScrubContext): PublicOrderSummary {
       displaySize: displaySize || undefined,
       displayShape: displayShape || undefined,
       displayFlavor: displayFlavor || undefined,
+      displayTiers: displayTiers?.length ? displayTiers : undefined,
       flavorNote: item.flavorNote || undefined,
       inscription: item.inscription || undefined,
       designInstructions: item.designInstructions || undefined,
