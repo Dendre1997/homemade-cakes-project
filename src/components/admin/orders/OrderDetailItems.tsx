@@ -497,10 +497,10 @@ const OrderDetailItems = ({
                             quantity: editingItem.quantity,
                             images: editingItem.imageUrls?.length
                               ? editingItem.imageUrls
-                              : referenceImages?.length
-                                ? referenceImages
-                                : editingItem.imageUrl
-                                  ? [editingItem.imageUrl]
+                              : editingItem.imageUrl
+                                ? [editingItem.imageUrl]
+                                : referenceImages?.length
+                                  ? referenceImages
                                   : [],
                             selectedImage: editingItem.imageUrl || "",
                             sizeValue: editingItem.customSize || (editingItem.diameterId ? editingItem.diameterId.toString() : "") || "",

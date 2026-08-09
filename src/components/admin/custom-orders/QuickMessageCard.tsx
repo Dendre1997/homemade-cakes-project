@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { MessageCircle } from "lucide-react";
 import { CustomOrder } from "@/types";
+import { summarizeCustomOrderCategories } from "@/lib/customOrderCategory";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
 import { Textarea } from "@/components/ui/Textarea";
@@ -41,7 +42,10 @@ function buildQuickMessage(
   paymentLink?: string | null
 ): string {
   const firstName = order.contact?.name?.trim().split(/\s+/)[0] || "there";
-  const category = order.category?.trim() || "custom order";
+  const category =
+    summarizeCustomOrderCategories(order.items ?? []) ||
+    order.category?.trim() ||
+    "custom order";
 
   const detailSegments = [
     order.details?.size?.trim(),

@@ -147,8 +147,17 @@ export async function GET() {
       if (coDate < today || coDate > windowEnd) continue;
 
       const ds = format(coDate, "yyyy-MM-dd");
-      // Custom orders don't carry a categoryId — use the cake fallback
-      minutesBooked[ds] = (minutesBooked[ds] ?? 0) + cakeFallbackMinutes;
+
+      // A single custom request can now contain multiple items (1-to-many).
+      // Book the fallback manufacturing time PER ITEM (e.g. 3 items → 3× block).
+      // Legacy flat documents have no `items[]` array → treat them as one item.
+      const itemCount = Array.isArray(co.items) && co.items.length > 0
+        ? co.items.length
+        : 1;
+
+      // Custom orders don't carry a categoryId — use the cake fallback per item.
+      minutesBooked[ds] =
+        (minutesBooked[ds] ?? 0) + cakeFallbackMinutes * itemCount;
     }
 
     // ── 5. Determine blocked dates ─────────────────────────────────────────

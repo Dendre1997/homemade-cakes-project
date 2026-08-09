@@ -561,24 +561,57 @@ export interface VideoBannerContent {
   isActive: boolean;
 }
 
+/** Item-specific details for a single custom creation within a request. */
+export interface CustomOrderItemDetails {
+  size?: string;
+  flavor?: string;
+  flavorNote?: string;
+  textOnCake?: string;
+  designNotes?: string;
+  shape?: string;
+  diameterId?: string;
+  /** Per-tier flavor selections (multi-tier cakes). */
+  tiers?: CakeTierSelection[];
+  [key: string]: any;
+}
+
+/** Transparent itemized price breakdown for a single custom item. */
+export interface CustomOrderPriceBreakdown {
+  baseCakePrice: number;
+  flavorUpcharge: number;
+  addonsCost: number;
+  grandTotal: number;
+}
+
+/**
+ * A single custom creation within a Custom Order request.
+ * A request (CustomOrder) may contain multiple of these (e.g. a tier cake + cupcakes).
+ */
+export interface CustomOrderItem {
+  /** Client-generated stable id (used for React keys, useFieldArray, and convert itemIds). */
+  id: string;
+  /** Catalog category reference (canonical). Optional on legacy documents. */
+  categoryId?: string;
+  /** Denormalized category display name (snapshot at selection time). */
+  category: 'Cake' | 'Bento' | 'Cupcakes' | 'Macarons' | string;
+  details: CustomOrderItemDetails;
+  referenceImages: string[];
+  addons?: SelectedAddon[];
+  priceBreakdown?: CustomOrderPriceBreakdown;
+  /** Client-estimated price for this item. */
+  approximatePrice?: number;
+  /** Admin-agreed price for this item (set during review/quote). */
+  agreedPrice?: number;
+}
+
 export interface CustomOrder {
   _id: string;
   status: 'pending_review' | 'converted' | 'rejected' | string;
+
+  // --- ORDER-LEVEL (global) fields ---
   date: Date;
   timeSlot: string;
-  category: 'Cake' | 'Bento' | 'Cupcakes' | 'Macarons' | string;
-  details: {
-    size?: string;
-    flavor?: string;
-    flavorNote?: string;
-    textOnCake?: string;
-    designNotes?: string;
-    diameterId?: string;
-    /** Per-tier flavor selections (multi-tier cakes). */
-    tiers?: CakeTierSelection[];
-    [key: string]: any;
-  };
-  referenceImages: string[];
+  deliveryMethod?: "pickup" | "delivery" | string;
   contact: {
     name: string;
     phone: string;
@@ -586,22 +619,46 @@ export interface CustomOrder {
     socialNickname?: string;
     socialPlatform?: "instagram" | "facebook";
   };
-  
+  /** Customer-submitted allergy info (order-level: applies to the whole request). */
+  allergies?: string;
+  paymentPreference?: "cash" | "e-transfer";
+
+  // --- ITEM-LEVEL (array) fields ---
+  items: CustomOrderItem[];
+
+  // --- Aggregated pricing (sum across items) ---
+  /** Sum of items[].approximatePrice (client estimate). */
+  approximatePriceTotal?: number;
+  /** Sum of items[].agreedPrice (admin quote). */
+  agreedPriceTotal?: number;
+
+  // --- System / lifecycle fields ---
   convertedOrderId?: string;
   createdAt?: string | Date;
   updatedAt?: string | Date;
   userId?: string;
-  
-  // Customer-submitted allergy info
-  allergies?: string;
-
-  // Admin fields
-  agreedPrice?: number;
-  approximatePrice?: number;
   adminNotes?: string;
-  deliveryMethod?: "pickup" | "delivery" | string;
-  paymentPreference?: "cash" | "e-transfer";
+  idempotencyKey?: string;
+  rejectionReason?: string | null;
+
+  // --- LEGACY flat fields (kept optional for backward compatibility) ---
+  // Older documents stored a single item's data at the root level. These are
+  // normalized into `items[0]` by normalizeCustomOrder(); prefer `items`.
+  /** @deprecated legacy single-item field — use items[i].category */
+  category?: 'Cake' | 'Bento' | 'Cupcakes' | 'Macarons' | string;
+  /** @deprecated legacy single-item field — use items[i].details */
+  details?: CustomOrderItemDetails;
+  /** @deprecated legacy single-item field — use items[i].referenceImages */
+  referenceImages?: string[];
+  /** @deprecated legacy single-item field — use items[i].addons */
   addons?: SelectedAddon[];
+  /** @deprecated legacy single-item field — use items[i].priceBreakdown */
+  priceBreakdown?: CustomOrderPriceBreakdown;
+  /** @deprecated legacy single-item field — use items[i].agreedPrice / agreedPriceTotal */
+  agreedPrice?: number;
+  /** @deprecated legacy single-item field — use items[i].approximatePrice / approximatePriceTotal */
+  approximatePrice?: number;
+
   [key: string]: any;
 }
 

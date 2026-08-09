@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CustomOrder } from "@/types";
+import { CustomOrder, CustomOrderItem } from "@/types";
+import { normalizeCustomOrder } from "@/lib/normalizeCustomOrder";
 import { Button } from "@/components/ui/Button";
 import { OrderItemTiersDisplay } from "@/components/shared/OrderItemTiersDisplay";
 import Link from "next/link";
@@ -34,7 +35,8 @@ export default function ClientRequestsTab({ userId }: { userId: string }) {
         const res = await fetch(`/api/custom-orders?userId=${userId}`);
         if (!res.ok) throw new Error("Failed to fetch requests");
         const data = await res.json();
-        setRequests(data);
+        // Normalize legacy flat requests into the canonical multi-item shape.
+        setRequests(Array.isArray(data) ? data.map(normalizeCustomOrder) : []);
       } catch (err) {
         console.error(err);
         setError("Could not load custom requests.");
@@ -75,14 +77,21 @@ export default function ClientRequestsTab({ userId }: { userId: string }) {
           {pendingRequests.map(req => {
             const isDelivery = req.deliveryMethod === 'delivery';
             const displayDate = req.date ? new Date(req.date) : null;
-            
+            const items: CustomOrderItem[] = req.items ?? [];
+            const categorySummary = Array.from(
+              new Set(items.map((it) => it.category).filter(Boolean))
+            ).join(", ");
+            const requestTitle = items.length > 1
+              ? `Custom Order Request (${items.length} items)`
+              : `Custom ${categorySummary || req.category || "Order"} Request`;
+
             return (
               <Card key={req._id} className="overflow-hidden shadow-sm border border-gray-200">
                 <CardHeader className="bg-subtleBackground/50 pb-4">
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
                       <h3 className="font-heading text-lg font-bold text-primary">
-                        Custom {req.category} Request
+                        {requestTitle}
                       </h3>
                       <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
                         <Calendar className="w-3 h-3" />
@@ -119,77 +128,95 @@ export default function ClientRequestsTab({ userId }: { userId: string }) {
                      </div>
                    </div>
 
-                   {/* Product Spec */}
-                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                     <div className="space-y-1 text-sm">
-                       <p className="text-muted-foreground uppercase tracking-wider text-xs font-semibold">Size & Flavor</p>
-                       <p className="text-primary font-medium">{req.details?.size || "Standard Size"}</p>
-                       <OrderItemTiersDisplay
-                         tiers={req.details?.tiers}
-                         flavor={req.details?.flavor}
-                         variant="compact"
-                       />
-                     </div>
-                     {(req.details?.flavorNote || req.details?.textOnCake) && (
-                       <div className="space-y-2 text-sm">
-                         <p className="text-muted-foreground uppercase tracking-wider text-xs font-semibold">Customizations</p>
-                         {req.details.flavorNote && (
-                           <p className="text-primary"><span className="text-muted-foreground mr-1">Note:</span>{req.details.flavorNote}</p>
-                         )}
-                         {req.details.textOnCake && (
-                           <p className="text-primary"><span className="text-muted-foreground mr-1">Text:</span>"{req.details.textOnCake}"</p>
-                         )}
-                       </div>
-                     )}
-                   </div>
-
-                   {req.details?.designNotes && (
-                     <StatefulCollapsible title="Design Notes">
-                       <p className="text-sm text-primary p-3 bg-white border border-gray-100 rounded-md whitespace-pre-wrap leading-relaxed mt-2">
-                         {req.details.designNotes}
-                       </p>
-                     </StatefulCollapsible>
-                   )}
-
-                   {req.addons && req.addons.length > 0 && (
-                     <div>
-                       <p className="text-muted-foreground uppercase tracking-wider text-xs font-semibold mb-2">Requested Add-ons</p>
-                       <div className="flex flex-wrap gap-2">
-                         {req.addons.map((a: any, i: number) => (
-                           <span key={i} className="px-3 py-1 bg-subtleBackground/50 text-primary text-xs font-medium rounded-full border border-primary/10">
-                             {a.name} {a.variantName && `(${a.variantName})`}
+                   {/* Per-item specifications (one request may contain many items) */}
+                   {items.map((item, itemIdx) => (
+                     <div
+                       key={item.id ?? itemIdx}
+                       className="space-y-4 rounded-lg border border-primary/10 bg-white/60 p-4"
+                     >
+                       {items.length > 1 && (
+                         <div className="flex items-center gap-2">
+                           <Badge variant="outline" className="text-xs">
+                             Item {itemIdx + 1}
+                           </Badge>
+                           <span className="font-heading text-sm font-bold text-primary">
+                             {item.category || "Custom Item"}
                            </span>
-                         ))}
+                         </div>
+                       )}
+
+                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                         <div className="space-y-1 text-sm">
+                           <p className="text-muted-foreground uppercase tracking-wider text-xs font-semibold">Size & Flavor</p>
+                           <p className="text-primary font-medium">{item.details?.size || "Standard Size"}</p>
+                           <OrderItemTiersDisplay
+                             tiers={item.details?.tiers}
+                             flavor={item.details?.flavor}
+                             variant="compact"
+                           />
+                         </div>
+                         {(item.details?.flavorNote || item.details?.textOnCake) && (
+                           <div className="space-y-2 text-sm">
+                             <p className="text-muted-foreground uppercase tracking-wider text-xs font-semibold">Customizations</p>
+                             {item.details.flavorNote && (
+                               <p className="text-primary"><span className="text-muted-foreground mr-1">Note:</span>{item.details.flavorNote}</p>
+                             )}
+                             {item.details.textOnCake && (
+                               <p className="text-primary"><span className="text-muted-foreground mr-1">Text:</span>"{item.details.textOnCake}"</p>
+                             )}
+                           </div>
+                         )}
                        </div>
+
+                       {item.details?.designNotes && (
+                         <StatefulCollapsible title="Design Notes">
+                           <p className="text-sm text-primary p-3 bg-white border border-gray-100 rounded-md whitespace-pre-wrap leading-relaxed mt-2">
+                             {item.details.designNotes}
+                           </p>
+                         </StatefulCollapsible>
+                       )}
+
+                       {item.addons && item.addons.length > 0 && (
+                         <div>
+                           <p className="text-muted-foreground uppercase tracking-wider text-xs font-semibold mb-2">Requested Add-ons</p>
+                           <div className="flex flex-wrap gap-2">
+                             {item.addons.map((a: any, i: number) => (
+                               <span key={i} className="px-3 py-1 bg-subtleBackground/50 text-primary text-xs font-medium rounded-full border border-primary/10">
+                                 {a.name} {a.variantName && `(${a.variantName})`}
+                               </span>
+                             ))}
+                           </div>
+                         </div>
+                       )}
+
+                       {item.referenceImages && item.referenceImages.length > 0 && (
+                         <div>
+                           <p className="text-muted-foreground uppercase tracking-wider text-xs font-semibold mb-3">Reference Images</p>
+                           <div className="flex gap-3 overflow-x-auto pb-2 custom-scrollbar snap-x snap-mandatory">
+                             {item.referenceImages.map((url, idx) => (
+                               <div
+                                 key={idx}
+                                 className="relative w-48 h-48 shrink-0 snap-center rounded-xl overflow-hidden border border-border shadow-sm"
+                               >
+                                 <Image
+                                   src={url}
+                                   alt={`Reference image ${idx + 1}`}
+                                   fill
+                                   quality={90}
+                                   className="object-cover"
+                                 />
+                               </div>
+                             ))}
+                           </div>
+                         </div>
+                       )}
                      </div>
-                   )}
+                   ))}
 
                    {req.allergies && req.allergies !== "No" && (
                      <Alert type="warning" title="Allergies Noted">
                        {req.allergies}
                      </Alert>
-                   )}
-
-                   {req.referenceImages && req.referenceImages.length > 0 && (
-                     <div>
-                       <p className="text-muted-foreground uppercase tracking-wider text-xs font-semibold mb-3">Reference Images</p>
-                       <div className="flex gap-3 overflow-x-auto pb-2 custom-scrollbar snap-x snap-mandatory">
-                         {req.referenceImages.map((url, idx) => (
-                           <div
-                             key={idx}
-                             className="relative w-48 h-48 shrink-0 snap-center rounded-xl overflow-hidden border border-border shadow-sm"
-                           >
-                             <Image
-                               src={url}
-                               alt={`Reference image ${idx + 1}`}
-                               fill
-                               quality={90}
-                               className="object-cover"
-                             />
-                           </div>
-                         ))}
-                       </div>
-                     </div>
                    )}
 
                    {req.contact && (
@@ -223,9 +250,11 @@ export default function ClientRequestsTab({ userId }: { userId: string }) {
                 
                 <CardFooter className="bg-subtleBackground/30 border-t p-4 flex justify-between items-center">
                   <span className="text-sm font-semibold text-muted-foreground">
-                    {req.approximatePrice ? `Estimated: ~$${req.approximatePrice.toFixed(2)}` : "Price pending review"}
+                    {req.approximatePriceTotal
+                      ? `Estimated: ~$${req.approximatePriceTotal.toFixed(2)}`
+                      : "Price pending review"}
                   </span>
-                  <Link href={`/custom-order?category=${req.category}`}>
+                  <Link href={`/custom-order?category=${items[0]?.category ?? req.category ?? ""}`}>
                      <Button variant="outline" size="sm" className="flex items-center gap-1">
                        <PlusCircle className="w-4 h-4" />
                        <span className="hidden sm:inline">Submit Another</span>
@@ -244,7 +273,7 @@ export default function ClientRequestsTab({ userId }: { userId: string }) {
                   {convertedRequests.map(req => (
                     <div key={req._id} className="bg-gray-50 rounded-xl p-4 flex justify-between items-center opacity-75 border border-gray-200">
                       <div>
-                        <p className="font-medium text-gray-700">Custom {req.category} Request</p>
+                        <p className="font-medium text-gray-700">Custom {req.items?.[0]?.category ?? req.category ?? "Order"} Request</p>
                         <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
                           <Calendar className="w-3 h-3" />
                           Converted on {format(new Date(req.updatedAt || req.date), "PPP")}
@@ -276,7 +305,7 @@ export default function ClientRequestsTab({ userId }: { userId: string }) {
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                           <div>
                             <h3 className="font-heading text-lg font-bold text-red-900">
-                              Custom {req.category} Request
+                              Custom {req.items?.[0]?.category ?? req.category ?? "Order"} Request
                             </h3>
                             <p className="text-sm text-red-700 flex items-center gap-1 mt-1">
                               <Calendar className="w-3 h-3" />
@@ -292,7 +321,7 @@ export default function ClientRequestsTab({ userId }: { userId: string }) {
                         </div>
                       </CardContent>
                       <CardFooter className="bg-red-50/50 border-t border-red-100 p-4 flex justify-end">
-                        <Link href={`/custom-order?category=${req.category}`}>
+                        <Link href={`/custom-order?category=${req.items?.[0]?.category ?? req.category ?? ""}`}>
                            <Button variant="outline" size="sm" className="flex items-center gap-1 border-red-200 text-red-700 hover:bg-red-100">
                              <PlusCircle className="w-4 h-4" />
                              Start New Request

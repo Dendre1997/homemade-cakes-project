@@ -1,14 +1,13 @@
-import { CustomOrderFormData } from "@/lib/validation/customOrderSchema";
+import { CustomOrderRequestData } from "@/lib/validation/customOrderSchema";
 import { Info, Sparkles, DollarSign, MapPin } from "lucide-react";
 import { format } from "date-fns";
 import HeaderLogo from "@/components/ui/HeaderLogo";
 import { SocialHandleAnchor } from "@/components/ui/SocialHandleAnchor";
 import { OrderItemTiersDisplay } from "@/components/shared/OrderItemTiersDisplay";
-import { socialPlatformLabel } from "@/lib/socialLinks";
 import { Button } from "@/components/ui/Button"
 
 interface Step6Props {
-  orderData: CustomOrderFormData | null;
+  orderData: CustomOrderRequestData | null;
   /** custom_orders document id from POST response */
   customOrderId?: string | null;
   onMakeAnotherRequest: () => void;
@@ -28,13 +27,200 @@ function getBakeryDmNicknameForPlatform(platform: "instagram" | "facebook"): str
   return raw || legacy;
 }
 
-export default function Step6Success({ orderData, customOrderId, onMakeAnotherRequest }: Step6Props) {
+/** Per-item specification + price breakdown card, rendered once per items[] entry. */
+function ItemSummary({ item, index, total }: { item: any; index: number; total: number }) {
+  const details = item?.details ?? {};
+  const addons: any[] = item?.addons ?? [];
+  const pb = item?.priceBreakdown;
+  const grandTotal = pb?.grandTotal ?? item?.approximatePrice ?? 0;
+  const baseCakePrice = pb?.baseCakePrice ?? 0;
+  const flavorUpcharge = pb?.flavorUpcharge ?? 0;
+  const flavorName = details?.flavor ?? "";
+  const referenceImages: string[] = item?.referenceImages ?? [];
 
+  return (
+    <div className="px-6 py-4 border-b border-gray-100">
+      <h3 className="text-primary/40 text-xs uppercase font-bold tracking-wider mb-3 flex items-center gap-1.5">
+        <Sparkles className="w-3.5 h-3.5" />
+        {total > 1 ? `Item ${index + 1} of ${total}` : "Specifications"}
+      </h3>
+
+      <div className="flex justify-between items-center mb-2">
+        <p className="font-extrabold text-sm text-primary/80">{item?.category}</p>
+        <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100 uppercase tracking-wide">
+          Custom
+        </span>
+      </div>
+
+      <div className="text-xs text-primary/60 space-y-1.5 bg-primary/5 p-3 rounded-xl border border-primary/10">
+        {details?.size && (
+          <div className="flex gap-2">
+            <span className="text-primary/40 w-20 shrink-0 font-semibold">Size:</span>
+            <span className="text-primary/80 font-medium break-words min-w-0 flex-1">
+              {details.size}
+            </span>
+          </div>
+        )}
+        {details?.shape && (
+          <div className="flex gap-2">
+            <span className="text-primary/40 w-20 shrink-0 font-semibold">Shape:</span>
+            <span className="text-primary/80 font-medium break-words min-w-0 flex-1">
+              {details.shape}
+            </span>
+          </div>
+        )}
+        {(details?.tiers?.length || details?.flavor) && (
+          <div className="flex gap-2">
+            <span className="text-primary/40 w-20 shrink-0 font-semibold">Flavor:</span>
+            <div className="text-primary/80 font-medium break-words min-w-0 flex-1">
+              <OrderItemTiersDisplay
+                tiers={details?.tiers}
+                flavor={details?.flavor}
+                variant="compact"
+                className="text-primary/80"
+              />
+            </div>
+          </div>
+        )}
+        {details?.flavorNote && details.flavorNote !== "No" && (
+          <div className="flex gap-2 pt-1.5 mt-1.5 border-t border-primary/10">
+            <span className="text-primary/40 w-20 shrink-0 font-semibold">Flavor Note:</span>
+            <span className="text-primary/80 font-medium break-words min-w-0 flex-1">
+              {details.flavorNote}
+            </span>
+          </div>
+        )}
+        <div className="flex gap-2">
+          <span className="text-primary/40 w-20 shrink-0 font-semibold">Inscription:</span>
+          {details?.textOnCake?.trim() ? (
+            <span className="text-primary/80 font-serif italic break-words whitespace-pre-wrap min-w-0 flex-1">
+              "{details.textOnCake}"
+            </span>
+          ) : (
+            <span className="text-primary/30 italic">None</span>
+          )}
+        </div>
+        {details?.designNotes && (
+          <div className="flex gap-2 pt-1.5 mt-1.5 border-t border-primary/10">
+            <span className="text-primary/40 w-20 shrink-0 font-semibold">Design:</span>
+            <span className="text-primary/70 leading-relaxed break-words whitespace-pre-wrap min-w-0 flex-1">
+              {details.designNotes}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Reference Images */}
+      {referenceImages.length > 0 && (
+        <div className="mt-3">
+          <p className="text-[10px] text-primary/40 font-bold uppercase tracking-widest mb-2">
+            Reference Images ({referenceImages.length})
+          </p>
+          <div className="flex gap-2 overflow-hidden">
+            {referenceImages.map((img, i) => {
+              const cbImg = img.includes("?") ? `${img}&_cb=${i}` : `${img}?_cb=${i}`;
+              return (
+                <div
+                  key={i}
+                  className="w-14 h-14 rounded-lg border border-primary/10 shadow-sm shrink-0 bg-primary/5 overflow-hidden"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={cbImg}
+                    alt="Ref"
+                    className="w-full h-full object-cover"
+                    crossOrigin="anonymous"
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Per-item price lines */}
+      <div className="mt-3 space-y-2">
+        <div className="flex justify-between items-center text-sm">
+          <span className="text-primary/70 font-medium">
+            Base
+            {details?.size ? (
+              <span className="text-primary/40 font-normal ml-1 text-xs">
+                ({details.size})
+              </span>
+            ) : null}
+          </span>
+          {grandTotal > 0 ? (
+            <span className="font-semibold text-primary/80 tabular-nums">
+              ${baseCakePrice.toFixed(2)}
+            </span>
+          ) : (
+            <span className="text-xs italic text-amber-600 font-semibold">TBD</span>
+          )}
+        </div>
+
+        {flavorUpcharge > 0 && (
+          <div className="flex justify-between items-center text-sm">
+            <span className="text-primary/60 font-medium">
+              Flavor
+              {flavorName && (
+                <span className="text-primary/40 font-normal"> · {flavorName}</span>
+              )}
+            </span>
+            <span className="font-semibold text-primary/70 tabular-nums">
+              +${flavorUpcharge.toFixed(2)}
+            </span>
+          </div>
+        )}
+
+        {addons.length > 0 && (
+          <>
+            <p className="text-[10px] text-primary/30 font-bold uppercase tracking-widest pt-1">
+              Add-ons
+            </p>
+            {addons.map((addon, idx) => (
+              <div
+                key={`${addon.addonId}-${idx}`}
+                className="flex justify-between items-center text-sm"
+              >
+                <span className="text-primary/60 font-medium">
+                  {addon.name}
+                  {addon.variantName && (
+                    <span className="text-primary/40 font-normal"> · {addon.variantName}</span>
+                  )}
+                </span>
+                <span className="font-semibold text-primary/70 tabular-nums">
+                  {addon.price > 0 ? (
+                    `+$${addon.price.toFixed(2)}`
+                  ) : (
+                    <span className="italic text-primary/30">Free</span>
+                  )}
+                </span>
+              </div>
+            ))}
+          </>
+        )}
+
+        {total > 1 && grandTotal > 0 && (
+          <div className="flex justify-between items-center text-sm pt-1.5 mt-1.5 border-t border-primary/10">
+            <span className="text-primary/70 font-semibold">Item subtotal</span>
+            <span className="font-bold text-primary/80 tabular-nums">
+              ${grandTotal.toFixed(2)}
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default function Step6Success({ orderData, customOrderId, onMakeAnotherRequest }: Step6Props) {
 
   if (!orderData) return null;
 
   const { name, socialNickname, socialPlatform } = orderData.contact;
   const hasSocialPlatform = !!socialPlatform;
+
+  const items = orderData.items ?? [];
 
   // Build the display name based on what's available
   const displayName = (() => {
@@ -52,25 +238,19 @@ export default function Step6Success({ orderData, customOrderId, onMakeAnotherRe
     hasSocialPlatform && socialNickname
       ? `via ${socialPlatform!.charAt(0).toUpperCase() + socialPlatform!.slice(1)} at ${socialNickname}`
       : "via phone or email";
-  const addons = orderData.addons ?? [];
-  const pb = orderData.priceBreakdown;
-  const hasPricing = pb !== undefined && (pb.grandTotal ?? 0) > 0;
 
-  const baseCakePrice = pb?.baseCakePrice ?? 0;
-  const flavorUpcharge = pb?.flavorUpcharge ?? 0;
-  const addonsCost = pb?.addonsCost ?? 0;
-  const grandTotal = pb?.grandTotal ?? orderData.approximatePrice ?? 0;
+  // Aggregate estimate across every item
+  const grandEstimate = items.reduce((sum, it: any) => {
+    const itemTotal = it?.priceBreakdown?.grandTotal ?? it?.approximatePrice ?? 0;
+    return sum + (Number(itemTotal) || 0);
+  }, 0);
+  const hasPricing = grandEstimate > 0;
 
   const paymentPreference = orderData.paymentPreference ?? "e-transfer";
   const paymentReminder =
     paymentPreference === "cash"
       ? "Payment: You selected Cash. You will pay the total amount upon pickup/delivery once your design is approved and priced."
       : "Payment: You selected E-transfer. Once your design is approved and priced, we will email you the final amount and the e-transfer email address. Payment is required the day before pickup.";
-
-  // Flavor name is already in details.flavor (set by Step 3's compilePayload)
-  const flavorName = orderData.details?.flavor ?? "";
-
-
 
   return (
     <div className="flex flex-col items-center">
@@ -229,236 +409,47 @@ export default function Step6Success({ orderData, customOrderId, onMakeAnotherRe
                 </div>
               )}
             </div>
-          </div>
 
-          {/* ── Cake Specifications ─────────────────────────────────────── */}
-          <div className="px-6 py-4 border-b border-gray-100">
-            <h3 className="text-primary/40 text-xs uppercase font-bold tracking-wider mb-3 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5" />
-              Cake Specifications
-            </h3>
-
-            <div className="flex justify-between items-center mb-2">
-              <p className="font-extrabold text-sm text-primary/80">
-                {orderData.category}
-              </p>
-              <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100 uppercase tracking-wide">
-                Custom
-              </span>
-            </div>
-
-            <div className="text-xs text-primary/60 space-y-1.5 bg-primary/5 p-3 rounded-xl border border-primary/10">
-              {orderData.details?.size && (
-                <div className="flex gap-2">
-                  <span className="text-primary/40 w-20 shrink-0 font-semibold">
-                    Size:
-                  </span>
-                  <span className="text-primary/80 font-medium break-words min-w-0 flex-1">
-                    {orderData.details.size}
-                  </span>
-                </div>
-              )}
-              {orderData.details?.shape && (
-                <div className="flex gap-2">
-                  <span className="text-primary/40 w-20 shrink-0 font-semibold">
-                    Shape:
-                  </span>
-                  <span className="text-primary/80 font-medium break-words min-w-0 flex-1">
-                    {orderData.details.shape}
-                  </span>
-                </div>
-              )}
-              {(orderData.details?.tiers?.length || orderData.details?.flavor) && (
-                <div className="flex gap-2">
-                  <span className="text-primary/40 w-20 shrink-0 font-semibold">
-                    Flavor:
-                  </span>
-                  <div className="text-primary/80 font-medium break-words min-w-0 flex-1">
-                    <OrderItemTiersDisplay
-                      tiers={orderData.details?.tiers}
-                      flavor={orderData.details?.flavor}
-                      variant="compact"
-                      className="text-primary/80"
-                    />
-                  </div>
-                </div>
-              )}
-              {orderData.details?.flavorNote && orderData.details.flavorNote !== "No" && (
-                <div className="flex gap-2 pt-1.5 mt-1.5 border-t border-primary/10">
-                  <span className="text-primary/40 w-20 shrink-0 font-semibold">
-                    Flavor Note:
-                  </span>
-                  <span className="text-primary/80 font-medium break-words min-w-0 flex-1">
-                    {orderData.details.flavorNote}
-                  </span>
-                </div>
-              )}
-              <div className="flex gap-2">
+            {/* Allergies — order-level */}
+            {orderData.allergies && orderData.allergies !== "No" && (
+              <div className="mt-3 flex gap-2 text-xs bg-rose-50/70 border border-rose-100 p-3 rounded-xl">
                 <span className="text-primary/40 w-20 shrink-0 font-semibold">
-                  Inscription:
+                  Allergies:
                 </span>
-                {orderData.details?.textOnCake?.trim() ? (
-                  <span className="text-primary/80 font-serif italic break-words whitespace-pre-wrap min-w-0 flex-1">
-                    "{orderData.details.textOnCake}"
-                  </span>
-                ) : (
-                  <span className="text-primary/30 italic">None</span>
-                )}
-              </div>
-              {orderData.allergies && orderData.allergies !== "No" && (
-                <div className="flex gap-2 pt-1.5 mt-1.5 border-t border-primary/10">
-                  <span className="text-primary/40 w-20 shrink-0 font-semibold">
-                    Allergies:
-                  </span>
-                  <span className="text-rose-600/80 font-medium break-words min-w-0 flex-1">
-                    {orderData.allergies}
-                  </span>
-                </div>
-              )}
-              {orderData.details?.designNotes && (
-                <div className="flex gap-2 pt-1.5 mt-1.5 border-t border-primary/10">
-                  <span className="text-primary/40 w-20 shrink-0 font-semibold">
-                    Design:
-                  </span>
-                  <span className="text-primary/70 leading-relaxed break-words whitespace-pre-wrap min-w-0 flex-1">
-                    {orderData.details.designNotes}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {/* Reference Images */}
-            {orderData.referenceImages.length > 0 && (
-              <div className="mt-3">
-                <p className="text-[10px] text-primary/40 font-bold uppercase tracking-widest mb-2">
-                  Reference Images ({orderData.referenceImages.length})
-                </p>
-                <div className="flex gap-2 overflow-hidden">
-                  {orderData.referenceImages.map((img, i) => {
-                    const cbImg = img.includes("?")
-                      ? `${img}&_cb=${i}`
-                      : `${img}?_cb=${i}`;
-                    return (
-                      <div
-                        key={i}
-                        className="w-14 h-14 rounded-lg border border-primary/10 shadow-sm shrink-0 bg-primary/5 overflow-hidden"
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={cbImg}
-                          alt="Ref"
-                          className="w-full h-full object-cover"
-                          crossOrigin="anonymous"
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
+                <span className="text-rose-600/80 font-medium break-words min-w-0 flex-1">
+                  {orderData.allergies}
+                </span>
               </div>
             )}
           </div>
 
-          {/* ── Price Breakdown ────────────────────────────────────────── */}
+          {/* ── Per-item Specifications ─────────────────────────────────── */}
+          {items.map((item: any, index: number) => (
+            <ItemSummary
+              key={item?.id ?? index}
+              item={item}
+              index={index}
+              total={items.length}
+            />
+          ))}
+
+          {/* ── Grand Total ─────────────────────────────────────────────── */}
           <div className="bg-primary/5 border-t border-primary/10 px-6 py-5 mt-auto">
-            <h3 className="text-primary/40 text-xs uppercase font-bold tracking-wider mb-3 flex items-center gap-1.5">
-              <DollarSign className="w-3.5 h-3.5" />
-              Price Breakdown
-            </h3>
+            <p className="text-[12px] text-primary font-bold text-center leading-relaxed pt-1">
+              Please note: Design requests are subject to final review.
+              Additional charges may apply based on the complexity of your
+              reference images and instructions
+            </p>
+            <p className="text-[12px] text-primary/30 font-medium text-center leading-relaxed pt-2 pb-3">
+              Estimate only — final price confirmed by baker after review.
+            </p>
 
-            <div className="space-y-2">
-              {/* 1. Base Cake Size */}
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-primary/70 font-medium">
-                  Base Cake
-                  {orderData.details?.size ? (
-                    <span className="text-primary/40 font-normal ml-1 text-xs">
-                      ({orderData.details.size})
-                    </span>
-                  ) : null}
-                </span>
-                {grandTotal > 0 ? (
-                  <span className="font-semibold text-primary/80 tabular-nums">
-                    ${baseCakePrice.toFixed(2)}
-                  </span>
-                ) : (
-                  <span className="text-xs italic text-amber-600 font-semibold">
-                    TBD
-                  </span>
-                )}
-              </div>
-
-              {/* 2. Flavor Upcharge — only shown when premium flavor adds cost */}
-              {flavorUpcharge > 0 && (
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-primary/60 font-medium">
-                    Flavor
-                    {flavorName && (
-                      <span className="text-primary/40 font-normal">
-                        {" "}
-                        · {flavorName}
-                      </span>
-                    )}
-                  </span>
-                  <span className="font-semibold text-primary/70 tabular-nums">
-                    +${flavorUpcharge.toFixed(2)}
-                  </span>
-                </div>
-              )}
-
-              {/* 3. Addon lines — one row per selected addon */}
-              {addons.length > 0 && (
-                <>
-                  <p className="text-[10px] text-primary/30 font-bold uppercase tracking-widest pt-1">
-                    Add-ons
-                  </p>
-                  {addons.map((addon, idx) => (
-                    <div
-                      key={`${addon.addonId}-${idx}`}
-                      className="flex justify-between items-center text-sm"
-                    >
-                      <span className="text-primary/60 font-medium">
-                        {addon.name}
-                        {addon.variantName && (
-                          <span className="text-primary/40 font-normal">
-                            {" "}
-                            · {addon.variantName}
-                          </span>
-                        )}
-                      </span>
-                      <span className="font-semibold text-primary/70 tabular-nums">
-                        {addon.price > 0 ? (
-                          `+$${addon.price.toFixed(2)}`
-                        ) : (
-                          <span className="italic text-primary/30">Free</span>
-                        )}
-                      </span>
-                    </div>
-                  ))}
-                </>
-              )}
-
-              {/* Disclaimer */}
-              <p className="text-[12px] text-primary font-bold text-center leading-relaxed pt-2">
-                Please note: Design requests are subject to final review.
-                Additional charges may apply based on the complexity of your
-                reference images and instructions
-              </p>
-              <p className="text-[12px] text-primary/30 font-medium text-center leading-relaxed pt-2">
-                Estimate only — final price confirmed by baker after review.
-              </p>
-            </div>
-
-            {/* Grand Total — exact HTML required by spec */}
-            <div className="flex justify-between items-center mt-3 pt-4 border-t border-gray-300 border-dashed">
+            <div className="flex justify-between items-center mt-1 pt-4 border-t border-gray-300 border-dashed">
               <span className="font-extrabold text-lg text-primary/40">
                 Est. Total
               </span>
               <span className="font-extrabold text-xl text-amber-600 italic">
-                {hasPricing
-                  ? `$${grandTotal.toFixed(2)}`
-                  : orderData.approximatePrice
-                    ? `$${orderData.approximatePrice.toFixed(2)}`
-                    : "TBD"}
+                {hasPricing ? `$${grandEstimate.toFixed(2)}` : "TBD"}
               </span>
             </div>
           </div>

@@ -11,6 +11,8 @@ interface CustomOrderDetailHeaderProps {
   status: string;
   agreedPrice: number | null;
   onPriceChange: (price: number | null) => void;
+  /** When true (multi-item requests), the price is a read-only sum of per-item prices. */
+  readOnlyPrice?: boolean;
   isSaving: boolean;
   onSave: () => void;
   isConverting: boolean;
@@ -24,6 +26,7 @@ export const CustomOrderDetailHeader = ({
   status,
   agreedPrice,
   onPriceChange,
+  readOnlyPrice = false,
   isSaving,
   onSave,
   isConverting,
@@ -72,16 +75,25 @@ export const CustomOrderDetailHeader = ({
           </Button>
         ) : (
           <>
-            <div className="relative shrink-0 w-full sm:w-44">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-semibold text-xs">$ Agreed Price</span>
-              <Input 
-                type="number" 
-                placeholder="0.00" 
-                value={agreedPrice ?? ""}
-                onChange={(e) => onPriceChange(e.target.value === "" ? null : Number(e.target.value))}
-                className="text-right font-bold text-lg h-12 pl-28 border-accent/20 bg-accent/5 focus:ring-accent/20 text-accent"
-              />
-            </div>
+            {readOnlyPrice ? (
+              <div className="relative shrink-0 w-full sm:w-56 h-12 flex items-center justify-between gap-2 rounded-md border border-accent/20 bg-accent/5 px-3">
+                <span className="text-muted-foreground font-semibold text-xs">Agreed Total</span>
+                <span className="font-bold text-lg text-accent">
+                  ${(agreedPrice ?? 0).toFixed(2)}
+                </span>
+              </div>
+            ) : (
+              <div className="relative shrink-0 w-full sm:w-44">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-semibold text-xs">$ Agreed Price</span>
+                <Input 
+                  type="number" 
+                  placeholder="0.00" 
+                  value={agreedPrice ?? ""}
+                  onChange={(e) => onPriceChange(e.target.value === "" ? null : Number(e.target.value))}
+                  className="text-right font-bold text-lg h-12 pl-28 border-accent/20 bg-accent/5 focus:ring-accent/20 text-accent"
+                />
+              </div>
+            )}
 
             <div className="flex flex-col sm:flex-row flex-1 gap-3">
               <Button

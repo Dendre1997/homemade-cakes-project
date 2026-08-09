@@ -1,10 +1,13 @@
 "use client";
 
 import { useState, useEffect, Suspense, useMemo, useRef } from "react";
-import { useForm, FormProvider, useFormContext } from "react-hook-form";
+import { useForm, FormProvider, useFormContext, useFieldArray } from "react-hook-form";
 import { useSearchParams } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { customOrderSchema, CustomOrderFormData } from "@/lib/validation/customOrderSchema";
+import {
+  customOrderRequestSchema,
+  CustomOrderRequestData,
+} from "@/lib/validation/customOrderSchema";
 import { Button } from "@/components/ui/Button";
 import { Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -19,33 +22,127 @@ import Step3SizeFlavor from "@/components/custom-order/Step3SizeFlavor";
 import Step4Design from "@/components/custom-order/Step4Design";
 import Step5Contact from "@/components/custom-order/Step5Contact";
 import Step6Success from "@/components/custom-order/Step6Success";
+import StepCartSummary from "@/components/custom-order/StepCartSummary";
+import { findCategoryForCustomOrderItem } from "@/lib/customOrderCategory";
 
+/**
+ * Step map for the multi-item ("Custom Order Cart") wizard.
+ *
+ *   0 Date      → ORDER-LEVEL (runs once)
+ *   1 Category  → ITEM-LEVEL (per activeItemIndex)
+ *   2 Details   → ITEM-LEVEL
+ *   3 Design    → ITEM-LEVEL
+ *   4 Cart      → ORDER-LEVEL summary of items[] (add another / proceed)
+ *   5 Contact   → ORDER-LEVEL (runs once)
+ *   6 Success   → ORDER-LEVEL (iterates items[])
+ */
 const STEPS = [
-  { id: 0, title: "Date", fields: ["date", "timeSlot", "deliveryMethod"], subTitle: "When would you like it ready?"},
-  { id: 1, title: "Category", fields: ["category"], subTitle: "What would you like to order?" },
-  { id: 2, title: "Details", fields: ["details.size", "details.flavor", "allergies"], subTitle: "Choose your preferences" },
-  { id: 3, title: "Design", fields: ["referenceImages", "details.textOnCake", "details.designNotes"], subTitle: "What design do you need?" },
-  { id: 4, title: "Contact", fields: ["contact.name", "contact.email", "contact.phone", "contact.socialNickname", "contact.socialPlatform", "paymentPreference"], subTitle: "What is your contact information?" },
-  { id: 5, title: "Success", fields: [], subTitle: "Thank you for your order!" },
+  { id: 0, title: "Date", subTitle: "When would you like it ready?" },
+  { id: 1, title: "Category", subTitle: "What would you like to order?" },
+  { id: 2, title: "Details", subTitle: "Choose your preferences" },
+  { id: 3, title: "Design", subTitle: "What design do you need?" },
+  { id: 4, title: "Your Request", subTitle: "Review what you've requested" },
+  { id: 5, title: "Contact", subTitle: "What is your contact information?" },
+  { id: 6, title: "Success", subTitle: "Thank you for your order!" },
 ];
+
+const CART_STEP = 4;
+const CONTACT_STEP = 5;
+const SUCCESS_STEP = 6;
+
+/** Factory for a fresh empty custom item. */
+function makeEmptyItem() {
+  const id =
+    typeof crypto !== "undefined" && crypto.randomUUID
+      ? crypto.randomUUID()
+      : Math.random().toString(36).substring(2, 15);
+  return {
+    id,
+    categoryId: "",
+    category: "",
+    referenceImages: [] as string[],
+    details: {
+      size: "",
+      flavor: "",
+      textOnCake: "",
+      designNotes: "",
+      shape: "",
+    },
+    addons: [] as any[],
+    approximatePrice: 0,
+    priceBreakdown: undefined,
+  };
+}
+
+/** Returns the RHF field paths to validate for a given step + active item. */
+function getStepFields(step: number, i: number): string[] {
+  switch (step) {
+    case 0:
+      return ["date", "timeSlot", "deliveryMethod"];
+    case 1:
+      return [`items.${i}.categoryId`, `items.${i}.category`];
+    case 2:
+      return [`items.${i}.details.size`, `items.${i}.details.flavor`, "allergies"];
+    case 3:
+      return [
+        `items.${i}.referenceImages`,
+        `items.${i}.details.textOnCake`,
+        `items.${i}.details.designNotes`,
+      ];
+    case CONTACT_STEP:
+      return [
+        "contact.name",
+        "contact.email",
+        "contact.phone",
+        "contact.socialNickname",
+        "contact.socialPlatform",
+        "paymentPreference",
+      ];
+    default:
+      return [];
+  }
+}
 
 /**
  * Silent Hydrator Component
- * Reads URL params and injects them into the form state on mount.
+ * Reads URL params and injects them into the FIRST item on mount.
  */
 function WizardHydrator() {
-  const { setValue } = useFormContext<CustomOrderFormData>();
+  const { setValue } = useFormContext<CustomOrderRequestData>();
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    const category = searchParams.get("category");
+    const categoryParam = searchParams.get("category");
     const image = searchParams.get("image");
 
-    if (category) {
-      setValue("category", category, { shouldValidate: true });
+    async function hydrateCategory() {
+      if (!categoryParam) return;
+      try {
+        const res = await fetch("/api/categories");
+        if (!res.ok) {
+          setValue("items.0.category", categoryParam, { shouldValidate: true });
+          return;
+        }
+        const categories = await res.json();
+        const match = findCategoryForCustomOrderItem(
+          { category: categoryParam },
+          categories
+        );
+        if (match) {
+          setValue("items.0.categoryId", String(match._id), { shouldValidate: true });
+          setValue("items.0.category", match.name, { shouldValidate: true });
+        } else {
+          setValue("items.0.category", categoryParam, { shouldValidate: true });
+        }
+      } catch {
+        setValue("items.0.category", categoryParam, { shouldValidate: true });
+      }
     }
+
+    void hydrateCategory();
+
     if (image) {
-      setValue("referenceImages", [image], { shouldValidate: true });
+      setValue("items.0.referenceImages", [image], { shouldValidate: true });
     }
   }, [searchParams, setValue]);
 
@@ -58,8 +155,9 @@ function CustomOrderContent() {
   const { user } = useAuthStore();
 
   const [currentStep, setCurrentStep] = useState(0);
+  const [activeItemIndex, setActiveItemIndex] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submittedData, setSubmittedData] = useState<CustomOrderFormData | null>(null);
+  const [submittedData, setSubmittedData] = useState<CustomOrderRequestData | null>(null);
   /** MongoDB custom_orders._id — returned by POST /api/custom-orders for DM / ops reference */
   const [submittedCustomOrderId, setSubmittedCustomOrderId] = useState<string | null>(null);
 
@@ -96,22 +194,16 @@ function CustomOrderContent() {
     }
   }, [currentStep, categories.length, flavors.length]);
 
-  const methods = useForm<CustomOrderFormData>({
-    resolver: zodResolver(customOrderSchema) as any,
+  const methods = useForm<CustomOrderRequestData>({
+    resolver: zodResolver(customOrderRequestSchema as any) as any,
     mode: "onTouched",
     shouldFocusError: true, // RHF focuses first errored field via internal refs on trigger() failure
     defaultValues: {
       status: "pending_review",
       timeSlot: "",
-      category: "",
-      referenceImages: [],
-      details: {
-        size: "",
-        flavor: "",
-        textOnCake: "",
-        designNotes: "",
-        shape: "",
-      },
+      deliveryMethod: "pickup",
+      allergies: "",
+      items: [makeEmptyItem()] as any,
       contact: {
         name: "",
         phone: "",
@@ -119,24 +211,24 @@ function CustomOrderContent() {
         socialNickname: "",
         socialPlatform: undefined,
       },
-      allergies: "",
-      approximatePrice: 0,
-      priceBreakdown: undefined,
       paymentPreference: "e-transfer",
     },
   });
 
-  const { trigger, handleSubmit, setFocus } = methods;
+  const { trigger, handleSubmit, setFocus, control } = methods;
 
-  const categoryName = methods.watch("category");
+  const { fields, append, remove } = useFieldArray({ control, name: "items" });
+
+  const categoryId = methods.watch(`items.${activeItemIndex}.categoryId`);
+  const categoryName = methods.watch(`items.${activeItemIndex}.category`);
 
   const activeCategoryObj = useMemo(() => {
-    if (!categoryName) return null;
-    return categories.find(c => {
-       const displayName = c.name.endsWith('s') || c.name.endsWith('S') ? c.name.slice(0, -1) : c.name;
-       return displayName === categoryName || c.name === categoryName;
-    }) || null;
-  }, [categoryName, categories]);
+    if (!categoryId && !categoryName) return null;
+    return findCategoryForCustomOrderItem(
+      { categoryId, category: categoryName },
+      categories
+    );
+  }, [categoryId, categoryName, categories]);
 
   const activeCategoryId = activeCategoryObj?._id || null;
 
@@ -158,8 +250,10 @@ function CustomOrderContent() {
   };
 
   const handleNext = async () => {
-    const fieldsToValidate = STEPS[currentStep].fields as any[];
-    const isValid = await trigger(fieldsToValidate);
+    const fieldsToValidate = getStepFields(currentStep, activeItemIndex);
+    const isValid = fieldsToValidate.length
+      ? await trigger(fieldsToValidate as any)
+      : true;
 
     if (isValid) {
       if (currentStep === 0 && hasInspiration) {
@@ -172,7 +266,7 @@ function CustomOrderContent() {
       const currentErrors = methods.formState.errors;
 
       requestAnimationFrame(() => {
-        for (const fieldPath of STEPS[currentStep].fields) {
+        for (const fieldPath of fieldsToValidate) {
           const err = fieldPath
             .split(".")
             .reduce((obj: any, key: string) => obj?.[key], currentErrors);
@@ -196,9 +290,8 @@ function CustomOrderContent() {
     }
   };
 
-
   const handleBack = () => {
-    // Logic: If on Step 3 (Details) and we have an inspiration, jump back to Step 1 (Date), skipping Step 2 (Category)
+    // From Details (step 2) with an inspiration, jump back to Date (step 0), skipping Category
     if (currentStep === 2 && hasInspiration) {
       setCurrentStep(0);
     } else {
@@ -207,7 +300,33 @@ function CustomOrderContent() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const onSubmit = async (data: CustomOrderFormData) => {
+  // ── Cart actions ──────────────────────────────────────────────────────────
+  const handleAddAnotherItem = () => {
+    const newIndex = fields.length;
+    append(makeEmptyItem() as any);
+    setActiveItemIndex(newIndex);
+    setCurrentStep(1); // Category for the new item
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleEditItem = (index: number) => {
+    setActiveItemIndex(index);
+    setCurrentStep(1);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleRemoveItem = (index: number) => {
+    if (fields.length <= 1) return; // never remove the last item
+    remove(index);
+    setActiveItemIndex((prev) => (prev >= index && prev > 0 ? prev - 1 : prev));
+  };
+
+  const handleProceedToContact = () => {
+    setCurrentStep(CONTACT_STEP);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const onSubmit = async (data: CustomOrderRequestData) => {
     setIsSubmitting(true);
     try {
       const payload = {
@@ -228,7 +347,7 @@ function CustomOrderContent() {
         typeof created?.orderId === "string" ? created.orderId : null
       );
       setSubmittedData(data);
-      setCurrentStep(5); // Go to success step
+      setCurrentStep(SUCCESS_STEP);
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (error) {
       console.error(error);
@@ -241,11 +360,19 @@ function CustomOrderContent() {
   const renderStep = () => {
     switch (currentStep) {
       case 0: return <Step1Availability onNext={handleNext} />;
-      case 1: return <Step2Category onNext={handleNext} />;
-      case 2: return <Step3SizeFlavor onNext={handleNext} onFlavorInfoClick={handleFlavorInfoClick} />;
-      case 3: return <Step4Design />;
-      case 4: return <Step5Contact />;
-      case 5: return (
+      case 1: return <Step2Category onNext={handleNext} itemIndex={activeItemIndex} />;
+      case 2: return <Step3SizeFlavor onNext={handleNext} onFlavorInfoClick={handleFlavorInfoClick} itemIndex={activeItemIndex} />;
+      case 3: return <Step4Design itemIndex={activeItemIndex} />;
+      case CART_STEP: return (
+          <StepCartSummary
+            onAddAnother={handleAddAnotherItem}
+            onEditItem={handleEditItem}
+            onRemoveItem={handleRemoveItem}
+            onProceed={handleProceedToContact}
+          />
+        );
+      case CONTACT_STEP: return <Step5Contact />;
+      case SUCCESS_STEP: return (
           <Step6Success
             orderData={submittedData}
             customOrderId={submittedCustomOrderId}
@@ -265,6 +392,8 @@ function CustomOrderContent() {
     exit: { x: -50, opacity: 0, transition: { duration: 0.3 } }
   };
 
+  const showChrome = currentStep < SUCCESS_STEP;
+
   return (
     <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8 bg-background relative overflow-hidden">
       {/* Dynamic Background */}
@@ -272,7 +401,7 @@ function CustomOrderContent() {
 
       <div className="max-w-3xl mx-auto relative z-10">
         {/* Header (Hide on Success step) */}
-        {currentStep < 5 && (
+        {showChrome && (
           <div className="text-center mb-10 animate-in fade-in slide-in-from-bottom-4 duration-1000">
             <h1 className="text-2xl sm:text-3xl font-heading font-extrabold text-primary mb-4 tracking-tight">
               {STEPS[currentStep].subTitle}
@@ -281,7 +410,7 @@ function CustomOrderContent() {
         )}
 
         {/* Progress Bar */}
-        {currentStep < 5 && (
+        {showChrome && (
           <div className="mb-10 relative px-2">
             <div className="overflow-hidden h-2.5 mb-6 text-xs flex rounded-full bg-secondary/30">
               <div
@@ -290,7 +419,7 @@ function CustomOrderContent() {
               ></div>
             </div>
             <div className="hidden sm:flex justify-between text-xs font-semibold text-primary/50 uppercase tracking-widest px-1">
-              {STEPS.slice(0, 5).map((step, idx) => (
+              {STEPS.slice(0, SUCCESS_STEP).map((step, idx) => (
                 <span
                   key={step.id}
                   className={
@@ -328,8 +457,8 @@ function CustomOrderContent() {
                 </motion.div>
               </AnimatePresence>
 
-              {/* Navigation Actions */}
-              {currentStep < 5 && (
+              {/* Navigation Actions — hidden on the Cart step (it owns its buttons) and Success */}
+              {showChrome && currentStep !== CART_STEP && (
                 <div className="mt-12 pt-6 border-t border-primary/10 flex justify-between items-center gap-4">
                   <Button
                     type="button"
@@ -341,7 +470,7 @@ function CustomOrderContent() {
                     &larr; Back
                   </Button>
 
-                  {currentStep < 4 ? (
+                  {currentStep < CONTACT_STEP ? (
                     <Button type="button" onClick={handleNext} className="w-40 h-12 text-lg rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all active:scale-95">
                       Next Step
                     </Button>
@@ -363,6 +492,20 @@ function CustomOrderContent() {
                   )}
                 </div>
               )}
+
+              {/* Cart step keeps a Back button to return to the last item's Design */}
+              {currentStep === CART_STEP && (
+                <div className="mt-8 pt-6 border-t border-primary/10 flex justify-start">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={handleBack}
+                    className="hover:bg-primary/5 text-primary/70 font-semibold"
+                  >
+                    &larr; Back
+                  </Button>
+                </div>
+              )}
             </form>
           </FormProvider>
         </div>
@@ -375,7 +518,7 @@ function CustomOrderContent() {
         >
           <div className="text-center mb-10">
             <h2 className="text-2xl sm:text-3xl font-heading font-bold text-primary mb-3">
-              Explore Our {categoryName} Flavors
+              Explore Our {activeCategoryObj?.name || categoryName} Flavors
             </h2>
           </div>
           <FlavorCarousel

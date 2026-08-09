@@ -60,14 +60,19 @@ export const AdminOrderItem = ({
   const isStandard = !isComboSet && !isSimpleSet && !isCustom;
 
   // -- IMAGES SETUP --
+  // An item's images live on the item itself (imageUrl / imageUrls). The
+  // order-level `referenceImages` is an aggregate of EVERY item's images, so we
+  // only fall back to it when this item has none of its own — otherwise every
+  // item in a multi-item order would show the entire request's images.
+  const hasOwnImages = !!item.imageUrl || (item.imageUrls?.length ?? 0) > 0;
   const allImages = [
     ...(item.imageUrl ? [{ src: item.imageUrl, isMain: true }] : []),
     ...(item.imageUrls || [])
       .filter((img) => img !== item.imageUrl)
       .map((img) => ({ src: img, isMain: false })),
-    ...(referenceImages || [])
-      .filter((img) => img !== item.imageUrl && !(item.imageUrls || []).includes(img))
-      .map((img) => ({ src: img, isMain: false })),
+    ...(!hasOwnImages
+      ? (referenceImages || []).map((img) => ({ src: img, isMain: false }))
+      : []),
   ];
 
   const renderGallery = () => {

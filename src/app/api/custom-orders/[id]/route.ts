@@ -1,6 +1,7 @@
 
 import { NextResponse } from "next/server";
 import clientPromise from "@/lib/db";
+import { normalizeCustomOrder } from "@/lib/normalizeCustomOrder";
 import { ObjectId } from "mongodb";
 
 export async function GET(
@@ -24,7 +25,7 @@ export async function GET(
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
-    return NextResponse.json(order);
+    return NextResponse.json(normalizeCustomOrder(order));
   } catch (error) {
     console.error("Fetch Custom Order Error:", error);
     return NextResponse.json(

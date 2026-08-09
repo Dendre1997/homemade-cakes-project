@@ -2,7 +2,7 @@ Data Models Reference
 All types are exported from src/types/index.ts. MongoDB ObjectId appears where persisted documents use native driver types at write time.
 
 Catalog Types
-Name Description Key Fields
+Name Description Key Fields 
 Flavor
 Sellable flavor variant with optional per-category scoping and surcharge price.
 _id, name, price, description?, categoryIds?[], imageUrl?
