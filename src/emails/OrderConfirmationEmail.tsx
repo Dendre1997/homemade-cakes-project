@@ -193,17 +193,24 @@ export const OrderConfirmationEmail = ({
                     getShapeName(item.selectedConfig?.cake?.shapeId)
                   : getShapeName(item.shapeId as any);
 
+                // Prefer per-item images (multi-item custom orders carry their
+                // own reference images) over the legacy order-level array.
+                const itemReferenceImages = (item as any).referenceImages as
+                  | string[]
+                  | undefined;
                 const itemImages = item.imageUrls?.length
                   ? item.imageUrls
-                  : item.imageUrl
-                    ? [item.imageUrl]
-                    : order.referenceImages?.length
-                      ? [
-                          order.referenceImages[
-                            Math.min(idx, order.referenceImages.length - 1)
-                          ],
-                        ]
-                      : [];
+                  : itemReferenceImages?.length
+                    ? itemReferenceImages
+                    : item.imageUrl
+                      ? [item.imageUrl]
+                      : order.referenceImages?.length
+                        ? [
+                            order.referenceImages[
+                              Math.min(idx, order.referenceImages.length - 1)
+                            ],
+                          ]
+                        : [];
 
                 const rowTotal = item.rowTotal || item.price * item.quantity;
                 const itemAddonCost =

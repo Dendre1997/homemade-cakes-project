@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useFormContext } from "react-hook-form";
-import { CustomOrderFormData } from "@/lib/validation/customOrderSchema";
+import { CustomOrderRequestData } from "@/lib/validation/customOrderSchema";
 import { calculateCustomOrderTotal } from "@/lib/pricing/customOrderPricing";
 import { Loader2 } from "lucide-react";
 import LoadingSpinner from "../ui/Spinner";
@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
+import { findCategoryForCustomOrderItem } from "@/lib/customOrderCategory";
 import { IShape, CakeTierSelection } from "@/types";
 
 import { FourInchBentoIcon } from "@/components/icons/cake-sizes/FourInchBentoIcon";
@@ -41,13 +42,16 @@ const BOX_SIZES = [
   { value: "24", label: "Box of", Icon: BoxIconTwentyFour },
 ];
 
-export default function Step3SizeFlavor({ onNext, onFlavorInfoClick }: { onNext: () => void; onFlavorInfoClick?: (id: string) => void }) {
-  const { setValue, watch, getValues, formState: { errors } } = useFormContext<CustomOrderFormData>();
-  const categoryName = watch("category");
+export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }: { onNext: () => void; onFlavorInfoClick?: (id: string) => void; itemIndex: number }) {
+  const { setValue, watch, getValues, formState: { errors } } = useFormContext<CustomOrderRequestData>();
+  const ip = (sub: string): any => `items.${itemIndex}.${sub}`;
+  const itemErrors = (errors.items?.[itemIndex] as any) ?? undefined;
+  const categoryId = watch(ip("categoryId"));
+  const categoryName = watch(ip("category"));
   
   // What the final output to the database will be
-  const currentSize = watch("details.size");
-  const currentFlavor = watch("details.flavor");
+  const currentSize = watch(ip("details.size"));
+  const currentFlavor = watch(ip("details.flavor"));
 
   const [isLoading, setIsLoading] = useState(true);
 
@@ -58,12 +62,12 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick }: { onNext:
   const [allShapes, setAllShapes] = useState<IShape[]>([]);
 
   const activeCategoryObj = useMemo(() => {
-    if (!categoryName) return null;
-    return categories.find(c => {
-       const displayName = c.name.endsWith('s') || c.name.endsWith('S') ? c.name.slice(0, -1) : c.name;
-       return displayName === categoryName || c.name === categoryName;
-    }) || null;
-  }, [categoryName, categories]);
+    if (!categoryId && !categoryName) return null;
+    return findCategoryForCustomOrderItem(
+      { categoryId, category: categoryName },
+      categories
+    );
+  }, [categoryId, categoryName, categories]);
 
   const activeCategoryId = activeCategoryObj?._id || null;
 
@@ -285,7 +289,7 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick }: { onNext:
       // cakeSizePrice = the size-multiplied cake price (the existing useMemo formula)
       const cakeSizePrice = approximatePrice > 0 ? approximatePrice : (basePrice || 0);
       // Read existing addons non-reactively so they're included in the grand total
-      const existingAddons = (getValues("addons") as any[]) ?? [];
+      const existingAddons = (getValues(ip("addons")) as any[]) ?? [];
 
       const result = calculateCustomOrderTotal({
         cakeSizePrice,
@@ -293,12 +297,12 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick }: { onNext:
         addons: existingAddons,
       });
 
-      setValue("approximatePrice", result.grandTotal > 0 ? result.grandTotal : undefined);
-      setValue("priceBreakdown", result);
+      setValue(ip("approximatePrice"), result.grandTotal > 0 ? result.grandTotal : undefined);
+      setValue(ip("priceBreakdown"), result);
 
     } else if (isDiscrete) {
       const cakeSizePrice = discretePrice > 0 ? discretePrice : 0;
-      const existingAddons = (getValues("addons") as any[]) ?? [];
+      const existingAddons = (getValues(ip("addons")) as any[]) ?? [];
 
       const result = calculateCustomOrderTotal({
         cakeSizePrice,
@@ -306,10 +310,26 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick }: { onNext:
         addons: existingAddons,
       });
 
-      setValue("approximatePrice", result.grandTotal > 0 ? result.grandTotal : undefined);
-      setValue("priceBreakdown", result);
+      setValue(ip("approximatePrice"), result.grandTotal > 0 ? result.grandTotal : undefined);
+      setValue(ip("priceBreakdown"), result);
+    } else if (isCombo) {
+      // Combo bug fix: previously combos never populated approximatePrice /
+      // priceBreakdown. Use the combo category's basePrice as the box price and
+      // fold in any add-ons; combo flavors carry no per-flavor upcharge.
+      const cakeSizePrice = basePrice > 0 ? basePrice : 0;
+      const existingAddons = (getValues(ip("addons")) as any[]) ?? [];
+
+      const result = calculateCustomOrderTotal({
+        cakeSizePrice,
+        flavorPrice: 0,
+        addons: existingAddons,
+      });
+
+      setValue(ip("approximatePrice"), result.grandTotal > 0 ? result.grandTotal : undefined);
+      setValue(ip("priceBreakdown"), result);
     }
-  }, [approximatePrice, discretePrice, isStandard, isDiscrete, standardFlavorUpcharge, basePrice, getValues, setValue]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [approximatePrice, discretePrice, isStandard, isDiscrete, isCombo, standardFlavorUpcharge, basePrice, itemIndex]);
 
 
   // --- COMPILATION LOGIC ---
@@ -388,19 +408,20 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick }: { onNext:
           ? allShapes.find((s) => s._id === standardShapeId)?.name || ""
           : "";
 
-      setValue("details.size", finalSize, { shouldValidate: true });
-      setValue("details.flavor", finalFlavor, { shouldValidate: true });
-      setValue("details.shape", finalShape, { shouldValidate: true });
+      setValue(ip("details.size"), finalSize, { shouldValidate: true });
+      setValue(ip("details.flavor"), finalFlavor, { shouldValidate: true });
+      setValue(ip("details.shape"), finalShape, { shouldValidate: true });
 
       if (isStandard) {
-        setValue("details.diameterId", finalDiameterId, { shouldValidate: true });
-        setValue("details.tiers", finalTiers, { shouldValidate: true });
+        setValue(ip("details.diameterId"), finalDiameterId, { shouldValidate: true });
+        setValue(ip("details.tiers"), finalTiers, { shouldValidate: true });
       } else {
-        setValue("details.diameterId", undefined, { shouldValidate: false });
-        setValue("details.tiers", undefined, { shouldValidate: false });
+        setValue(ip("details.diameterId"), undefined, { shouldValidate: false });
+        setValue(ip("details.tiers"), undefined, { shouldValidate: false });
       }
 
-  }, [isCombo, isDiscrete, comboPieceQuantity, comboTreatFlavorIds, comboCakeFlavorId, discreteQuantity, discreteFlavorIds, standardDiameterId, tierFlavors, standardShapeId, standardTiersCount, filteredFlavors, filteredDiameters, allShapes, isStandard, setValue, treatFlavors, bentoFlavors]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isCombo, isDiscrete, comboPieceQuantity, comboTreatFlavorIds, comboCakeFlavorId, discreteQuantity, discreteFlavorIds, standardDiameterId, tierFlavors, standardShapeId, standardTiersCount, filteredFlavors, filteredDiameters, allShapes, isStandard, setValue, treatFlavors, bentoFlavors, itemIndex]);
 
   // Sync back local state compilation
   useEffect(() => {
@@ -681,7 +702,7 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick }: { onNext:
               )}
 
               {filteredDiameters.length > 0 ? (
-                <div data-field-name="details.size">
+                <div data-field-name={`items.${itemIndex}.details.size`}>
                   <DiameterSelector
                     diameters={displayableDiameters}
                     selectedDiameterId={standardDiameterId}
@@ -697,7 +718,7 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick }: { onNext:
                   )}
                 </div>
               ) : (
-                <div data-field-name="details.size">
+                <div data-field-name={`items.${itemIndex}.details.size`}>
                   <h3 className="font-heading text-xl text-primary mb-2">
                     Custom Yield / Size
                   </h3>
@@ -708,7 +729,7 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick }: { onNext:
                     placeholder="e.g. 15 guests, 3-tiers"
                     value={currentSize || ""} // Fallback if no DB configs exist
                     onChange={(e) =>
-                      setValue("details.size", e.target.value, {
+                      setValue(ip("details.size"), e.target.value, {
                         shouldValidate: true,
                       })
                     }
@@ -716,15 +737,15 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick }: { onNext:
                   />
                 </div>
               )}
-              {errors.details?.size && (
+              {itemErrors?.details?.size && (
                 <p className="text-primary/60 text-sm mt-3 flex items-center font-medium">
                   {" "}
-                  {errors.details.size.message}
+                  {itemErrors.details.size.message}
                 </p>
               )}
             </div>
 
-            <div data-field-name="details.flavor">
+            <div data-field-name={`items.${itemIndex}.details.flavor`}>
               {filteredFlavors.length > 0 ? (
                 <div className="space-y-6">
                   {standardTiersCount > 1 ? (
@@ -774,17 +795,17 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick }: { onNext:
                   placeholder="e.g. Vanilla Bean with Jam"
                   value={currentFlavor || ""}
                   onChange={(e) =>
-                    setValue("details.flavor", e.target.value, {
+                    setValue(ip("details.flavor"), e.target.value, {
                       shouldValidate: true,
                     })
                   }
                   className="w-full max-w-sm bg-white"
                 />
               )}
-              {errors.details?.flavor && (
+              {itemErrors?.details?.flavor && (
                 <p className="text-primary/60 text-sm mt-3 flex items-center font-medium">
                   {" "}
-                  {errors.details.flavor.message}
+                  {itemErrors.details.flavor.message}
                 </p>
               )}
             </div>
@@ -794,6 +815,7 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick }: { onNext:
         <FlavorNoteSection
           isVisible={isFlavorSelected}
           isMultiTier={isStandard && standardTiersCount > 1}
+          itemIndex={itemIndex}
         />
         <AllergySection />
       </div>
@@ -803,7 +825,7 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick }: { onNext:
 
 
 function AllergySection() {
-  const { setValue, watch, formState: { errors } } = useFormContext<CustomOrderFormData>();
+  const { setValue, watch, formState: { errors } } = useFormContext<CustomOrderRequestData>();
   const currentAllergies = watch("allergies");
 
   const handleNo = () => {
@@ -914,26 +936,29 @@ function AllergySection() {
 function FlavorNoteSection({
   isVisible,
   isMultiTier = false,
+  itemIndex,
 }: {
   isVisible: boolean;
   isMultiTier?: boolean;
+  itemIndex: number;
 }) {
-  const { setValue, watch } = useFormContext<CustomOrderFormData>();
-  const currentFlavorNote = watch("details.flavorNote");
+  const { setValue, watch } = useFormContext<CustomOrderRequestData>();
+  const ip = (sub: string): any => `items.${itemIndex}.${sub}`;
+  const currentFlavorNote = watch(ip("details.flavorNote"));
 
   const handleNo = () => {
-    setValue("details.flavorNote", "No", { shouldValidate: true });
+    setValue(ip("details.flavorNote"), "No", { shouldValidate: true });
   };
 
   const handleYes = () => {
     // Switch to YES mode — clear "No" so the input shows and user must type
     if (currentFlavorNote === "No" || currentFlavorNote === undefined) {
-      setValue("details.flavorNote", "", { shouldValidate: false });
+      setValue(ip("details.flavorNote"), "", { shouldValidate: false });
     }
   };
 
   const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setValue("details.flavorNote", e.target.value, { shouldValidate: true });
+    setValue(ip("details.flavorNote"), e.target.value, { shouldValidate: true });
   };
 
   // Determine active button

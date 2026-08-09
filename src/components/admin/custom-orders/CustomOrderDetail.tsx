@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CustomOrder, IShape } from "@/types";
+import { normalizeCustomOrder } from "@/lib/normalizeCustomOrder";
 import { useAlert } from "@/contexts/AlertContext";
 import { CustomOrderDetailHeader } from "./CustomOrderDetailHeader";
 import { CustomOrderSpecsForm } from "./CustomOrderSpecsForm";
@@ -23,7 +24,10 @@ interface CustomOrderDetailProps {
 export default function CustomOrderDetail({ initialOrder, shapes = [] }: CustomOrderDetailProps) {
   const router = useRouter();
   const { showAlert } = useAlert();
-  const [order, setOrder] = useState<CustomOrder>(initialOrder);
+  // Normalize legacy flat requests into the canonical multi-item shape.
+  const [order, setOrder] = useState<CustomOrder>(() =>
+    normalizeCustomOrder(initialOrder)
+  );
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isConverting, setIsConverting] = useState(false);
@@ -41,13 +45,49 @@ export default function CustomOrderDetail({ initialOrder, shapes = [] }: CustomO
     initialOrder.paymentPreference ?? 'e-transfer'
   );
 
+  const items = order.items ?? [];
+
+  const agreedPriceTotal = useMemo(
+    () =>
+      (order.items ?? []).reduce(
+        (sum, it) => sum + (Number(it.agreedPrice) || 0),
+        0
+      ),
+    [order.items]
+  );
+
+  const approximatePriceTotal = useMemo(
+    () =>
+      (order.items ?? []).reduce(
+        (sum, it) => sum + (Number(it.approximatePrice) || 0),
+        0
+      ),
+    [order.items]
+  );
+
   const handleFieldChange = (field: string, value: any) => {
     setOrder((prev) => ({ ...prev, [field]: value }));
   };
 
+  const handleItemChange = (index: number, field: string, value: any) => {
+    setOrder((prev) => {
+      const nextItems = [...(prev.items ?? [])];
+      if (!nextItems[index]) return prev;
+      if (field === "__patch") {
+        nextItems[index] = { ...nextItems[index], ...value };
+      } else {
+        nextItems[index] = { ...nextItems[index], [field]: value };
+      }
+      return { ...prev, items: nextItems };
+    });
+  };
+
   const handleConvertClick = () => {
-    if (!order.agreedPrice || isNaN(Number(order.agreedPrice))) {
-      showAlert("Please enter a valid agreed price before converting.", "error");
+    if (!agreedPriceTotal || isNaN(Number(agreedPriceTotal))) {
+      showAlert(
+        "Please enter a valid agreed price for at least one item before converting.",
+        "error"
+      );
       return;
     }
     setIsConvertModalOpen(true);
@@ -61,7 +101,13 @@ export default function CustomOrderDetail({ initialOrder, shapes = [] }: CustomO
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          agreedPrice: Number(order.agreedPrice),
+          // Per-item agreed prices (convert route sums these into totalAmount).
+          items: (order.items ?? []).map((it) => ({
+            id: it.id,
+            agreedPrice: Number(it.agreedPrice) || 0,
+          })),
+          // Legacy single-price fallback for single-item requests.
+          agreedPrice: agreedPriceTotal,
           expectedMethod,
           // Forward any logistics edits the admin made before converting
           date: order.date,
@@ -137,7 +183,7 @@ export default function CustomOrderDetail({ initialOrder, shapes = [] }: CustomO
     }
   };
 
-  const handleImageUpload = async (files: FileList) => {
+  const handleItemImageUpload = async (index: number, files: FileList) => {
     setIsUploading(true);
     const uploadPromises = Array.from(files).map(async (file) => {
       const formData = new FormData();
@@ -156,10 +202,18 @@ export default function CustomOrderDetail({ initialOrder, shapes = [] }: CustomO
 
     try {
       const urls = await Promise.all(uploadPromises);
-      setOrder((prev) => ({
-        ...prev,
-        referenceImages: [...(prev.referenceImages || []), ...urls],
-      }));
+      setOrder((prev) => {
+        const nextItems = [...(prev.items ?? [])];
+        if (!nextItems[index]) return prev;
+        nextItems[index] = {
+          ...nextItems[index],
+          referenceImages: [
+            ...(nextItems[index].referenceImages || []),
+            ...urls,
+          ],
+        };
+        return { ...prev, items: nextItems };
+      });
       showAlert("Images uploaded!", "success");
     } catch (err) {
       console.error(err);
@@ -175,7 +229,11 @@ export default function CustomOrderDetail({ initialOrder, shapes = [] }: CustomO
       const res = await fetch(`/api/admin/custom-orders/${order._id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(order),
+        body: JSON.stringify({
+          ...order,
+          agreedPriceTotal,
+          approximatePriceTotal,
+        }),
       });
 
       if (!res.ok) {
@@ -198,8 +256,13 @@ export default function CustomOrderDetail({ initialOrder, shapes = [] }: CustomO
       <CustomOrderDetailHeader
         id={order._id}
         status={order.status}
-        agreedPrice={order.agreedPrice ?? null}
-        onPriceChange={(price) => handleFieldChange("agreedPrice", price)}
+        agreedPrice={agreedPriceTotal}
+        onPriceChange={(price) => {
+          // With a single item the header stays an editable shortcut; with
+          // multiple items pricing happens per-item in the specs form.
+          if (items.length === 1) handleItemChange(0, "agreedPrice", price);
+        }}
+        readOnlyPrice={items.length !== 1}
         isSaving={isSaving}
         onSave={handleSave}
         isConverting={isConverting}
@@ -213,9 +276,11 @@ export default function CustomOrderDetail({ initialOrder, shapes = [] }: CustomO
           <CustomOrderSpecsForm
             order={order}
             shapes={shapes}
-            onChange={handleFieldChange}
-            onImageUpload={handleImageUpload}
+            onItemChange={handleItemChange}
+            onOrderChange={handleFieldChange}
+            onItemImageUpload={handleItemImageUpload}
             isUploading={isUploading}
+            agreedPriceTotal={agreedPriceTotal}
           />
         </div>
 
@@ -261,7 +326,7 @@ export default function CustomOrderDetail({ initialOrder, shapes = [] }: CustomO
       >
         <p className="mb-4">
           Converting with agreed price of{" "}
-          <strong>${order.agreedPrice}</strong>. The customer selected{" "}
+          <strong>${agreedPriceTotal.toFixed(2)}</strong>. The customer selected{" "}
           <strong>
             {order.paymentPreference === "cash" ? "Cash at Pickup" : "E-Transfer"}
           </strong>

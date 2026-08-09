@@ -1,6 +1,7 @@
 "use client";
 
 import { CustomOrder } from "@/types";
+import { summarizeCustomOrderCategories } from "@/lib/customOrderCategory";
 import { format } from "date-fns";
 import { Trash2, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -23,6 +24,10 @@ export function CompactCustomOrderRow({ order, type }: Props) {
 
   const displayName = order.contact?.name || order.contact?.socialNickname || order.customerName || "Unknown Customer";
   const orderDate = order.date || order.eventDate;
+  const categoryLabel =
+    summarizeCustomOrderCategories(order.items ?? []) ||
+    order.category?.trim() ||
+    "Custom Order";
 
   const handleDelete = async () => {
     setIsRejectOpen(false);
@@ -46,7 +51,7 @@ export function CompactCustomOrderRow({ order, type }: Props) {
       <div className="flex flex-col sm:flex-row sm:items-center gap-4 flex-1">
         <div className="min-w-[150px]">
           <p className="font-semibold text-primary">{displayName}</p>
-          <p className="text-xs text-muted-foreground">{order.category || "Custom Order"}</p>
+          <p className="text-xs text-muted-foreground">{categoryLabel}</p>
           {type === 'rejected' && (
             <p className="text-xs text-muted-foreground italic mt-1">
               Reason: {order.rejectionReason || 'No reason provided'}

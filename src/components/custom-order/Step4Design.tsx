@@ -1,5 +1,5 @@
 import { useFormContext, Controller } from "react-hook-form";
-import { CustomOrderFormData } from "@/lib/validation/customOrderSchema";
+import { CustomOrderRequestData } from "@/lib/validation/customOrderSchema";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { Check, AlertCircle } from "lucide-react";
 import Spinner from "@/components/ui/Spinner";
@@ -11,15 +11,18 @@ import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 import { MultiImageUpload } from "@/components/custom-order/MultiImageUpload";
 import { AddonSelector } from "@/components/shared/AddonSelector";
-import { Addon, IGalleryImage, SelectedAddon, Collection } from "@/types";
+import { Addon, IGalleryImage, SelectedAddon, Collection, ProductCategory } from "@/types";
 import { calculateCustomOrderTotal } from "@/lib/pricing/customOrderPricing";
+import { findCategoryForCustomOrderItem } from "@/lib/customOrderCategory";
 
-export default function Step4Design() {
-  const { control, watch, setValue, getValues, formState: { errors } } = useFormContext<CustomOrderFormData>();
-  const textOnCakeWatcher = watch("details.textOnCake");
+export default function Step4Design({ itemIndex }: { itemIndex: number }) {
+  const { control, watch, setValue, getValues, formState: { errors } } = useFormContext<CustomOrderRequestData>();
+  const ip = (sub: string): any => `items.${itemIndex}.${sub}`;
+  const itemErrors = (errors.items?.[itemIndex] as any) ?? undefined;
+  const textOnCakeWatcher = watch(ip("details.textOnCake"));
   const [showInscriptionInput, setShowInscriptionInput] = useState(!!textOnCakeWatcher);
 
-  const designNotesWatcher = watch("details.designNotes");
+  const designNotesWatcher = watch(ip("details.designNotes"));
   const [designNotesSelection, setDesignNotesSelection] = useState<"yes" | "no" | null>(
     designNotesWatcher ? (designNotesWatcher === "Same as on reference" ? "no" : "yes") : null
   );
@@ -36,9 +39,10 @@ export default function Step4Design() {
   const [activeCategoryType, setActiveCategoryType] = useState<string | undefined>(undefined);
 
   // Wizard Data
-  const categoryName = watch("category");
-  const referenceImages = watch("referenceImages") || []; // Up to 3
-  const selectedAddons = watch("addons") || [];
+  const categoryId = watch(ip("categoryId"));
+  const categoryName = watch(ip("category"));
+  const referenceImages = (watch(ip("referenceImages")) as string[]) || []; // Up to 3
+  const selectedAddons = (watch(ip("addons")) as any[]) || [];
 
   // Refs for Auto-Scroll
   const carouselRef = useRef<HTMLDivElement>(null);
@@ -51,7 +55,9 @@ export default function Step4Design() {
   // we only want this effect to re-fire when ADDONS change, not when we write
   // the new breakdown back to the form.
   useEffect(() => {
-    const pb = getValues("priceBreakdown");
+    const pb = getValues(ip("priceBreakdown")) as
+      | { baseCakePrice: number; flavorUpcharge: number }
+      | undefined;
     if (!pb) return; // Step 3 hasn't run yet; nothing to update
 
     const result = calculateCustomOrderTotal({
@@ -60,8 +66,8 @@ export default function Step4Design() {
       addons: selectedAddons,
     });
 
-    setValue("approximatePrice", result.grandTotal > 0 ? result.grandTotal : undefined);
-    setValue("priceBreakdown", result);
+    setValue(ip("approximatePrice"), result.grandTotal > 0 ? result.grandTotal : undefined);
+    setValue(ip("priceBreakdown"), result);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedAddons]); // Only addons as dep — getValues/setValue are stable refs
 
@@ -76,7 +82,8 @@ export default function Step4Design() {
             fetch("/api/collections/all")
         ]);
         if (!catRes.ok) throw new Error("Failed to load categories");
-        const categories = await catRes.json();
+        const categories: Pick<ProductCategory, "_id" | "name" | "categoryType">[] =
+          await catRes.json();
         if (addonsRes.ok) {
             setAllAddons(await addonsRes.json());
         }
@@ -84,20 +91,17 @@ export default function Step4Design() {
             setAllCollections(await colsRes.json());
         }
 
-        const activeCategoryObj = categories.find((c: any) => {
-          const displayName =
-            c.name.endsWith("s") || c.name.endsWith("S")
-              ? c.name.slice(0, -1)
-              : c.name;
-          return displayName === categoryName || c.name === categoryName;
-        });
-        const activeCategoryId = activeCategoryObj?._id;
+        const activeCategoryObj = findCategoryForCustomOrderItem(
+          { categoryId, category: categoryName },
+          categories
+        );
+        const resolvedCategoryId = activeCategoryObj?._id;
 
-        if (activeCategoryId) {
-          setActiveCategoryId(activeCategoryId);
+        if (resolvedCategoryId) {
+          setActiveCategoryId(String(resolvedCategoryId));
           setActiveCategoryType(activeCategoryObj?.categoryType);
           const [galleryRes] = await Promise.all([
-            fetch(`/api/gallery?categoryId=${activeCategoryId}`)
+            fetch(`/api/gallery?categoryId=${resolvedCategoryId}`)
           ]);
           
           if (galleryRes.ok) {
@@ -120,8 +124,8 @@ export default function Step4Design() {
       }
     }
 
-    if (categoryName) fetchCatalogInspiration();
-  }, [categoryName]);
+    if (categoryId || categoryName) fetchCatalogInspiration();
+  }, [categoryId, categoryName]);
 
   // -- Auto-Scroll Performance --
   useEffect(() => {
@@ -155,7 +159,7 @@ export default function Step4Design() {
     const addonsToToggle = galleryImage?.defaultAddons || [];
     
     if (isAlreadySelected) {
-       setValue("referenceImages", referenceImages.filter((u: string) => u !== url), { shouldValidate: true });
+       setValue(ip("referenceImages"), referenceImages.filter((u: string) => u !== url), { shouldValidate: true });
        // Deselection Hydration: Remove these default addons if no other selected image requires them
        if (addonsToToggle.length > 0) {
            const otherSelectedUrls = referenceImages.filter((u: string) => u !== url);
@@ -174,14 +178,14 @@ export default function Step4Design() {
                }
                return true;
            });
-           setValue("addons", newAddons, { shouldValidate: true });
+           setValue(ip("addons"), newAddons, { shouldValidate: true });
        }
     } else {
        if (isAtCapacity) {
           alert("Maximum of 3 images reached. Deselect an image to add a different one.");
           return;
        }
-       setValue("referenceImages", [...referenceImages, url], { shouldValidate: true });
+       setValue(ip("referenceImages"), [...referenceImages, url], { shouldValidate: true });
        // Selection Hydration: Inject default addons
        if (addonsToToggle.length > 0 && allAddons.length > 0) {
            const newAddons = [...selectedAddons];
@@ -202,7 +206,7 @@ export default function Step4Design() {
                    }
                }
            }
-           setValue("addons", newAddons, { shouldValidate: true });
+           setValue(ip("addons"), newAddons, { shouldValidate: true });
        }
     }
   };
@@ -400,7 +404,7 @@ export default function Step4Design() {
         </div>
 
         {/* ROW 2: UPLOAD ZONE */}
-        <div className="border-b border-primary/10 pb-10" data-field-name="referenceImages">
+        <div className="border-b border-primary/10 pb-10" data-field-name={`items.${itemIndex}.referenceImages`}>
           <h3 className="font-heading text-xl text-primary mb-2">
             Upload Your Idea
           </h3>
@@ -415,17 +419,17 @@ export default function Step4Design() {
                 catalogImages.includes(url),
               );
               setValue(
-                "referenceImages",
+                ip("referenceImages"),
                 [...currentCatalogPicks, ...newUploads],
                 { shouldValidate: true },
               );
             }}
             maxImages={maxImages - catalogSelectedImagesCount}
           />
-          {errors.referenceImages && (
+          {itemErrors?.referenceImages && (
             <p className="text-red-500 text-sm mt-4 flex items-center gap-1 font-medium bg-red-50 p-2 rounded-lg">
               <AlertCircle className="w-4 h-4 shrink-0" />{" "}
-              {errors.referenceImages.message}
+              {itemErrors.referenceImages.message}
             </p>
           )}
         </div>
@@ -439,7 +443,7 @@ export default function Step4Design() {
           <AddonSelector 
             categoryId={activeCategoryId}
             selectedAddons={selectedAddons}
-            onChange={(decos) => setValue("addons", decos, { shouldValidate: true })}
+            onChange={(decos) => setValue(ip("addons"), decos, { shouldValidate: true })}
             availableAddons={allAddons}
           />
         </div>
@@ -456,7 +460,7 @@ export default function Step4Design() {
                   onCheckedChange={(checked) => {
                     setShowInscriptionInput(checked);
                     if (!checked)
-                      setValue("details.textOnCake", "", {
+                      setValue(ip("details.textOnCake"), "", {
                         shouldValidate: true,
                       });
                   }}
@@ -486,7 +490,7 @@ export default function Step4Design() {
                   </p>
                   <Controller
                     control={control}
-                    name="details.textOnCake"
+                    name={ip("details.textOnCake")}
                     render={({ field }) => (
                       <div className="relative">
                         <Textarea
@@ -519,7 +523,7 @@ export default function Step4Design() {
                 type="button"
                 onClick={() => {
                   setDesignNotesSelection("no");
-                  setValue("details.designNotes", "Same as on reference", { shouldValidate: true });
+                  setValue(ip("details.designNotes"), "Same as on reference", { shouldValidate: true });
                 }}
                 className={`w-32 h-12 text-lg rounded-xl shadow-lg transition-all active:scale-95 ${
                   designNotesSelection === "no"
@@ -536,7 +540,7 @@ export default function Step4Design() {
                 onClick={() => {
                   setDesignNotesSelection("yes");
                   if (designNotesWatcher === "Same as on reference") {
-                    setValue("details.designNotes", "", { shouldValidate: false });
+                    setValue(ip("details.designNotes"), "", { shouldValidate: false });
                   }
                 }}
                 className={`w-32 h-12 text-lg rounded-xl shadow-lg transition-all active:scale-95 ${
@@ -558,22 +562,22 @@ export default function Step4Design() {
                   : "grid-rows-[0fr] opacity-0 mt-0",
               )}
             >
-              <div className="min-h-0" data-field-name="details.designNotes">
+              <div className="min-h-0" data-field-name={`items.${itemIndex}.details.designNotes`}>
                 <Controller
                   control={control}
-                  name="details.designNotes"
+                  name={ip("details.designNotes")}
                   render={({ field }) => (
                     <Textarea
                       {...field}
                       placeholder="I want a vintage heart style with heavy piping, mainly baby pink with white borders..."
-                      className={`h-32 bg-subtleBackground ${errors.details?.designNotes ? "border-red-500 ring-1 ring-red-500" : ""}`}
+                      className={`h-32 bg-subtleBackground ${itemErrors?.details?.designNotes ? "border-red-500 ring-1 ring-red-500" : ""}`}
                     />
                   )}
                 />
-                {errors.details?.designNotes && (
+                {itemErrors?.details?.designNotes && (
                   <p className="text-red-500 text-sm mt-3 flex items-center gap-1 font-medium">
                     <AlertCircle className="w-4 h-4 shrink-0" />{" "}
-                    {errors.details.designNotes.message}
+                    {itemErrors.details.designNotes.message}
                   </p>
                 )}
               </div>

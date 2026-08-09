@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { adminAuth } from "@/lib/firebase/adminApp";
 import { withMongoClient } from "@/lib/db";
 import { mongoUnavailableResponse } from "@/lib/db/mongoHttp";
+import { normalizeCustomOrders } from "@/lib/normalizeCustomOrder";
 import { User } from "@/types";
 
 /**
@@ -48,7 +49,7 @@ export async function GET() {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    return NextResponse.json(result.orders);
+    return NextResponse.json(normalizeCustomOrders(result.orders));
   } catch (error) {
     console.error("Admin Custom Orders GET Error:", error);
     return (

@@ -10,12 +10,44 @@ export function getTierSizeLabels(diameter?: Diameter | null): string[] {
   return Array.from({ length: tiersCount }, (_, index) => `Tier ${index + 1}`);
 }
 
+export function resolveFlavorId(
+  value: string | undefined | null,
+  flavors: Pick<Flavor, "_id" | "name">[]
+): string {
+  if (!value?.trim()) return "";
+  const trimmed = value.trim();
+  const byId = flavors.find((f) => String(f._id) === trimmed);
+  if (byId) return String(byId._id);
+  const byName = flavors.find(
+    (f) => f.name.toLowerCase() === trimmed.toLowerCase()
+  );
+  return byName ? String(byName._id) : "";
+}
+
+export function resolveDiameterId(
+  value: string | undefined | null,
+  diameters: Pick<Diameter, "_id" | "name">[]
+): string {
+  if (!value?.trim()) return "";
+  const trimmed = value.trim();
+  const byId = diameters.find((d) => String(d._id) === trimmed);
+  if (byId) return String(byId._id);
+  const byName = diameters.find(
+    (d) => d.name.toLowerCase() === trimmed.toLowerCase()
+  );
+  return byName ? String(byName._id) : "";
+}
+
 export function tierFlavorsFromSelections(
-  tiers?: CakeTierSelection[]
+  tiers?: CakeTierSelection[],
+  flavors?: Pick<Flavor, "_id" | "name">[]
 ): TierFlavorMap {
   if (!tiers?.length) return {};
   return tiers.reduce<TierFlavorMap>((acc, tier) => {
-    acc[tier.tierIndex] = tier.flavorId;
+    const resolved =
+      resolveFlavorId(tier.flavorId, flavors ?? []) ||
+      resolveFlavorId(tier.flavorName, flavors ?? []);
+    acc[tier.tierIndex] = resolved || tier.flavorId || "";
     return acc;
   }, {});
 }

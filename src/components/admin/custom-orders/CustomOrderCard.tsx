@@ -1,6 +1,7 @@
 "use client";
 
-import { CustomOrder } from "@/types";
+import { CustomOrder, CustomOrderItem } from "@/types";
+import { normalizeCustomOrder } from "@/lib/normalizeCustomOrder";
 import { format } from "date-fns";
 import { 
   Calendar, Phone, Mail, Copy, CheckCircle2, 
@@ -24,7 +25,13 @@ interface CustomOrderCardProps {
   order: CustomOrder & Record<string, any>;
 }
 
-export const CustomOrderCard = ({ order }: CustomOrderCardProps) => {
+export const CustomOrderCard = ({ order: rawOrder }: CustomOrderCardProps) => {
+  // Normalize legacy flat requests into the canonical multi-item shape so the
+  // card always renders from `order.items[]`.
+  const order = normalizeCustomOrder(rawOrder) as CustomOrder & Record<string, any>;
+  const items: CustomOrderItem[] = order.items ?? [];
+  const isMultiItem = items.length > 1;
+
   const router = useRouter();
   const { showAlert } = useAlert();
   const [agreedPrice, setAgreedPrice] = useState("");
@@ -39,9 +46,16 @@ export const CustomOrderCard = ({ order }: CustomOrderCardProps) => {
     order.paymentPreference ?? 'e-transfer'
   );
 
-  // Use all reference images
-  const images = order.referenceImages || order.referenceImageUrls || [];
+  // Aggregate reference images across every item (falling back to legacy roots).
+  const images: string[] = items.flatMap((it) => it.referenceImages || []);
+  if (images.length === 0) {
+    const legacyImages = order.referenceImages || order.referenceImageUrls || [];
+    images.push(...legacyImages);
+  }
   const displayImage = images.length > 0 ? images[0] : null;
+
+  const approximatePriceTotal = order.approximatePriceTotal;
+  const agreedPriceTotal = order.agreedPriceTotal;
 
   const handleConvert = async () => {
     setIsConvertModalOpen(false);
@@ -179,54 +193,83 @@ export const CustomOrderCard = ({ order }: CustomOrderCardProps) => {
         {/* The "Receipt" Block */}
         <div className="mx-4 my-2 p-3 bg-[#fdf2f1] rounded-md flex-1 text-sm">
            <div className="space-y-3">
-              <div className="flex justify-between items-center border-b border-[#764a4d]/10 pb-2">
-                 <span className="font-heading text-[#231416] uppercase text-[10px] tracking-wider">
-                    {order.category || "Custom Order"}
-                 </span>
-                 <span className="text-[#764a4d] text-xs font-bold">
-                    {order.details?.size || "N/A"}
-                 </span>
-              </div>
+              {isMultiItem && (
+                <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#764a4d]">
+                  <Cake className="w-3.5 h-3.5" />
+                  {items.length} items
+                </div>
+              )}
 
-              <div className="flex flex-col gap-1.5 text-[#764a4d]">
-                 <div className="flex items-start gap-2">
-                    <Layers className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <OrderItemTiersDisplay
-                        tiers={order.details?.tiers}
-                        flavor={order.details?.flavor}
-                        variant="compact"
-                        className="text-xs leading-tight text-[#764a4d]"
-                        label="Tiers:"
-                      />
-                      {!order.details?.tiers?.length && (
-                        <span className="text-xs leading-tight">
-                          {order.details?.flavor || "Flavor TBD"}
-                        </span>
-                      )}
-                    </div>
-                 </div>
-                 
-                 {order.details?.textOnCake && (
-                    <div className="flex items-start gap-2 p-1.5 bg-white/50 rounded border border-[#764a4d]/10">
-                       <ScrollText className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                       <span className="text-[11px] italic text-[#231416] leading-tight">
-                          "{order.details.textOnCake}"
-                       </span>
-                    </div>
-                 )}
-                 
-                 {(order.details?.designNotes || order.description) && (
-                    <div className="flex items-start gap-2">
-                       <Box className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                       <p className="text-[11px] text-gray-600 line-clamp-3 leading-snug">
-                          {order.details?.designNotes || order.description}
-                       </p>
-                    </div>
-                 )}
-              </div>
+              {items.map((item, itemIdx) => (
+                <div key={item.id ?? itemIdx} className="space-y-1.5">
+                  <div className="flex justify-between items-center border-b border-[#764a4d]/10 pb-2">
+                     <span className="font-heading text-[#231416] uppercase text-[10px] tracking-wider">
+                        {item.category || "Custom Order"}
+                     </span>
+                     <span className="text-[#764a4d] text-xs font-bold">
+                        {item.details?.size || "N/A"}
+                     </span>
+                  </div>
 
-              {/* Allergies Row */}
+                  <div className="flex flex-col gap-1.5 text-[#764a4d]">
+                     <div className="flex items-start gap-2">
+                        <Layers className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <OrderItemTiersDisplay
+                            tiers={item.details?.tiers}
+                            flavor={item.details?.flavor}
+                            variant="compact"
+                            className="text-xs leading-tight text-[#764a4d]"
+                            label="Tiers:"
+                          />
+                          {!item.details?.tiers?.length && (
+                            <span className="text-xs leading-tight">
+                              {item.details?.flavor || "Flavor TBD"}
+                            </span>
+                          )}
+                        </div>
+                     </div>
+
+                     {item.details?.textOnCake && (
+                        <div className="flex items-start gap-2 p-1.5 bg-white/50 rounded border border-[#764a4d]/10">
+                           <ScrollText className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                           <span className="text-[11px] italic text-[#231416] leading-tight">
+                              "{item.details.textOnCake}"
+                           </span>
+                        </div>
+                     )}
+
+                     {item.details?.designNotes && (
+                        <div className="flex items-start gap-2">
+                           <Box className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                           <p className="text-[11px] text-gray-600 line-clamp-3 leading-snug">
+                              {item.details.designNotes}
+                           </p>
+                        </div>
+                     )}
+                  </div>
+                </div>
+              ))}
+
+              {/* Price totals */}
+              {(approximatePriceTotal != null || agreedPriceTotal != null) && (
+                <div className="flex flex-col gap-1 border-t border-[#764a4d]/10 pt-2 text-[#764a4d]">
+                  {approximatePriceTotal != null && (
+                    <div className="flex justify-between text-[11px]">
+                      <span className="text-[#764a4d]/70">Est. Total</span>
+                      <span className="font-semibold">~${approximatePriceTotal.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {agreedPriceTotal != null && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-[#764a4d]/70">Agreed Total</span>
+                      <span className="font-bold text-[#231416]">${agreedPriceTotal.toFixed(2)}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Allergies Row (order-level) */}
               {order.allergies && order.allergies !== "No" && (
                 <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-lg px-2 py-1.5 mt-1">
                   <AlertTriangle className="w-3.5 h-3.5 text-red-500 mt-0.5 shrink-0" />
@@ -257,44 +300,72 @@ export const CustomOrderCard = ({ order }: CustomOrderCardProps) => {
         <div className="px-5 pb-4 pt-2 mt-auto border-t border-gray-50 bg-gray-50/30">
            {!paymentLink ? (
               <div className="flex flex-col gap-3">
-                 <div className="relative" onClick={stopPropagation}>
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-semibold text-xs">$</span>
-                    <Input 
-                      type="number" 
-                      placeholder="Agreed Price" 
-                      value={agreedPrice}
-                      onChange={(e) => setAgreedPrice(e.target.value)}
-                      onFocus={stopPropagation}
-                      className="text-right font-bold text-sm h-9 pl-7 border-[#764a4d]/10 focus:ring-[#764a4d]/10"
-                    />
-                 </div>
-                 <div className="flex gap-2">
-                    <Button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (!agreedPrice || isNaN(Number(agreedPrice))) {
-                           showAlert("Please enter a valid number for the price.", "error");
-                           return;
-                        }
-                        setIsConvertModalOpen(true);
-                      }} 
-                      disabled={isProcessing || isRejecting || !agreedPrice} 
-                      className="flex-1  text-white h-9 text-xs shadow-sm"
-                    >
-                      {isProcessing ? "Finalizing..." : "Convert"}
-                    </Button>
-                    <Button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setIsRejectOpen(true);
-                      }}
-                      variant="ghost" 
-                      disabled={isProcessing || isRejecting}
-                      className="px-3 text-red-500 hover:text-primary hover:bg-subtitleBackground h-9 transition-colors"
-                    >
-                       <Trash2 className="w-4 h-4" />
-                    </Button>
-                 </div>
+                 {isMultiItem ? (
+                    // Multi-item requests need a price per item — send the admin to
+                    // the detail page where each item can be quoted individually.
+                    <div className="flex gap-2" onClick={stopPropagation}>
+                       <Link
+                         href={`/bakery-manufacturing-orders/custom-orders/${order._id}`}
+                         className="flex-1"
+                       >
+                         <Button className="w-full text-white h-9 text-xs shadow-sm">
+                           Quote {items.length} items
+                         </Button>
+                       </Link>
+                       <Button
+                         onClick={(e) => {
+                           e.stopPropagation();
+                           setIsRejectOpen(true);
+                         }}
+                         variant="ghost"
+                         disabled={isProcessing || isRejecting}
+                         className="px-3 text-red-500 hover:text-primary hover:bg-subtitleBackground h-9 transition-colors"
+                       >
+                          <Trash2 className="w-4 h-4" />
+                       </Button>
+                    </div>
+                 ) : (
+                    <>
+                       <div className="relative" onClick={stopPropagation}>
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-semibold text-xs">$</span>
+                          <Input 
+                            type="number" 
+                            placeholder="Agreed Price" 
+                            value={agreedPrice}
+                            onChange={(e) => setAgreedPrice(e.target.value)}
+                            onFocus={stopPropagation}
+                            className="text-right font-bold text-sm h-9 pl-7 border-[#764a4d]/10 focus:ring-[#764a4d]/10"
+                          />
+                       </div>
+                       <div className="flex gap-2">
+                          <Button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (!agreedPrice || isNaN(Number(agreedPrice))) {
+                                 showAlert("Please enter a valid number for the price.", "error");
+                                 return;
+                              }
+                              setIsConvertModalOpen(true);
+                            }} 
+                            disabled={isProcessing || isRejecting || !agreedPrice} 
+                            className="flex-1  text-white h-9 text-xs shadow-sm"
+                          >
+                            {isProcessing ? "Finalizing..." : "Convert"}
+                          </Button>
+                          <Button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setIsRejectOpen(true);
+                            }}
+                            variant="ghost" 
+                            disabled={isProcessing || isRejecting}
+                            className="px-3 text-red-500 hover:text-primary hover:bg-subtitleBackground h-9 transition-colors"
+                          >
+                             <Trash2 className="w-4 h-4" />
+                          </Button>
+                       </div>
+                    </>
+                 )}
               </div>
            ) : (
               <div className="flex flex-col items-center gap-2 animate-in fade-in zoom-in duration-300">

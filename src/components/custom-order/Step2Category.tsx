@@ -1,5 +1,5 @@
 import { useFormContext } from "react-hook-form";
-import { CustomOrderFormData } from "@/lib/validation/customOrderSchema";
+import { CustomOrderRequestData } from "@/lib/validation/customOrderSchema";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import { useEffect, useState } from "react";
@@ -15,9 +15,13 @@ interface CategoryDoc {
   imageUrl: string;
 }
 
-export default function Step2Category({ onNext }: { onNext: () => void }) {
-  const { setValue, watch, formState: { errors } } = useFormContext<CustomOrderFormData>();
-  const currentCategory = watch("category");
+export default function Step2Category({ onNext, itemIndex }: { onNext: () => void; itemIndex: number }) {
+  const { setValue, watch, formState: { errors } } = useFormContext<CustomOrderRequestData>();
+  const ip = (sub: string): any => `items.${itemIndex}.${sub}`;
+  const currentCategoryId = watch(ip("categoryId"));
+  const categoryError =
+    (errors.items?.[itemIndex] as any)?.categoryId ||
+    (errors.items?.[itemIndex] as any)?.category;
   const [categories, setCategories] = useState<CategoryDoc[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -38,12 +42,13 @@ export default function Step2Category({ onNext }: { onNext: () => void }) {
     fetchCategories();
   }, []);
 
-  const handleSelect = (name: string) => {
-    setValue("category", name, { shouldValidate: true });
-    setValue("details.size", "");
-    setValue("details.flavor", "");
-    setValue("details.diameterId", undefined);
-    setValue("details.tiers", undefined);
+  const handleSelect = (cat: CategoryDoc) => {
+    setValue(ip("categoryId"), String(cat._id), { shouldValidate: true });
+    setValue(ip("category"), cat.name, { shouldValidate: true });
+    setValue(ip("details.size"), "");
+    setValue(ip("details.flavor"), "");
+    setValue(ip("details.diameterId"), undefined);
+    setValue(ip("details.tiers"), undefined);
   };
 
   return (
@@ -59,19 +64,16 @@ export default function Step2Category({ onNext }: { onNext: () => void }) {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {categories.filter(cat => cat.categoryType !== "combo").map((cat) => {
-            const displayName =
-              cat.name.endsWith("s") || cat.name.endsWith("S")
-                ? cat.name.slice(0, -1)
-                : cat.name;
+            const isSelected = String(currentCategoryId) === String(cat._id);
 
             return (
               <motion.div
                 key={cat._id}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => handleSelect(displayName)}
+                onClick={() => handleSelect(cat)}
                 className={`cursor-pointer rounded-2xl p-4 border-2 transition-all duration-300 flex items-center gap-4 ${
-                  currentCategory === displayName
+                  isSelected
                     ? "border-accent bg-accent/5 shadow-md shadow-accent/10"
                     : "border-primary/10 bg-white hover:border-accent/40 hover:bg-subtleBackground"
                 }`}
@@ -81,7 +83,7 @@ export default function Step2Category({ onNext }: { onNext: () => void }) {
                   {cat.imageUrl ? (
                     <Image
                       src={cat.imageUrl}
-                      alt={displayName}
+                      alt={cat.name}
                       fill
                       sizes="256px"
                       quality={100}
@@ -98,7 +100,7 @@ export default function Step2Category({ onNext }: { onNext: () => void }) {
                 {/* Category Details */}
                 <div>
                   <h3 className="text-lg font-bold font-heading text-primary leading-tight">
-                    {displayName}
+                    {cat.name}
                   </h3>
                 </div>
               </motion.div>
@@ -107,11 +109,11 @@ export default function Step2Category({ onNext }: { onNext: () => void }) {
         </div>
       )}
 
-      {errors.category && (
+      {categoryError && (
         <div className="flex justify-center mt-6">
           <p className="text-red-500 text-sm font-medium bg-red-50 inline-flex items-center gap-2 px-4 py-2 border border-red-100 rounded-xl shadow-sm">
             <AlertCircle className="w-5 h-5 shrink-0" />{" "}
-            {errors.category.message}
+            {categoryError.message}
           </p>
         </div>
       )}

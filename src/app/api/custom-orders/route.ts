@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import clientPromise from "@/lib/db";
-import { customOrderSchema } from "@/lib/validation/customOrderSchema";
-import { ObjectId } from "mongodb";
+import { customOrderRequestSchema } from "@/lib/validation/customOrderSchema";
+import { normalizeCustomOrders } from "@/lib/normalizeCustomOrder";
 
 export async function GET(req: Request) {
   try {
@@ -21,7 +21,7 @@ export async function GET(req: Request) {
       .sort({ createdAt: -1 })
       .toArray();
 
-    return NextResponse.json(customOrders, { status: 200 });
+    return NextResponse.json(normalizeCustomOrders(customOrders), { status: 200 });
   } catch (error) {
     console.error("Fetch Custom Orders Error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
@@ -37,8 +37,9 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    // 1. Zod Validation
-    const validation = customOrderSchema.safeParse({
+    // 1. Zod Validation — multi-item schema. The preprocess step also accepts
+    //    legacy flat single-item payloads and folds them into items[].
+    const validation = customOrderRequestSchema.safeParse({
       ...body,
       createdAt: new Date(), // Ensure server set timestamp
       date: body.date ? new Date(body.date) : undefined
@@ -57,7 +58,9 @@ export async function POST(req: Request) {
     const db = client.db(process.env.MONGODB_DB_NAME);
     const collection = db.collection("custom_orders");
 
-    // 2. Primary Idempotency Check (Strict Match)
+    // 2. Idempotency — rely purely on the strict client-generated key. (The old
+    //    fuzzy match keyed on flat details.flavor/size no longer applies to the
+    //    multi-item structure.)
     if (data.idempotencyKey) {
       const existingStrict = await collection.findOne({ idempotencyKey: data.idempotencyKey });
       if (existingStrict) {
@@ -68,29 +71,12 @@ export async function POST(req: Request) {
       }
     }
 
-    // 3. Secondary Idempotency Check (Fuzzy Match - last 5 minutes)
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-    const existingFuzzy = await collection.findOne({
-      "contact.email": data.contact.email,
-      category: data.category,
-      "details.flavor": data.details.flavor,
-      "details.size": data.details.size,
-      createdAt: { $gte: fiveMinutesAgo }
-    });
-
-    if (existingFuzzy) {
-      return NextResponse.json(
-        { success: true, orderId: existingFuzzy._id.toString(), note: "idempotent_fuzzy" },
-        { status: 200 }
-      );
-    }
-
-    // 4. Database Insertion
+    // 3. Database Insertion — persist the multi-item payload as-is.
     const orderData = {
         ...data,
-        status: data.status || 'new'
+        status: data.status || 'pending_review'
     };
-    
+
     const result = await collection.insertOne(orderData);
 
     return NextResponse.json(

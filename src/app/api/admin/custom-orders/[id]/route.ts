@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { adminAuth } from "@/lib/firebase/adminApp";
 import clientPromise from "@/lib/db";
 import { ObjectId } from "mongodb";
+import { normalizeCustomOrder } from "@/lib/normalizeCustomOrder";
 import { User } from "@/types";
 
 /**
@@ -61,7 +62,7 @@ export async function GET(
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
-    return NextResponse.json(order);
+    return NextResponse.json(normalizeCustomOrder(order));
   } catch (error) {
     console.error("Admin Custom Order GET Error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

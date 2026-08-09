@@ -615,8 +615,13 @@ export default function PrintOrderPage() {
         {/* ── ITEMS ── */}
         <div className="body">
           {order.items.map((item, idx) => {
+            // Prefer this item's own image; only fall back to the order-level
+            // aggregate when the item has no images of its own.
             const refImage =
-              item.imageUrl || order.referenceImages?.[0] || null;
+              item.imageUrl ||
+              item.imageUrls?.[0] ||
+              order.referenceImages?.[0] ||
+              null;
 
             const isComboSet = item.selectedConfig && !!item.selectedConfig.cake;
             const isSimpleSet = item.selectedConfig && !item.selectedConfig.cake && (item.selectedConfig.items?.length || 0) > 0;
