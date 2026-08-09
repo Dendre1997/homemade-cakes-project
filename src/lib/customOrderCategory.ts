@@ -9,7 +9,9 @@ export function legacyCategoryDisplayName(name: string): string {
 }
 
 /** Find a catalog category by stored custom-order item fields (id first, then legacy string). */
-export function findCategoryForCustomOrderItem<T extends Pick<ProductCategory, "_id" | "name">>(
+export function findCategoryForCustomOrderItem<
+  T extends Pick<ProductCategory, "_id" | "name"> & Partial<Pick<ProductCategory, "categoryType">>
+>(
   item: { categoryId?: string; category?: string },
   categories: T[]
 ): T | null {

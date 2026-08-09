@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 import { MultiImageUpload } from "@/components/custom-order/MultiImageUpload";
 import { AddonSelector } from "@/components/shared/AddonSelector";
-import { Addon, IGalleryImage, SelectedAddon, Collection } from "@/types";
+import { Addon, IGalleryImage, SelectedAddon, Collection, ProductCategory } from "@/types";
 import { calculateCustomOrderTotal } from "@/lib/pricing/customOrderPricing";
 import { findCategoryForCustomOrderItem } from "@/lib/customOrderCategory";
 
@@ -82,7 +82,8 @@ export default function Step4Design({ itemIndex }: { itemIndex: number }) {
             fetch("/api/collections/all")
         ]);
         if (!catRes.ok) throw new Error("Failed to load categories");
-        const categories = await catRes.json();
+        const categories: Pick<ProductCategory, "_id" | "name" | "categoryType">[] =
+          await catRes.json();
         if (addonsRes.ok) {
             setAllAddons(await addonsRes.json());
         }
