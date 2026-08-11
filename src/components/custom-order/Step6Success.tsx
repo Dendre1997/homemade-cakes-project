@@ -219,25 +219,15 @@ export default function Step6Success({ orderData, customOrderId, onMakeAnotherRe
 
   const { name, socialNickname, socialPlatform } = orderData.contact;
   const hasSocialPlatform = !!socialPlatform;
+  const hasSocialContact = hasSocialPlatform && !!socialNickname?.trim();
 
   const items = orderData.items ?? [];
 
-  // Build the display name based on what's available
-  const displayName = (() => {
-    const firstName = name?.trim().split(" ")[0] || "";
-    const nickPart = socialNickname?.trim() || "";
-    const platformPart = hasSocialPlatform
-      ? `${socialPlatform!.charAt(0).toUpperCase() + socialPlatform!.slice(1)} `
-      : "";
-    if (firstName && nickPart) return `${firstName} (${platformPart}${nickPart})`;
-    return firstName || nickPart || "there";
-  })();
+  const displayName = name?.trim().split(" ")[0] || "there";
 
-  // Contact method adapts to what the customer chose
-  const contactMethod =
-    hasSocialPlatform && socialNickname
-      ? `via ${socialPlatform!.charAt(0).toUpperCase() + socialPlatform!.slice(1)} at ${socialNickname}`
-      : "via phone or email";
+  const contactMethod = hasSocialContact
+    ? `via ${socialPlatform!.charAt(0).toUpperCase() + socialPlatform!.slice(1)} at @${socialNickname!.replace(/^@+/, "")}`
+    : "via phone or email";
 
   // Aggregate estimate across every item
   const grandEstimate = items.reduce((sum, it: any) => {
@@ -341,28 +331,22 @@ export default function Step6Success({ orderData, customOrderId, onMakeAnotherRe
               <p className="text-primary/40 text-xs uppercase font-bold tracking-wider mb-0.5">
                 Customer
               </p>
-              {orderData.contact.name ? (
-                <>
-                  <p className="font-semibold text-base">
-                    {orderData.contact.name}
-                  </p>
-                  {orderData.contact.socialNickname && (
-                    <p className="text-primary/50 text-xs mt-0.5">
-                      {orderData.contact.socialPlatform}
-                    </p>
-                  )}
-                </>
-              ) : (
-                <p className="font-semibold text-base">
-                  {orderData.contact.socialNickname}
-                </p>
-              )}
+              <p className="font-semibold text-base">
+                {orderData.contact.name}
+              </p>
               <p className="text-primary/60 font-medium">
                 {orderData.contact.phone}
               </p>
               {orderData.contact.email && (
                 <p className="text-primary/50 text-xs mt-0.5">
                   {orderData.contact.email}
+                </p>
+              )}
+              {orderData.contact.socialPlatform && orderData.contact.socialNickname && (
+                <p className="text-primary/50 text-xs mt-0.5">
+                  {orderData.contact.socialPlatform.charAt(0).toUpperCase() +
+                    orderData.contact.socialPlatform.slice(1)}
+                  : @{orderData.contact.socialNickname.replace(/^@+/, "")}
                 </p>
               )}
             </div>
