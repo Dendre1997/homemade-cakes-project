@@ -215,6 +215,9 @@ function mapToPublicOrder(order: any, ctx: ScrubContext): PublicOrderSummary {
             }
           : undefined,
       addons,
+      ...(Number(item.designQuote) > 0
+        ? { designQuote: Number(item.designQuote) }
+        : {}),
     };
   });
 
@@ -234,8 +237,13 @@ function mapToPublicOrder(order: any, ctx: ScrubContext): PublicOrderSummary {
     return acc + perItem * (Number(item.quantity) || 1);
   }, 0);
 
+  const designFeesTotal = rawItems.reduce((acc, item) => {
+    const designQuote = Number(item.designQuote) || 0;
+    return acc + designQuote * (Number(item.quantity) || 1);
+  }, 0);
+
   const total = Number(order.totalAmount) || 0;
-  const baseCakePrice = Math.max(0, total - addonsCost);
+  const baseCakePrice = Math.max(0, total - addonsCost - designFeesTotal);
 
   const deliveryDates = Array.isArray(order.deliveryInfo?.deliveryDates)
     ? order.deliveryInfo.deliveryDates.map((d: any) => ({
@@ -268,6 +276,7 @@ function mapToPublicOrder(order: any, ctx: ScrubContext): PublicOrderSummary {
     items,
     pricing: {
       baseCakePrice,
+      ...(designFeesTotal > 0 ? { designFeesTotal } : {}),
       addons: addonsFlat,
       discount:
         order.discountInfo && Number(order.discountInfo.amount) > 0

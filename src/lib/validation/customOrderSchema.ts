@@ -23,58 +23,29 @@ const addonSchema = z.object({
   imageUrl: z.string().optional(),
 });
 
-const contactSchema = z
-  .object({
-    name: z.string().optional().default(""),
-    phone: z.string().optional().default(""),
-    email: z
-      .string()
-      .regex(
-        /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
-        "Please enter a valid email address (e.g., example@gmail.com)"
-      )
-      .optional()
-      .or(z.literal("")),
-    socialNickname: z.string().optional(),
-    socialPlatform: z.enum(["instagram", "facebook"]).optional(),
-  })
-  .superRefine((data, ctx) => {
-    const hasNickname = (data.socialNickname ?? "").trim().length > 0;
-    const hasSocialPlatform = !!data.socialPlatform;
-
-    if ((data.name ?? "").trim().length < 2) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.too_small,
-        minimum: 2,
-        origin: "string",
-        inclusive: true,
-        message: "Name is required",
-        path: ["name"],
-      });
-    }
-
-    // Phone: required unless user has both a nickname AND chose a social platform
-    const canContactViaSocial = hasNickname && hasSocialPlatform;
-    const phoneVal = (data.phone ?? "").trim();
-
-    if (!canContactViaSocial && phoneVal.length === 0) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Phone is required (or select a social media platform above)",
-        path: ["phone"],
-      });
-    } else if (phoneVal.length > 0) {
-      // Strict phone validation if provided
-      const strippedPhone = phoneVal.replace(/[\s\-\(\)\+]/g, "");
-      if (!/^\d+$/.test(strippedPhone) || strippedPhone.length < 10 || strippedPhone.length > 15) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Please enter a valid phone number (e.g., 403-123-4567)",
-          path: ["phone"],
-        });
-      }
-    }
-  });
+const contactSchema = z.object({
+  name: z.string().min(2, "Name is required"),
+  phone: z
+    .string()
+    .min(1, "Phone is required")
+    .refine((phoneVal) => {
+      const strippedPhone = phoneVal.trim().replace(/[\s\-\(\)\+]/g, "");
+      return (
+        /^\d+$/.test(strippedPhone) &&
+        strippedPhone.length >= 10 &&
+        strippedPhone.length <= 15
+      );
+    }, "Please enter a valid phone number (e.g., 403-123-4567)"),
+  email: z
+    .string()
+    .min(1, "Email is required")
+    .regex(
+      /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+      "Please enter a valid email address (e.g., example@gmail.com)"
+    ),
+  socialNickname: z.string().optional(),
+  socialPlatform: z.enum(["instagram", "facebook"]).optional(),
+});
 
 /**
  * LEGACY / CLIENT schema (single flat item).
@@ -163,6 +134,7 @@ export const customOrderItemSchema = z.object({
   priceBreakdown: priceBreakdownSchema.optional(),
   approximatePrice: z.number().optional(),
   agreedPrice: z.number().optional(),
+  designQuote: z.number().min(0).optional(),
 });
 
 export type CustomOrderItemData = z.infer<typeof customOrderItemSchema>;

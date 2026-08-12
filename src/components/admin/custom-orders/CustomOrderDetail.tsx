@@ -105,6 +105,9 @@ export default function CustomOrderDetail({ initialOrder, shapes = [] }: CustomO
           items: (order.items ?? []).map((it) => ({
             id: it.id,
             agreedPrice: Number(it.agreedPrice) || 0,
+            ...(it.designQuote != null && !Number.isNaN(Number(it.designQuote))
+              ? { designQuote: Number(it.designQuote) }
+              : {}),
           })),
           // Legacy single-price fallback for single-item requests.
           agreedPrice: agreedPriceTotal,

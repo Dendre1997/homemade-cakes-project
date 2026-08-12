@@ -140,8 +140,12 @@ export const ClientReceiptCard = ({
     return acc + (itemAddonsCost * item.quantity);
   }, 0);
 
-  // 2. Base Cake Price (TotalAmount - AddonsCost)
-  const baseCakePrice = Math.max(0, order.totalAmount - addonsCost);
+  const designFeesTotal = order.items.reduce((acc, item) => {
+    const designQuote = Number(item.designQuote) || 0;
+    return acc + designQuote * (item.quantity || 1);
+  }, 0);
+
+  const baseCakePrice = Math.max(0, order.totalAmount - addonsCost - designFeesTotal);
 
   const isDelivery = order.deliveryInfo?.method === "delivery";
   const deliveryAddressText = formatDeliveryAddress(
@@ -273,6 +277,7 @@ export const ClientReceiptCard = ({
           const fallbackIdx = order.referenceImages ? Math.min(idx, Math.max(0, order.referenceImages.length - 1)) : 0;
           const effectiveImageUrl = item.imageUrl || (order.referenceImages && order.referenceImages.length > 0 ? order.referenceImages[fallbackIdx] : undefined);
           const itemImages = item.imageUrls?.length ? item.imageUrls : (effectiveImageUrl ? [effectiveImageUrl] : []);
+          const itemDesignQuote = Number(item.designQuote) || 0;
 
           return (
             <div key={idx} className="flex flex-col pb-4 border-b border-gray-50 last:border-0 last:pb-0">
@@ -328,6 +333,11 @@ export const ClientReceiptCard = ({
                      item.designInstructions.trim().toLowerCase() !== "same as on reference" && (
                        <p className="whitespace-pre-wrap">Instructions: {item.designInstructions}</p>
                      )}
+                    {itemDesignQuote > 0 && (
+                      <p className="text-primary/60 font-semibold">
+                        + ${itemDesignQuote.toFixed(2)} Design Fee
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -365,6 +375,13 @@ export const ClientReceiptCard = ({
             <span>Base Cake</span>
             <span>${baseCakePrice.toFixed(2)}</span>
           </div>
+
+          {designFeesTotal > 0 && (
+            <div className="flex justify-between">
+              <span>Design Fees</span>
+              <span>${designFeesTotal.toFixed(2)}</span>
+            </div>
+          )}
           
           {/* Extras (Addons breakdown) */}
           {addons.length > 0 && (

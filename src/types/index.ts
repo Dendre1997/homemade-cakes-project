@@ -258,6 +258,8 @@ export interface CartItem {
   flavorNote?: string;
   isManualPrice?: boolean;
   designInstructions?: string;
+  /** Admin-assigned decor/design fee (subset of agreedPrice / rowTotal). */
+  designQuote?: number;
   addons?: SelectedAddon[];
   /** Per-tier flavor selections (multi-tier cakes). */
   tiers?: CakeTierSelection[];
@@ -371,6 +373,7 @@ export interface PublicOrderItem {
   flavorNote?: string;
   inscription?: string;
   designInstructions?: string;
+  designQuote?: number;
   imageUrls: string[];
   isCombo?: boolean;
   comboCenter?: { flavorName: string; inscription?: string };
@@ -400,6 +403,7 @@ export interface PublicOrderSummary {
   items: PublicOrderItem[];
   pricing: {
     baseCakePrice: number;
+    designFeesTotal?: number;
     addons: PublicOrderAddon[];
     discount?: { code?: string; name?: string; amount: number };
     total: number;
@@ -453,6 +457,8 @@ export interface OrderItem {
   flavorNote?: string;
   isManualPrice?: boolean;
   designInstructions?: string;
+  /** Admin-assigned decor/design fee (subset of agreedPrice / rowTotal). */
+  designQuote?: number;
   addons?: SelectedAddon[];
   /** Per-tier flavor selections (multi-tier cakes). */
   tiers?: CakeTierSelection[];
@@ -602,6 +608,8 @@ export interface CustomOrderItem {
   approximatePrice?: number;
   /** Admin-agreed price for this item (set during review/quote). */
   agreedPrice?: number;
+  /** Optional decor/design fee — subset of agreedPrice. Base = agreedPrice - designQuote. */
+  designQuote?: number;
 }
 
 export interface CustomOrder {

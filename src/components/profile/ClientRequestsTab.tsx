@@ -189,6 +189,15 @@ export default function ClientRequestsTab({ userId }: { userId: string }) {
                          </div>
                        )}
 
+                       {item.agreedPrice != null &&
+                         Number(item.agreedPrice) > 0 &&
+                         item.designQuote != null &&
+                         Number(item.designQuote) > 0 && (
+                           <p className="text-sm font-semibold text-accent tabular-nums">
+                             Base ${Math.max(0, Number(item.agreedPrice) - Number(item.designQuote)).toFixed(2)} + Design ${Number(item.designQuote).toFixed(2)} = ${Number(item.agreedPrice).toFixed(2)}
+                           </p>
+                         )}
+
                        {item.referenceImages && item.referenceImages.length > 0 && (
                          <div>
                            <p className="text-muted-foreground uppercase tracking-wider text-xs font-semibold mb-3">Reference Images</p>

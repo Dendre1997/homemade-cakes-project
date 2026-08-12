@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useFormContext, Controller } from "react-hook-form";
 import { CustomOrderFormData } from "@/lib/validation/customOrderSchema";
 import { Input } from "@/components/ui/Input";
@@ -7,9 +7,7 @@ import { useAuthStore } from "@/lib/store/authStore";
 import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
 import { LogIn } from "lucide-react";
-import { useEffect } from "react";
 
-// Inline SVG brand icons
 const InstagramIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor">
     <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
@@ -23,26 +21,22 @@ const FacebookIcon = ({ className }: { className?: string }) => (
 );
 
 export default function Step5Contact() {
-  const [contactMethod, setContactMethod] = useState<"social" | "phone" | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const { user, fetchProfile } = useAuthStore();
   const { control, watch, setValue, formState: { errors } } = useFormContext<CustomOrderFormData>();
-  const socialNickname = watch("contact.socialNickname") ?? "";
   const socialPlatform = watch("contact.socialPlatform");
-  const hasNickname = socialNickname.trim().length > 0;
-  const phoneIsOptional = hasNickname && !!socialPlatform;
 
   useEffect(() => {
     if (user) {
       const currentName = watch("contact.name");
       const currentEmail = watch("contact.email");
-      
+
       if (!currentName && user.name?.first) {
-        setValue("contact.name", `${user.name.first} ${user.name.last || ''}`.trim(), { shouldValidate: true });
+        setValue("contact.name", `${user.name.first} ${user.name.last || ""}`.trim(), { shouldValidate: true });
       } else if (!currentName && user.email) {
-        setValue("contact.name", user.email.split('@')[0], { shouldValidate: true });
+        setValue("contact.name", user.email.split("@")[0], { shouldValidate: true });
       }
-      
+
       if (!currentEmail && user.email) {
         setValue("contact.email", user.email, { shouldValidate: true });
       }
@@ -71,20 +65,11 @@ export default function Step5Contact() {
   };
 
   const togglePlatform = (platform: "instagram" | "facebook") => {
-    setValue(
-      "contact.socialPlatform",
-      socialPlatform === platform ? undefined : platform,
-      { shouldValidate: true }
-    );
-  };
-
-  const handleContactMethodChange = (method: "social" | "phone") => {
-    setContactMethod(method);
-    if (method === "social") {
-      setValue("contact.phone", "", { shouldValidate: false });
-    } else if (method === "phone") {
-      setValue("contact.socialNickname", "", { shouldValidate: false });
-      setValue("contact.socialPlatform", undefined, { shouldValidate: false });
+    if (socialPlatform === platform) {
+      setValue("contact.socialPlatform", undefined, { shouldValidate: true });
+      setValue("contact.socialNickname", "", { shouldValidate: true });
+    } else {
+      setValue("contact.socialPlatform", platform, { shouldValidate: true });
     }
   };
 
@@ -101,10 +86,10 @@ export default function Step5Contact() {
           <p className="text-sm font-medium text-primary">
             Log in to track your request status
           </p>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleLoginClick} 
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleLoginClick}
             disabled={isLoggingIn}
             className="w-full max-w-[200px] flex items-center justify-center gap-2"
           >
@@ -115,119 +100,139 @@ export default function Step5Contact() {
       )}
 
       <div className="space-y-5">
-        {/* Contact Method Selector */}
-        <div className="space-y-3 mb-6">
-          <div className="flex gap-3 justify-center">
-            <Button
-              type="button"
-              variant={contactMethod === "social" ? "primary" : "outline"}
-              onClick={() => handleContactMethodChange("social")}
-              className="flex-1 max-w-[140px]"
-            >
-              Social
-            </Button>
-            <Button
-              type="button"
-              variant={contactMethod === "phone" ? "primary" : "outline"}
-              onClick={() => handleContactMethodChange("phone")}
-              className="flex-1 max-w-[140px]"
-            >
-              Phone
-            </Button>
-          </div>
+        {/* Name */}
+        <div data-field-name="contact.name">
+          <label className="block text-sm font-semibold mb-1 text-primary">
+            Your Name
+          </label>
+          <Controller
+            control={control}
+            name="contact.name"
+            render={({ field }) => (
+              <Input
+                {...field}
+                placeholder="Your Name"
+                className={`h-12 bg-white ${errors.contact?.name ? "border-red-500" : ""}`}
+              />
+            )}
+          />
+          {errors.contact?.name && (
+            <p className="text-primary/60 text-xs mt-1">
+              {errors.contact.name.message}
+            </p>
+          )}
         </div>
 
-        {contactMethod === "phone" && (
-          <>
-            {/* 1. Full Name */}
-            <div data-field-name="contact.name">
-              <label className="block text-sm font-semibold mb-1 text-primary">
-                Your Name
-              </label>
-              <Controller
-                control={control}
-                name="contact.name"
-                render={({ field }) => (
-                  <Input
-                    {...field}
-                    placeholder="Your Name"
-                    className={`h-12 bg-white ${errors.contact?.name ? "border-red-500" : ""}`}
-                  />
-                )}
+        {/* Email */}
+        <div data-field-name="contact.email">
+          <label className="block text-sm font-semibold mb-1 text-primary">
+            Email Address
+            <span className="block font-normal text-primary/60 text-xs mt-0.5 mb-1.5">
+              We&apos;ll send you a summary of your request after confirmation
+            </span>
+          </label>
+          <Controller
+            control={control}
+            name="contact.email"
+            render={({ field }) => (
+              <Input
+                {...field}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^a-zA-Z0-9@._-]/g, "");
+                  field.onChange(val);
+                }}
+                type="email"
+                placeholder="name@example.com"
+                className={`h-12 bg-white ${errors.contact?.email ? "border-red-500" : ""}`}
               />
-              {errors.contact?.name && (
-                <p className="text-primary/60 text-xs mt-1">
-                  {errors.contact.name.message}
-                </p>
-              )}
-            </div>
+            )}
+          />
+          {errors.contact?.email && (
+            <p className="text-primary/60 text-xs mt-1">
+              {errors.contact.email.message}
+            </p>
+          )}
+        </div>
 
-            {/* 4. Phone Number */}
-            <div data-field-name="contact.phone">
-              <label className="block text-sm font-semibold mb-1 text-primary">
-                Phone Number{" "}
-              </label>
-              <Controller
-                control={control}
-                name="contact.phone"
-                render={({ field }) => (
-                  <Input
-                    {...field}
-                    onChange={(e) => {
-                      const val = e.target.value.replace(/[^0-9\s+()-]/g, "");
-                      field.onChange(val);
-                    }}
-                    type="tel"
-                    placeholder="Your Phone Number"
-                    className={`h-12 bg-white ${errors.contact?.phone ? "border-red-500" : ""}`}
-                  />
-                )}
+        {/* Phone */}
+        <div data-field-name="contact.phone">
+          <label className="block text-sm font-semibold mb-1 text-primary">
+            Phone Number
+          </label>
+          <Controller
+            control={control}
+            name="contact.phone"
+            render={({ field }) => (
+              <Input
+                {...field}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9\s+()-]/g, "");
+                  field.onChange(val);
+                }}
+                type="tel"
+                placeholder="Your Phone Number"
+                className={`h-12 bg-white ${errors.contact?.phone ? "border-red-500" : ""}`}
               />
-              {errors.contact?.phone && (
-                <p className="text-primary/60 text-xs mt-1">
-                  {errors.contact.phone.message}
-                </p>
-              )}
-            </div>
-          </>
-        )}
+            )}
+          />
+          {errors.contact?.phone && (
+            <p className="text-primary/60 text-xs mt-1">
+              {errors.contact.phone.message}
+            </p>
+          )}
+        </div>
 
-        {contactMethod === "social" && (
-          <>
-            <div data-field-name="contact.name" className="mb-4">
-              <label className="block text-sm font-semibold mb-1 text-primary">
-                Your Name
-              </label>
-              <Controller
-                control={control}
-                name="contact.name"
-                render={({ field }) => (
-                  <Input {...field} placeholder="Your Name" className={`h-12 bg-white ${errors.contact?.name ? "border-red-500" : ""}`} />
-                )}
-              />
-              {errors.contact?.name && (
-                <p className="text-primary/60 text-xs mt-1">
-                  {errors.contact.name.message}
-                </p>
-              )}
-            </div>
+        {/* Social Media (Optional) */}
+        <div className="pt-2" data-field-name="contact.socialPlatform">
+          <label className="block text-sm font-semibold mb-1 text-primary">
+            Social Media
+            <span className="font-normal text-primary/50 text-xs ml-1">
+              (Optional)
+            </span>
+          </label>
+          <p className="text-xs text-primary/60 mb-3">
+            Prefer to be contacted via social media? Select a platform below.
+          </p>
 
-            {/* 2. Social Media Nickname */}
+          <div className="flex gap-3 justify-center mb-4">
+            <button
+              type="button"
+              onClick={() => togglePlatform("instagram")}
+              className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl border font-semibold text-sm transition-all duration-200 active:scale-95 ${
+                socialPlatform === "instagram"
+                  ? "bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 text-white border-transparent shadow-lg shadow-pink-500/25"
+                  : "bg-white border-primary/15 text-primary/70 hover:border-pink-400/50 hover:text-pink-600 hover:bg-pink-50/50"
+              }`}
+            >
+              <InstagramIcon className="w-4 h-4" />
+              Instagram
+            </button>
+
+            <button
+              type="button"
+              onClick={() => togglePlatform("facebook")}
+              className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl border font-semibold text-sm transition-all duration-200 active:scale-95 ${
+                socialPlatform === "facebook"
+                  ? "bg-[#1877F2] text-white border-transparent shadow-lg shadow-blue-500/25"
+                  : "bg-white border-primary/15 text-primary/70 hover:border-blue-500/50 hover:text-blue-600 hover:bg-blue-50/50"
+              }`}
+            >
+              <FacebookIcon className="w-4 h-4" />
+              Facebook
+            </button>
+          </div>
+
+          {socialPlatform && (
             <div data-field-name="contact.socialNickname">
               <label className="block text-sm font-semibold mb-1 text-primary">
                 {socialPlatform === "facebook"
                   ? "Facebook Profile URL"
                   : "Instagram Nickname"}
-                {socialPlatform === "facebook" && (
-                  <span className="block font-normal text-primary/60 text-xs mt-0.5 mb-1.5">
-                    Please paste full link to your Facebook profile or page
-                  </span>
-                )}
-                {socialPlatform === "instagram" && (
-                  <span className="block font-normal text-primary/60 text-xs mt-0.5 mb-1.5">
-                    Please enter your Instagram nickname
-                  </span>
-                )}
+                <span className="block font-normal text-primary/60 text-xs mt-0.5 mb-1.5">
+                  {socialPlatform === "facebook"
+                    ? "Please paste full link to your Facebook profile or page"
+                    : "Please enter your Instagram nickname"}
+                </span>
               </label>
               <Controller
                 control={control}
@@ -240,172 +245,60 @@ export default function Step5Contact() {
                         ? "https://www.facebook.com/yourprofile"
                         : "e.g. @username or Instagram handle"
                     }
-                    className="h-12"
-                    onChange={(e) => {
-                      field.onChange(e);
-                      const val = e.target.value;
-                      if (
-                        val.includes("https://www.facebook.com") ||
-                        val.includes("facebook.com")
-                      ) {
-                        setValue("contact.socialPlatform", "facebook", {
-                          shouldValidate: true,
-                        });
-                      } else if (val.trim().length > 0 && !socialPlatform) {
-                        setValue("contact.socialPlatform", "instagram", {
-                          shouldValidate: true,
-                        });
-                      }
-                    }}
+                    className="h-12 bg-white"
                   />
                 )}
               />
             </div>
+          )}
+        </div>
 
-            {/* 3. Social Platform Buttons */}
-            <div className="pt-1" data-field-name="contact.socialPlatform">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="flex-1 h-px bg-primary/10" />
-                <span className="text-xs font-semibold text-primary/40 uppercase tracking-wider whitespace-nowrap">
-                  Pick your social media platform
-                </span>
-                <div className="flex-1 h-px bg-primary/10" />
+        {/* Payment Preference */}
+        <div className="pt-2" data-field-name="paymentPreference">
+          <label className="block text-sm font-semibold mb-3 text-primary">
+            Payment Preference
+          </label>
+          <p className="text-xs text-primary/60 mb-3">
+            How would you like to pay once your quote is confirmed?
+          </p>
+          <Controller
+            control={control}
+            name="paymentPreference"
+            render={({ field }) => (
+              <div className="flex flex-col gap-2">
+                {(["e-transfer", "cash"] as const).map((method) => (
+                  <label
+                    key={method}
+                    className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
+                      field.value === method
+                        ? "border-accent bg-accent/5 text-accent font-semibold"
+                        : "border-primary/15 bg-white text-primary/70 hover:border-primary/30"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="paymentPreference"
+                      value={method}
+                      checked={field.value === method}
+                      onChange={() => field.onChange(method)}
+                      className="accent-accent w-4 h-4"
+                    />
+                    <div>
+                      <span className="text-sm block">
+                        {method === "e-transfer" ? "E-Transfer" : "Cash at Pickup"}
+                      </span>
+                      <span className="text-xs font-normal text-primary/50">
+                        {method === "e-transfer"
+                          ? "E-Transfer — Payment required 24 hours before pickup"
+                          : "Pay full amount in cash when you pick up your order"}
+                      </span>
+                    </div>
+                  </label>
+                ))}
               </div>
-
-              {!hasNickname && (
-                <p className="text-xs text-primary/40 text-center mb-3 italic">
-                  Fill in your social media nickname above to enable this option
-                </p>
-              )}
-
-              <div className="flex gap-3 justify-center">
-                {/* Instagram */}
-                <button
-                  type="button"
-                  disabled={!hasNickname}
-                  onClick={() => togglePlatform("instagram")}
-                  className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl border font-semibold text-sm transition-all duration-200 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${
-                    socialPlatform === "instagram"
-                      ? "bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 text-white border-transparent shadow-lg shadow-pink-500/25"
-                      : "bg-white border-primary/15 text-primary/70 hover:border-pink-400/50 hover:text-pink-600 hover:bg-pink-50/50"
-                  }`}
-                >
-                  <InstagramIcon className="w-4 h-4" />
-                  Instagram
-                </button>
-
-                {/* Facebook */}
-                <button
-                  type="button"
-                  disabled={!hasNickname}
-                  onClick={() => togglePlatform("facebook")}
-                  className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl border font-semibold text-sm transition-all duration-200 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${
-                    socialPlatform === "facebook"
-                      ? "bg-[#1877F2] text-white border-transparent shadow-lg shadow-blue-500/25"
-                      : "bg-white border-primary/15 text-primary/70 hover:border-blue-500/50 hover:text-blue-600 hover:bg-blue-50/50"
-                  }`}
-                >
-                  <FacebookIcon className="w-4 h-4" />
-                  Facebook
-                </button>
-              </div>
-
-              {phoneIsOptional && (
-                <p className="text-xs text-center text-primary/50 mt-3">
-                  ✓ We'll reach out via{" "}
-                  <span className="font-semibold capitalize">
-                    {socialPlatform}
-                  </span>{" "}
-                  at <span className="font-semibold">{socialNickname}</span>
-                </p>
-              )}
-            </div>
-          </>
-        )}
-
-        {contactMethod !== null && (
-          <div data-field-name="contact.email">
-            <label className="block text-sm font-semibold mb-1 text-primary">
-              Email Address{" "}
-              <span className="font-normal text-primary/50 text-xs">
-                (Optional)
-              </span>
-              <span className="block font-normal text-primary/60 text-xs mt-0.5 mb-1.5">
-                Enter your email to get a summary of your request after
-                confirmation
-              </span>
-            </label>
-            <Controller
-              control={control}
-              name="contact.email"
-              render={({ field }) => (
-                <Input
-                  {...field}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/[^a-zA-Z0-9@._-]/g, "");
-                    field.onChange(val);
-                  }}
-                  type="email"
-                  placeholder="name@example.com"
-                  className={`h-12 bg-white ${errors.contact?.email ? "border-red-500" : ""}`}
-                />
-              )}
-            />
-            {errors.contact?.email && (
-              <p className="text-primary/60 text-xs mt-1">
-                {errors.contact.email.message}
-              </p>
             )}
-          </div>
-        )}
-
-        {contactMethod !== null && (
-          <div className="pt-2" data-field-name="paymentPreference">
-            <label className="block text-sm font-semibold mb-3 text-primary">
-              Payment Preference
-            </label>
-            <p className="text-xs text-primary/60 mb-3">
-              How would you like to pay once your quote is confirmed?
-            </p>
-            <Controller
-              control={control}
-              name="paymentPreference"
-              render={({ field }) => (
-                <div className="flex flex-col gap-2">
-                  {(["e-transfer", "cash"] as const).map((method) => (
-                    <label
-                      key={method}
-                      className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
-                        field.value === method
-                          ? "border-accent bg-accent/5 text-accent font-semibold"
-                          : "border-primary/15 bg-white text-primary/70 hover:border-primary/30"
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="paymentPreference"
-                        value={method}
-                        checked={field.value === method}
-                        onChange={() => field.onChange(method)}
-                        className="accent-accent w-4 h-4"
-                      />
-                      <div>
-                        <span className="text-sm block">
-                          {method === "e-transfer" ? "E-Transfer" : "Cash at Pickup"}
-                        </span>
-                        <span className="text-xs font-normal text-primary/50">
-                          {method === "e-transfer"
-                            ? "E-Transfer — Payment required 24 hours before pickup"
-                            : "Pay full amount in cash when you pick up your order"}
-                        </span>
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              )}
-            />
-          </div>
-        )}
+          />
+        </div>
       </div>
     </div>
   );
