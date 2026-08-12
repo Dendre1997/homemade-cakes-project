@@ -296,6 +296,11 @@ export const OrderSummaryDisplay = ({
                     Instructions: {item.designInstructions}
                   </p>
                 )}
+              {item.designQuote != null && item.designQuote > 0 && (
+                <p className="text-primary/60 font-semibold">
+                  + ${item.designQuote.toFixed(2)} Design Fee
+                </p>
+              )}
             </div>
 
             {/* Image gallery — ALL images shown as a wrapping grid of thumbnails */}
@@ -348,6 +353,13 @@ export const OrderSummaryDisplay = ({
             <span>Base Cake</span>
             <span>${pricing.baseCakePrice.toFixed(2)}</span>
           </div>
+
+          {(pricing.designFeesTotal ?? 0) > 0 && (
+            <div className="flex justify-between">
+              <span>Design Fees</span>
+              <span>${pricing.designFeesTotal!.toFixed(2)}</span>
+            </div>
+          )}
 
           {pricing.addons.length > 0 && (
             <div className="space-y-1.5 pt-1">

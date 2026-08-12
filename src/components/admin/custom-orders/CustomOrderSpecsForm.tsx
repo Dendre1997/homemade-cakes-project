@@ -93,9 +93,46 @@ function ItemSpecEditor({
   const [galleryIndex, setGalleryIndex] = useState<number | null>(null);
   const [imageToDeleteIndex, setImageToDeleteIndex] = useState<number | null>(null);
   const [tierFlavors, setTierFlavors] = useState<Record<number, string>>({});
+  const [isDesignQuoteManuallyEdited, setIsDesignQuoteManuallyEdited] = useState(false);
 
   const details: any = item.details || {};
   const referenceImages: string[] = item.referenceImages || [];
+
+  const calculateAutoDesignQuote = (agreedPrice: number) =>
+    Math.max(0, agreedPrice - (Number(item.approximatePrice) || 0));
+
+  const handleAgreedPriceChange = (raw: string) => {
+    if (raw === "") {
+      setIsDesignQuoteManuallyEdited(false);
+      onItemChange(index, "agreedPrice", null);
+      onItemChange(index, "designQuote", null);
+      return;
+    }
+
+    const agreedPrice = Number(raw);
+    if (Number.isNaN(agreedPrice)) return;
+
+    onItemChange(index, "agreedPrice", agreedPrice);
+
+    if (agreedPrice <= 0) {
+      setIsDesignQuoteManuallyEdited(false);
+      onItemChange(index, "designQuote", null);
+      return;
+    }
+
+    if (!isDesignQuoteManuallyEdited) {
+      onItemChange(index, "designQuote", calculateAutoDesignQuote(agreedPrice));
+    }
+  };
+
+  const handleDesignQuoteChange = (raw: string) => {
+    setIsDesignQuoteManuallyEdited(true);
+    onItemChange(
+      index,
+      "designQuote",
+      raw === "" ? null : Number(raw)
+    );
+  };
 
   const resolvedCategoryId = useMemo(
     () => resolveCustomOrderItemCategoryId(item, categories),
@@ -471,24 +508,55 @@ function ItemSpecEditor({
         />
       </div>
 
-      <div className="space-y-sm border-t border-border/40 pt-4">
-        <Label className="text-xs font-bold uppercase tracking-widest text-accent">Agreed Price ($)</Label>
-        <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-semibold text-sm">$</span>
-          <Input
-            type="number"
-            value={item.agreedPrice ?? ""}
-            onChange={(e) =>
-              onItemChange(
-                index,
-                "agreedPrice",
-                e.target.value === "" ? null : Number(e.target.value)
-              )
-            }
-            className="h-11 pl-7 text-right font-bold text-accent border-accent/20 bg-accent/5 focus:ring-accent/20"
-            placeholder="0.00"
-          />
+      <div className="border-t border-border/40 pt-4 space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-md">
+          <div className="space-y-sm">
+            <Label className="text-xs font-bold uppercase tracking-widest text-accent">
+              Agreed Price ($)
+            </Label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-semibold text-sm">
+                $
+              </span>
+              <Input
+                type="number"
+                min={0}
+                step="0.01"
+                value={item.agreedPrice ?? ""}
+                onChange={(e) => handleAgreedPriceChange(e.target.value)}
+                className="h-11 pl-7 text-right font-bold text-accent border-accent/20 bg-accent/5 focus:ring-accent/20"
+                placeholder="0.00"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-sm">
+            <Label className="text-xs font-bold uppercase tracking-widest text-accent">
+              Design Quote ($)
+            </Label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-semibold text-sm">
+                $
+              </span>
+              <Input
+                type="number"
+                min={0}
+                step="0.01"
+                value={item.designQuote ?? ""}
+                onChange={(e) => handleDesignQuoteChange(e.target.value)}
+                className="h-11 pl-7 text-right font-bold text-accent border-accent/20 bg-accent/5 focus:ring-accent/20"
+                placeholder="0.00"
+              />
+            </div>
+          </div>
         </div>
+
+        <p className="text-xs text-muted-foreground font-medium">
+          Base:{" "}
+          <span className="font-mono font-semibold text-primary/70">
+            ${Math.max(0, (Number(item.agreedPrice) || 0) - (Number(item.designQuote) || 0)).toFixed(2)}
+          </span>
+        </p>
       </div>
 
       <ImagePreviewGallery

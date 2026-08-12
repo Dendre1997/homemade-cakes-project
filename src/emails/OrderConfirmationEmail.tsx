@@ -213,10 +213,7 @@ export const OrderConfirmationEmail = ({
                         : [];
 
                 const rowTotal = item.rowTotal || item.price * item.quantity;
-                const itemAddonCost =
-                  (item.addons || []).reduce((s, a) => s + a.price, 0) *
-                  item.quantity;
-                const itemBaseTotal = rowTotal - itemAddonCost;
+                const designQuote = Number(item.designQuote) || 0;
                 const hasAddons = item.addons && item.addons.length > 0;
 
                 return (
@@ -250,7 +247,7 @@ export const OrderConfirmationEmail = ({
                           </Column>
                           <Column style={styles.itemPriceCol} align="right">
                             <Text style={styles.itemPrice}>
-                              ${itemBaseTotal.toFixed(2)}
+                              ${rowTotal.toFixed(2)}
                             </Text>
                           </Column>
                         </Row>
@@ -303,6 +300,25 @@ export const OrderConfirmationEmail = ({
                         )}
                       </Column>
                     </Row>
+
+                    {/* Design fee sub-row */}
+                    {designQuote > 0 && (
+                      <Row style={{ marginTop: "8px" }}>
+                        <Column style={{ width: "60px" }} />
+                        <Column>
+                          <Row>
+                            <Column>
+                              <Text style={styles.addonName}>Design Fee</Text>
+                            </Column>
+                            <Column align="right">
+                              <Text style={styles.addonPrice}>
+                                +${designQuote.toFixed(2)}
+                              </Text>
+                            </Column>
+                          </Row>
+                        </Column>
+                      </Row>
+                    )}
 
                     {/* Addon sub-rows */}
                     {hasAddons && (

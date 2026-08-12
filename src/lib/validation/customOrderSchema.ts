@@ -134,6 +134,7 @@ export const customOrderItemSchema = z.object({
   priceBreakdown: priceBreakdownSchema.optional(),
   approximatePrice: z.number().optional(),
   agreedPrice: z.number().optional(),
+  designQuote: z.number().min(0).optional(),
 });
 
 export type CustomOrderItemData = z.infer<typeof customOrderItemSchema>;

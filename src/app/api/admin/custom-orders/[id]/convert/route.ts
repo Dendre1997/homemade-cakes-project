@@ -23,7 +23,8 @@ async function buildOrderItemFromCustomItem(
   item: CustomOrderItem,
   newOrderId: ObjectId,
   index: number,
-  price: number
+  price: number,
+  designQuote?: number
 ) {
   // STRICT per-item image mapping: an OrderItem only ever receives the images
   // attached to THIS custom item. Never aggregate across the whole request.
@@ -116,6 +117,10 @@ async function buildOrderItemFromCustomItem(
     flavorNote: item.details?.flavorNote,
     categoryId: resolvedCategoryId,
     addons: item.addons || [],
+    designQuote:
+      designQuote != null && !Number.isNaN(designQuote) && designQuote > 0
+        ? designQuote
+        : undefined,
   };
 }
 
@@ -202,10 +207,13 @@ export async function POST(
     // Priority: body.items[i].agreedPrice / body.agreedPrices[i]  →  stored
     // item.agreedPrice  →  single body.agreedPrice (only when there is one item).
     const bodyItemPrices: Record<number, number> = {};
+    const bodyItemDesignQuotes: Record<number, number> = {};
     if (Array.isArray(body.items)) {
       body.items.forEach((bi: any, idx: number) => {
         const p = Number(bi?.agreedPrice);
         if (!Number.isNaN(p)) bodyItemPrices[idx] = p;
+        const dq = Number(bi?.designQuote);
+        if (!Number.isNaN(dq) && dq >= 0) bodyItemDesignQuotes[idx] = dq;
       });
     } else if (Array.isArray(body.agreedPrices)) {
       body.agreedPrices.forEach((raw: any, idx: number) => {
@@ -220,6 +228,16 @@ export async function POST(
       const fromSingle =
         items.length === 1 && agreedPrice != null ? Number(agreedPrice) : undefined;
       return Number(fromBody ?? fromStored ?? fromSingle ?? 0);
+    });
+
+    const perItemDesignQuotes = items.map((it, idx) => {
+      const fromBody = bodyItemDesignQuotes[idx];
+      const fromStored =
+        typeof it.designQuote === "number" ? it.designQuote : undefined;
+      const resolved = fromBody ?? fromStored;
+      return resolved != null && !Number.isNaN(resolved) && resolved >= 0
+        ? resolved
+        : undefined;
     });
 
     const totalAmount = perItemPrices.reduce((sum, p) => sum + (p || 0), 0);
@@ -239,7 +257,14 @@ export async function POST(
     // Build one production OrderItem per custom item
     const orderItems = await Promise.all(
       items.map((it, idx) =>
-        buildOrderItemFromCustomItem(db, it, newOrderId, idx, perItemPrices[idx])
+        buildOrderItemFromCustomItem(
+          db,
+          it,
+          newOrderId,
+          idx,
+          perItemPrices[idx],
+          perItemDesignQuotes[idx]
+        )
       )
     );
 
@@ -310,6 +335,9 @@ export async function POST(
     const persistedItems = items.map((it, idx) => ({
       ...it,
       agreedPrice: perItemPrices[idx],
+      ...(perItemDesignQuotes[idx] != null
+        ? { designQuote: perItemDesignQuotes[idx] }
+        : {}),
     }));
 
     // Transaction: insert order, then update the custom order request status
@@ -317,20 +345,13 @@ export async function POST(
     await customOrdersColl.replaceOne(
       { _id: new ObjectId(id) },
       {
+        ...customOrder,
         _id: new ObjectId(id),
-        userId: customOrder.userId,
-        status: 'converted',
+        status: "converted",
         convertedOrderId: newOrderId.toString(),
         items: persistedItems,
         agreedPriceTotal: totalAmount,
-        date: customOrder.date || (customOrder as any).eventDate,
-        contact: {
-          name: customOrder.contact?.name || (customOrder as any).customerName,
-          email: customOrder.contact?.email || (customOrder as any).customerEmail,
-        },
-        paymentPreference: customOrder.paymentPreference,
-        createdAt: customOrder.createdAt || customOrder.date || new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       }
     );
 

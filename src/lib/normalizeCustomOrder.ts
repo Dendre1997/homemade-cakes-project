@@ -57,6 +57,7 @@ function legacyItemFromRoot(raw: RawCustomOrder): CustomOrderItem {
   if (raw.priceBreakdown) item.priceBreakdown = raw.priceBreakdown;
   if (typeof raw.approximatePrice === "number") item.approximatePrice = raw.approximatePrice;
   if (typeof raw.agreedPrice === "number") item.agreedPrice = raw.agreedPrice;
+  if (typeof raw.designQuote === "number") item.designQuote = raw.designQuote;
 
   return item;
 }
@@ -81,6 +82,7 @@ function normalizeItem(rawItem: any): CustomOrderItem {
   if (rawItem?.priceBreakdown) item.priceBreakdown = rawItem.priceBreakdown;
   if (typeof rawItem?.approximatePrice === "number") item.approximatePrice = rawItem.approximatePrice;
   if (typeof rawItem?.agreedPrice === "number") item.agreedPrice = rawItem.agreedPrice;
+  if (typeof rawItem?.designQuote === "number") item.designQuote = rawItem.designQuote;
 
   return item;
 }
