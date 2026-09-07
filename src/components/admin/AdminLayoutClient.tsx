@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import HeaderAdmin from '@/components/admin/HeaderAdmin'
+import CopilotPanel from '@/components/admin/Copilot/CopilotPanel';
 
 export default function AdminLayoutClient({
   children,
@@ -9,6 +10,7 @@ export default function AdminLayoutClient({
   children: React.ReactNode;
 }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isCopilotOpen, setIsCopilotOpen] = useState(false);
 
   return (
     <>
@@ -21,10 +23,17 @@ export default function AdminLayoutClient({
           <HeaderAdmin
             title={""}
             onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+            onToggleCopilot={() => setIsCopilotOpen((open) => !open)}
+            isCopilotOpen={isCopilotOpen}
           />
           <main className="flex-grow p-4 md:p-8">{children}</main>
         </div>
       </div>
+
+      <CopilotPanel
+        isOpen={isCopilotOpen}
+        onClose={() => setIsCopilotOpen(false)}
+      />
     </>
   );
 }

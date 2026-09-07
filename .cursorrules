@@ -1,0 +1,374 @@
+D&K Creations — Baker AI Assistant: Architecture Constitution
+
+This file is BINDING. It was extracted from an architectural audit and three
+implementation phases already built and verified (`tsc --noEmit` clean, live
+401-tested) by a prior architecture session. If any instruction here conflicts
+with a general pattern you know from training data (especially older Vercel
+AI SDK examples, tutorials, or blog posts), **this file wins**. Do not
+"helpfully" revert to a more familiar but outdated pattern.
+
+Stack: Next.js 16 (App Router) · MongoDB Atlas via the **native driver only**
+(no Prisma, no Mongoose, no ORM) · Firebase Auth · Resend · Pusher ·
+Cloudinary · Square · Vercel AI SDK **v7**.
+
+---
+
+## 1. Security Mandate — Non-Negotiable
+
+**Every** backend API route and **every** Server Action must call
+`verifyAdminAPI()` as the literal first executed statement, before any
+`clientPromise`/DB call, before parsing the request body, before anything
+else. On failure, throw/return an unauthorized result — never continue.
+
+```ts
+export async function POST(req: Request) {
+  const session = await verifyAdminAPI();
+  if (!("user" in session)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  // ...rest of the handler
+}
+```
+
+Server Actions are publicly invocable POST endpoints. The edge proxy
+(`src/proxy.ts`) does **not** protect them automatically — it only matches
+`/bakery-manufacturing-orders/*` and `/api/admin/*` by path. This is why rule
+1a exists:
+
+**1a. Every AI route MUST live under `/api/admin/ai/*`.** This is not a
+naming preference — it is what makes the route inherit the edge-proxy
+admin-session gate. A route placed anywhere else is unprotected at the edge
+even if `verifyAdminAPI()` is present inside the handler; keep both layers.
+
+**1b. Never trust `customerId` for identity or authorization.** Guest
+checkouts have no `customerId`. It is a convenience field, not an identity
+key — see §4.
+
+**1c. Ad-hoc outbound email is forbidden until a dedicated route exists.**
+Resend is currently wired to fixed React Email templates only. Any tool that
+"sends a message" must draft into a `DraftMessageCard` (copy / wa.me / sms:
+deep link) — never call Resend directly from a tool. Real ad-hoc email
+requires a future `POST /api/admin/messages/send` with recipient validation
+(must match an email already on the order) and a mandatory human preview
+before send.
+
+---
+
+## 2. Database Rules (MongoDB)
+
+- **Native driver only.** No ORM, no schema-validation library replacing
+  Zod. Types live in `src/types/index.ts`.
+- **Always project.** Every query a tool or AI route makes must exclude
+  heavy fields at the driver level (not filtered after fetch) — this is what
+  keeps LLM context windows small and cheap:
+
+```ts
+const ORDER_PROJECTION = {
+  notesLog: 0,
+  paymentToken: 0,
+  referenceImages: 0,
+  "items.imageUrl": 0,
+  "items.imageUrls": 0,
+  "items.selectedConfig": 0,
+} as const;
+```
+
+- **Indexes are mandatory, not optional**, on any collection a tool queries
+  repeatedly:
+  - `orders`: `{ "deliveryInfo.deliveryDates.date": 1 }`, `{ status: 1 }`,
+    `{ isPaid: 1 }`, `{ createdAt: -1 }`
+  - `custom_orders`: `{ status: 1 }`, `{ date: 1 }`
+  - Handle index-already-exists gracefully (error codes 85/86 = conflict,
+    not failure); one collection failing must not abort the others.
+
+- **Never surface a raw ObjectId to the model or the UI.** Resolve through
+  `getHumanReadableLookupMaps()` (categories, flavors, shapes, diameters —
+  60s TTL cache, stale-cache-over-empty-map on read failure). **Denormalized
+  names already stored on the document (`item.flavor`, `tier.flavorName`)
+  always take priority over the live lookup map** — they are a historical
+  snapshot and are more accurate than "what the catalog is named today."
+
+- **Strip nulls before they reach the model.** Every object handed to the
+  LLM passes through a `compact()` helper that drops `undefined`, `null`,
+  empty strings, and empty arrays. Empty keys invite hallucination.
+
+- **Custom order documents are `[key: string]: any` with legacy fields.**
+  Never read `custom_orders` raw — always go through
+  `normalizeCustomOrder()` first, in tools and in routes alike.
+
+- **Any free-text search input that reaches `$regex` must be escaped**
+  (`escapeRegex()`) before use — unescaped input is a live ReDoS /
+  broken-query vector. `_id` cannot take `$regex` directly — use
+  `{ $expr: { $regexMatch: { input: { $toString: "$_id" }, regex, options: "i" } } }`.
+
+- **Do not perform read-modify-write on whole-document arrays from a tool.**
+  `PUT /api/admin/schedule-settings` rewrites the entire `dateOverrides[]`
+  array and will race with a baker editing the calendar concurrently. Any
+  mutation tool touching a single date must use an atomic operator
+  (`arrayFilters` + `$set` on `dateOverrides.$[el]`, or `$pull`+`$push`) via a
+  dedicated `PATCH` endpoint — never the bulk `PUT`.
+
+---
+
+## 3. Customer Identity Rule
+
+`orders.customerId` is populated **only** for logged-in customers. Guest
+checkout orders never have it. **Do not build customer identity, CRM
+lookups, or LTV around `customerId`.** Identity must be resolved from
+normalized phone or email:
+
+- `orders.customerInfo.{phone,email}`
+- `custom_orders.contact.{phone,email}`
+
+Phone matching must tolerate formatting (`(403) 555-1234` vs `4035551234`) —
+either match on a digits-only regex (`\D*`-joined) or, preferably, a
+denormalized `phoneDigits` field written at insert time with a supporting
+index. Never full-collection-scan a `$regex` phone match in a hot path.
+
+---
+
+## 4. Vercel AI SDK v7 — Chat / Generative UI (STRICT)
+
+### Explicitly BANNED
+
+- `ai/rsc` — experimental/legacy in v7.
+- `streamUI` — experimental/legacy in v7.
+- `generateObject` as a standalone function — **removed** in v7; structured
+  output is part of `generateText`/`streamText` now.
+- Rendering tool results by switching on `part.type === 'tool-invocation'`
+  or `part.type === 'tool-result'` — that is v4/v5 naming and does not exist
+  in v7.
+- `needsApproval` on the tool definition — **deprecated**; approval moved to
+  the route config (see §6).
+
+### MANDATED pattern
+
+Client: `useChat` from `@ai-sdk/react`, reading `message.parts`.
+
+Server route (must be under `/api/admin/ai/chat`, must call
+`verifyAdminAPI()` first):
+
+```ts
+const result = streamText({
+  model,
+  messages: await convertToModelMessages(messages),
+  tools: bakerTools,
+  stopWhen: isStepCount(6),
+  toolApproval: { blockDate: "user-approval", sendReminder: "user-approval" },
+});
+return createUIMessageStreamResponse({
+  stream: toUIMessageStream({ stream: result.stream, onError }),
+});
+```
+
+Always override `onError` — the SDK default masks every failure as
+"An error occurred," which is useless for debugging tool failures.
+
+**Each tool gets its own part type, `tool-${toolName}`** (e.g.
+`tool-findOrders`, `tool-getDailyBrief`) — not a generic `tool-invocation`.
+Switch on this specific type, and let `part.output` narrow automatically
+from the tool's registered schema (no `as` casts needed if the tool registry
+is typed and exported through a `type`-only import, e.g.
+`InferUITools<BakerTools>`).
+
+**Every generative-UI component must render all four part states** — there
+is no optional state here:
+
+- `input-streaming` → skeleton, ideally showing the in-flight query
+- `input-available` → skeleton (tool executing)
+- `output-available` → the real card
+- `output-error` → an explicit error block
+
+**Always render an explicit empty-result state.** If a tool returns zero
+rows, show that plainly — do not let the model fill the silence with an
+invented answer.
+
+Keep the LLM API key server-side only. Never `dangerouslyAllowBrowser`,
+never ship a provider key to the client.
+
+---
+
+## 5. Vercel AI SDK v7 — Inline Form Helpers (non-chat)
+
+For "Generate with AI" buttons on a form (product creation, quote
+suggestion) — this is a **different pattern from chat, do not reuse
+`useChat`**:
+
+- Server: a dedicated (non-chat) route using `streamText` with
+  `output: Output.object({ schema })`.
+- Client: the `useObject` hook, which streams a `DeepPartial` of the schema
+  so form fields fill in progressively — not all at once.
+- This is why `generateObject` being removed matters: structured output for
+  forms now flows through `streamText`, not a separate function.
+
+Every suggested numeric value (price, especially) must be grounded by
+injecting real price anchors into the prompt context (`categories.basePrice`,
+`diameters.basePrice`, `gallery_images.decorationPrice`, historical
+`agreedPrice` on similar converted requests) — never let the model invent a
+price from nothing.
+
+---
+
+## 6. Human-in-the-Loop — Mutation Rule
+
+**Every tool that mutates data must be registered with
+`toolApproval: 'user-approval'`** on the chat route config (not on the tool
+itself — that's the deprecated pattern). The baker must explicitly
+Approve/Deny in the UI before the tool body executes. This applies to, at
+minimum: blocking/unblocking dates, setting day capacity, converting a
+custom request to an order, generating a payment link, rejecting a custom
+request, and sending any reminder/message.
+
+Every approved mutation must be written to the `ai_action_log` collection
+(adminUid, tool name, input, output, `approvedAt`, `targetCollection`,
+`targetId`, `createdAt`). Without this, an action taken a week ago (e.g. "why
+is Saturday blocked?") is unrecoverable and untrustworthy. Do not ship a
+mutation tool without a corresponding log write in the same code path.
+
+---
+
+## 7. Calculation Rule — No Math In The Model, Ever
+
+The LLM **never** performs arithmetic that has a financial or physical
+consequence. It selects inputs and calls a tool; a pure TypeScript function
+does the math and the tool returns the finished number. This is not a style
+preference — the model is documented to make confident, wrong arithmetic,
+and a wrong gram count or wrong dollar total is a real-world loss.
+
+Applies to (non-exhaustive — extend this list, never remove from it):
+
+- Order/cart pricing → `calculateOrderPricing()`
+- Custom order pricing → `calculateCustomOrderTotal()`
+- Kitchen capacity/minutes → `computeDayCapacity()`
+- Money totals on unpaid-orders aggregation → done in Mongo (`$group`), not
+  summed by the model
+- Relative date resolution ("next Friday," "in two weeks") →
+  a dedicated `resolveDate({ expression })` tool built on `getBakeryToday()`
+  - `date-fns`, evaluated in the `America/Edmonton` timezone (DST-aware).
+  The model must call this tool for any relative date — it must not compute
+  the date itself.
+- Recipe scaling → `src/lib/recipes/scale.ts` (see below)
+
+### Recipe scaling formula (must be implemented exactly this way)
+
+Scale by **area**, not by diameter ratio — diameter-ratio scaling is the
+common wrong answer and under-portions the cake:
+
+```
+factor = Σ(targets) [ (π · (d_target/2)²) / (π · (d_source/2)²) × layersRatio × count ]
+```
+
+- Round pans: `π·r²`. Square/rectangular pans: `side²` (or `w×h`), not
+  `π·r²`.
+- 6" → 8" is `(4²/3²) = 1.78×`, **not** `8/6 = 1.33×`.
+- Cupcakes/units: linear scaling by `unitCount`, not area.
+- Round after scaling: grams to the nearest 1, teaspoons to the nearest
+  0.25.
+- Any ingredient with `isScalable: false` (leavening, salt, etc.) is copied
+  through **unchanged** — never scaled linearly with the rest.
+- The model's job here is to pick the recipe and the target sizes and call
+  `scaleRecipe(...)`; it must not "double-check" or restate the arithmetic
+  itself in prose.
+
+---
+
+## 8. New Collections (create with these shapes, do not improvise)
+
+```ts
+// ai_conversations — chat threads
+{ _id, adminUid, title, messages: [...], createdAt, updatedAt }
+
+// ai_action_log — audit trail for every approved mutation
+{ _id, adminUid, tool, input, output, approvedAt, targetCollection, targetId, createdAt }
+
+// recipes — for the Recipe Scaler tool
+//
+// NESTED TECH-CARD SHAPE. A real bakery tech card is a sequence of named
+// sub-preparations ("Ванільний бісквіт" → "Заварний крем" → "Збірка"), each
+// with its OWN ingredient list and its OWN instructions. Do NOT flatten this
+// into a top-level `ingredients[]` + `steps[]` pair: that loses which
+// ingredient belongs to which preparation, which is exactly what the scaler
+// and the printed tech card need. This nested form is the shipped,
+// authoritative schema — `src/lib/validation/recipe.ts` and
+// `src/lib/db/recipes.ts` are the source of truth.
+{
+  _id, name, slug /* unique */, isActive,
+  categoryId?: ObjectId, flavorId?: ObjectId, description?,
+  yield: {
+    sizeLabel: string,
+    diameterId?, shapeId?,
+    panDiameterInches: number,    // REQUIRED numeric field — diameters.name
+                                  // is a display string, not reliably numeric
+    panSideInches?: number,       // square pans
+    panHeightInches?: number,
+    layers?: number, servings?: number, unitCount?: number,
+    targetWeightGrams?: number,   // finished batch weight, when stated
+  },
+  components: [{                  // >= 1, ordered as on the tech card
+    name: string,                 // e.g. 'Ванільний бісквіт'
+    instructions?: string,        // prep steps for THIS component only
+    ingredients: [{               // >= 1
+      id, name, quantity, unit: 'g'|'kg'|'ml'|'l'|'tsp'|'tbsp'|'pcs',
+      isScalable: boolean, allergenIds?: ObjectId[],
+      costPerUnit?, note?,
+    }],
+  }],
+  activeTimeMinutes?, bakeTimeMinutes?, notes?,  // cross-cutting, whole recipe
+  createdAt, updatedAt,
+}
+```
+
+Recipe indexes: `{ slug: 1 }` unique, `{ flavorId: 1 }`, `{ isActive: 1 }`.
+`allergenIds` must reuse the existing `allergens` collection — this is what
+lets an allergy cross-check against `custom_orders.allergies` come for free.
+
+`scaleRecipe()` scales **per component**, returning
+`ScaledComponent[] = [{ name, ingredients: [...] }]` — the component grouping
+survives scaling and must survive serialization to the UI card too.
+
+---
+
+## 9. Provider / Environment
+
+- Provider selection is lazy and env-driven: OpenAI first if
+  `OPENAI_API_KEY` is set, else Anthropic if `ANTHROPIC_API_KEY` is set.
+  Model overrides: `COPILOT_OPENAI_MODEL` / `COPILOT_ANTHROPIC_MODEL`.
+- If neither key is set, the route must return a clear `503` ("No AI
+  provider configured") — not a silent failure.
+- A **separate vision-capable model** is needed for any tool reasoning over
+  `referenceImages` (Cloudinary URLs) — decor-complexity quoting, product
+  generation. Do not assume the text model handles images.
+- **AI SDK v7 requires Node ≥ 22.** If the project is still on Node 20.x,
+  treat that as a blocking upgrade before relying on the copilot in
+  production — not a warning to ignore.
+- Rate limiting does not exist anywhere in this project yet. Any
+  agent loop with `stopWhen: isStepCount(n > 1)` multiplies model calls —
+  do not ship an agent loop to production without a throttle in front of it.
+
+---
+
+## 10. Baseline Text — Improve, Don't Replace
+
+`buildQuickMessage()` (in `QuickMessageCard.tsx`) is a deterministic,
+already-correct generator for quote messages (price breakdown, allergy
+warning, logistics, payment link, sign-off, `wa.me:` / `sms:` links). Treat
+it as the few-shot baseline and the ground truth for tone. AI drafting
+tools must produce output that is a refinement of this baseline (e.g. a
+"Rewrite tone" pass over its output), not a from-scratch reinvention.
+
+---
+
+## 11. Known Prerequisites — Do Not Build The Downstream Feature First
+
+| If building... | This must exist first |
+| --- | --- |
+| Date-blocking tool (Gatekeeper) | Atomic `PATCH` on a single `dateOverride` (§2) |
+| Business Analyst tool | `GET /api/admin/ai/analytics-summary` — the full `/api/admin/analytics` payload (`soldItemsLog`, `detailedOrders`, etc.) is too large for context and must not be called directly |
+| Customer Insights / CRM tool | Phone/email indexes + `phoneDigits` denormalization (§3) |
+| Email-sending tool | `POST /api/admin/messages/send` with recipient validation + mandatory preview (§1c) |
+| Recipe Scaler tool | `recipes` collection + CRUD routes (§8) |
+| Any relative-date tool input | `resolveDate()` tool (§7) — never let the model compute the date inline |
+
+If a task requires one of the right-hand-column items and it does not yet
+exist in the codebase, **build the prerequisite first** and say so — do not
+approximate it inline inside the feature you were asked for.

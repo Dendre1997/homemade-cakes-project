@@ -597,14 +597,43 @@ export async function POST(request: NextRequest) {
 }
 
 
+/**
+ * Returns only the orders owned by the currently authenticated customer.
+ * Admins must use /api/admin/orders, which supports date-range filtering
+ * and enforces the admin session cookie.
+ */
 export async function GET() {
   try {
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get("session")?.value;
+
+    if (!sessionCookie) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const decodedToken = await adminAuth
+      .verifySessionCookie(sessionCookie, true)
+      .catch(() => null);
+
+    if (!decodedToken) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
 
+    const user = await db
+      .collection("users")
+      .findOne({ firebaseUid: decodedToken.uid });
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const orders = await db
       .collection("orders")
-      .find({})
+      // customerId is stored as ObjectId, but legacy documents may hold a string.
+      .find({ customerId: { $in: [user._id, user._id.toString()] } })
       .sort({ createdAt: -1 })
       .toArray();
 

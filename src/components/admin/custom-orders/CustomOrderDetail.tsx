@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import type { DeepPartial } from "ai";
 import { useRouter } from "next/navigation";
 import { CustomOrder, IShape } from "@/types";
 import { normalizeCustomOrder } from "@/lib/normalizeCustomOrder";
@@ -10,7 +11,9 @@ import { CustomOrderSpecsForm } from "./CustomOrderSpecsForm";
 import { CustomOrderContactForm } from "./CustomOrderContactForm";
 import { CustomOrderLogisticsForm } from "./CustomOrderLogisticsForm";
 import { QuickMessageCard } from "./QuickMessageCard";
+import { QuotePropositionCard } from "./QuotePropositionCard";
 import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
+import type { QuoteSuggestion } from "@/lib/ai/schemas/quoteSuggestion";
 import {
   appendCloudinaryUploadPreset,
   cloudinaryUploadUrl,
@@ -254,6 +257,33 @@ export default function CustomOrderDetail({ initialOrder, shapes = [] }: CustomO
     }
   };
 
+  const handleApplyQuoteSuggestion = (suggestion: QuoteSuggestion) => {
+    setOrder((prev) => {
+      const nextItems = [...(prev.items ?? [])];
+
+      for (const suggested of suggestion.items) {
+        const index = nextItems.findIndex((item) => item.id === suggested.itemId);
+        if (index === -1) continue;
+
+        nextItems[index] = {
+          ...nextItems[index],
+          agreedPrice:
+            suggested.suggestedBasePrice + suggested.suggestedDesignQuote,
+          designQuote: suggested.suggestedDesignQuote,
+        };
+      }
+
+      return { ...prev, items: nextItems };
+    });
+
+    showAlert(
+      "AI quote applied to the form. Review the numbers, then save when ready.",
+      "success"
+    );
+  };
+
+  const canSuggestQuote = order.status === "pending_review";
+
   return (
     <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-in fade-in duration-500">
       <CustomOrderDetailHeader
@@ -276,6 +306,13 @@ export default function CustomOrderDetail({ initialOrder, shapes = [] }: CustomO
 
       <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
+          {canSuggestQuote && (
+            <QuotePropositionCard
+              customOrderId={order._id}
+              items={items}
+              onApply={handleApplyQuoteSuggestion}
+            />
+          )}
           <CustomOrderSpecsForm
             order={order}
             shapes={shapes}

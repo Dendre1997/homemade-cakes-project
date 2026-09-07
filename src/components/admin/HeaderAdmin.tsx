@@ -5,15 +5,23 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/store/authStore";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
-import { Menu, User, LogOut, ExternalLink } from "lucide-react";
+import { Menu, User, LogOut, ExternalLink, Sparkles } from "lucide-react";
 import { Button } from "../ui/Button";
+import { cn } from "@/lib/utils";
 
 interface AdminHeaderProps {
   onToggleSidebar: () => void;
   title: string;
+  onToggleCopilot?: () => void;
+  isCopilotOpen?: boolean;
 }
 
-const AdminHeader = ({ onToggleSidebar, title }: AdminHeaderProps) => {
+const AdminHeader = ({
+  onToggleSidebar,
+  title,
+  onToggleCopilot,
+  isCopilotOpen = false,
+}: AdminHeaderProps) => {
   const { user, isLoading } = useAuthStore();
   const router = useRouter();
 
@@ -52,6 +60,25 @@ const AdminHeader = ({ onToggleSidebar, title }: AdminHeaderProps) => {
 
         {/* --- Right Side: Actions --- */}
         <div className="flex items-center gap-md">
+          {onToggleCopilot && (
+            <button
+              onClick={onToggleCopilot}
+              aria-label="Toggle Baker Copilot"
+              aria-expanded={isCopilotOpen}
+              className={cn(
+                "inline-flex items-center gap-sm rounded-medium border px-sm py-1 transition-colors",
+                isCopilotOpen
+                  ? "border-accent bg-accent/15 text-accent"
+                  : "border-border text-primary hover:border-accent hover:text-accent"
+              )}
+            >
+              <Sparkles className="h-4 w-4" />
+              <span className="hidden font-body text-small sm:inline">
+                Copilot
+              </span>
+            </button>
+          )}
+
           <Link href="/" target="_blank" rel="noopener noreferrer">
             <Button variant="secondary" size="sm">
               <ExternalLink className="h-4 w-4 mr-sm" />

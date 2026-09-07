@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Allergen,
   Diameter,
@@ -82,6 +82,8 @@ import { X } from "lucide-react";
 import { useAlert } from "@/contexts/AlertContext";
 import { AddonSelector } from "@/components/shared/AddonSelector";
 import { SelectedAddon } from "@/types";
+import { AiProductGenerator } from "@/components/admin/AiProductGenerator";
+import type { ProductSuggestion } from "@/lib/ai/schemas/productSuggestion";
 
 const ProductForm = ({
   existingProduct,
@@ -99,6 +101,8 @@ const ProductForm = ({
   const isEditMode = !!existingProduct;
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [shortDescription, setShortDescription] = useState("");
+  const [slug, setSlug] = useState("");
   const [structureBasePrice, setStructureBasePrice] = useState("");
   const [isActive, setIsActive] = useState<boolean>(true);
   const [availableFlavorIds, setAvailableFlavorIds] = useState<string[]>([]);
@@ -197,6 +201,8 @@ const ProductForm = ({
     if (existingProduct) {
       setName(existingProduct.name || "");
       setDescription(existingProduct.description || "");
+      setShortDescription("");
+      setSlug(existingProduct.slug || "");
       let displayPrice = existingProduct.structureBasePrice || 0;
       
       // FIX: Decouple Bento Price from Total Price for Combo Sets
@@ -346,6 +352,7 @@ const ProductForm = ({
       allergenIds,
       availableDiameterConfigs: sortedConfigsToSubmit,
       imageUrls: imageUrls,
+      ...(slug.trim() ? { slug: slug.trim() } : {}),
       inscriptionSettings: (productType === 'set' && isCombo) ? {
         isAvailable: comboAllowInscription,
         price: 0,
@@ -396,6 +403,23 @@ const ProductForm = ({
     }
   };
 
+  const aiFlavorIds = useMemo(() => {
+    const ids = new Set(availableFlavorIds);
+    if (productType === "set" && isCombo) {
+      comboCakeFlavorIds.forEach((id) => ids.add(id));
+    }
+    return [...ids];
+  }, [availableFlavorIds, comboCakeFlavorIds, isCombo, productType]);
+
+  const handleApplyProductSuggestion = (suggestion: ProductSuggestion) => {
+    setName(suggestion.suggestedName);
+    setShortDescription(suggestion.shortDescription);
+    setDescription(suggestion.description);
+    setSlug(suggestion.seoSlug);
+    setStructureBasePrice(String(suggestion.suggestedPrice));
+    showAlert("AI copy applied to the form. Review before saving.", "success");
+  };
+
   const iconSizeClass = "h-8 w-8 text-primary shrink-0";
 
   return (
@@ -421,6 +445,18 @@ const ProductForm = ({
           </Card>
 
           {/* 1. BASIC INFORMATION */}
+          {categoryId && (
+            <AiProductGenerator
+              draft={{
+                partialName: name,
+                categoryId,
+                flavorIds: aiFlavorIds,
+              }}
+              isGalleryItem={false}
+              onApply={handleApplyProductSuggestion}
+            />
+          )}
+
           <Card>
             <CardHeader>
               <CardTitle>Basic Details</CardTitle>
@@ -441,6 +477,18 @@ const ProductForm = ({
               </div>
 
               <div className="grid gap-2">
+                <label htmlFor="shortDescription" className="text-sm font-medium">
+                  Short Description
+                </label>
+                <Input
+                  id="shortDescription"
+                  placeholder="One-line teaser for cards and previews…"
+                  value={shortDescription}
+                  onChange={(e) => setShortDescription(e.target.value)}
+                />
+              </div>
+
+              <div className="grid gap-2">
                 <label htmlFor="description" className="text-sm font-medium">
                   Description
                 </label>
@@ -450,6 +498,18 @@ const ProductForm = ({
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={5}
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <label htmlFor="slug" className="text-sm font-medium">
+                  URL Slug
+                </label>
+                <Input
+                  id="slug"
+                  placeholder="strawberry-vanity-cake"
+                  value={slug}
+                  onChange={(e) => setSlug(e.target.value)}
                 />
               </div>
 
