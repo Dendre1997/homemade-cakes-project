@@ -1,7 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, MailCheck, SearchX, TriangleAlert } from "lucide-react";
+import {
+  CalendarRange,
+  Loader2,
+  MailCheck,
+  SearchX,
+  TriangleAlert,
+} from "lucide-react";
 import type { ChatAddToolApproveResponseFunction } from "ai";
 import type {
   BakerUIMessage,
@@ -40,6 +46,20 @@ function ToolCallError({ label, message }: { label: string; message?: string }) 
   );
 }
 
+/**
+ * `resolveDate` is plumbing rather than a headline result, so it renders as a
+ * single quiet line — but the resolved window is still shown, because "next
+ * week" meaning Sep 14–20 is exactly the detail worth double-checking.
+ */
+function ResolvedDateChip({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-sm px-md font-body text-small text-primary/50">
+      <CalendarRange className="h-3.5 w-3.5 text-accent" />
+      {label}
+    </div>
+  );
+}
+
 function EmptyResult({ message }: { message: string }) {
   return (
     <div className="flex items-center gap-sm rounded-medium border border-dashed border-border px-md py-sm font-body text-small text-primary/60">
@@ -50,6 +70,26 @@ function EmptyResult({ message }: { message: string }) {
 }
 
 type ToolApprovalResponder = ChatAddToolApproveResponseFunction;
+
+/** Skeleton label for an in-flight search, which may be by text, date, or both. */
+function describeSearchInput(
+  input:
+    | { query?: string; startDate?: string; endDate?: string }
+    | undefined
+): string {
+  const query = input?.query?.trim();
+  const { startDate, endDate } = input ?? {};
+
+  const window =
+    startDate && endDate && startDate !== endDate
+      ? `${startDate} – ${endDate}`
+      : (startDate ?? endDate);
+
+  if (query && window) return `Searching for "${query}" in ${window}…`;
+  if (query) return `Searching for "${query}"…`;
+  if (window) return `Searching orders for ${window}…`;
+  return "Searching orders…";
+}
 
 function ManageCalendarApprovalPart({
   part,
@@ -185,22 +225,23 @@ export function CopilotMessage({
                 return (
                   <ToolCallSkeleton
                     key={key}
-                    label={
-                      part.input?.query
-                        ? `Searching for "${part.input.query}"…`
-                        : "Searching orders…"
-                    }
+                    label={describeSearchInput(part.input)}
                   />
                 );
 
               case "output-available": {
-                const { orders, customOrders, truncated } = part.output;
+                const { orders, customOrders, truncated, criteria } =
+                  part.output;
 
                 if (orders.length === 0 && customOrders.length === 0) {
                   return (
                     <EmptyResult
                       key={key}
-                      message={`Nothing matched "${part.output.query}".`}
+                      message={
+                        criteria
+                          ? `Nothing matched ${criteria}.`
+                          : "Nothing matched that search."
+                      }
                     />
                   );
                 }
@@ -227,6 +268,45 @@ export function CopilotMessage({
                   <ToolCallError
                     key={key}
                     label="Search"
+                    message={part.errorText}
+                  />
+                );
+
+              default:
+                return null;
+            }
+          }
+
+          case "tool-resolveDate": {
+            switch (part.state) {
+              case "input-streaming":
+              case "input-available":
+                return (
+                  <ToolCallSkeleton
+                    key={key}
+                    label={
+                      part.input?.expression
+                        ? `Working out "${part.input.expression}"…`
+                        : "Working out the date…"
+                    }
+                  />
+                );
+
+              case "output-available":
+                return part.output.resolved ? (
+                  <ResolvedDateChip
+                    key={key}
+                    label={`${part.output.expression} → ${part.output.label}`}
+                  />
+                ) : (
+                  <EmptyResult key={key} message={part.output.message} />
+                );
+
+              case "output-error":
+                return (
+                  <ToolCallError
+                    key={key}
+                    label="Date lookup"
                     message={part.errorText}
                   />
                 );

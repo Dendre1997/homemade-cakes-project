@@ -13,12 +13,16 @@ import {
   shortId,
 } from "@/lib/ai/serialize";
 import { normalizeCustomOrder } from "@/lib/normalizeCustomOrder";
+import { isValidDateKey, utcDayRange } from "@/lib/db/capacity";
 
 /**
- * Unified text search across `orders` and `custom_orders`.
+ * Unified text and date search across `orders` and `custom_orders`.
  *
  * Lives outside the route handler so the AI tool can call it in-process
  * instead of paying for an HTTP round trip back into our own API.
+ *
+ * Text and date criteria combine with AND, so "Olivia" plus a range answers
+ * "what has Olivia got booked next week".
  */
 
 export const MIN_QUERY_LENGTH = 2;
@@ -66,6 +70,92 @@ function buildIdClauses(query: string, pattern: string): Filter<Document>[] {
   }
 
   return clauses;
+}
+
+export class InvalidSearchDateError extends Error {
+  constructor(value: string) {
+    super(`"${value}" is not a valid date. Use YYYY-MM-DD.`);
+    this.name = "InvalidSearchDateError";
+  }
+}
+
+interface ResolvedRange {
+  startKey: string;
+  endKey: string;
+  /** Inclusive UTC instant boundaries, for the BSON Date comparisons. */
+  start: Date;
+  end: Date;
+}
+
+/**
+ * Turns optional `YYYY-MM-DD` bounds into an inclusive window. One bound alone
+ * means a single day. Reversed bounds are normalized rather than rejected — the
+ * resolved window is echoed back in the result, so the correction stays visible.
+ */
+function resolveRange(
+  startDate: string | null | undefined,
+  endDate: string | null | undefined
+): ResolvedRange | null {
+  const rawStart = startDate?.trim() || null;
+  const rawEnd = endDate?.trim() || null;
+  if (!rawStart && !rawEnd) return null;
+
+  for (const value of [rawStart, rawEnd]) {
+    if (value !== null && !isValidDateKey(value)) {
+      throw new InvalidSearchDateError(value);
+    }
+  }
+
+  const first = rawStart ?? (rawEnd as string);
+  const second = rawEnd ?? (rawStart as string);
+  const [startKey, endKey] = first <= second ? [first, second] : [second, first];
+
+  return {
+    startKey,
+    endKey,
+    start: utcDayRange(startKey).start,
+    end: utcDayRange(endKey).end,
+  };
+}
+
+/**
+ * Orders carry one entry per fulfillment date, so matching the array field
+ * matches the document when ANY of its dates falls inside the window.
+ */
+function ordersDateClause(range: ResolvedRange): Filter<Document> {
+  return {
+    "deliveryInfo.deliveryDates.date": { $gte: range.start, $lte: range.end },
+  };
+}
+
+/**
+ * `custom_orders.date` is a BSON Date on current documents but a full ISO
+ * string on a legacy batch. MongoDB compares only within a BSON type, so a
+ * Date-only range silently skips those legacy rows — hence both branches.
+ * ISO-8601 sorts lexicographically, which is what makes the string bounds work.
+ */
+function customOrdersDateClause(range: ResolvedRange): Filter<Document> {
+  return {
+    $or: [
+      { date: { $gte: range.start, $lte: range.end } },
+      {
+        date: {
+          $type: "string",
+          $gte: range.startKey,
+          $lte: `${range.endKey}T23:59:59.999Z`,
+        },
+      },
+    ],
+  };
+}
+
+function combineFilters(
+  ...filters: (Filter<Document> | null)[]
+): Filter<Document> {
+  const active = filters.filter((f): f is Filter<Document> => f !== null);
+  if (active.length === 0) return {};
+  if (active.length === 1) return active[0];
+  return { $and: active };
 }
 
 function buildOrdersFilter(
@@ -189,13 +279,20 @@ function shapeCustomOrder(doc: WithId<Document>, maps: LookupMaps) {
 }
 
 export interface SearchArgs {
-  query: string;
+  /** Free text. Optional when a date window is supplied instead. */
+  query?: string | null;
+  /** Inclusive `YYYY-MM-DD` lower bound on the fulfillment/event date. */
+  startDate?: string | null;
+  /** Inclusive `YYYY-MM-DD` upper bound. Omit for a single day. */
+  endDate?: string | null;
   limit?: number;
 }
 
 export class SearchQueryTooShortError extends Error {
   constructor() {
-    super(`Search query must be at least ${MIN_QUERY_LENGTH} characters.`);
+    super(
+      `Provide a search query of at least ${MIN_QUERY_LENGTH} characters, a date, or both.`
+    );
     this.name = "SearchQueryTooShortError";
   }
 }
@@ -207,16 +304,44 @@ export function clampSearchLimit(value: number | undefined): number {
   return Math.min(Math.max(Math.trunc(value), 1), MAX_SEARCH_LIMIT);
 }
 
-export async function searchBakeryRecords({ query, limit }: SearchArgs) {
-  const trimmed = query.trim();
-  if (trimmed.length < MIN_QUERY_LENGTH) {
+export async function searchBakeryRecords({
+  query,
+  startDate,
+  endDate,
+  limit,
+}: SearchArgs) {
+  const trimmed = query?.trim() ?? "";
+
+  // A bare "2026-09-18" is a date, not a name. Promote it to the window so it
+  // filters on delivery dates instead of failing a regex against text fields —
+  // that mismatch is what made date questions return "nothing matched".
+  const queryIsDateKey = trimmed.length > 0 && isValidDateKey(trimmed);
+  const explicitRange = resolveRange(startDate, endDate);
+  const range =
+    explicitRange ?? (queryIsDateKey ? resolveRange(trimmed, trimmed) : null);
+
+  const textQuery = queryIsDateKey ? "" : trimmed;
+  const hasText = textQuery.length >= MIN_QUERY_LENGTH;
+
+  if (!hasText && !range) {
     throw new SearchQueryTooShortError();
   }
 
-  const normalizedQuery = trimmed.slice(0, MAX_QUERY_LENGTH);
+  const normalizedQuery = textQuery.slice(0, MAX_QUERY_LENGTH);
   const pattern = escapeRegex(normalizedQuery);
-  const phoneRegex = buildPhoneRegex(normalizedQuery);
+  const phoneRegex = hasText ? buildPhoneRegex(normalizedQuery) : null;
   const resolvedLimit = clampSearchLimit(limit);
+
+  const ordersFilter = combineFilters(
+    hasText ? buildOrdersFilter(normalizedQuery, pattern, phoneRegex) : null,
+    range ? ordersDateClause(range) : null
+  );
+  const customOrdersFilter = combineFilters(
+    hasText
+      ? buildCustomOrdersFilter(normalizedQuery, pattern, phoneRegex)
+      : null,
+    range ? customOrdersDateClause(range) : null
+  );
 
   const [maps, raw] = await Promise.all([
     getHumanReadableLookupMaps(),
@@ -226,16 +351,46 @@ export async function searchBakeryRecords({ query, limit }: SearchArgs) {
       const [orders, customOrders] = await Promise.all([
         db
           .collection("orders")
-          .find(buildOrdersFilter(normalizedQuery, pattern, phoneRegex))
-          .sort({ createdAt: -1 })
+          .find(ordersFilter)
+          // A date search reads as a schedule, so show it chronologically.
+          .sort(
+            range
+              ? { "deliveryInfo.deliveryDates.date": 1 }
+              : { createdAt: -1 }
+          )
           .limit(resolvedLimit)
           .toArray(),
-        db
-          .collection("custom_orders")
-          .find(buildCustomOrdersFilter(normalizedQuery, pattern, phoneRegex))
-          .sort({ date: -1 })
-          .limit(resolvedLimit)
-          .toArray(),
+        range
+          ? db
+              .collection("custom_orders")
+              .aggregate<WithId<Document>>([
+                { $match: customOrdersFilter },
+                // BSON orders strings before dates, so the legacy string rows
+                // would all bunch at the top of a chronological list — and win
+                // the limit on a wide range. Normalize before sorting.
+                {
+                  $addFields: {
+                    sortDate: {
+                      $convert: {
+                        input: "$date",
+                        to: "date",
+                        onError: null,
+                        onNull: null,
+                      },
+                    },
+                  },
+                },
+                { $sort: { sortDate: 1 } },
+                { $limit: resolvedLimit },
+                { $project: { sortDate: 0 } },
+              ])
+              .toArray()
+          : db
+              .collection("custom_orders")
+              .find(customOrdersFilter)
+              .sort({ date: -1 })
+              .limit(resolvedLimit)
+              .toArray(),
       ]);
 
       return { orders, customOrders };
@@ -247,8 +402,15 @@ export async function searchBakeryRecords({ query, limit }: SearchArgs) {
     shapeCustomOrder(doc, maps)
   );
 
+  const dateRange = range
+    ? { startDate: range.startKey, endDate: range.endKey }
+    : undefined;
+
   return {
-    query: normalizedQuery,
+    query: normalizedQuery || undefined,
+    dateRange,
+    /** One label describing what was actually searched, for prose and the UI. */
+    criteria: describeCriteria(normalizedQuery, dateRange),
     limit: resolvedLimit,
     counts: {
       orders: orders.length,
@@ -260,6 +422,22 @@ export async function searchBakeryRecords({ query, limit }: SearchArgs) {
     orders,
     customOrders,
   };
+}
+
+function describeCriteria(
+  query: string,
+  dateRange: { startDate: string; endDate: string } | undefined
+): string {
+  const parts: string[] = [];
+  if (query) parts.push(`"${query}"`);
+  if (dateRange) {
+    parts.push(
+      dateRange.startDate === dateRange.endDate
+        ? dateRange.startDate
+        : `${dateRange.startDate} to ${dateRange.endDate}`
+    );
+  }
+  return parts.join(" · ");
 }
 
 export type SearchResult = Awaited<ReturnType<typeof searchBakeryRecords>>;
