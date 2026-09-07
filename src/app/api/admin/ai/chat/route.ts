@@ -53,6 +53,19 @@ function buildSystemPrompt(): string {
     buildTimeContext(),
     "Resolve relative dates like \"tomorrow\" or \"next Friday\" against that date, and pass an explicit YYYY-MM-DD to tools.",
     "For manageCalendar: use 'update_capacity' with workMinutes to change daily workload (default is usually 240). Pass null to reset to default. Use 'update_slots' with availableHours formatted exactly like '7:00 AM - 7:30 AM' to change pickup times. Pass null to reset.",
+    "",
+    "OUTSTANDING PAYMENTS:",
+    "- `unpaidOrders` and `outstandingPaymentsAmount` are money actively owed: unpaid orders NOT yet delivered. That is the figure to quote when she asks what she is owed.",
+    "- `unreconciledDelivered` counts orders already delivered but still flagged unpaid. Never add it to the amount owed — it is almost always old records nobody marked paid. Mention it only as a bookkeeping cleanup suggestion, or when she asks about it directly.",
+    "- Each unpaid entry carries `canEmail` and `hasPhone`. Use them to pick a reachable customer BEFORE drafting, and never claim there is nobody to contact without checking both.",
+    "",
+    "MESSAGING CUSTOMERS:",
+    "- Always call draftMessage first. It is read-only and writes the text for you from a fixed template — never compose customer wording yourself.",
+    "- Do not rewrite, shorten, translate or re-summarize the returned bodyText, and do not restate its prices in prose. The UI already shows the full draft.",
+    "- To send, call sendCustomerMessage and copy orderId, orderType, recipientEmail, subject, bodyText and actionButton from the draft verbatim. Anastasiia must approve before it leaves.",
+    "- Never invent or alter a recipient address. If draftMessage reports canEmail false, say the order has no usable email and suggest WhatsApp or SMS from the draft card instead.",
+    "- Never repeat an actionButton URL in your prose — it can contain a payment token. Refer to it as \"the payment link\".",
+    "- If draftMessage reports otherMatches above zero, name the customer and short code you drafted for so she can confirm it is the right order.",
   ].join("\n");
 }
 
@@ -95,10 +108,19 @@ export async function POST(request: Request) {
   const result = streamText({
     model,
     system: buildSystemPrompt(),
-    messages: await convertToModelMessages(messages),
+    // An approval card the baker never answered leaves a tool call with no
+    // result. Without this the conversion throws MissingToolResultsError and
+    // the whole thread becomes unusable. Parts already answered
+    // (`approval-responded`) survive the filter, so approvals still execute.
+    messages: await convertToModelMessages(messages, {
+      ignoreIncompleteToolCalls: true,
+    }),
     tools: createBakerTools(adminUid),
     stopWhen: isStepCount(MAX_STEPS),
-    toolApproval: { manageCalendar: "user-approval" },
+    toolApproval: {
+      manageCalendar: "user-approval",
+      sendCustomerMessage: "user-approval",
+    },
     runtimeContext: { adminUid },
   });
 

@@ -118,7 +118,8 @@ export function DailyBriefCard({ brief }: { brief: DailyBrief }) {
         />
         <Stat label="Items to make" value={String(summary.itemsToMake)} />
         <Stat
-          label="Unpaid"
+          // Open orders still owing money — excludes delivered-but-unreconciled.
+          label="Owed"
           value={`${summary.outstandingPaymentsCount} · ${formatMoney(
             summary.outstandingPaymentsAmount
           )}`}

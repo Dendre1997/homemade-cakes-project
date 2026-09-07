@@ -5,6 +5,9 @@ import type { DailyBriefResult } from "@/lib/ai/queries/dailyBrief";
 import type {
   ScaleRecipeToolResult,
   ManageCalendarToolResult,
+  DraftMessageToolResult,
+  DraftMessageToolSuccess,
+  SendCustomerMessageToolResult,
 } from "@/lib/ai/tools";
 
 /**
@@ -33,4 +36,20 @@ export type UnpaidOrder = DailyBrief["unpaidOrders"]["items"][number];
 export type PendingRequest =
   DailyBrief["pendingCustomRequests"]["items"][number];
 
-export type { ScaleRecipeToolResult, ManageCalendarToolResult };
+export type {
+  ScaleRecipeToolResult,
+  ManageCalendarToolResult,
+  DraftMessageToolResult,
+  DraftMessageToolSuccess,
+  SendCustomerMessageToolResult,
+};
+
+/** Payload the DraftMessageCard hands back when the baker clicks "Send email". */
+export interface SendMessageRequest {
+  orderId: string;
+  orderType: "regular" | "custom";
+  recipientEmail: string;
+  subject: string;
+  bodyText: string;
+  actionButton?: { label: string; url: string };
+}

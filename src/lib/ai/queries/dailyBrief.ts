@@ -21,6 +21,7 @@ import {
   shortId,
 } from "@/lib/ai/serialize";
 import { normalizeCustomOrder } from "@/lib/normalizeCustomOrder";
+import { isSendableEmail } from "@/lib/db/messages";
 
 /**
  * The single aggregation behind the daily briefing. Extracted from the route so
@@ -29,6 +30,15 @@ import { normalizeCustomOrder } from "@/lib/normalizeCustomOrder";
 
 /** Keeps the payload inside a reasonable prompt budget. */
 const LIST_LIMIT = 10;
+
+const CANCELLED_STATUSES = ["cancelled"] as const;
+
+/**
+ * Statuses meaning the cake already reached the customer. Unpaid orders in this
+ * state are stale records that were never marked paid rather than money the
+ * baker is actively collecting.
+ */
+const FULFILLED_STATUSES = ["delivered"] as const;
 
 /**
  * Heavy fields an LLM never needs. Excluding them at the driver level means
@@ -131,7 +141,13 @@ function shapeUnpaidOrder(doc: WithId<Document>, todayKey: string) {
     dueDate,
     expectedMethod:
       doc.paymentDetails?.expectedMethod ?? doc.paymentDetails?.method,
-    hasPaymentLink: Boolean(doc.paymentToken),
+    // Precomputed in the pipeline: ORDER_PROJECTION strips `paymentToken`, so
+    // reading it off the document here would always be false.
+    hasPaymentLink: Boolean(doc.hasPaymentLink),
+    // Reachability up front, so the model can pick a contactable order instead
+    // of drafting blind and discovering `canEmail: false` afterwards.
+    canEmail: isSendableEmail(doc.customerInfo?.email),
+    hasPhone: Boolean(String(doc.customerInfo?.phone ?? "").trim()),
     customer: shapeCustomer(doc.customerInfo),
   });
 }
@@ -195,6 +211,7 @@ function buildSummary(
     unpaidDueToday: unpaidToday,
     capacityUsedPercent: capacity.utilizationPercent,
     minutesRemaining: capacity.availableMinutes,
+    // Live debt only — see `unreconciledDelivered` for the historical gap.
     outstandingPaymentsCount: unpaidCount,
     outstandingPaymentsAmount: Math.round(unpaidAmount * 100) / 100,
     pendingCustomRequests: pendingCount,
@@ -222,9 +239,16 @@ export async function buildDailyBrief({ date }: DailyBriefArgs = {}) {
     withMongoClient(async (client) => {
       const db = client.db(process.env.MONGODB_DB_NAME);
 
+      // Live debt: unpaid and not yet handed over. A `delivered` order that
+      // stayed unpaid is historical bookkeeping nobody is chasing, so it is
+      // counted separately below instead of inflating the amount owed.
       const unpaidFilter = {
         isPaid: false,
-        status: { $nin: ["cancelled"] },
+        status: { $nin: [...CANCELLED_STATUSES, ...FULFILLED_STATUSES] },
+      };
+      const unreconciledFilter = {
+        isPaid: false,
+        status: { $in: [...FULFILLED_STATUSES] },
       };
       const pendingFilter = { status: "pending_review" };
 
@@ -234,6 +258,7 @@ export async function buildDailyBrief({ date }: DailyBriefArgs = {}) {
         ordersOnDate,
         unpaidOrders,
         unpaidStats,
+        unreconciledStats,
         pendingRequests,
         pendingCount,
       ] = await Promise.all([
@@ -254,14 +279,56 @@ export async function buildDailyBrief({ date }: DailyBriefArgs = {}) {
           .toArray(),
         db
           .collection("orders")
-          .find(unpaidFilter, { projection: ORDER_PROJECTION })
-          .sort({ createdAt: 1 })
-          .limit(LIST_LIMIT)
+          // The pipeline never removes `_id`, so the shaper's WithId contract holds.
+          .aggregate<WithId<Document>>([
+            { $match: unpaidFilter },
+            {
+              $addFields: {
+                // Derived before the projection drops the token itself.
+                hasPaymentLink: {
+                  $eq: [{ $type: "$paymentToken" }, "string"],
+                },
+              },
+            },
+            { $sort: { createdAt: 1 } },
+            { $limit: LIST_LIMIT },
+            { $project: ORDER_PROJECTION },
+          ])
           .toArray(),
         db
           .collection("orders")
           .aggregate([
             { $match: unpaidFilter },
+            {
+              // Money is summed in Mongo, never by the model (§7).
+              $facet: {
+                totals: [
+                  {
+                    $group: {
+                      _id: null,
+                      count: { $sum: 1 },
+                      amount: { $sum: "$totalAmount" },
+                    },
+                  },
+                ],
+                byStatus: [
+                  {
+                    $group: {
+                      _id: "$status",
+                      count: { $sum: 1 },
+                      amount: { $sum: "$totalAmount" },
+                    },
+                  },
+                  { $sort: { count: -1 } },
+                ],
+              },
+            },
+          ])
+          .toArray(),
+        db
+          .collection("orders")
+          .aggregate([
+            { $match: unreconciledFilter },
             {
               $group: {
                 _id: null,
@@ -280,13 +347,31 @@ export async function buildDailyBrief({ date }: DailyBriefArgs = {}) {
         db.collection("custom_orders").countDocuments(pendingFilter),
       ]);
 
+      const facet = unpaidStats[0] as
+        | {
+            totals?: { count?: number; amount?: number }[];
+            byStatus?: { _id?: string; count?: number; amount?: number }[];
+          }
+        | undefined;
+
+      const unreconciled = unreconciledStats[0] as
+        | { count?: number; amount?: number }
+        | undefined;
+
       return {
         settings,
         categories,
         ordersOnDate,
         unpaidOrders,
-        unpaidCount: (unpaidStats[0]?.count as number | undefined) ?? 0,
-        unpaidAmount: (unpaidStats[0]?.amount as number | undefined) ?? 0,
+        unpaidCount: facet?.totals?.[0]?.count ?? 0,
+        unpaidAmount: facet?.totals?.[0]?.amount ?? 0,
+        unreconciledCount: unreconciled?.count ?? 0,
+        unreconciledAmount: unreconciled?.amount ?? 0,
+        unpaidByStatus: (facet?.byStatus ?? []).map((row) => ({
+          status: row._id ?? "unknown",
+          count: row.count ?? 0,
+          amount: Math.round((row.amount ?? 0) * 100) / 100,
+        })),
         pendingRequests,
         pendingCount,
       };
@@ -325,11 +410,24 @@ export async function buildDailyBrief({ date }: DailyBriefArgs = {}) {
     ),
     capacity,
     todaysOrders,
+    /** Money actively owed: unpaid and not yet handed to the customer. */
     unpaidOrders: {
       totalCount: data.unpaidCount,
       totalAmount: Math.round(data.unpaidAmount * 100) / 100,
+      byStatus: data.unpaidByStatus,
+      /** How many of the listed orders have an address that can receive mail. */
+      emailableCount: unpaidOrders.filter((order) => order.canEmail).length,
       truncated: data.unpaidCount > unpaidOrders.length,
       items: unpaidOrders,
+    },
+    /**
+     * Delivered orders still flagged unpaid. Kept out of the amount owed above
+     * so it is not read as collectable, but surfaced rather than hidden — the
+     * gap is a bookkeeping signal worth acting on.
+     */
+    unreconciledDelivered: {
+      count: data.unreconciledCount,
+      amount: Math.round(data.unreconciledAmount * 100) / 100,
     },
     pendingCustomRequests: {
       totalCount: data.pendingCount,

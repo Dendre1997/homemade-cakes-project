@@ -1,9 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, SearchX, TriangleAlert } from "lucide-react";
+import { Loader2, MailCheck, SearchX, TriangleAlert } from "lucide-react";
 import type { ChatAddToolApproveResponseFunction } from "ai";
-import type { BakerUIMessage } from "@/lib/ai/uiMessage";
+import type {
+  BakerUIMessage,
+  SendCustomerMessageToolResult,
+  SendMessageRequest,
+} from "@/lib/ai/uiMessage";
 import { cn } from "@/lib/utils";
 import CustomRequestCard from "./CustomRequestCard";
 import DailyBriefCard from "./DailyBriefCard";
@@ -11,6 +15,8 @@ import OrderSummaryCard from "./OrderSummaryCard";
 import RecipeScaleCard from "./cards/RecipeScaleCard";
 import CalendarApprovalCard from "./cards/CalendarApprovalCard";
 import CalendarCard from "./cards/CalendarCard";
+import DraftMessageCard from "./cards/DraftMessageCard";
+import SendMessageApprovalCard from "./cards/SendMessageApprovalCard";
 
 /** Shown while a tool call is being assembled or executed. */
 function ToolCallSkeleton({ label }: { label: string }) {
@@ -84,12 +90,69 @@ function ManageCalendarApprovalPart({
   );
 }
 
+function SendCustomerMessageApprovalPart({
+  part,
+  addToolApprovalResponse,
+}: {
+  part: Extract<
+    BakerUIMessage["parts"][number],
+    { type: "tool-sendCustomerMessage"; state: "approval-requested" }
+  >;
+  addToolApprovalResponse?: ToolApprovalResponder;
+}) {
+  const [isResponding, setIsResponding] = useState(false);
+
+  const respond = async (approved: boolean) => {
+    if (!addToolApprovalResponse || isResponding) return;
+    setIsResponding(true);
+    try {
+      await addToolApprovalResponse({ id: part.approval.id, approved });
+    } finally {
+      setIsResponding(false);
+    }
+  };
+
+  return (
+    <SendMessageApprovalCard
+      recipientEmail={part.input.recipientEmail}
+      subject={part.input.subject}
+      bodyText={part.input.bodyText}
+      actionButton={part.input.actionButton}
+      isResponding={isResponding}
+      onApprove={() => respond(true)}
+      onDeny={() => respond(false)}
+    />
+  );
+}
+
+function SendCustomerMessageResult({
+  output,
+}: {
+  output: SendCustomerMessageToolResult;
+}) {
+  if (!output.success) {
+    return <ToolCallError label="Send email" message={output.message} />;
+  }
+
+  return (
+    <div className="rounded-medium border border-border bg-card-background px-md py-sm font-body text-small text-primary">
+      <p className="inline-flex items-center gap-sm">
+        <MailCheck className="h-3.5 w-3.5 text-accent" />
+        Email sent to {output.recipientEmail}
+      </p>
+      <p className="mt-xs text-primary/60">{output.subject}</p>
+    </div>
+  );
+}
+
 export function CopilotMessage({
   message,
   addToolApprovalResponse,
+  onSendEmail,
 }: {
   message: BakerUIMessage;
   addToolApprovalResponse?: ToolApprovalResponder;
+  onSendEmail?: (request: SendMessageRequest) => void;
 }) {
   const isUser = message.role === "user";
 
@@ -287,6 +350,103 @@ export function CopilotMessage({
                   <ToolCallError
                     key={key}
                     label="Calendar update"
+                    message={part.errorText}
+                  />
+                );
+
+              default:
+                return null;
+            }
+          }
+
+          case "tool-draftMessage": {
+            switch (part.state) {
+              case "input-streaming":
+              case "input-available":
+                return (
+                  <ToolCallSkeleton
+                    key={key}
+                    label={
+                      part.input?.orderQuery
+                        ? `Drafting a message for "${part.input.orderQuery}"…`
+                        : "Drafting a message…"
+                    }
+                  />
+                );
+
+              case "output-available":
+                return (
+                  <DraftMessageCard
+                    key={key}
+                    result={part.output}
+                    onSendEmail={onSendEmail}
+                  />
+                );
+
+              case "output-error":
+                return (
+                  <ToolCallError
+                    key={key}
+                    label="Message draft"
+                    message={part.errorText}
+                  />
+                );
+
+              default:
+                return null;
+            }
+          }
+
+          case "tool-sendCustomerMessage": {
+            switch (part.state) {
+              case "input-streaming":
+              case "input-available":
+                return (
+                  <ToolCallSkeleton key={key} label="Preparing the email…" />
+                );
+
+              case "approval-requested":
+                return (
+                  <SendCustomerMessageApprovalPart
+                    key={key}
+                    part={part}
+                    addToolApprovalResponse={addToolApprovalResponse}
+                  />
+                );
+
+              case "approval-responded":
+                return (
+                  <ToolCallSkeleton
+                    key={key}
+                    label={
+                      part.approval.approved
+                        ? "Sending email…"
+                        : "Email cancelled…"
+                    }
+                  />
+                );
+
+              case "output-available":
+                return (
+                  <SendCustomerMessageResult key={key} output={part.output} />
+                );
+
+              case "output-denied":
+                return (
+                  <div
+                    key={key}
+                    className="rounded-medium border border-border bg-card-background px-md py-sm font-body text-small text-primary/70"
+                  >
+                    Email denied — nothing was sent to{" "}
+                    {part.input.recipientEmail}.
+                  </div>
+                );
+
+              case "output-error":
+                return (
+                  <ToolCallError
+                    key={key}
+                    label="Send email"
                     message={part.errorText}
                   />
                 );

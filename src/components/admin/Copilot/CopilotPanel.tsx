@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, lastAssistantMessageIsCompleteWithApprovalResponses } from "ai";
 import { Loader2, Send, Sparkles, Square, TriangleAlert, X } from "lucide-react";
-import type { BakerUIMessage } from "@/lib/ai/uiMessage";
+import type { BakerUIMessage, SendMessageRequest } from "@/lib/ai/uiMessage";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 import CopilotMessage from "./CopilotMessage";
@@ -60,6 +60,35 @@ export function CopilotPanel({ isOpen, onClose }: CopilotPanelProps) {
     if (error) clearError();
     sendMessage({ text: trimmed });
     setInput("");
+  };
+
+  /**
+   * "Send email" on a draft card. The arguments are spelled out rather than
+   * referenced ("send the draft above") because the model would otherwise
+   * paraphrase the body, and the wording is deterministic by design (§10).
+   */
+  const requestEmailSend = (request: SendMessageRequest) => {
+    if (isBusy) return;
+    if (error) clearError();
+
+    const lines = [
+      "Send this email now. Call sendCustomerMessage with exactly these arguments — copy them character for character and change nothing:",
+      `orderId: ${request.orderId}`,
+      `orderType: ${request.orderType}`,
+      `recipientEmail: ${request.recipientEmail}`,
+      `subject: ${request.subject}`,
+    ];
+
+    if (request.actionButton) {
+      lines.push(
+        `actionButton.label: ${request.actionButton.label}`,
+        `actionButton.url: ${request.actionButton.url}`
+      );
+    }
+
+    lines.push("bodyText:", request.bodyText);
+
+    sendMessage({ text: lines.join("\n") });
   };
 
   return (
@@ -122,6 +151,7 @@ export function CopilotPanel({ isOpen, onClose }: CopilotPanelProps) {
                 key={message.id}
                 message={message}
                 addToolApprovalResponse={addToolApprovalResponse}
+                onSendEmail={requestEmailSend}
               />
             ))
           )}
