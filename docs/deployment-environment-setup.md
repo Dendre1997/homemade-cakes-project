@@ -92,6 +92,24 @@ SQUARE_WEBHOOK_SIGNATURE_KEY=xxxxxxxxxxxxxxxx
 
 # ─────────────────────────────────────────────────────────────────────────────
 
+# Baker AI Copilot (src/lib/ai/provider.ts)
+
+# Set exactly one API key. OPENAI_API_KEY wins if both are present.
+
+# Without a key, /api/admin/ai/chat returns 503 and the Copilot panel stays idle.
+
+# ─────────────────────────────────────────────────────────────────────────────
+
+OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxx
+ANTHROPIC_API_KEY=sk-ant-xxxxxxxxxxxxxxxx
+
+# Optional model overrides (defaults: gpt-4o-mini / claude-3-5-sonnet-latest)
+
+COPILOT_OPENAI_MODEL=gpt-4o-mini
+COPILOT_ANTHROPIC_MODEL=claude-3-5-sonnet-latest
+
+# ─────────────────────────────────────────────────────────────────────────────
+
 # Application / Hosting
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -24,6 +24,7 @@ import {
   MessageCircle,
   Home,
   CakeSlice,
+  ChefHat,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -53,6 +54,7 @@ const navSections = [
     label: "Catalog",
     items: [
       { href: "/bakery-manufacturing-orders/products", label: "Products", icon: Package },
+      { href: "/bakery-manufacturing-orders/recipes", label: "Recipes", icon: ChefHat },
       { href: "/bakery-manufacturing-orders/catalog", label: "Inventory", icon: Database },
       { href: "/bakery-manufacturing-orders/products/create", label: "Create Product", icon: PlusCircle },
     ],

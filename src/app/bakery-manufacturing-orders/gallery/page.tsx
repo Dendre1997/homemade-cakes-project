@@ -25,6 +25,8 @@ import { useConfirmation } from "@/contexts/ConfirmationContext";
 import { IGalleryImage, ProductCategory, Collection } from "@/types";
 import { cn } from "@/lib/utils";
 import LoadingSpinner from "@/components/ui/Spinner";
+import { AiProductGenerator } from "@/components/admin/AiProductGenerator";
+import type { ProductSuggestion } from "@/lib/ai/schemas/productSuggestion";
 import {
   appendCloudinaryUploadPreset,
   cloudinaryUploadUrl,
@@ -57,6 +59,43 @@ export default function GalleryAdminPage() {
     decorationPrice: 0,
     isActive: true,
     defaultAddons: [],
+  };
+
+  const handleApplyGallerySuggestion = (suggestion: ProductSuggestion) => {
+    setEditingItem((prev) => {
+      if (!prev) return prev;
+
+      const tagMatchedCategories = categories
+        .filter((cat) =>
+          suggestion.suggestedTags?.some((tag) => {
+            const normalizedTag = tag.trim().toLowerCase();
+            const normalizedName = cat.name.trim().toLowerCase();
+            return (
+              normalizedTag === normalizedName ||
+              normalizedName.includes(normalizedTag) ||
+              normalizedTag.includes(normalizedName)
+            );
+          })
+        )
+        .map((cat) => cat._id.toString());
+
+      const mergedCategories = [
+        ...new Set([...(prev.categories || []), ...tagMatchedCategories]),
+      ];
+
+      return {
+        ...prev,
+        title: suggestion.suggestedName,
+        description: suggestion.shortDescription
+          ? `${suggestion.shortDescription}\n\n${suggestion.description}`
+          : suggestion.description,
+        decorationPrice: suggestion.suggestedPrice,
+        categories:
+          mergedCategories.length > 0 ? mergedCategories : prev.categories,
+      };
+    });
+
+    showAlert("AI copy applied to the form. Review before saving.", "success");
   };
 
   const fetchData = useCallback(async () => {
@@ -375,6 +414,15 @@ export default function GalleryAdminPage() {
               </div>
 
               <div className="space-y-6 flex-1">
+                <AiProductGenerator
+                  isGalleryItem
+                  draft={{
+                    partialName: editingItem?.title,
+                    categoryId: editingItem?.categories?.[0],
+                  }}
+                  onApply={handleApplyGallerySuggestion}
+                />
+
                 <div className="space-y-1.5">
                   <Label htmlFor="title">Title</Label>
                   <Input 

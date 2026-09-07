@@ -1,8 +1,34 @@
 "use server";
 
 import clientPromise from "@/lib/db";
+import { verifyAdminAPI } from "@/lib/auth/adminOnly";
 import { ObjectId } from "mongodb";
 import { revalidatePath } from "next/cache";
+
+class UnauthorizedError extends Error {
+  constructor() {
+    super("Unauthorized");
+    this.name = "UnauthorizedError";
+  }
+}
+
+/**
+ * Server Actions are publicly callable POST endpoints, so the admin session
+ * must be re-verified here — the edge proxy guard on /bakery-manufacturing-orders
+ * does not cover the action endpoint itself.
+ */
+async function requireAdmin(): Promise<void> {
+  const session = await verifyAdminAPI();
+  if (!("user" in session)) {
+    throw new UnauthorizedError();
+  }
+}
+
+function unauthorizedResult(error: unknown) {
+  return error instanceof UnauthorizedError
+    ? { success: false as const, error: "Unauthorized" }
+    : null;
+}
 
 export async function addOrderNote(orderId: string, content: string) {
   if (!content || !content.trim()) {
@@ -10,6 +36,8 @@ export async function addOrderNote(orderId: string, content: string) {
   }
 
   try {
+    await requireAdmin();
+
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
 
@@ -17,7 +45,7 @@ export async function addOrderNote(orderId: string, content: string) {
       id: new ObjectId().toString(),
       content: content.trim(),
       createdAt: new Date(),
-      author: "Admin", // For now hardcoded, can be replaced with actual user if auth is available
+      author: "Admin",
     };
 
     let query;
@@ -56,6 +84,9 @@ export async function addOrderNote(orderId: string, content: string) {
     revalidatePath(`/bakery-manufacturing-orders/orders/${orderId}`);
     return { success: true };
   } catch (error) {
+    const denied = unauthorizedResult(error);
+    if (denied) return denied;
+
     console.error("Failed to add order note:", error);
     return { success: false, error: "Failed to add note" };
   }
@@ -63,6 +94,8 @@ export async function addOrderNote(orderId: string, content: string) {
 
 export async function deleteOrderNote(orderId: string, noteId: string) {
   try {
+    await requireAdmin();
+
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
 
@@ -96,6 +129,9 @@ export async function deleteOrderNote(orderId: string, noteId: string) {
     revalidatePath(`/bakery-manufacturing-orders/orders/${orderId}`);
     return { success: true };
   } catch (error) {
+    const denied = unauthorizedResult(error);
+    if (denied) return denied;
+
     console.error("Failed to delete order note:", error);
     return { success: false, error: "Failed to delete note" };
   }
@@ -107,6 +143,8 @@ export async function updateOrderNote(orderId: string, noteId: string, newConten
     }
 
     try {
+      await requireAdmin();
+
       const client = await clientPromise;
       const db = client.db(process.env.MONGODB_DB_NAME);
   
@@ -140,6 +178,9 @@ export async function updateOrderNote(orderId: string, noteId: string, newConten
       revalidatePath(`/bakery-manufacturing-orders/orders/${orderId}`);
       return { success: true };
     } catch (error) {
+      const denied = unauthorizedResult(error);
+      if (denied) return denied;
+
       console.error("Failed to update order note:", error);
       return { success: false, error: "Failed to update note" };
     }
