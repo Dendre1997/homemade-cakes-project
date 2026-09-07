@@ -282,25 +282,38 @@ factor = Σ(targets) [ (π · (d_target/2)²) / (π · (d_source/2)²) × layers
 { _id, adminUid, tool, input, output, approvedAt, targetCollection, targetId, createdAt }
 
 // recipes — for the Recipe Scaler tool
+//
+// NESTED TECH-CARD SHAPE. A real bakery tech card is a sequence of named
+// sub-preparations ("Ванільний бісквіт" → "Заварний крем" → "Збірка"), each
+// with its OWN ingredient list and its OWN instructions. Do NOT flatten this
+// into a top-level `ingredients[]` + `steps[]` pair: that loses which
+// ingredient belongs to which preparation, which is exactly what the scaler
+// and the printed tech card need. This nested form is the shipped,
+// authoritative schema — `src/lib/validation/recipe.ts` and
+// `src/lib/db/recipes.ts` are the source of truth.
 {
   _id, name, slug /* unique */, isActive,
-  categoryId?, flavorId?, description?,
+  categoryId?: ObjectId, flavorId?: ObjectId, description?,
   yield: {
     sizeLabel: string,
     diameterId?, shapeId?,
-    panDiameterInches?: number,   // REQUIRED numeric field — diameters.name
-                                   // is a display string, not reliably numeric
+    panDiameterInches: number,    // REQUIRED numeric field — diameters.name
+                                  // is a display string, not reliably numeric
     panSideInches?: number,       // square pans
     panHeightInches?: number,
     layers?: number, servings?: number, unitCount?: number,
+    targetWeightGrams?: number,   // finished batch weight, when stated
   },
-  ingredients: [{
-    id, name, quantity, unit: 'g'|'kg'|'ml'|'l'|'tsp'|'tbsp'|'pcs',
-    group?, isScalable: boolean, allergenIds?: ObjectId[],
-    costPerUnit?, note?,
+  components: [{                  // >= 1, ordered as on the tech card
+    name: string,                 // e.g. 'Ванільний бісквіт'
+    instructions?: string,        // prep steps for THIS component only
+    ingredients: [{               // >= 1
+      id, name, quantity, unit: 'g'|'kg'|'ml'|'l'|'tsp'|'tbsp'|'pcs',
+      isScalable: boolean, allergenIds?: ObjectId[],
+      costPerUnit?, note?,
+    }],
   }],
-  steps?: [{ order, instruction, durationMinutes? }],
-  activeTimeMinutes?, bakeTimeMinutes?, notes?,
+  activeTimeMinutes?, bakeTimeMinutes?, notes?,  // cross-cutting, whole recipe
   createdAt, updatedAt,
 }
 ```
@@ -308,6 +321,10 @@ factor = Σ(targets) [ (π · (d_target/2)²) / (π · (d_source/2)²) × layers
 Recipe indexes: `{ slug: 1 }` unique, `{ flavorId: 1 }`, `{ isActive: 1 }`.
 `allergenIds` must reuse the existing `allergens` collection — this is what
 lets an allergy cross-check against `custom_orders.allergies` come for free.
+
+`scaleRecipe()` scales **per component**, returning
+`ScaledComponent[] = [{ name, ingredients: [...] }]` — the component grouping
+survives scaling and must survive serialization to the UI card too.
 
 ---
 

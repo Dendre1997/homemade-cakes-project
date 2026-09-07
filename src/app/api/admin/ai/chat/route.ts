@@ -13,11 +13,27 @@ import {
   MissingAiCredentialsError,
 } from "@/lib/ai/provider";
 import { createBakerTools } from "@/lib/ai/tools";
+import { BAKERY_TIME_ZONE, getBakeryToday } from "@/lib/db/capacity";
 
 export const maxDuration = 60;
 
 /** Enough steps for a tool call, a follow-up tool call, and a final answer. */
 const MAX_STEPS = 6;
+
+/**
+ * Today in the bakery's time zone, as both a human-readable weekday date and
+ * the `YYYY-MM-DD` key tools expect. Recomputed per request — never hardcode a
+ * date here, or every relative date the model resolves drifts silently.
+ */
+function buildTimeContext(): string {
+  const dateKey = getBakeryToday();
+  const readable = new Intl.DateTimeFormat("en-CA", {
+    dateStyle: "full",
+    timeZone: BAKERY_TIME_ZONE,
+  }).format(new Date());
+
+  return `CRITICAL TIME CONTEXT: Today is ${readable} (${dateKey}). The bakery timezone is ${BAKERY_TIME_ZONE}. ALWAYS use this exact date as your reference point when resolving relative dates like 'tomorrow', 'next week', or month names.`;
+}
 
 function buildSystemPrompt(): string {
   return [
@@ -34,7 +50,7 @@ function buildSystemPrompt(): string {
     "- When a result is marked `truncated`, tell her more records exist beyond what you listed.",
     "- Flag allergies prominently whenever they appear in a custom request.",
     "",
-    "CRITICAL TIME CONTEXT: Today is Saturday, August 15, 2026. The bakery timezone is America/Edmonton. ALWAYS use this exact date as your reference point when resolving relative dates like 'tomorrow', 'next week', or month names.",
+    buildTimeContext(),
     "Resolve relative dates like \"tomorrow\" or \"next Friday\" against that date, and pass an explicit YYYY-MM-DD to tools.",
     "For manageCalendar: use 'update_capacity' with workMinutes to change daily workload (default is usually 240). Pass null to reset to default. Use 'update_slots' with availableHours formatted exactly like '7:00 AM - 7:30 AM' to change pickup times. Pass null to reset.",
   ].join("\n");
