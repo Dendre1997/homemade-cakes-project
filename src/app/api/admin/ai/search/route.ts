@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAdminAPI } from "@/lib/auth/adminOnly";
 import { mongoUnavailableResponse } from "@/lib/db/mongoHttp";
 import {
+  InvalidSearchDateError,
   searchBakeryRecords,
   SearchQueryTooShortError,
 } from "@/lib/ai/queries/search";
@@ -28,12 +29,17 @@ export async function GET(request: NextRequest) {
   try {
     const result = await searchBakeryRecords({
       query: searchParams.get("q") ?? "",
+      startDate: searchParams.get("startDate"),
+      endDate: searchParams.get("endDate"),
       limit: Number.isFinite(parsedLimit) ? parsedLimit : undefined,
     });
 
     return NextResponse.json(result);
   } catch (error) {
-    if (error instanceof SearchQueryTooShortError) {
+    if (
+      error instanceof SearchQueryTooShortError ||
+      error instanceof InvalidSearchDateError
+    ) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 

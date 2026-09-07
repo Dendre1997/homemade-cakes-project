@@ -4,10 +4,15 @@ import { withMongoClient } from "@/lib/db";
 import type { RecipeDocument } from "@/lib/db/recipes";
 import {
   MAX_SEARCH_LIMIT,
-  MIN_QUERY_LENGTH,
   searchBakeryRecords,
 } from "@/lib/ai/queries/search";
 import { buildDailyBrief } from "@/lib/ai/queries/dailyBrief";
+import { getBakeryToday } from "@/lib/db/capacity";
+import {
+  resolveDateExpression,
+  SUPPORTED_DATE_EXPRESSIONS,
+  type ResolvedDateExpression,
+} from "@/lib/dates/resolve";
 import {
   calculateScaleFactor,
   scaleRecipe,
@@ -155,18 +160,39 @@ function resolveAdminUid(
   return boundAdminUid || contextUid || UNKNOWN_ADMIN_UID;
 }
 
+const DATE_KEY_DESCRIPTION =
+  "A calendar date as YYYY-MM-DD. Never compute this yourself from a phrase " +
+  "like 'next week' — call resolveDate first and pass its output.";
+
 export const findOrders = tool({
   description:
-    "Search all orders and custom order requests by free text. Use this for " +
-    "customer names, phone numbers, emails, Instagram handles, the 6-character " +
-    "order code, cake inscriptions, or design notes. Always use this instead of " +
-    "guessing at order details.",
+    "Search orders and custom order requests by customer name, phone, email, " +
+    "Instagram handle, 6-character order code, cake inscription, design notes, " +
+    "or by fulfillment date. Use startDate and endDate for a specific day or a " +
+    "range such as 'next week' or 'this weekend' (resolve the phrase with " +
+    "resolveDate first). Text and dates can be combined to narrow one " +
+    "customer's bookings to a period. Always use this instead of guessing at " +
+    "order details.",
   inputSchema: z.object({
     query: z
       .string()
-      .min(MIN_QUERY_LENGTH)
+      .optional()
       .describe(
-        "The search text: a customer name, phone, email, social handle, order code, or words from the cake design."
+        "Search text: a customer name, phone, email, social handle, order code, or words from the cake design. Optional when startDate or endDate is provided."
+      ),
+    startDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .optional()
+      .describe(
+        `Inclusive start of the fulfillment-date window. ${DATE_KEY_DESCRIPTION}`
+      ),
+    endDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .optional()
+      .describe(
+        `Inclusive end of the window. Omit to search a single day. ${DATE_KEY_DESCRIPTION}`
       ),
     limit: z
       .number()
@@ -176,9 +202,64 @@ export const findOrders = tool({
       .optional()
       .describe("Maximum results per collection. Defaults to 10."),
   }),
-  execute: async ({ query, limit }) => {
-    const result = await searchBakeryRecords({ query, limit });
+  execute: async ({ query, startDate, endDate, limit }) => {
+    const result = await searchBakeryRecords({
+      query,
+      startDate,
+      endDate,
+      limit,
+    });
     return serializeToolResult(result);
+  },
+});
+
+export type ResolveDateToolSuccess = ResolvedDateExpression & {
+  resolved: true;
+};
+
+export type ResolveDateToolFailure = {
+  resolved: false;
+  expression: string;
+  today: string;
+  message: string;
+};
+
+export type ResolveDateToolResult =
+  | ResolveDateToolSuccess
+  | ResolveDateToolFailure;
+
+/**
+ * §7: the model selects a phrase, a pure function does the calendar math.
+ * Every relative date reaching another tool must come through here.
+ */
+export const resolveDate = tool({
+  description:
+    "Convert a relative date phrase into explicit YYYY-MM-DD bounds in the " +
+    "bakery's time zone. ALWAYS call this before any tool that takes a date " +
+    "when the baker used a phrase like 'next week', 'this weekend', 'friday', " +
+    "'tomorrow' or 'september 18'. Never calculate a date yourself.",
+  inputSchema: z.object({
+    expression: z
+      .string()
+      .min(2)
+      .describe(
+        `The phrase to resolve, exactly as the baker said it. Supported forms include: ${SUPPORTED_DATE_EXPRESSIONS.join(", ")}.`
+      ),
+  }),
+  execute: async ({ expression }): Promise<ResolveDateToolResult> => {
+    const today = getBakeryToday();
+    const resolved = resolveDateExpression(expression, today);
+
+    if (!resolved) {
+      return {
+        resolved: false,
+        expression,
+        today,
+        message: `Could not understand "${expression}" as a date. Ask her which calendar date she means, or try one of: ${SUPPORTED_DATE_EXPRESSIONS.slice(0, 8).join(", ")}.`,
+      };
+    }
+
+    return { resolved: true, ...resolved };
   },
 });
 
@@ -537,6 +618,7 @@ function createSendCustomerMessageTool(boundAdminUid: string) {
 export function createBakerTools(adminUid = UNKNOWN_ADMIN_UID) {
   return {
     findOrders,
+    resolveDate,
     getDailyBrief,
     manageCalendar: createManageCalendarTool(adminUid),
     scaleRecipe: scaleRecipeTool,
