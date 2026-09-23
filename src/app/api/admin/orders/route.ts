@@ -9,6 +9,7 @@ import { resend, DEFAULT_FROM } from "@/lib/email";
 import OrderConfirmationEmail from "@/emails/OrderConfirmationEmail";
 import { render } from "@react-email/render";
 import { getAppSettings } from "@/lib/api/settings";
+import { normalizePhoneDigits } from "@/lib/crm/normalize";
 
 export async function GET(request: NextRequest) {
   try {
@@ -162,7 +163,10 @@ export async function POST(request: NextRequest) {
 
       const newOrder = {
         customerId: userId,
-        customerInfo,
+        customerInfo: {
+          ...customerInfo,
+          phoneDigits: normalizePhoneDigits(customerInfo.phone),
+        },
         deliveryInfo: {
           ...deliveryInfo,
           deliveryDates:

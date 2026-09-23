@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import clientPromise from "@/lib/db";
 import { customOrderRequestSchema } from "@/lib/validation/customOrderSchema";
 import { normalizeCustomOrders } from "@/lib/normalizeCustomOrder";
+import { normalizePhoneDigits } from "@/lib/crm/normalize";
 
 export async function GET(req: Request) {
   try {
@@ -74,6 +75,10 @@ export async function POST(req: Request) {
     // 3. Database Insertion — persist the multi-item payload as-is.
     const orderData = {
         ...data,
+        contact: {
+          ...data.contact,
+          phoneDigits: normalizePhoneDigits(data.contact.phone),
+        },
         status: data.status || 'pending_review'
     };
 

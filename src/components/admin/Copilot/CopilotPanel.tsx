@@ -1,13 +1,21 @@
 "use client";
 
-import { useEffect, useRef, useState, type RefObject } from "react";
+import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, lastAssistantMessageIsCompleteWithApprovalResponses } from "ai";
-import { Loader2, Mic, Send, Sparkles, Square, TriangleAlert, X } from "lucide-react";
+import { Mic, Send, Sparkles, Square, TriangleAlert, X } from "lucide-react";
 import type { BakerUIMessage, SendMessageRequest } from "@/lib/ai/uiMessage";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
-import CopilotMessage from "./CopilotMessage";
+import CopilotMessage, { CopilotWorkingRow } from "./CopilotMessage";
+import {
+  buildThreadPlans,
+  conversationLanguage,
+  draftIntent,
+  pendingApprovalIds,
+  presentClientError,
+  type DraftKind,
+} from "./composeAnswer";
 import { useSpeechInput } from "./useSpeechInput";
 
 /**
@@ -58,10 +66,17 @@ interface CopilotPanelProps {
 
 export function CopilotPanel({ isOpen, onClose }: CopilotPanelProps) {
   const [input, setInput] = useState("");
+  const [expiredApprovalIds, setExpiredApprovalIds] = useState<Set<string>>(
+    () => new Set()
+  );
   const panelRef = useRef<HTMLElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const revealTimeoutRef = useRef<number | null>(null);
+  const stickToBottomRef = useRef(true);
+  const chatGenerationRef = useRef(0);
+  const sendGuardRef = useRef(false);
+  const newChatTimersRef = useRef<number[]>([]);
 
   useVisualViewportLock(isOpen, panelRef);
 
@@ -78,23 +93,55 @@ export function CopilotPanel({ isOpen, onClose }: CopilotPanelProps) {
     enabled: isOpen,
   });
 
-  const { messages, sendMessage, status, error, stop, clearError, addToolApprovalResponse } =
-    useChat<BakerUIMessage>({
-      transport: new DefaultChatTransport({ api: "/api/admin/ai/chat" }),
-      sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithApprovalResponses,
-    });
+  const {
+    messages,
+    sendMessage,
+    setMessages,
+    status,
+    error,
+    stop,
+    clearError,
+    addToolApprovalResponse,
+  } = useChat<BakerUIMessage>({
+    transport: new DefaultChatTransport({ api: "/api/admin/ai/chat" }),
+    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithApprovalResponses,
+  });
 
   const isBusy = status === "submitted" || status === "streaming";
+  const plans = useMemo(
+    () => buildThreadPlans(messages, expiredApprovalIds),
+    [messages, expiredApprovalIds]
+  );
+  const lastPlan = plans[plans.length - 1];
+  const answerStarted =
+    lastPlan?.role === "assistant" &&
+    Boolean(lastPlan.status || lastPlan.blocks.length > 0 || lastPlan.headline);
 
   useEffect(() => {
     if (isOpen) inputRef.current?.focus();
   }, [isOpen]);
 
   useEffect(() => {
-    scrollRef.current?.scrollTo({
-      top: scrollRef.current.scrollHeight,
-      behavior: "smooth",
-    });
+    sendGuardRef.current = false;
+  }, [messages]);
+
+  useEffect(() => {
+    const element = scrollRef.current;
+    if (!element) return;
+
+    const onScroll = () => {
+      const distance =
+        element.scrollHeight - element.scrollTop - element.clientHeight;
+      stickToBottomRef.current = distance < 96;
+    };
+
+    element.addEventListener("scroll", onScroll, { passive: true });
+    return () => element.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    if (!stickToBottomRef.current) return;
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [messages, status]);
 
   useEffect(() => {
@@ -111,6 +158,7 @@ export function CopilotPanel({ isOpen, onClose }: CopilotPanelProps) {
       if (revealTimeoutRef.current !== null) {
         window.clearTimeout(revealTimeoutRef.current);
       }
+      for (const timer of newChatTimersRef.current) window.clearTimeout(timer);
     };
   }, []);
 
@@ -121,49 +169,91 @@ export function CopilotPanel({ isOpen, onClose }: CopilotPanelProps) {
     }
     revealTimeoutRef.current = window.setTimeout(() => {
       inputRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-      scrollRef.current?.scrollTo({
-        top: scrollRef.current.scrollHeight,
-        behavior: "smooth",
-      });
     }, 300);
+  };
+
+  const expireOpenApprovals = () => {
+    const ids = pendingApprovalIds(messages);
+    if (ids.length === 0) return;
+    setExpiredApprovalIds((current) => {
+      const next = new Set(current);
+      for (const id of ids) next.add(id);
+      return next;
+    });
   };
 
   const submit = (text: string) => {
     const trimmed = text.trim();
     if (!trimmed || isBusy) return;
+    chatGenerationRef.current += 1;
     if (error) clearError();
     stopListening();
+    expireOpenApprovals();
+    stickToBottomRef.current = true;
     sendMessage({ text: trimmed });
     setInput("");
   };
 
+  const startNewChat = () => {
+    const generation = chatGenerationRef.current + 1;
+    chatGenerationRef.current = generation;
+    void stop();
+    stopListening();
+    setInput("");
+    setExpiredApprovalIds(new Set());
+    setMessages([]);
+    if (error) clearError();
+    stickToBottomRef.current = true;
+    // A stream abort can write the partial reply after the clear. Drop it
+    // again once that write has landed, unless a newer turn already started.
+    for (const timer of newChatTimersRef.current) window.clearTimeout(timer);
+    newChatTimersRef.current = [50, 300].map((delay) =>
+      window.setTimeout(() => {
+        if (chatGenerationRef.current === generation) setMessages([]);
+      }, delay)
+    );
+  };
+
+  const onDraftMessage = (kind: DraftKind, shortId: string) => {
+    submit(draftIntent(kind, shortId, conversationLanguage(messages)));
+  };
+
   /**
-   * "Send email" on a draft card. The arguments are spelled out rather than
-   * referenced ("send the draft above") because the model would otherwise
-   * paraphrase the body, and the wording is deterministic by design (§10).
+   * "Send email" opens the approval card directly. The letter stays on the
+   * draft; it is not pasted into a user bubble for the model to retype.
    */
   const requestEmailSend = (request: SendMessageRequest) => {
-    if (isBusy) return;
+    if (isBusy || sendGuardRef.current) return;
+    chatGenerationRef.current += 1;
     if (error) clearError();
+    sendGuardRef.current = true;
+    expireOpenApprovals();
+    stickToBottomRef.current = true;
 
-    const lines = [
-      "Send this email now. Call sendCustomerMessage with exactly these arguments — copy them character for character and change nothing:",
-      `orderId: ${request.orderId}`,
-      `orderType: ${request.orderType}`,
-      `recipientEmail: ${request.recipientEmail}`,
-      `subject: ${request.subject}`,
-    ];
+    const approvalMessage: BakerUIMessage = {
+      id: crypto.randomUUID(),
+      role: "assistant",
+      parts: [
+        {
+          type: "tool-sendCustomerMessage",
+          toolCallId: crypto.randomUUID(),
+          state: "approval-requested",
+          input: {
+            orderId: request.orderId,
+            orderType: request.orderType,
+            recipientEmail: request.recipientEmail,
+            subject: request.subject,
+            bodyText: request.bodyText,
+            ...(request.actionButton
+              ? { actionButton: request.actionButton }
+              : {}),
+          },
+          approval: { id: crypto.randomUUID() },
+        },
+      ],
+    };
 
-    if (request.actionButton) {
-      lines.push(
-        `actionButton.label: ${request.actionButton.label}`,
-        `actionButton.url: ${request.actionButton.url}`
-      );
-    }
-
-    lines.push("bodyText:", request.bodyText);
-
-    sendMessage({ text: lines.join("\n") });
+    setMessages((current) => [...current, approvalMessage]);
   };
 
   return (
@@ -193,13 +283,24 @@ export function CopilotPanel({ isOpen, onClose }: CopilotPanelProps) {
             <Sparkles className="h-5 w-5 text-accent" />
             Copilot
           </p>
-          <button
-            onClick={onClose}
-            aria-label="Close copilot"
-            className="rounded-medium p-1 transition-colors hover:bg-subtleBackground"
-          >
-            <X className="h-5 w-5 text-primary" />
-          </button>
+          <div className="flex items-center gap-sm">
+            <button
+              type="button"
+              onClick={startNewChat}
+              disabled={messages.length === 0}
+              className="font-body text-small text-primary/60 transition-colors hover:text-primary disabled:pointer-events-none disabled:opacity-40"
+            >
+              New chat
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close copilot"
+              className="rounded-medium p-1 transition-colors hover:bg-subtleBackground"
+            >
+              <X className="h-5 w-5 text-primary" />
+            </button>
+          </div>
         </header>
 
         <div
@@ -225,30 +326,22 @@ export function CopilotPanel({ isOpen, onClose }: CopilotPanelProps) {
               </div>
             </div>
           ) : (
-            messages.map((message) => (
+            messages.map((message, index) => (
               <CopilotMessage
                 key={message.id}
-                message={message}
+                plan={plans[index]}
+                busy={isBusy}
                 addToolApprovalResponse={addToolApprovalResponse}
                 onSendEmail={requestEmailSend}
+                onDraftMessage={onDraftMessage}
               />
             ))
           )}
 
-          {status === "submitted" && (
-            <div className="inline-flex items-center gap-sm font-body text-small text-primary/60">
-              <Loader2 className="h-3.5 w-3.5 animate-spin text-accent" />
-              Thinking…
-            </div>
-          )}
+          {isBusy && !answerStarted && <CopilotWorkingRow />}
 
           {error && (
-            <div className="rounded-medium border border-error/40 bg-error/10 px-md py-sm font-body text-small text-error">
-              <p className="inline-flex items-center gap-sm">
-                <TriangleAlert className="h-3.5 w-3.5" />
-                {error.message || "Something went wrong."}
-              </p>
-            </div>
+            <ChatError message={error.message} />
           )}
         </div>
 
@@ -349,6 +442,21 @@ export function CopilotPanel({ isOpen, onClose }: CopilotPanelProps) {
         </form>
       </aside>
     </>
+  );
+}
+
+function ChatError({ message }: { message?: string }) {
+  const presented = presentClientError(message);
+  return (
+    <div className="rounded-medium border border-error/40 bg-error/10 px-md py-sm font-body text-small text-error">
+      <p className="inline-flex items-center gap-sm">
+        <TriangleAlert className="h-3.5 w-3.5" />
+        {presented.lead}
+      </p>
+      {presented.detail && (
+        <p className="mt-xs text-error/80">{presented.detail}</p>
+      )}
+    </div>
   );
 }
 

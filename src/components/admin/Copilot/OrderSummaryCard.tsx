@@ -40,18 +40,39 @@ function firstFulfillmentDate(order: OrderSearchHit): string | null {
   return entry?.timeSlot ? `${formatted} · ${entry.timeSlot}` : formatted;
 }
 
-export function OrderSummaryCard({ order }: { order: OrderSearchHit }) {
+export function OrderSummaryCard({
+  order,
+  hideName = false,
+  nested = false,
+  onDraft,
+  draftDisabled = false,
+}: {
+  order: OrderSearchHit;
+  hideName?: boolean;
+  nested?: boolean;
+  onDraft?: () => void;
+  draftDisabled?: boolean;
+}) {
   const fulfillmentDate = firstFulfillmentDate(order);
   const isDelivery = order.fulfillment?.method === "delivery";
   const statusLabel = order.status
     ? (PAID_STATUSES[order.status] ?? order.status)
     : "Unknown";
+  const paidLabel = order.isPaid ? "Paid" : "Unpaid";
+  const showWorkflow =
+    Boolean(order.status) && statusLabel.toLowerCase() !== paidLabel.toLowerCase();
 
   return (
-    <Link
-      href={`/bakery-manufacturing-orders/orders/${order._id}`}
-      className="block rounded-medium border border-border bg-card-background p-md transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+    <div
+      className={cn(
+        "rounded-medium border border-border p-md",
+        nested ? "bg-background" : "bg-card-background"
+      )}
     >
+      <Link
+        href={`/bakery-manufacturing-orders/orders/${order._id}`}
+        className="block rounded-small transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+      >
       <div className="flex items-start justify-between gap-sm">
         <div className="min-w-0">
           <p className="flex items-center gap-xs font-body text-small text-accent">
@@ -60,9 +81,11 @@ export function OrderSummaryCard({ order }: { order: OrderSearchHit }) {
               #{order.shortId}
             </span>
           </p>
-          <p className="truncate font-body text-body text-primary">
-            {order.customer?.name ?? "No name"}
-          </p>
+          {!hideName && (
+            <p className="truncate font-body text-body text-primary">
+              {order.customer?.name ?? "No name"}
+            </p>
+          )}
         </div>
 
         <div className="shrink-0 text-right">
@@ -77,8 +100,13 @@ export function OrderSummaryCard({ order }: { order: OrderSearchHit }) {
                 : "bg-error/15 text-error"
             )}
           >
-            {order.isPaid ? "Paid" : "Unpaid"}
+            {paidLabel}
           </span>
+          {showWorkflow && (
+            <span className="mt-xs inline-block rounded-small bg-subtleBackground px-xs py-[2px] font-body text-[11px] text-primary/70">
+              {statusLabel}
+            </span>
+          )}
         </div>
       </div>
 
@@ -106,9 +134,6 @@ export function OrderSummaryCard({ order }: { order: OrderSearchHit }) {
           </span>
         )}
 
-        <span className="rounded-small bg-background px-xs py-[2px] text-[11px]">
-          {statusLabel}
-        </span>
       </div>
 
       {order.items && order.items.length > 0 && (
@@ -120,7 +145,18 @@ export function OrderSummaryCard({ order }: { order: OrderSearchHit }) {
             .join(" | ")}
         </p>
       )}
-    </Link>
+      </Link>
+      {onDraft && (
+        <button
+          type="button"
+          onClick={onDraft}
+          disabled={draftDisabled}
+          className="mt-sm font-body text-small text-primary/45 transition-colors hover:text-accent disabled:pointer-events-none disabled:opacity-40"
+        >
+          Draft message
+        </button>
+      )}
+    </div>
   );
 }
 

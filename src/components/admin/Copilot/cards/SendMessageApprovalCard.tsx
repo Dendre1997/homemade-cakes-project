@@ -10,6 +10,8 @@ interface SendMessageApprovalCardProps {
   subject: string;
   bodyText: string;
   actionButton?: { label: string; url: string };
+  /** The draft is still on screen, so the letter itself stays behind a disclosure. */
+  compact?: boolean;
   onApprove: () => void;
   onDeny: () => void;
   isResponding?: boolean;
@@ -21,6 +23,7 @@ export function SendMessageApprovalCard({
   subject,
   bodyText,
   actionButton,
+  compact = false,
   onApprove,
   onDeny,
   isResponding = false,
@@ -60,16 +63,37 @@ export function SendMessageApprovalCard({
           <p className="mt-xs font-body text-small text-primary">{subject}</p>
         </div>
 
-        <div>
-          <p className="font-body text-small font-semibold text-primary/70">
-            Message
-          </p>
-          <pre className="mt-xs max-h-64 overflow-y-auto whitespace-pre-wrap break-words rounded-medium border border-border bg-background px-sm py-sm font-body text-small leading-relaxed text-primary">
-            {bodyText}
-          </pre>
-        </div>
+        {compact ? (
+          <div>
+            <p className="font-body text-small text-primary/70">
+              Same text as the draft above
+            </p>
+            <details className="mt-xs">
+              <summary className="cursor-pointer font-body text-small text-primary/50">
+                Show the message
+              </summary>
+              <pre className="mt-xs max-h-64 overflow-y-auto whitespace-pre-wrap break-words rounded-medium border border-border bg-background px-sm py-sm font-body text-small leading-relaxed text-primary">
+                {bodyText}
+              </pre>
+            </details>
+            {actionButton && (
+              <p className="mt-sm font-body text-small text-primary/60">
+                Includes the payment link.
+              </p>
+            )}
+          </div>
+        ) : (
+          <div>
+            <p className="font-body text-small font-semibold text-primary/70">
+              Message
+            </p>
+            <pre className="mt-xs max-h-64 overflow-y-auto whitespace-pre-wrap break-words rounded-medium border border-border bg-background px-sm py-sm font-body text-small leading-relaxed text-primary">
+              {bodyText}
+            </pre>
+          </div>
+        )}
 
-        {actionButton && (
+        {!compact && actionButton && (
           <div>
             <p className="font-body text-small font-semibold text-primary/70">
               Button

@@ -8,6 +8,7 @@ import type {
   DraftMessageToolResult,
   DraftMessageToolSuccess,
   SendCustomerMessageToolResult,
+  CustomerHistoryToolResult,
 } from "@/lib/ai/tools";
 
 /**
@@ -42,6 +43,7 @@ export type {
   DraftMessageToolResult,
   DraftMessageToolSuccess,
   SendCustomerMessageToolResult,
+  CustomerHistoryToolResult,
 };
 
 /** Payload the DraftMessageCard hands back when the baker clicks "Send email". */

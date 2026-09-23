@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import clientPromise from "@/lib/db";
 import { ObjectId } from "mongodb";
 import { OrderStatus, CartItem } from "@/types";
+import { normalizePhoneDigits } from "@/lib/crm/normalize";
 
 interface Context {
   params: Promise<{ id: string }>;
@@ -164,6 +165,9 @@ export async function PUT(request: NextRequest, { params }: Context) {
           }
         }
       }
+      mergedCustomerInfo.phoneDigits = normalizePhoneDigits(
+        mergedCustomerInfo.phone
+      );
       updateFields.$set.customerInfo = mergedCustomerInfo;
     }
 

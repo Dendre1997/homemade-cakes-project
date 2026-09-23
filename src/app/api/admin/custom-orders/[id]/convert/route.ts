@@ -11,6 +11,7 @@ import { render } from "@react-email/render";
 import { getAppSettings } from "@/lib/api/settings";
 import { normalizeCustomOrder } from "@/lib/normalizeCustomOrder";
 import type { CustomOrderItem } from "@/types";
+import { normalizePhoneDigits } from "@/lib/crm/normalize";
 
 /**
  * Resolves a single custom item's free-text fields to catalog ObjectIds and
@@ -278,6 +279,7 @@ export async function POST(
         : null;
 
     const contact = customOrder.contact || ({} as any);
+    const phoneDigits = normalizePhoneDigits(contact.phone);
     const legalName = (contact.name as string | undefined)?.trim?.() || "";
     const socialNick = (contact.socialNickname as string | undefined)?.trim?.() || "";
     const socialPlat = contact.socialPlatform as "instagram" | "facebook" | undefined;
@@ -292,6 +294,7 @@ export async function POST(
         name: legalName || "Customer",
         email: contact.email || "",
         phone: contact.phone || "",
+        phoneDigits,
         socialNickname: socialNick || undefined,
         socialPlatform: socialPlat,
         notes: ["Converted from Custom Request", allergyNote]
@@ -347,6 +350,10 @@ export async function POST(
       {
         ...customOrder,
         _id: new ObjectId(id),
+        contact: {
+          ...(customOrder.contact || {}),
+          phoneDigits,
+        },
         status: "converted",
         convertedOrderId: newOrderId.toString(),
         items: persistedItems,

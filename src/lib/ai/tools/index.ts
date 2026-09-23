@@ -7,6 +7,10 @@ import {
   searchBakeryRecords,
 } from "@/lib/ai/queries/search";
 import { buildDailyBrief } from "@/lib/ai/queries/dailyBrief";
+import {
+  buildCustomerHistory,
+  type CustomerHistoryResult,
+} from "@/lib/ai/queries/customerHistory";
 import { getBakeryToday } from "@/lib/db/capacity";
 import {
   resolveDateExpression,
@@ -145,6 +149,8 @@ export type SendCustomerMessageToolResult =
   | SendCustomerMessageToolSuccess
   | SendCustomerMessageToolError;
 
+export type CustomerHistoryToolResult = CustomerHistoryResult;
+
 type CopilotRuntimeContext = {
   adminUid?: string;
 };
@@ -166,13 +172,13 @@ const DATE_KEY_DESCRIPTION =
 
 export const findOrders = tool({
   description:
-    "Search orders and custom order requests by customer name, phone, email, " +
-    "Instagram handle, 6-character order code, cake inscription, design notes, " +
-    "or by fulfillment date. Use startDate and endDate for a specific day or a " +
-    "range such as 'next week' or 'this weekend' (resolve the phrase with " +
-    "resolveDate first). Text and dates can be combined to narrow one " +
-    "customer's bookings to a period. Always use this instead of guessing at " +
-    "order details.",
+    "Find orders and custom requests by name, phone, email, Instagram, order " +
+    "code, or across a fulfillment-date RANGE such as next week or this weekend. " +
+    "Call at most once per turn. For a range, call resolveDate once first, then " +
+    "pass startDate and endDate. Add dates only when the baker named a period. " +
+    "Do not use this for one day's workload, what to bake, whether today has " +
+    "room, or who owes money — those are getDailyBrief. If nothing matches or " +
+    "several people match, stop and ask one question. Do not call this again.",
   inputSchema: z.object({
     query: z
       .string()
@@ -234,10 +240,11 @@ export type ResolveDateToolResult =
  */
 export const resolveDate = tool({
   description:
-    "Convert a relative date phrase into explicit YYYY-MM-DD bounds in the " +
-    "bakery's time zone. ALWAYS call this before any tool that takes a date " +
-    "when the baker used a phrase like 'next week', 'this weekend', 'friday', " +
-    "'tomorrow' or 'september 18'. Never calculate a date yourself.",
+    "Turn one relative date phrase into YYYY-MM-DD bounds in the bakery time " +
+    "zone. Call at most once per turn, and only when the baker named a relative " +
+    "day or range. Do not call this for 'today'. Never calculate a date " +
+    "yourself. After it returns, call exactly one of getDailyBrief (a single " +
+    "day) or findOrders (a range or a search that needs those dates).",
   inputSchema: z.object({
     expression: z
       .string()
@@ -263,12 +270,31 @@ export const resolveDate = tool({
   },
 });
 
+export const getCustomerHistory = tool({
+  description:
+    "Retrieve comprehensive customer CRM profile: Lifetime Value (LTV), order " +
+    "frequency, favorite cake flavors, payment status, and order history.",
+  inputSchema: z.object({
+    customerQuery: z
+      .string()
+      .min(2)
+      .describe("Customer phone, email, or name to analyze"),
+  }),
+  execute: async ({ customerQuery }) => {
+    const result = await buildCustomerHistory(customerQuery);
+    return serializeToolResult(result);
+  },
+});
+
 export const getDailyBrief = tool({
   description:
-    "Get the operational briefing for one day: kitchen capacity in minutes, " +
-    "orders due that day, outstanding unpaid orders, and custom requests still " +
-    "awaiting a quote. Use this for any question about the schedule, workload, " +
-    "what to bake, who owes money, or whether a date has room.",
+    "Briefing for ONE calendar day: kitchen minutes, what to bake, whether that " +
+    "day has room, orders due, and who still owes money (unpaidOrders). Use for " +
+    "'what does my day look like', 'what should I bake today', 'do I have room " +
+    "today', and 'who owes me'. Call at most once per turn. Omit date for today. " +
+    "If the day is relative, call resolveDate once and pass its YYYY-MM-DD. Do " +
+    "not also call findOrders for that day. For 'who owes me', answer from " +
+    "unpaidOrders — do not search each customer. Do not use this for a multi-day range.",
   inputSchema: z.object({
     date: z
       .string()
@@ -287,10 +313,9 @@ export const getDailyBrief = tool({
 function createManageCalendarTool(boundAdminUid: string) {
   return tool({
     description:
-      "Manage the bakery calendar: block/unblock dates, set daily kitchen capacity " +
-      "(workMinutes), or set pickup time slots (availableHours). Use ONLY explicit " +
-      "YYYY-MM-DD dates from the system time context — never invent dates. Requires " +
-      "admin approval before changes are saved.",
+      "Block or unblock dates, set daily kitchen minutes, or set pickup slots. " +
+      "Call once with explicit YYYY-MM-DD dates, then stop for approval. Do not " +
+      "call it again in the same turn. Never invent dates.",
     inputSchema: z
       .object({
         action: z
@@ -393,9 +418,8 @@ function createManageCalendarTool(boundAdminUid: string) {
 
 export const scaleRecipeTool = tool({
   description:
-    "Scale a catalog recipe to a different round pan diameter using area-based " +
-    "math (never calculate ingredient quantities yourself). Searches recipes by " +
-    "name or slug, then returns scaled component ingredient lists.",
+    "Scale one catalog recipe to a different round pan using area math. Call " +
+    "once. Do not calculate or restate ingredient quantities yourself.",
   inputSchema: z.object({
     recipeQuery: z
       .string()
@@ -485,11 +509,11 @@ export const scaleRecipeTool = tool({
 
 export const draftMessage = tool({
   description:
-    "Draft a customer message (email/WhatsApp/SMS) for an order. READ-ONLY — " +
-    "this only writes a draft, it never sends anything. The wording, the price " +
-    "breakdown and the payment link are generated by a deterministic template, " +
-    "so do not rewrite the returned text or restate its numbers. Use this " +
-    "before sendCustomerMessage.",
+    "Draft a customer message from the fixed template. Read-only — it never " +
+    "sends. Call at most once per turn. Pass the short code or order id already " +
+    "on screen; do not call findOrders first when that code is already known. " +
+    "Do not rewrite bodyText, prices, or payment URLs. Do not call " +
+    "sendCustomerMessage; the baker sends from the draft card.",
   inputSchema: z.object({
     orderQuery: z
       .string()
@@ -547,11 +571,10 @@ export const draftMessage = tool({
 function createSendCustomerMessageTool(boundAdminUid: string) {
   return tool({
     description:
-      "Send a drafted message to the customer by email. MUTATION — requires " +
-      "admin approval. Pass the exact orderId, orderType, recipientEmail, " +
-      "subject and bodyText returned by draftMessage; never retype or " +
-      "summarize the body. The recipient is re-validated against the order " +
-      "server-side, so a wrong address is rejected rather than delivered.",
+      "Email the exact draft. Requires approval. Do not call this from a chat " +
+      "reply — the Send email button starts it. If invoked, copy orderId, " +
+      "orderType, recipientEmail, subject, bodyText, and actionButton verbatim. " +
+      "Never rewrite them. The recipient is re-checked against the order.",
     inputSchema: z.object({
       orderId: objectIdStringSchema.describe(
         "The orderId returned by draftMessage."
@@ -619,6 +642,7 @@ export function createBakerTools(adminUid = UNKNOWN_ADMIN_UID) {
   return {
     findOrders,
     resolveDate,
+    getCustomerHistory,
     getDailyBrief,
     manageCalendar: createManageCalendarTool(adminUid),
     scaleRecipe: scaleRecipeTool,

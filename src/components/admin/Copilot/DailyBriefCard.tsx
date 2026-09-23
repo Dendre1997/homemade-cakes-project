@@ -10,6 +10,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import type { DailyBrief } from "@/lib/ai/uiMessage";
+import { formatBakeryDate } from "./composeAnswer";
 import { cn } from "@/lib/utils";
 
 function formatMoney(amount: number | undefined): string {
@@ -130,6 +131,39 @@ export function DailyBriefCard({ brief }: { brief: DailyBrief }) {
           value={String(summary.pendingCustomRequests)}
         />
       </div>
+
+      {brief.unpaidOrders.items.length > 0 && (
+        <div className="mt-md space-y-xs">
+          <p className="font-body text-[11px] uppercase tracking-wide text-primary/60">
+            Owed
+          </p>
+          {brief.unpaidOrders.items.map((order) => (
+            <Link
+              key={order._id}
+              href={`/bakery-manufacturing-orders/orders/${order._id}`}
+              className="flex items-center justify-between gap-sm rounded-small px-xs py-[6px] font-body text-small text-primary transition-colors hover:bg-background"
+            >
+              <span className="min-w-0 truncate">
+                <span className="text-accent">#{order.shortId}</span>{" "}
+                {order.customer?.name ?? "No name"}
+              </span>
+              <span className="shrink-0 text-right text-primary/70">
+                {formatMoney(order.totalAmount)}
+                {typeof order.dueDate === "string" && order.dueDate
+                  ? ` · ${formatBakeryDate(order.dueDate)}`
+                  : ""}
+              </span>
+            </Link>
+          ))}
+          {brief.unpaidOrders.truncated && (
+            <p className="font-body text-small text-primary/50">
+              +{" "}
+              {brief.unpaidOrders.totalCount - brief.unpaidOrders.items.length}{" "}
+              more owed
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Production list */}
       {brief.todaysOrders.length > 0 && (
