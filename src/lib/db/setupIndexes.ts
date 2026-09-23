@@ -39,10 +39,23 @@ const INDEX_PLAN: Record<string, IndexDefinition[]> = {
     { name: "status_1", key: { status: 1 } },
     { name: "isPaid_1", key: { isPaid: 1 } },
     { name: "createdAt_-1", key: { createdAt: -1 } },
+    {
+      name: "customerInfo_phoneDigits_1",
+      key: { "customerInfo.phoneDigits": 1 },
+    },
+    { name: "customerInfo_email_1", key: { "customerInfo.email": 1 } },
   ],
   custom_orders: [
     { name: "status_1", key: { status: 1 } },
     { name: "date_1", key: { date: 1 } },
+    { name: "contact_phoneDigits_1", key: { "contact.phoneDigits": 1 } },
+    { name: "contact_email_1", key: { "contact.email": 1 } },
+  ],
+  ai_action_log: [
+    {
+      name: "adminUid_1_createdAt_-1",
+      key: { adminUid: 1, createdAt: -1 },
+    },
   ],
   recipes: [
     { name: "slug_1", key: { slug: 1 }, unique: true },

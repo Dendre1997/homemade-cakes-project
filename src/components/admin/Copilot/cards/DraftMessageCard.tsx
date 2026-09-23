@@ -15,6 +15,7 @@ import type {
   DraftMessageToolSuccess,
   SendMessageRequest,
 } from "@/lib/ai/uiMessage";
+import type { DraftSendPhase } from "../composeAnswer";
 import { formatPhoneForMessaging } from "@/lib/messages/draft";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -24,6 +25,8 @@ interface DraftMessageCardProps {
   result: DraftMessageToolResult;
   /** Asks the copilot to run `sendCustomerMessage` with this exact draft. */
   onSendEmail?: (request: SendMessageRequest) => void;
+  phase?: DraftSendPhase;
+  busy?: boolean;
   className?: string;
 }
 
@@ -47,10 +50,12 @@ function withActionUrl(draft: DraftMessageToolSuccess): string {
 export function DraftMessageCard({
   result,
   onSendEmail,
+  phase = "idle",
+  busy = false,
   className,
 }: DraftMessageCardProps) {
   const [copied, setCopied] = useState(false);
-  const [emailRequested, setEmailRequested] = useState(false);
+  const sendPending = phase === "pending";
 
   const fullText = result.found ? withActionUrl(result) : "";
 
@@ -86,8 +91,7 @@ export function DraftMessageCard({
   };
 
   const requestEmail = () => {
-    if (!onSendEmail || !result.recipientEmail || emailRequested) return;
-    setEmailRequested(true);
+    if (!onSendEmail || !result.recipientEmail || sendPending || busy) return;
     onSendEmail({
       orderId: result.orderId,
       orderType: result.orderType,
@@ -250,11 +254,11 @@ export function DraftMessageCard({
             type="button"
             variant="primary"
             className="flex-1"
-            disabled={!canEmail || !onSendEmail || emailRequested}
+            disabled={!canEmail || !onSendEmail || sendPending || busy}
             onClick={requestEmail}
           >
             <Mail className="mr-2 h-4 w-4" />
-            {emailRequested ? "Requested…" : "Send email"}
+            {sendPending ? "Requested…" : "Send email"}
           </Button>
         </div>
       </div>

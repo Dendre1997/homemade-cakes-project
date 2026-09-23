@@ -30,7 +30,19 @@ function hasRealAllergies(allergies: string | undefined): boolean {
   return Boolean(value) && value !== "no" && value !== "none";
 }
 
-export function CustomRequestCard({ request }: { request: CustomRequestHit }) {
+export function CustomRequestCard({
+  request,
+  hideName = false,
+  nested = false,
+  onDraft,
+  draftDisabled = false,
+}: {
+  request: CustomRequestHit;
+  hideName?: boolean;
+  nested?: boolean;
+  onDraft?: () => void;
+  draftDisabled?: boolean;
+}) {
   const eventDate = formatEventDate(request.eventDate);
   const price =
     formatMoney(request.agreedPriceTotal) ??
@@ -39,12 +51,22 @@ export function CustomRequestCard({ request }: { request: CustomRequestHit }) {
   const statusLabel = request.status
     ? (STATUS_LABELS[request.status] ?? request.status)
     : "Unknown";
+  const chip =
+    !isQuoted && (!request.status || request.status === "pending_review")
+      ? "Needs quote"
+      : statusLabel;
 
   return (
-    <Link
-      href={`/bakery-manufacturing-orders/custom-orders/${request._id}`}
-      className="block rounded-medium border border-accent/40 bg-card-background p-md transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+    <div
+      className={cn(
+        "rounded-medium border border-accent/40 p-md",
+        nested ? "bg-background" : "bg-card-background"
+      )}
     >
+      <Link
+        href={`/bakery-manufacturing-orders/custom-orders/${request._id}`}
+        className="block rounded-small transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+      >
       <div className="flex items-start justify-between gap-sm">
         <div className="min-w-0">
           <p className="flex items-center gap-xs font-body text-small text-accent">
@@ -53,33 +75,32 @@ export function CustomRequestCard({ request }: { request: CustomRequestHit }) {
               #{request.shortId}
             </span>
           </p>
-          <p className="truncate font-body text-body text-primary">
-            {request.contact?.name ?? "No name"}
-          </p>
+          {!hideName && (
+            <p className="truncate font-body text-body text-primary">
+              {request.contact?.name ?? "No name"}
+            </p>
+          )}
         </div>
 
         <div className="shrink-0 text-right">
           {price && (
             <p className="font-body text-body text-primary">{price}</p>
           )}
-          <span className="mt-xs inline-block rounded-small bg-background px-xs py-[2px] font-body text-[11px]">
-            {isQuoted ? statusLabel : "Quote TBD"}
+          <span className="mt-xs inline-block rounded-small bg-subtleBackground px-xs py-[2px] font-body text-[11px] text-primary/70">
+            {chip}
           </span>
         </div>
       </div>
 
-      <div className="mt-sm flex flex-wrap items-center gap-x-md gap-y-xs font-body text-small text-primary/70">
-        {eventDate && (
+      {eventDate && (
+        <div className="mt-sm flex flex-wrap items-center gap-x-md gap-y-xs font-body text-small text-primary/70">
           <span className="inline-flex items-center gap-xs">
             <CalendarDays className="h-3.5 w-3.5" />
             {eventDate}
             {request.timeSlot ? ` · ${request.timeSlot}` : ""}
           </span>
-        )}
-        <span className="rounded-small bg-background px-xs py-[2px] text-[11px]">
-          {statusLabel}
-        </span>
-      </div>
+        </div>
+      )}
 
       {hasRealAllergies(request.allergies) && (
         <p
@@ -102,7 +123,18 @@ export function CustomRequestCard({ request }: { request: CustomRequestHit }) {
             .join(" | ")}
         </p>
       )}
-    </Link>
+      </Link>
+      {onDraft && (
+        <button
+          type="button"
+          onClick={onDraft}
+          disabled={draftDisabled}
+          className="mt-sm font-body text-small text-primary/45 transition-colors hover:text-accent disabled:pointer-events-none disabled:opacity-40"
+        >
+          Draft message
+        </button>
+      )}
+    </div>
   );
 }
 

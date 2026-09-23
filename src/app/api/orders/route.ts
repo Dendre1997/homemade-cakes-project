@@ -13,6 +13,7 @@ import PendingOrderAdminEmail  from "@/emails/PendingOrderAdminEmail";
 
 import { calculateOrderPricing } from "@/lib/pricing";
 import { getAppSettings } from "@/lib/api/settings";
+import { normalizePhoneDigits } from "@/lib/crm/normalize";
 
 // Helper to prevent NaN and ensure 2 decimals
 const safePrice = (val: any) => {
@@ -214,7 +215,10 @@ export async function POST(request: NextRequest) {
 
       const pendingOrder = {
         customerId,
-        customerInfo,
+        customerInfo: {
+          ...customerInfo,
+          phoneDigits: normalizePhoneDigits(customerInfo.phone),
+        },
         deliveryInfo: {
           method: deliveryInfo.method,
           address: deliveryInfo.address,
@@ -481,7 +485,10 @@ export async function POST(request: NextRequest) {
 
       const newOrder = {
         customerId,
-        customerInfo,
+        customerInfo: {
+          ...customerInfo,
+          phoneDigits: normalizePhoneDigits(customerInfo.phone),
+        },
         deliveryInfo: {
           method: deliveryInfo.method,
           address: deliveryInfo.address,

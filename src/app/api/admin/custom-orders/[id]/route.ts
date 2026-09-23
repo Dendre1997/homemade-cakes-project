@@ -5,6 +5,7 @@ import clientPromise from "@/lib/db";
 import { ObjectId } from "mongodb";
 import { normalizeCustomOrder } from "@/lib/normalizeCustomOrder";
 import { User } from "@/types";
+import { normalizePhoneDigits } from "@/lib/crm/normalize";
 
 /**
  * Shared admin auth helper for this route segment.
@@ -91,6 +92,17 @@ export async function PUT(
 
     // Filter out _id to avoid MongoDB immutable field error
     const { _id, ...updateData } = body;
+
+    if (
+      updateData.contact &&
+      typeof updateData.contact === "object" &&
+      "phone" in updateData.contact
+    ) {
+      updateData.contact = {
+        ...updateData.contact,
+        phoneDigits: normalizePhoneDigits(updateData.contact.phone),
+      };
+    }
 
     const result = await db.collection("custom_orders").updateOne(
       { _id: new ObjectId(id) },

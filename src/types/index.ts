@@ -306,6 +306,8 @@ export interface Order {
     name: string;
     email: string;
     phone: string;
+    /** Digits-only phone for CRM matching. Written at insert/update, never derived in a query. */
+    phoneDigits?: string;
     notes?: string;
     /** Customer social handle (without @); preserved from custom orders & explicit checkout if added later */
     socialNickname?: string;
@@ -624,6 +626,8 @@ export interface CustomOrder {
     name: string;
     phone: string;
     email: string;
+    /** Digits-only phone for CRM matching. Written at insert/update, never derived in a query. */
+    phoneDigits?: string;
     socialNickname?: string;
     socialPlatform?: "instagram" | "facebook";
   };
