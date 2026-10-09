@@ -2,6 +2,20 @@ import clientPromise from "@/lib/db";
 import { withMongoRetry } from "@/lib/db/withMongoRetry";
 import { ObjectId } from "mongodb";
 
+function toIdString(id: unknown): string {
+  if (typeof id === "string") return id;
+  if (id && typeof (id as { toString?: () => string }).toString === "function") {
+    return (id as { toString: () => string }).toString();
+  }
+  return "";
+}
+
+function toIsoString(value: unknown): string | undefined {
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value === "string") return value;
+  return undefined;
+}
+
 export interface GetProductsParams {
   categoryId?: string;
   collectionId?: string;
@@ -99,33 +113,58 @@ export async function getProducts({
   const products = result[0]?.data || [];
   const totalCount = result[0]?.metadata[0]?.totalCount || 0;
 
-  const productsWithStrings = products.map((product: Record<string, unknown>) => ({
-    ...product,
-    _id: (product._id as ObjectId).toString(),
-    categoryId: (product.categoryId as ObjectId).toString(),
-    collectionIds: ((product.collectionIds as ObjectId[]) || []).map((id) =>
-      id.toString()
-    ),
-    seasonalEventIds: ((product.seasonalEventIds as ObjectId[]) || []).map((id) =>
-      id.toString()
-    ),
-    availableFlavorIds: ((product.availableFlavorIds as ObjectId[]) || []).map(
-      (id) => id.toString()
-    ),
-    allergenIds: ((product.allergenIds as ObjectId[]) || []).map((id) =>
-      id.toString()
-    ),
-    availableDiameterConfigs: (
-      (product.availableDiameterConfigs as Record<string, unknown>[]) || []
-    ).map((config) => ({
-      ...config,
-      diameterId: (config.diameterId as ObjectId).toString(),
-    })),
-    category: {
-      ...(product.category as Record<string, unknown>),
-      _id: ((product.category as Record<string, unknown>)._id as ObjectId).toString(),
-    },
-  }));
+  const productsWithStrings = products.map((product: Record<string, unknown>) => {
+    const combo = product.comboConfig as
+      | {
+          cakeFlavorIds?: unknown[];
+          cakeDiameterIds?: unknown[];
+        }
+      | null
+      | undefined;
+
+    const formatted = {
+      ...product,
+      _id: toIdString(product._id),
+      categoryId: toIdString(product.categoryId),
+      collectionIds: ((product.collectionIds as unknown[]) || []).map(toIdString),
+      seasonalEventIds: ((product.seasonalEventIds as unknown[]) || []).map(
+        toIdString
+      ),
+      availableFlavorIds: ((product.availableFlavorIds as unknown[]) || []).map(
+        toIdString
+      ),
+      allergenIds: ((product.allergenIds as unknown[]) || []).map(toIdString),
+      availableDiameterConfigs: (
+        (product.availableDiameterConfigs as Record<string, unknown>[]) || []
+      ).map((config) => ({
+        ...config,
+        diameterId: toIdString(config.diameterId),
+      })),
+      defaultAddons: Array.isArray(product.defaultAddons)
+        ? (product.defaultAddons as Record<string, unknown>[]).map((addon) => ({
+            ...addon,
+            addonId: toIdString(addon.addonId),
+            variantId: addon.variantId ? toIdString(addon.variantId) : "",
+          }))
+        : product.defaultAddons,
+      comboConfig: combo
+        ? {
+            ...combo,
+            cakeFlavorIds: (combo.cakeFlavorIds || []).map(toIdString),
+            cakeDiameterIds: (combo.cakeDiameterIds || []).map(toIdString),
+          }
+        : combo,
+      category: {
+        ...(product.category as Record<string, unknown>),
+        _id: toIdString((product.category as Record<string, unknown>)._id),
+      },
+      createdAt: toIsoString(product.createdAt),
+      updatedAt: toIsoString(product.updatedAt),
+    };
+
+    // Drops any leftover BSON values (ObjectId.toJSON is a hex string).
+    return JSON.parse(JSON.stringify(formatted));
+  });
 
   return { products: productsWithStrings, totalCount };
   });

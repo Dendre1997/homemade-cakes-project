@@ -18,6 +18,12 @@ interface ClientReceiptCardProps {
   pickupAddress?: string;
 }
 
+/** Shrinks only when an address is wider than the receipt text column. */
+function emailLineFontSizePx(email: string): number {
+  const size = 280 / (email.length * 0.62);
+  return Math.min(14, size);
+}
+
 const formatDeliveryAddress = (
   address:
     | string
@@ -444,18 +450,20 @@ export const ClientReceiptCard = ({
                   <span className="font-bold text-primary">
                     ${order.totalAmount.toFixed(2)}
                   </span>{" "}
-                  the day before pickup by sending an e-transfer to{" "}
-                  {eTransferEmail.trim() ? (
-                    <span className="font-bold text-primary break-all">
-                      {eTransferEmail.trim()}
-                    </span>
-                  ) : (
-                    <span className="italic text-primary/50">
-                      the bakery e-transfer address (see confirmation email)
-                    </span>
-                  )}
-                  .
+                  the day before pickup by sending an e-transfer to:
                 </p>
+                {eTransferEmail.trim() ? (
+                  <p
+                    className="mt-1.5 font-bold text-primary whitespace-nowrap text-center leading-none"
+                    style={{ fontSize: `${emailLineFontSizePx(eTransferEmail.trim())}px` }}
+                  >
+                    {eTransferEmail.trim()}
+                  </p>
+                ) : (
+                  <p className="mt-1.5 italic text-primary/50">
+                    the bakery e-transfer address (see confirmation email)
+                  </p>
+                )}
               )}
             </div>
           </div>
