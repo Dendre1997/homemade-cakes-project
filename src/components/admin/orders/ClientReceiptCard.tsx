@@ -444,26 +444,36 @@ export const ClientReceiptCard = ({
                   at the pickup in cash.
                 </p>
               ) : (
-                <p>
-                  <span className="font-semibold text-primary">Instruction:</span>{" "}
-                  Pay the total amount of{" "}
-                  <span className="font-bold text-primary">
-                    ${order.totalAmount.toFixed(2)}
-                  </span>{" "}
-                  the day before pickup by sending an e-transfer to:
-                </p>
-                {eTransferEmail.trim() ? (
-                  <p
-                    className="mt-1.5 font-bold text-primary whitespace-nowrap text-center leading-none"
-                    style={{ fontSize: `${emailLineFontSizePx(eTransferEmail.trim())}px` }}
-                  >
-                    {eTransferEmail.trim()}
+                <>
+                  <p>
+                    <span className="font-semibold text-primary">Instruction:</span>{" "}
+                    Pay the total amount of{" "}
+                    <span className="font-bold text-primary">
+                      ${order.totalAmount.toFixed(2)}
+                    </span>{" "}
+                    the day before pickup by sending an e-transfer to:
                   </p>
-                ) : (
-                  <p className="mt-1.5 italic text-primary/50">
-                    the bakery e-transfer address (see confirmation email)
-                  </p>
-                )}
+                  {eTransferEmail.trim() ? (
+                    <p
+                      className="mt-2 font-bold text-primary text-center"
+                      style={{
+                        display: "block",
+                        width: "100%",
+                        whiteSpace: "nowrap",
+                        wordBreak: "keep-all",
+                        overflowWrap: "normal",
+                        lineHeight: 1.2,
+                        fontSize: `${emailLineFontSizePx(eTransferEmail.trim())}px`,
+                      }}
+                    >
+                      {eTransferEmail.trim()}
+                    </p>
+                  ) : (
+                    <p className="mt-2 italic text-primary/50 text-center">
+                      the bakery e-transfer address (see confirmation email)
+                    </p>
+                  )}
+                </>
               )}
             </div>
           </div>
