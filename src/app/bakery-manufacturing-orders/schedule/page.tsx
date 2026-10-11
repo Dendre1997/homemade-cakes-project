@@ -1,5 +1,6 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { FloatingActionBar } from "@/components/admin/FloatingActionBar";
 import { ScheduleSettings } from "@/types";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -34,6 +35,17 @@ const SchedulePage = () => {
   );
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const savedSettingsRef = useRef<Partial<ScheduleSettings> | null>(null);
+
+  const serializeSettings = (value: Partial<ScheduleSettings>) =>
+    JSON.stringify(value);
+
+  const isDirty = useMemo(() => {
+    if (!savedSettingsRef.current) return false;
+    return (
+      serializeSettings(settings) !== serializeSettings(savedSettingsRef.current)
+    );
+  }, [settings]);
 
   const fetchSettings = useCallback(async () => {
     setIsLoading(true);
@@ -52,7 +64,9 @@ const SchedulePage = () => {
         throw new Error("Failed to fetch schedule data");
       }
 
-      setSettings(await settingsRes.json());
+      const loadedSettings = (await settingsRes.json()) as Partial<ScheduleSettings>;
+      setSettings(loadedSettings);
+      savedSettingsRef.current = structuredClone(loadedSettings);
       setMinutesBooked(await bookedMinutesRes.json());
     } catch (error) {
       console.error(error);
@@ -86,6 +100,7 @@ const SchedulePage = () => {
         body: JSON.stringify(settings),
       });
       if (!res.ok) throw new Error("Failed to save settings");
+      savedSettingsRef.current = structuredClone(settings);
       showAlert("Settings saved successfully!", 'success');
     } catch (error) {
       console.error(error);
@@ -306,10 +321,18 @@ const SchedulePage = () => {
           </div>
         </div>
         
-        <Button onClick={handleSave} disabled={isSaving}>
-          {isSaving ? "Saving..." : "Save Settings"}
-        </Button>
       </div>
+
+      <FloatingActionBar
+        isDirty={isDirty}
+        isSaving={isSaving}
+        onDiscard={() => {
+          if (savedSettingsRef.current) {
+            setSettings(structuredClone(savedSettingsRef.current));
+          }
+        }}
+        onSave={handleSave}
+      />
     </section>
   );
 };

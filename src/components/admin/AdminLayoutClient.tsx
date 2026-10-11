@@ -16,13 +16,13 @@ export default function AdminLayoutClient({
 
   return (
     <>
-      <div className="relative min-h-screen bg-background xl:pl-64">
+      <div className="flex min-h-screen bg-background">
         <AdminSidebar
           isOpen={isSidebarOpen}
           onClose={() => setIsSidebarOpen(false)}
           sidebarToggleRef={sidebarToggleRef}
         />
-        <div className="flex flex-col">
+        <div className="flex min-w-0 flex-1 flex-col">
           <HeaderAdmin
             title={""}
             isSidebarOpen={isSidebarOpen}

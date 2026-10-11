@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { FloatingActionBar } from "@/components/admin/FloatingActionBar";
 import type { DeepPartial } from "ai";
 import { useRouter } from "next/navigation";
 import { CustomOrder, IShape } from "@/types";
@@ -47,6 +48,27 @@ export default function CustomOrderDetail({ initialOrder, shapes = [] }: CustomO
   const [expectedMethod, setExpectedMethod] = useState<'cash' | 'e-transfer'>(
     initialOrder.paymentPreference ?? 'e-transfer'
   );
+
+  type SavedDraft = {
+    order: CustomOrder;
+    expectedMethod: "cash" | "e-transfer";
+  };
+
+  const savedDraftRef = useRef<SavedDraft>({
+    order: normalizeCustomOrder(initialOrder),
+    expectedMethod: initialOrder.paymentPreference ?? "e-transfer",
+  });
+
+  const serializeDraft = (draft: SavedDraft) =>
+    JSON.stringify({
+      order: draft.order,
+      expectedMethod: draft.expectedMethod,
+    });
+
+  const isDirty =
+    order.status !== "converted" &&
+    serializeDraft({ order, expectedMethod }) !==
+      serializeDraft(savedDraftRef.current);
 
   const items = order.items ?? [];
 
@@ -248,6 +270,10 @@ export default function CustomOrderDetail({ initialOrder, shapes = [] }: CustomO
       }
 
       showAlert("Custom Request updated successfully!", "success");
+      savedDraftRef.current = {
+        order: structuredClone(order),
+        expectedMethod,
+      };
       router.refresh();
     } catch (err: any) {
       console.error(err);
@@ -297,7 +323,6 @@ export default function CustomOrderDetail({ initialOrder, shapes = [] }: CustomO
         }}
         readOnlyPrice={items.length !== 1}
         isSaving={isSaving}
-        onSave={handleSave}
         isConverting={isConverting}
         onConvert={handleConvertClick}
         isConverted={order.status === "converted"}
@@ -355,6 +380,17 @@ export default function CustomOrderDetail({ initialOrder, shapes = [] }: CustomO
           />
         </div>
       </div>
+
+      <FloatingActionBar
+        isDirty={isDirty}
+        isSaving={isSaving}
+        onDiscard={() => {
+          const saved = savedDraftRef.current;
+          setOrder(structuredClone(saved.order));
+          setExpectedMethod(saved.expectedMethod);
+        }}
+        onSave={handleSave}
+      />
 
       <ConfirmationModal
         isOpen={isConvertModalOpen}

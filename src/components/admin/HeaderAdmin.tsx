@@ -57,8 +57,8 @@ const AdminHeader = ({
             ref={sidebarToggleRef}
             type="button"
             onClick={onToggleSidebar}
-            className="xl:hidden rounded-medium p-1 transition-colors hover:bg-subtleBackground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
-            aria-label="Toggle sidebar"
+            className="rounded-medium p-1 transition-colors hover:bg-subtleBackground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 xl:hidden"
+            aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
             aria-expanded={isSidebarOpen}
             aria-controls="admin-navigation-sidebar"
           >

@@ -29,7 +29,7 @@ import {
 
 interface SidebarProps {
   isOpen: boolean;
-  onClose?: () => void;
+  onClose: () => void;
   sidebarToggleRef?: React.RefObject<HTMLButtonElement | null>;
 }
 
@@ -105,8 +105,7 @@ function useIsXlSidebarLayout() {
 
 type SidebarPanelProps = {
   pathname: string;
-  onClose?: () => void;
-  showMobileClose: boolean;
+  onClose: () => void;
   closeButtonRef?: React.RefObject<HTMLButtonElement | null>;
   getBadgeCount: (badge?: string) => number;
 };
@@ -114,7 +113,6 @@ type SidebarPanelProps = {
 function AdminSidebarPanel({
   pathname,
   onClose,
-  showMobileClose,
   closeButtonRef,
   getBadgeCount,
 }: SidebarPanelProps) {
@@ -124,7 +122,7 @@ function AdminSidebarPanel({
         <Link
           href="/bakery-manufacturing-orders"
           onClick={onClose}
-          className="group flex items-center gap-sm"
+          className="group flex min-w-0 items-center gap-sm"
         >
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent/80">
             <CakeSlice className="h-4 w-4 text-white" aria-hidden />
@@ -135,17 +133,15 @@ function AdminSidebarPanel({
             </span>
           </div>
         </Link>
-        {showMobileClose && (
-          <button
-            ref={closeButtonRef}
-            type="button"
-            onClick={onClose}
-            className="shrink-0 rounded-medium p-1 transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-primary"
-            aria-label="Close sidebar"
-          >
-            <X className="h-5 w-5 text-white/70" aria-hidden />
-          </button>
-        )}
+        <button
+          ref={closeButtonRef}
+          type="button"
+          onClick={onClose}
+          className="rounded-lg p-2 text-neutral-500 transition-colors hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white xl:hidden"
+          aria-label="Close sidebar"
+        >
+          <X className="h-5 w-5" />
+        </button>
       </div>
 
       <nav className="custom-scrollbar flex-1 overflow-y-auto px-sm py-sm">
@@ -358,9 +354,21 @@ const AdminSidebar = ({ isOpen, onClose, sidebarToggleRef }: SidebarProps) => {
 
   React.useEffect(() => {
     if (isXlLayout && isOpen) {
-      onClose?.();
+      onClose();
     }
   }, [isXlLayout, isOpen, onClose]);
+
+  const isOpenRef = useRef(isOpen);
+  const isXlLayoutRef = useRef(isXlLayout);
+  const onCloseRef = useRef(onClose);
+  isOpenRef.current = isOpen;
+  isXlLayoutRef.current = isXlLayout;
+  onCloseRef.current = onClose;
+
+  React.useEffect(() => {
+    if (isXlLayoutRef.current || !isOpenRef.current) return;
+    onCloseRef.current();
+  }, [pathname]);
 
   React.useEffect(() => {
     if (isXlLayout) return;
@@ -378,7 +386,7 @@ const AdminSidebar = ({ isOpen, onClose, sidebarToggleRef }: SidebarProps) => {
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        onClose?.();
+        onClose();
       }
     };
 
@@ -386,58 +394,47 @@ const AdminSidebar = ({ isOpen, onClose, sidebarToggleRef }: SidebarProps) => {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [isOpen, isXlLayout, onClose]);
 
-  const panelProps: SidebarPanelProps = {
-    pathname,
-    onClose,
-    getBadgeCount,
-    showMobileClose: false,
-  };
+  React.useEffect(() => {
+    if (isXlLayout || !isOpen) return;
 
-  const shellClassName =
-    "flex h-full w-64 flex-col bg-primary text-white shadow-lg";
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isOpen, isXlLayout]);
+
+  const mobileDrawerClosed = !isXlLayout && !isOpen;
 
   return (
     <>
-      <aside
-        className={cn(
-          "fixed left-0 top-0 z-40 hidden h-full xl:flex",
-          shellClassName,
-        )}
-        aria-label="Admin navigation"
-      >
-        <AdminSidebarPanel {...panelProps} />
-      </aside>
-
       {!isXlLayout && isOpen && (
-        <button
-          type="button"
-          tabIndex={-1}
-          aria-label="Close sidebar"
-          className="fixed inset-0 z-40 bg-black/50 xl:hidden"
-          onClick={() => onClose?.()}
+        <div
+          className="fixed inset-0 z-40 bg-black/50 transition-opacity xl:hidden"
+          onClick={onClose}
+          aria-hidden="true"
         />
       )}
 
-      {!isXlLayout && (
-        <aside
-          id="admin-navigation-sidebar"
-          aria-label="Admin navigation"
-          aria-hidden={!isOpen}
-          inert={isOpen ? undefined : true}
-          className={cn(
-            shellClassName,
-            "fixed left-0 top-0 z-50 flex xl:hidden",
-            "transition-transform duration-300 ease-in-out",
-            isOpen ? "translate-x-0" : "-translate-x-full pointer-events-none",
-          )}
-        >
-          <AdminSidebarPanel
-            {...panelProps}
-            showMobileClose
-            closeButtonRef={closeButtonRef}
-          />
-        </aside>
-      )}
+      <aside
+        id="admin-navigation-sidebar"
+        aria-label="Admin navigation"
+        aria-hidden={mobileDrawerClosed ? true : undefined}
+        inert={mobileDrawerClosed ? true : undefined}
+        className={cn(
+          "flex min-h-screen flex-col bg-primary text-white shadow-lg",
+          "fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] transform transition-transform duration-300 ease-in-out",
+          !isXlLayout && (isOpen ? "translate-x-0" : "-translate-x-full pointer-events-none"),
+          "xl:static xl:z-auto xl:w-64 xl:max-w-none xl:translate-x-0 xl:pointer-events-auto",
+        )}
+      >
+        <AdminSidebarPanel
+          pathname={pathname}
+          onClose={onClose}
+          closeButtonRef={closeButtonRef}
+          getBadgeCount={getBadgeCount}
+        />
+      </aside>
     </>
   );
 };

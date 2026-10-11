@@ -10,7 +10,7 @@ import {
   type UseFormRegister,
 } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Trash2, Loader2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import AiRecipeParser from "@/components/admin/recipes/AiRecipeParser";
 import type { RecipeParseFormApply } from "@/lib/ai/schemas/recipeParse";
 import {
@@ -22,6 +22,7 @@ import {
   type RecipeFormValues,
 } from "@/lib/validation/recipe";
 import type { Diameter, Flavor, IShape, ProductCategory } from "@/types";
+import { FloatingActionBar } from "@/components/admin/FloatingActionBar";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
@@ -289,8 +290,10 @@ export default function RecipeForm({
     handleSubmit,
     reset,
     setValue,
-    formState: { errors },
+    formState: { errors, isDirty, isSubmitting: isFormSubmitting },
   } = form;
+
+  const saving = isSubmitting || isFormSubmitting;
 
   const {
     fields: componentFields,
@@ -731,16 +734,11 @@ export default function RecipeForm({
         </CardContent>
       </Card>
 
-      <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
-        {isSubmitting ? (
-          <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Saving...
-          </>
-        ) : (
-          submitLabel
-        )}
-      </Button>
+      <FloatingActionBar
+        isDirty={isDirty}
+        isSaving={saving}
+        onDiscard={() => reset(initialValues ?? getDefaultRecipeFormValues())}
+      />
     </form>
   );
 }

@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/Button";
 import Link from "next/link";
 import { Input } from "@/components/ui/Input";
-import { Save, ArrowLeft, Loader2, CheckCircle2, Copy, Zap } from "lucide-react";
+import { ArrowLeft, Loader2, Copy, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 
 interface CustomOrderDetailHeaderProps {
@@ -14,7 +14,6 @@ interface CustomOrderDetailHeaderProps {
   /** When true (multi-item requests), the price is a read-only sum of per-item prices. */
   readOnlyPrice?: boolean;
   isSaving: boolean;
-  onSave: () => void;
   isConverting: boolean;
   onConvert: () => void;
   isConverted: boolean;
@@ -28,7 +27,6 @@ export const CustomOrderDetailHeader = ({
   onPriceChange,
   readOnlyPrice = false,
   isSaving,
-  onSave,
   isConverting,
   onConvert,
   isConverted,
@@ -110,18 +108,6 @@ export const CustomOrderDetailHeader = ({
                 Convert to Order
               </Button>
 
-              <Button
-                onClick={onSave}
-                disabled={isSaving || isConverting}
-                className="shadow-md flex-1 sm:flex-none sm:min-w-[160px] h-12 font-bold"
-              >
-                {isSaving ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Save className="w-4 h-4 mr-2" />
-                )}
-                Save Changes
-              </Button>
             </div>
           </>
         )}
