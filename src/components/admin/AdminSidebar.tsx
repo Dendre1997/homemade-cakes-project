@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import React, { useRef } from "react";
-import * as Dialog from "@radix-ui/react-dialog";
+import React, { useRef, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
 import { cn, focusWithVisibleIndicator } from "@/lib/utils";
 import { pusherClient } from "@/lib/pusher-client";
@@ -84,18 +83,24 @@ const badgeVariants: Record<string, string> = {
   support: "bg-accent/60 text-white",
 };
 
+const XL_SIDEBAR_QUERY = "(min-width: 1280px)";
+
+function subscribeXlSidebarLayout(onStoreChange: () => void) {
+  const mq = window.matchMedia(XL_SIDEBAR_QUERY);
+  mq.addEventListener("change", onStoreChange);
+  return () => mq.removeEventListener("change", onStoreChange);
+}
+
+function getXlSidebarLayoutSnapshot() {
+  return window.matchMedia(XL_SIDEBAR_QUERY).matches;
+}
+
 function useIsXlSidebarLayout() {
-  const [isXl, setIsXl] = React.useState(false);
-
-  React.useEffect(() => {
-    const mq = window.matchMedia("(min-width: 1280px)");
-    const update = () => setIsXl(mq.matches);
-    update();
-    mq.addEventListener("change", update);
-    return () => mq.removeEventListener("change", update);
-  }, []);
-
-  return isXl;
+  return useSyncExternalStore(
+    subscribeXlSidebarLayout,
+    getXlSidebarLayoutSnapshot,
+    () => false,
+  );
 }
 
 type SidebarPanelProps = {
@@ -131,16 +136,15 @@ function AdminSidebarPanel({
           </div>
         </Link>
         {showMobileClose && (
-          <Dialog.Close asChild>
-            <button
-              ref={closeButtonRef}
-              type="button"
-              className="rounded-medium p-1 transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-primary"
-              aria-label="Close sidebar"
-            >
-              <X className="h-5 w-5 text-white/70" aria-hidden />
-            </button>
-          </Dialog.Close>
+          <button
+            ref={closeButtonRef}
+            type="button"
+            onClick={onClose}
+            className="shrink-0 rounded-medium p-1 transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-primary"
+            aria-label="Close sidebar"
+          >
+            <X className="h-5 w-5 text-white/70" aria-hidden />
+          </button>
         )}
       </div>
 
@@ -233,6 +237,7 @@ const AdminSidebar = ({ isOpen, onClose, sidebarToggleRef }: SidebarProps) => {
   const pathname = usePathname();
   const isXlLayout = useIsXlSidebarLayout();
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const wasMobileOpenRef = useRef(false);
   const [totalCustomRequestsCount, setTotalCustomRequestsCount] = React.useState(0);
   const [newOrdersCount, setNewOrdersCount] = React.useState(0);
   const [supportChats, setSupportChats] = React.useState<any[]>([]);
@@ -357,6 +362,30 @@ const AdminSidebar = ({ isOpen, onClose, sidebarToggleRef }: SidebarProps) => {
     }
   }, [isXlLayout, isOpen, onClose]);
 
+  React.useEffect(() => {
+    if (isXlLayout) return;
+
+    if (isOpen) {
+      focusWithVisibleIndicator(closeButtonRef.current);
+    } else if (wasMobileOpenRef.current) {
+      focusWithVisibleIndicator(sidebarToggleRef?.current ?? null);
+    }
+    wasMobileOpenRef.current = isOpen;
+  }, [isOpen, isXlLayout, sidebarToggleRef]);
+
+  React.useEffect(() => {
+    if (!isOpen || isXlLayout) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose?.();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isOpen, isXlLayout, onClose]);
+
   const panelProps: SidebarPanelProps = {
     pathname,
     onClose,
@@ -379,50 +408,35 @@ const AdminSidebar = ({ isOpen, onClose, sidebarToggleRef }: SidebarProps) => {
         <AdminSidebarPanel {...panelProps} />
       </aside>
 
+      {!isXlLayout && isOpen && (
+        <button
+          type="button"
+          tabIndex={-1}
+          aria-label="Close sidebar"
+          className="fixed inset-0 z-40 bg-black/50 xl:hidden"
+          onClick={() => onClose?.()}
+        />
+      )}
+
       {!isXlLayout && (
-        <Dialog.Root
-          modal
-          open={isOpen}
-          onOpenChange={(open) => {
-            if (!open) onClose?.();
-          }}
+        <aside
+          id="admin-navigation-sidebar"
+          aria-label="Admin navigation"
+          aria-hidden={!isOpen}
+          inert={isOpen ? undefined : true}
+          className={cn(
+            shellClassName,
+            "fixed left-0 top-0 z-50 flex xl:hidden",
+            "transition-transform duration-300 ease-in-out",
+            isOpen ? "translate-x-0" : "-translate-x-full pointer-events-none",
+          )}
         >
-          <Dialog.Portal>
-            <Dialog.Overlay
-              className={cn(
-                "fixed inset-0 z-40 bg-black/50 transition-opacity duration-300",
-                "data-[state=open]:opacity-100 data-[state=closed]:opacity-0",
-                "data-[state=closed]:pointer-events-none",
-              )}
-            />
-            <Dialog.Content
-              id="admin-navigation-sidebar"
-              aria-modal={true}
-              aria-describedby={undefined}
-              onOpenAutoFocus={(event) => {
-                event.preventDefault();
-                focusWithVisibleIndicator(closeButtonRef.current);
-              }}
-              onCloseAutoFocus={(event) => {
-                event.preventDefault();
-                focusWithVisibleIndicator(sidebarToggleRef?.current ?? null);
-              }}
-              className={cn(
-                shellClassName,
-                "fixed left-0 top-0 z-50 outline-none",
-                "transition-transform duration-300 ease-in-out",
-                "data-[state=open]:translate-x-0 data-[state=closed]:-translate-x-full",
-              )}
-            >
-              <Dialog.Title className="sr-only">Admin navigation</Dialog.Title>
-              <AdminSidebarPanel
-                {...panelProps}
-                showMobileClose
-                closeButtonRef={closeButtonRef}
-              />
-            </Dialog.Content>
-          </Dialog.Portal>
-        </Dialog.Root>
+          <AdminSidebarPanel
+            {...panelProps}
+            showMobileClose
+            closeButtonRef={closeButtonRef}
+          />
+        </aside>
       )}
     </>
   );
