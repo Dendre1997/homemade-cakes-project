@@ -99,7 +99,7 @@ export const OrderAssignmentDatePicker = ({
           <button
             type="button"
             onClick={goToPreviousMonth}
-            className="p-sm rounded-full transition-colors hover:bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+            className="p-sm rounded-full transition-colors hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
             aria-label="Go to previous month"
           >
             <ChevronLeft className="h-5 w-5 text-primary" />
@@ -107,7 +107,7 @@ export const OrderAssignmentDatePicker = ({
           <button
             type="button"
             onClick={goToNextMonth}
-            className="p-sm rounded-full transition-colors hover:bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+            className="p-sm rounded-full transition-colors hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
             aria-label="Go to next month"
           >
             <ChevronRight className="h-5 w-5 text-primary" />
@@ -156,7 +156,7 @@ export const OrderAssignmentDatePicker = ({
                       type="button"
                       disabled={!isCurrentMonth}
                       className={cn(
-                        "relative flex h-full w-full items-center justify-center rounded-medium font-body transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1",
+                        "relative flex h-full w-full items-center justify-center rounded-medium font-body transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1",
                         "text-sm",
                         capacity >= 100 &&
                           "bg-destructive/20 text-destructive-foreground hover:bg-destructive/30",
@@ -202,7 +202,7 @@ export const OrderAssignmentDatePicker = ({
                         <PopoverPrimitive.Close asChild>
                           <button
                             aria-label="Close"
-                            className="p-1 rounded-full hover:bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
+                            className="p-1 rounded-full hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
                             onClick={() => setPopupDate?.(null)}
                           >
                             <X className="h-4 w-4 text-primary/80" />
@@ -258,7 +258,7 @@ export const OrderAssignmentDatePicker = ({
                   onClick={() => onSelect(day)} // Simple selection
                   disabled={!isCurrentMonth || isDisabled}
                   className={cn(
-                    "relative flex h-full w-full items-center justify-center rounded-medium font-body transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1",
+                    "relative flex h-full w-full items-center justify-center rounded-medium font-body transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1",
                     "text-sm",
                     !isCurrentMonth &&
                       "text-primary/30 opacity-60 pointer-events-none",

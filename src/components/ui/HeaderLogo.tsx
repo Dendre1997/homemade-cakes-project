@@ -9,15 +9,16 @@ interface LogoProps {
 
 const Logo: FC<LogoProps> = ({ size = "100%", prefetch }) => {
   return (
-    <Link href={"/"} prefetch={prefetch}>
+    <Link href={"/"} prefetch={prefetch} aria-label="D&K Creations home">
       <svg
         version="1.1"
         xmlns="http://www.w3.org/2000/svg"
         width={size}
-        // height="auto"
         viewBox="216 330 594 300"
         preserveAspectRatio="xMinYMid meet"
         className="h-auto block mx-auto"
+        aria-hidden="true"
+        focusable="false"
       >
         <path
           fill="#8A6E56"

@@ -35,6 +35,17 @@ export default function Step1Availability({ onNext }: { onNext: () => void }) {
   // Watch the selected date to dynamically show time slots
   const selectedDate = watch("date");
   const selectedTimeSlot = watch("timeSlot");
+  const deliveryMethod = watch("deliveryMethod");
+
+  useEffect(() => {
+    if (
+      checkoutSettings &&
+      !checkoutSettings.isDeliveryEnabled &&
+      deliveryMethod === "delivery"
+    ) {
+      setValue("deliveryMethod", "pickup");
+    }
+  }, [checkoutSettings, deliveryMethod, setValue]);
 
   // Auto-select the very first mathematically available date
   useEffect(() => {
@@ -211,15 +222,16 @@ export default function Step1Availability({ onNext }: { onNext: () => void }) {
                         {/* Navigation buttons */}
                         <button
                           type="button"
+                          aria-label="Previous time slots"
                           onClick={() =>
                             setCarouselIndex((i) =>
                               Math.max(0, i - visibleCount),
                             )
                           }
                           disabled={carouselIndex === 0}
-                          className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white border shadow-sm flex items-center justify-center disabled:opacity-30 hover:border-accent transition-all"
+                          className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white border shadow-sm flex items-center justify-center disabled:opacity-30 hover:border-accent transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
                         >
-                          <ChevronLeft className="w-4 h-4 text-primary" />
+                          <ChevronLeft className="w-4 h-4 text-primary" aria-hidden="true" />
                         </button>
 
                         {/* Slots track */}
@@ -243,8 +255,9 @@ export default function Step1Availability({ onNext }: { onNext: () => void }) {
                                 >
                                   <button
                                     type="button"
+                                    aria-pressed={field.value === slot}
                                     onClick={() => field.onChange(slot)}
-                                    className={`w-full h-20 rounded-lg text-sm font-semibold 
+                                    className={`w-full h-20 rounded-lg text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 
             flex items-center justify-center text-center
             leading-tight transition-all shadow-sm
             ${
@@ -266,6 +279,7 @@ export default function Step1Availability({ onNext }: { onNext: () => void }) {
 
                         <button
                           type="button"
+                          aria-label="Next time slots"
                           onClick={() =>
                             setCarouselIndex((i) =>
                               Math.min(
@@ -279,9 +293,9 @@ export default function Step1Availability({ onNext }: { onNext: () => void }) {
                             carouselIndex >=
                             availableHoursForSelectedDate.length - visibleCount
                           }
-                          className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white border shadow-sm flex items-center justify-center disabled:opacity-30 hover:border-accent transition-all"
+                          className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white border shadow-sm flex items-center justify-center disabled:opacity-30 hover:border-accent transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
                         >
-                          <ChevronRight className="w-4 h-4 text-primary" />
+                          <ChevronRight className="w-4 h-4 text-primary" aria-hidden="true" />
                         </button>
 
                         {/* Dots */}
@@ -290,8 +304,12 @@ export default function Step1Availability({ onNext }: { onNext: () => void }) {
                             <button
                               key={i}
                               type="button"
+                              aria-label={`Show time slots ${i + 1}`}
+                              aria-current={
+                                carouselIndex === targetIndex ? "true" : undefined
+                              }
                               onClick={() => setCarouselIndex(targetIndex)}
-                              className={`w-1.5 h-1.5 rounded-full transition-all ${
+                              className={`w-1.5 h-1.5 rounded-full transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 ${
                                 carouselIndex === targetIndex
                                   ? "bg-accent w-3"
                                   : "bg-gray-300"
@@ -311,14 +329,8 @@ export default function Step1Availability({ onNext }: { onNext: () => void }) {
                         render={({ field }) => {
                           const isDeliveryEnabled =
                             checkoutSettings.isDeliveryEnabled;
-
-                          // Auto-correct to pickup if delivery was selected but config is disabled
-                          if (
-                            !isDeliveryEnabled &&
-                            field.value === "delivery"
-                          ) {
-                            field.onChange("pickup");
-                          }
+                          const pickupSelected =
+                            field.value === "pickup" || !field.value;
 
                           return (
                             <div className="mt-6 border-t pt-4 border-primary/10">
@@ -326,7 +338,7 @@ export default function Step1Availability({ onNext }: { onNext: () => void }) {
                                 Order Delivery/Pickup Method
                               </h3>
 
-                              {(field.value === "pickup" || !field.value) &&
+                              {pickupSelected &&
                                 checkoutSettings?.pickupAddress?.trim() !==
                                   "" && (
                                   <div className="mb-4 p-3 bg-accent/5 rounded-lg border border-accent/20 text-sm text-primary/80 flex items-start gap-2">
@@ -341,36 +353,52 @@ export default function Step1Availability({ onNext }: { onNext: () => void }) {
                                 )}
 
                               <div
+                                role="radiogroup"
+                                aria-label="Order delivery or pickup method"
                                 className={`grid grid-cols-1 gap-4 ${isDeliveryEnabled ? "sm:grid-cols-2" : ""}`}
                               >
-                                <div
-                                  onClick={() => field.onChange("pickup")}
+                                <label
                                   className={cn(
-                                    "rounded-xl border p-4 cursor-pointer text-center transition-all flex items-center justify-center gap-2",
-                                    field.value === "pickup" || !field.value
+                                    "rounded-xl border p-4 cursor-pointer text-center transition-all flex items-center justify-center gap-2 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-accent has-[:focus-visible]:ring-offset-2",
+                                    pickupSelected
                                       ? "border-accent ring-2 ring-accent/20 bg-accent/5 shadow-sm"
                                       : "border-border hover:border-accent hover:bg-accent/5 bg-white",
                                   )}
                                 >
-                                  <h4 className="font-heading font-bold text-lg text-primary">
+                                  <input
+                                    type="radio"
+                                    name="custom-order-delivery-method"
+                                    value="pickup"
+                                    checked={pickupSelected}
+                                    onChange={() => field.onChange("pickup")}
+                                    className="sr-only"
+                                  />
+                                  <span className="font-heading font-bold text-lg text-primary">
                                     Pickup
-                                  </h4>
-                                </div>
+                                  </span>
+                                </label>
 
                                 {isDeliveryEnabled && (
-                                  <div
-                                    onClick={() => field.onChange("delivery")}
+                                  <label
                                     className={cn(
-                                      "rounded-xl border p-4 cursor-pointer text-center transition-all flex items-center justify-center gap-2",
+                                      "rounded-xl border p-4 cursor-pointer text-center transition-all flex items-center justify-center gap-2 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-accent has-[:focus-visible]:ring-offset-2",
                                       field.value === "delivery"
                                         ? "border-accent ring-2 ring-accent/20 bg-accent/5 shadow-sm"
                                         : "border-border hover:border-accent hover:bg-accent/5 bg-white",
                                     )}
                                   >
-                                    <h4 className="font-heading font-bold text-lg text-primary">
+                                    <input
+                                      type="radio"
+                                      name="custom-order-delivery-method"
+                                      value="delivery"
+                                      checked={field.value === "delivery"}
+                                      onChange={() => field.onChange("delivery")}
+                                      className="sr-only"
+                                    />
+                                    <span className="font-heading font-bold text-lg text-primary">
                                       Delivery
-                                    </h4>
-                                  </div>
+                                    </span>
+                                  </label>
                                 )}
                               </div>
                               {!isDeliveryEnabled && (

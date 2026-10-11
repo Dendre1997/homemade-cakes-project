@@ -73,10 +73,23 @@ const SingleProductPage = () => {
       </div>
     );
 
-    if (fetchError || !product) {
-        if (fetchError === "Product not found") notFound();
-        return <div className="text-center py-xl text-error">Error: {fetchError}</div>;
-  }
+    if (fetchError === "Product not found") {
+        notFound();
+    }
+
+    if (fetchError) {
+        return (
+            <div className="text-center py-xl">
+                <p role="alert" className="text-error">
+                    Error: {fetchError}
+                </p>
+            </div>
+        );
+    }
+
+    if (!product) {
+        notFound();
+    }
   
     return <SingleProductContent product={product} />;
 };
@@ -252,7 +265,7 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
         return {
           id: details?._id || "",
           name: details?.name || "Unknown",
-          servings: `Approx. ${details?.sizeValue || 0} servings`,
+          servings: details?.servings?.trim() || "",
           illustration: getIllustrationForSize(details?.sizeValue || 0),
           imageUrl: details?.imageUrl,
           sizeValue: details?.sizeValue || 0,
@@ -404,7 +417,7 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
            return {
               id: details._id,
               name: details.name,
-              servings: `Approx. ${details.sizeValue} servings`,
+              servings: details.servings?.trim() || "",
               illustration: getIllustrationForSize(details.sizeValue),
               imageUrl: details.imageUrl,
            };

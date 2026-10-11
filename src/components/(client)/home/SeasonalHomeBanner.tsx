@@ -2,7 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Button } from "@/components/ui/Button";
+import { buttonVariants } from "@/components/ui/Button";
+import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { SeasonalEvent } from "@/types";
 
@@ -62,17 +63,18 @@ const SeasonalHomeBanner = ({ activeEvent }: SeasonalHomeBannerProps) => {
             )}
 
             <div className="flex flex-col sm:flex-row gap-4">
-              <Link href={`/specials/${activeEvent.slug}`}>
-                <Button
-                  size="lg"
-                  className="border-none font-bold text-lg shadow-lg hover:scale-105 transition-transform"
-                  style={{
-                    backgroundColor: activeEvent.themeColor,
-                    color: "#fff",
-                  }}
-                >
-                  Explore Collection
-                </Button>
+              <Link
+                href={`/specials/${activeEvent.slug}`}
+                className={cn(
+                  buttonVariants({ size: "lg" }),
+                  "border-none font-bold text-lg shadow-lg hover:scale-105 transition-transform",
+                )}
+                style={{
+                  backgroundColor: activeEvent.themeColor,
+                  color: "#fff",
+                }}
+              >
+                Explore Collection
               </Link>
 
               <div className="flex items-center gap-2 text-sm text-primary font-body bg-accent/10 border border-accent/20 px-4 py-2 rounded-full backdrop-blur-md w-fit shadow-sm">

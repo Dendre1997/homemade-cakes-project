@@ -6,10 +6,11 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import LoadingSpinner from "@/components/ui/Spinner";
 import { Diameter, Flavor, IShape } from "@/types";
-import { Button } from "@/components/ui/Button";
+import { Button, buttonVariants } from "@/components/ui/Button";
 import { Trash2 } from "lucide-react";
 import QuantityStepper from "@/components/ui/QuantityStepper";
 import { OrderItemTiersDisplay } from "@/components/shared/OrderItemTiersDisplay";
+import { cn } from "@/lib/utils";
 
 const CartPage = () => {
   const { items, removeItem, increaseQuantity, decreaseQuantity } = useCartStore();
@@ -87,8 +88,11 @@ const CartPage = () => {
               Your cart is currently empty.
             </p>
             <div className="mt-lg">
-              <Link href="/products">
-                <Button variant="secondary">Return to Catalog</Button>
+              <Link
+                href="/products"
+                className={buttonVariants({ variant: "secondary" })}
+              >
+                Return to Catalog
               </Link>
             </div>
           </div>
@@ -307,10 +311,11 @@ const CartPage = () => {
                   </div>
                 </dl>
                 <div className="mt-lg">
-                  <Link href="/checkout">
-                    <Button variant="primary" className="w-full">
-                      Proceed to Checkout
-                    </Button>
+                  <Link
+                    href="/checkout"
+                    className={cn(buttonVariants({ variant: "primary" }), "w-full")}
+                  >
+                    Proceed to Checkout
                   </Link>
                 </div>
               </div>

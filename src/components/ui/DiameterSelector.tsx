@@ -7,7 +7,7 @@ import Image from "next/image";
 export interface DiameterOption {
   id: string;
   name: string;
-  servings: string;
+  servings?: string;
   illustration: React.FC<React.SVGProps<SVGSVGElement>>;
   imageUrl?: string;
   sizeValue?: number;
@@ -73,9 +73,11 @@ const DiameterSelector = ({
                 <p className="font-body text-body font-bold text-primary">
                   {diameter.name}
                 </p>
-                <p className="font-body text-small text-primary/80">
-                  {diameter.servings}
-                </p>
+                {diameter.servings?.trim() ? (
+                  <p className="font-body text-small text-primary/80">
+                    {diameter.servings.trim()}
+                  </p>
+                ) : null}
               </div>
             </button>
           );

@@ -1,7 +1,8 @@
 import { withMongoClient } from "@/lib/db";
 import { Order, OrderStatus } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
+import { buttonVariants } from "@/components/ui/Button";
+import { cn } from "@/lib/utils";
 import { 
   DollarSign, 
   Clock, 
@@ -162,16 +163,21 @@ export default async function AdminDashboard() {
 
         {/* Quick Actions */}
         <div className="flex gap-3 flex-col md:flex-row">
-          <Link href="/bakery-manufacturing-orders/orders/new" >
-            <Button className="gap-2 shadow-sm">
-              <Plus className="w-4 h-4" /> Manual Order
-            </Button>
+          <Link
+            href="/bakery-manufacturing-orders/orders/new"
+            className={cn(buttonVariants({ variant: "primary" }), "gap-2 shadow-sm")}
+          >
+            <Plus className="w-4 h-4" aria-hidden /> Manual Order
           </Link>
-          <Link href="/bakery-manufacturing-orders/products/create">
-            <Button variant="outline" className="gap-2 shadow-sm bg-white">
-              <Plus className="w-4 h-4" />
-              New Product
-            </Button>
+          <Link
+            href="/bakery-manufacturing-orders/products/create"
+            className={cn(
+              buttonVariants({ variant: "outline" }),
+              "gap-2 shadow-sm bg-white",
+            )}
+          >
+            <Plus className="w-4 h-4" aria-hidden />
+            New Product
           </Link>
         </div>
       </div>

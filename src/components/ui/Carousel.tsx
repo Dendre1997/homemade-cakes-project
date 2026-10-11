@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion, PanInfo } from "framer-motion";
-import { cn } from "@/lib/utils";
+import { cn, focusWithVisibleIndicator } from "@/lib/utils";
 
 interface CarouselProps<T> {
   items: T[];
@@ -22,6 +22,26 @@ export function Carousel<T>({
   const [index, setIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const activeSlideRef = useRef<HTMLDivElement>(null);
+
+  const handleTrackFocusIn = useCallback(() => {
+    setIsPaused(true);
+  }, []);
+
+  const handleTrackFocusOut = useCallback(
+    (event: React.FocusEvent<HTMLDivElement>) => {
+      const related = event.relatedTarget;
+      if (
+        related instanceof Node &&
+        trackRef.current?.contains(related)
+      ) {
+        return;
+      }
+      setIsPaused(false);
+    },
+    [],
+  );
 
   // Helper to map virtual index to actual item index
   const getActualIndex = useCallback(
@@ -62,6 +82,27 @@ export function Carousel<T>({
     return () => clearInterval(timer);
   }, [isPaused, handleNext, autoPlayInterval]);
 
+  useEffect(() => {
+    const track = trackRef.current;
+    const activeSlide = activeSlideRef.current;
+    if (!track || !activeSlide) return;
+
+    const focused = document.activeElement;
+    if (
+      !(focused instanceof HTMLElement) ||
+      !track.contains(focused) ||
+      activeSlide.contains(focused)
+    ) {
+      return;
+    }
+
+    const nextFocusTarget =
+      activeSlide.querySelector<HTMLElement>(
+        'a[href], button:not([disabled])',
+      ) ?? activeSlide;
+    focusWithVisibleIndicator(nextFocusTarget);
+  }, [index]);
+
   const pauseAutoPlay = useCallback(() => setIsPaused(true), []);
   const resumeAutoPlay = useCallback(() => setIsPaused(false), []);
 
@@ -90,7 +131,12 @@ export function Carousel<T>({
       ref={containerRef}
     >
       {/* Track */}
-      <div className="relative w-full h-[400px] md:h-[500px] flex items-center justify-center perspective-1000">
+      <div
+        ref={trackRef}
+        className="relative w-full h-[400px] md:h-[500px] flex items-center justify-center perspective-1000"
+        onFocusCapture={handleTrackFocusIn}
+        onBlurCapture={handleTrackFocusOut}
+      >
         {windowRange.map((offset) => {
           const virtualIndex = index + offset;
           const actualIndex = getActualIndex(virtualIndex);
@@ -100,6 +146,9 @@ export function Carousel<T>({
           return (
             <motion.div
               key={virtualIndex} // Virtual index as key ensures continuity
+              ref={isActive ? activeSlideRef : undefined}
+              inert={isActive ? undefined : true}
+              aria-hidden={!isActive}
               className={cn(
                 "absolute top-0 w-[70%] md:w-[40%] h-full",
                 "flex items-center justify-center",

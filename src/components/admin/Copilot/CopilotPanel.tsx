@@ -1,12 +1,19 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type RefObject,
+} from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, lastAssistantMessageIsCompleteWithApprovalResponses } from "ai";
 import { Mic, Send, Sparkles, Square, TriangleAlert, X } from "lucide-react";
 import type { BakerUIMessage, SendMessageRequest } from "@/lib/ai/uiMessage";
 import { Button } from "@/components/ui/Button";
-import { cn } from "@/lib/utils";
+import { cn, focusWithVisibleIndicator } from "@/lib/utils";
 import CopilotMessage, { CopilotWorkingRow } from "./CopilotMessage";
 import {
   buildThreadPlans,
@@ -59,12 +66,27 @@ const SUGGESTIONS = [
   "Find the order for Sarah",
 ];
 
+/** Copilot toggle stays in the admin header; skip restore if it is not visible/connected. */
+function canRestoreFocusToCopilotToggle(
+  element: HTMLButtonElement | null | undefined
+): element is HTMLButtonElement {
+  if (!element?.isConnected) return false;
+  const style = window.getComputedStyle(element);
+  if (style.visibility === "hidden" || style.display === "none") return false;
+  return element.getClientRects().length > 0;
+}
+
 interface CopilotPanelProps {
   isOpen: boolean;
   onClose: () => void;
+  copilotToggleRef?: RefObject<HTMLButtonElement | null>;
 }
 
-export function CopilotPanel({ isOpen, onClose }: CopilotPanelProps) {
+export function CopilotPanel({
+  isOpen,
+  onClose,
+  copilotToggleRef,
+}: CopilotPanelProps) {
   const [input, setInput] = useState("");
   const [expiredApprovalIds, setExpiredApprovalIds] = useState<Set<string>>(
     () => new Set()
@@ -117,9 +139,44 @@ export function CopilotPanel({ isOpen, onClose }: CopilotPanelProps) {
     lastPlan?.role === "assistant" &&
     Boolean(lastPlan.status || lastPlan.blocks.length > 0 || lastPlan.headline);
 
+  const wasOpenRef = useRef(isOpen);
+  const restoreCopilotToggleOnCloseRef = useRef(false);
+
+  const requestClose = useCallback(() => {
+    const panel = panelRef.current;
+    const active = document.activeElement;
+    restoreCopilotToggleOnCloseRef.current =
+      panel != null &&
+      active instanceof Node &&
+      (panel === active || panel.contains(active));
+    onClose();
+  }, [onClose]);
+
   useEffect(() => {
-    if (isOpen) inputRef.current?.focus();
-  }, [isOpen]);
+    if (isOpen) {
+      focusWithVisibleIndicator(inputRef.current);
+    } else if (wasOpenRef.current) {
+      const panel = panelRef.current;
+      const active = document.activeElement;
+      const focusStillInPanel =
+        panel != null &&
+        active instanceof Node &&
+        panel.contains(active);
+
+      if (restoreCopilotToggleOnCloseRef.current) {
+        restoreCopilotToggleOnCloseRef.current = false;
+        const toggle = copilotToggleRef?.current;
+        if (canRestoreFocusToCopilotToggle(toggle)) {
+          focusWithVisibleIndicator(toggle);
+        } else if (focusStillInPanel && active instanceof HTMLElement) {
+          active.blur();
+        }
+      } else if (focusStillInPanel && active instanceof HTMLElement) {
+        active.blur();
+      }
+    }
+    wasOpenRef.current = isOpen;
+  }, [isOpen, copilotToggleRef]);
 
   useEffect(() => {
     sendGuardRef.current = false;
@@ -147,11 +204,21 @@ export function CopilotPanel({ isOpen, onClose }: CopilotPanelProps) {
   useEffect(() => {
     if (!isOpen) return;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      const panel = panelRef.current;
+      const active = document.activeElement;
+      if (
+        !panel ||
+        !(active instanceof Node) ||
+        !panel.contains(active)
+      ) {
+        return;
+      }
+      requestClose();
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [isOpen, onClose]);
+  }, [isOpen, requestClose]);
 
   useEffect(() => {
     return () => {
@@ -257,21 +324,12 @@ export function CopilotPanel({ isOpen, onClose }: CopilotPanelProps) {
   };
 
   return (
-    <>
-      {/* Backdrop — mobile only, so the panel can sit beside content on desktop */}
-      <div
-        onClick={onClose}
-        aria-hidden="true"
-        className={cn(
-          "fixed inset-0 z-40 bg-primary/30 transition-opacity lg:hidden",
-          isOpen ? "opacity-100" : "pointer-events-none opacity-0"
-        )}
-      />
-
       <aside
+        id="baker-copilot-panel"
         ref={panelRef}
         aria-label="Baker Copilot"
         aria-hidden={!isOpen}
+        inert={isOpen ? undefined : true}
         className={cn(
           "fixed right-0 top-0 z-50 flex h-dvh max-h-dvh w-full flex-col overflow-hidden border-l border-border bg-background",
           "shadow-lg transition-transform duration-300 ease-out sm:w-[420px]",
@@ -294,7 +352,7 @@ export function CopilotPanel({ isOpen, onClose }: CopilotPanelProps) {
             </button>
             <button
               type="button"
-              onClick={onClose}
+              onClick={requestClose}
               aria-label="Close copilot"
               className="rounded-medium p-1 transition-colors hover:bg-subtleBackground"
             >
@@ -441,7 +499,6 @@ export function CopilotPanel({ isOpen, onClose }: CopilotPanelProps) {
           </div>
         </form>
       </aside>
-    </>
   );
 }
 

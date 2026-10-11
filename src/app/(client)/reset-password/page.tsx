@@ -5,7 +5,7 @@ import { auth } from "@/lib/firebase/client";
 import { confirmPasswordReset } from "firebase/auth";
 import Link from "next/link";
 import { Input } from "@/components/ui/Input";
-import { Button } from "@/components/ui/Button";
+import { Button, buttonVariants } from "@/components/ui/Button";
 import LoadingSpinner from "@/components/ui/Spinner";
 
 const ResetPasswordContent = () => {
@@ -132,8 +132,8 @@ const ResetPasswordContent = () => {
         </form>
         <p className="mt-10 text-center text-sm text-gray-500">
           Back to{" "}
-          <Link href="/login">
-            <Button variant="text">Sign In</Button>
+          <Link href="/login" className={buttonVariants({ variant: "text" })}>
+            Sign In
           </Link>
         </p>
       </div>

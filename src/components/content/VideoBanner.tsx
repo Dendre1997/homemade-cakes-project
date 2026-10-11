@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Button } from "@/components/ui/Button";
+import { buttonVariants } from "@/components/ui/Button";
 import { VideoBannerContent } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -25,24 +25,32 @@ export const VideoBanner = ({ content }: VideoBannerProps) => {
         {/* Fallback for browsers that don't support video */}
       </video>
 
-      {/* Overlay - Darkens on hover/mobile to make text readable */}
-      <div 
+      {/* Overlay — always visible below md; on hover-capable md+ hidden until hover or focus within */}
+      <div
         className={cn(
-            "absolute inset-0 flex items-center justify-center transition-all duration-500",
-            // Mobile: Always visible with semi-transparent background
-            "bg-black/30 opacity-100",
-            // Desktop: Hidden by default, fades in on hover
-            "md:bg-black/40 md:opacity-0 md:group-hover:opacity-100"
+          "absolute inset-0 flex items-center justify-center transition-all duration-500",
+          "bg-black/30 md:bg-black/40",
+          "[@media(hover:hover)_and_(min-width:768px)]:opacity-0",
+          "[@media(hover:hover)_and_(min-width:768px)]:group-hover:opacity-100",
+          "[@media(hover:hover)_and_(min-width:768px)]:has-[a:focus]:opacity-100",
         )}
       >
-        <div className="text-center transform transition-transform duration-500 translate-y-0 md:translate-y-4 md:group-hover:translate-y-0">
-          <Link href={content.linkUrl || "/"}>
-            <Button
-              size="lg"
-              className="font-bold text-lg px-8 py-6 shadow-xl hover:scale-105 transition-transform"
-            >
-              {content.buttonText || "Order Now"}
-            </Button>
+        <div
+          className={cn(
+            "text-center transform transition-transform duration-500 translate-y-0",
+            "[@media(hover:hover)_and_(min-width:768px)]:translate-y-4",
+            "[@media(hover:hover)_and_(min-width:768px)]:group-hover:translate-y-0",
+            "[@media(hover:hover)_and_(min-width:768px)]:has-[a:focus]:translate-y-0",
+          )}
+        >
+          <Link
+            href={content.linkUrl || "/"}
+            className={cn(
+              buttonVariants({ size: "lg" }),
+              "font-bold text-lg px-8 py-6 shadow-xl hover:scale-105 transition-transform",
+            )}
+          >
+            {content.buttonText || "Order Now"}
           </Link>
         </div>
       </div>

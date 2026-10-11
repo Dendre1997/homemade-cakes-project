@@ -48,9 +48,10 @@ const DialogContent = React.forwardRef<
         <Button
           variant="secondary"
           size="sm"
+          aria-label="Close"
           className="absolute right-3 top-3 h-8 w-8 p-0 z-50 rounded-full flex items-center justify-center transition hover:opacity-80"
         >
-          ✕
+          <span aria-hidden="true">✕</span>
         </Button>
       </DialogPrimitive.Close>
     </DialogPrimitive.Content>

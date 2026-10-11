@@ -4,7 +4,8 @@ import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ProductWithCategory, Discount } from "@/types";
-import { Button } from "../ui/Button";
+import { buttonVariants } from "../ui/Button";
+import { cn } from "@/lib/utils";
 import { calculateProductPrice } from "@/lib/discountUtils";
 
 interface ProductCardProps {
@@ -90,14 +91,14 @@ const ProductCard = ({ product, validDiscounts = [], linkPrefetch }: ProductCard
                 </>
               )}
             </div>
-            <Button
-              variant="secondary"
-              size="sm"
-              className="px-5 font-semibold group-hover:bg-accent group-hover:text-white transition-all duration-300"
-              aria-label={`Customize ${product.name}`}
+            <span
+              className={cn(
+                buttonVariants({ variant: "secondary", size: "sm" }),
+                "px-5 font-semibold group-hover:bg-accent group-hover:text-white transition-all duration-300",
+              )}
             >
               Order
-            </Button>
+            </span>
           </div>
         </div>
       </div>

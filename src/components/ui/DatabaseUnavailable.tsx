@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Button } from "@/components/ui/Button";
+import { buttonVariants } from "@/components/ui/Button";
 
 interface DatabaseUnavailableProps {
   title?: string;
@@ -16,11 +16,11 @@ export default function DatabaseUnavailable({
         <h1 className="font-heading text-h2 text-primary">{title}</h1>
         <p className="font-body text-body text-primary/80">{message}</p>
         <div className="flex flex-col sm:flex-row gap-sm justify-center pt-sm">
-          <Link href="/">
-            <Button variant="secondary">Go to Homepage</Button>
+          <Link href="/" className={buttonVariants({ variant: "secondary" })}>
+            Go to Homepage
           </Link>
-          <Link href="/products">
-            <Button variant="primary">Browse Catalog</Button>
+          <Link href="/products" className={buttonVariants({ variant: "primary" })}>
+            Browse Catalog
           </Link>
         </div>
       </div>

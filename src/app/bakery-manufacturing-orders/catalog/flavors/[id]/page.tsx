@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Button } from "@/components/ui/Button";
+import { buttonVariants } from "@/components/ui/Button";
 import { ArrowLeft } from "lucide-react";
 
 interface Props {
@@ -14,10 +14,12 @@ export default function EditFlavorPage({ params }: Props) {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Link href="/bakery-manufacturing-orders/catalog?tab=flavors">
-          <Button variant="outline" size="icon">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
+        <Link
+          href="/bakery-manufacturing-orders/catalog?tab=flavors"
+          aria-label="Back to flavors catalog"
+          className={buttonVariants({ variant: "outline", size: "icon" })}
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden />
         </Link>
         <div>
           <h1 className="text-2xl font-bold tracking-tight">

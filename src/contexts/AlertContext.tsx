@@ -2,12 +2,14 @@
 
 import { createContext, useContext, useState, ReactNode, useCallback, useMemo } from "react";
 
-type AlertType = "success" | "error" | "warning" | "info";
+export type AlertType = "success" | "error" | "warning" | "info";
 
 interface AlertState {
   isOpen: boolean;
   message: string | null;
   type: AlertType;
+  /** Bumps on each showAlert so repeated text still triggers a live announcement. */
+  announcementId: number;
 }
 
 interface AlertContextType {
@@ -23,14 +25,25 @@ export const AlertProvider = ({ children }: { children: ReactNode }) => {
     isOpen: false,
     message: null,
     type: "info",
+    announcementId: 0,
   });
 
   const showAlert = useCallback((message: string, type: AlertType) => {
-    setAlertState({ isOpen: true, message, type });
+    setAlertState((prev) => ({
+      isOpen: true,
+      message,
+      type,
+      announcementId: prev.announcementId + 1,
+    }));
   }, []);
 
   const hideAlert = useCallback(() => {
-    setAlertState({ isOpen: false, message: null, type: "info" });
+    setAlertState((prev) => ({
+      isOpen: false,
+      message: null,
+      type: "info",
+      announcementId: prev.announcementId,
+    }));
   }, []);
 
   const contextValue = useMemo(() => ({

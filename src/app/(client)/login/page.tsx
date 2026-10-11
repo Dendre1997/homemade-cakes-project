@@ -2,7 +2,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Button } from "@/components/ui/Button";
+import { Button, buttonVariants } from "@/components/ui/Button";
 import LoadingSpinner from "@/components/ui/Spinner";
 import {
   signInWithGoogle,
@@ -96,7 +96,11 @@ const LoginPageContent = () => {
       </div>
 
       <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-sm space-y-6">
-        {error && <p className="text-sm text-red-600 text-center">{error}</p>}
+        {error && (
+          <p role="alert" className="text-sm text-red-600 text-center">
+            {error}
+          </p>
+        )}
 
         <Button
           id="google-signin-btn"
@@ -134,8 +138,8 @@ const LoginPageContent = () => {
 
         <p className="mt-10 text-center text-sm text-gray-500">
           Don&apos;t have an account?{" "}
-          <Link href="/register">
-            <Button variant="text">Sign up now</Button>
+          <Link href="/register" className={buttonVariants({ variant: "text" })}>
+            Sign up now
           </Link>
         </p>
       </div>

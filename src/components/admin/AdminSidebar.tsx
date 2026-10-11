@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import React from "react";
+import React, { useRef } from "react";
+import * as Dialog from "@radix-ui/react-dialog";
 import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
+import { cn, focusWithVisibleIndicator } from "@/lib/utils";
 import { pusherClient } from "@/lib/pusher-client";
 import {
   LayoutDashboard,
@@ -30,6 +31,7 @@ import {
 interface SidebarProps {
   isOpen: boolean;
   onClose?: () => void;
+  sidebarToggleRef?: React.RefObject<HTMLButtonElement | null>;
 }
 
 // ─── Nav structure: grouped sections ───────────────────────────────────────
@@ -71,31 +73,179 @@ const navSections = [
   },
 ];
 
-// Pinned to the bottom, outside the scrollable nav
 const footerItems = [
   { href: "/bakery-manufacturing-orders/settings", label: "Settings", icon: Settings },
   { href: "/", label: "Back to Storefront", icon: Home },
 ];
 
-// Badge style variants — differentiated but all using your existing palette
 const badgeVariants: Record<string, string> = {
-  orders:  "bg-accent text-white",
-  custom:  "bg-white/20 text-white",
+  orders: "bg-accent text-white",
+  custom: "bg-white/20 text-white",
   support: "bg-accent/60 text-white",
 };
 
-const AdminSidebar = ({ isOpen, onClose }: SidebarProps) => {
+function useIsXlSidebarLayout() {
+  const [isXl, setIsXl] = React.useState(false);
+
+  React.useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1280px)");
+    const update = () => setIsXl(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+
+  return isXl;
+}
+
+type SidebarPanelProps = {
+  pathname: string;
+  onClose?: () => void;
+  showMobileClose: boolean;
+  closeButtonRef?: React.RefObject<HTMLButtonElement | null>;
+  getBadgeCount: (badge?: string) => number;
+};
+
+function AdminSidebarPanel({
+  pathname,
+  onClose,
+  showMobileClose,
+  closeButtonRef,
+  getBadgeCount,
+}: SidebarPanelProps) {
+  return (
+    <>
+      <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-md pb-sm pt-md">
+        <Link
+          href="/bakery-manufacturing-orders"
+          onClick={onClose}
+          className="group flex items-center gap-sm"
+        >
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent/80">
+            <CakeSlice className="h-4 w-4 text-white" aria-hidden />
+          </div>
+          <div className="flex flex-col leading-tight">
+            <span className="font-heading text-lg font-semibold text-white">
+              Baker Panel
+            </span>
+          </div>
+        </Link>
+        {showMobileClose && (
+          <Dialog.Close asChild>
+            <button
+              ref={closeButtonRef}
+              type="button"
+              className="rounded-medium p-1 transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-primary"
+              aria-label="Close sidebar"
+            >
+              <X className="h-5 w-5 text-white/70" aria-hidden />
+            </button>
+          </Dialog.Close>
+        )}
+      </div>
+
+      <nav className="custom-scrollbar flex-1 overflow-y-auto px-sm py-sm">
+        {navSections.map((section) => (
+          <div key={section.label} className="mb-sm">
+            <p className="px-sm pb-xs pt-sm font-body text-[10px] font-semibold uppercase tracking-widest text-white/30">
+              {section.label}
+            </p>
+
+            <ul className="space-y-[2px]">
+              {section.items.map((item) => {
+                const isActive = pathname === item.href;
+                const Icon = item.icon;
+                const badgeCount = getBadgeCount(item.badge);
+
+                return (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      onClick={onClose}
+                      aria-current={isActive ? "page" : undefined}
+                      className={cn(
+                        "flex items-center justify-between gap-sm rounded-medium px-sm py-[7px]",
+                        "font-body text-lg text-white/60 transition-colors",
+                        "hover:bg-white/10 hover:text-white/90",
+                        isActive && "bg-accent/25 text-white",
+                      )}
+                    >
+                      <div className="flex items-center gap-sm">
+                        <Icon
+                          className={cn(
+                            "h-4 w-4 shrink-0 transition-colors",
+                            isActive
+                              ? "text-accent-foreground opacity-90"
+                              : "text-white/40",
+                          )}
+                          aria-hidden
+                        />
+                        <span>{item.label}</span>
+                      </div>
+
+                      {badgeCount > 0 && item.badge && (
+                        <span
+                          className={cn(
+                            "shrink-0 rounded-full px-[7px] py-px text-[11px] font-bold",
+                            badgeVariants[item.badge],
+                          )}
+                        >
+                          {badgeCount}
+                        </span>
+                      )}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ))}
+      </nav>
+
+      <div className="shrink-0 border-t border-white/10 px-sm py-sm">
+        {footerItems.map((item) => {
+          const isActive = pathname === item.href;
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={onClose}
+              aria-current={isActive ? "page" : undefined}
+              className={cn(
+                "flex items-center gap-sm rounded-medium px-sm py-[7px]",
+                "font-body text-lg text-white/40 transition-colors",
+                "hover:bg-white/10 hover:text-white/70",
+                isActive && "text-white/80",
+              )}
+            >
+              <Icon className="h-4 w-4 shrink-0" aria-hidden />
+              <span>{item.label}</span>
+            </Link>
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
+const AdminSidebar = ({ isOpen, onClose, sidebarToggleRef }: SidebarProps) => {
   const pathname = usePathname();
+  const isXlLayout = useIsXlSidebarLayout();
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [totalCustomRequestsCount, setTotalCustomRequestsCount] = React.useState(0);
   const [newOrdersCount, setNewOrdersCount] = React.useState(0);
   const [supportChats, setSupportChats] = React.useState<any[]>([]);
+  const countsInFlightRef = React.useRef(false);
 
   const unreadSupportCount = React.useMemo(
-    () => Array.isArray(supportChats) ? supportChats.filter((c) => c.hasUnread).length : 0,
-    [supportChats]
+    () =>
+      Array.isArray(supportChats)
+        ? supportChats.filter((c) => c.hasUnread).length
+        : 0,
+    [supportChats],
   );
 
-  // Helper: resolve badge count for a given badge key
   const getBadgeCount = (badge?: string): number => {
     if (badge === "orders") return newOrdersCount;
     if (badge === "custom") return totalCustomRequestsCount;
@@ -103,16 +253,11 @@ const AdminSidebar = ({ isOpen, onClose }: SidebarProps) => {
     return 0;
   };
 
-  // ─── Data fetching ────────────────────────────────────────────────────────
-  // Batch in-flight guard: one tick runs custom-orders → orders → chats sequentially;
-  // skip the whole tick if the previous batch has not finished.
-  const countsInFlightRef = React.useRef(false);
-
   React.useEffect(() => {
     const fetchCounts = async () => {
       if (countsInFlightRef.current) {
         console.debug(
-          "[AdminSidebar] Skipping poll; previous badge-count fetch still in flight"
+          "[AdminSidebar] Skipping poll; previous badge-count fetch still in flight",
         );
         return;
       }
@@ -123,7 +268,7 @@ const AdminSidebar = ({ isOpen, onClose }: SidebarProps) => {
         if (customRes.ok) {
           const customOrders = await customRes.json();
           const pendingCustomCount = customOrders.filter(
-            (o: any) => !['converted', 'rejected'].includes(o.status)
+            (o: any) => !["converted", "rejected"].includes(o.status),
           ).length;
           setTotalCustomRequestsCount(pendingCustomCount);
         }
@@ -133,7 +278,7 @@ const AdminSidebar = ({ isOpen, onClose }: SidebarProps) => {
           const orders = await ordersRes.json();
           if (Array.isArray(orders)) {
             const newOrderCount = orders.filter(
-              (o: any) => !["delivered", "cancelled"].includes(o.status)
+              (o: any) => !["delivered", "cancelled"].includes(o.status),
             ).length;
             setNewOrdersCount(newOrderCount);
           }
@@ -158,13 +303,14 @@ const AdminSidebar = ({ isOpen, onClose }: SidebarProps) => {
     return () => clearInterval(interval);
   }, []);
 
-  // ─── Real-time listeners ──────────────────────────────────────────────────
   React.useEffect(() => {
     const handleRead = (e: Event) => {
       const detail = (e as CustomEvent).detail;
       if (detail?.chatId) {
         setSupportChats((prev) =>
-          prev.map((c) => (c._id === detail.chatId ? { ...c, hasUnread: false } : c))
+          prev.map((c) =>
+            c._id === detail.chatId ? { ...c, hasUnread: false } : c,
+          ),
         );
       }
     };
@@ -178,19 +324,23 @@ const AdminSidebar = ({ isOpen, onClose }: SidebarProps) => {
             if (!Array.isArray(prev)) prev = [];
             const exists = prev.some((c) => c._id === data.chatId);
             if (!exists) {
-              fetch("/api/admin/chats").then((res) => res.json()).then(chats => {
+              fetch("/api/admin/chats")
+                .then((res) => res.json())
+                .then((chats) => {
                   if (Array.isArray(chats)) setSupportChats(chats);
-              });
+                });
               return prev;
             }
             return prev.map((c) =>
-              c._id === data.chatId ? { ...c, hasUnread: true } : c
+              c._id === data.chatId ? { ...c, hasUnread: true } : c,
             );
           });
         } else {
-          fetch("/api/admin/chats").then((res) => res.json()).then(chats => {
+          fetch("/api/admin/chats")
+            .then((res) => res.json())
+            .then((chats) => {
               if (Array.isArray(chats)) setSupportChats(chats);
-          });
+            });
         }
       });
     }
@@ -201,121 +351,80 @@ const AdminSidebar = ({ isOpen, onClose }: SidebarProps) => {
     };
   }, []);
 
+  React.useEffect(() => {
+    if (isXlLayout && isOpen) {
+      onClose?.();
+    }
+  }, [isXlLayout, isOpen, onClose]);
+
+  const panelProps: SidebarPanelProps = {
+    pathname,
+    onClose,
+    getBadgeCount,
+    showMobileClose: false,
+  };
+
+  const shellClassName =
+    "flex h-full w-64 flex-col bg-primary text-white shadow-lg";
+
   return (
-    <aside
-      className={cn(
-        "fixed top-0 left-0 z-40 h-full w-64 bg-primary text-white shadow-lg transition-transform duration-300",
-        "transform flex flex-col",
-        isOpen ? "translate-x-0" : "-translate-x-full",
-        "xl:translate-x-0"
-      )}
-    >
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between px-md pt-md pb-sm border-b border-white/10 shrink-0">
-        <Link
-          href="/bakery-manufacturing-orders"
-          onClick={onClose}
-          className="flex items-center gap-sm group"
+    <>
+      <aside
+        className={cn(
+          "fixed left-0 top-0 z-40 hidden h-full xl:flex",
+          shellClassName,
+        )}
+        aria-label="Admin navigation"
+      >
+        <AdminSidebarPanel {...panelProps} />
+      </aside>
+
+      {!isXlLayout && (
+        <Dialog.Root
+          modal
+          open={isOpen}
+          onOpenChange={(open) => {
+            if (!open) onClose?.();
+          }}
         >
-          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-accent/80 shrink-0">
-            <CakeSlice className="h-4 w-4 text-white" />
-          </div>
-          <div className="flex flex-col leading-tight">
-            <span className="font-heading text-lg text-white font-semibold">
-              Baker Panel
-            </span>
-          </div>
-        </Link>
-        <button
-          onClick={onClose}
-          className="rounded-medium p-1 transition-colors hover:bg-white/20 xl:hidden"
-          aria-label="Close sidebar"
-        >
-          <X className="h-5 w-5 text-white/70" />
-        </button>
-      </div>
-
-      {/* ── Scrollable nav ──────────────────────────────────────────────────── */}
-      <nav className="flex-1 overflow-y-auto custom-scrollbar px-sm py-sm">
-        {navSections.map((section) => (
-          <div key={section.label} className="mb-sm">
-            {/* Section label */}
-            <p className="px-sm pt-sm pb-xs text-[10px] font-semibold uppercase tracking-widest text-white/30 font-body">
-              {section.label}
-            </p>
-
-            <ul className="space-y-[2px]">
-              {section.items.map((item) => {
-                const isActive = pathname === item.href;
-                const Icon = item.icon;
-                const badgeCount = getBadgeCount(item.badge);
-
-                return (
-                  <li key={item.href}>
-                    <Link
-                      href={item.href}
-                      onClick={onClose}
-                      className={cn(
-                        "flex items-center justify-between gap-sm rounded-medium px-sm py-[7px]",
-                        "font-body text-lg text-white/60 transition-colors",
-                        "hover:bg-white/10 hover:text-white/90",
-                        isActive && "bg-accent/25 text-white"
-                      )}
-                    >
-                      <div className="flex items-center gap-sm">
-                        <Icon
-                          className={cn(
-                            "h-4 w-4 shrink-0 transition-colors",
-                            isActive ? "text-accent-foreground opacity-90" : "text-white/40"
-                          )}
-                        />
-                        <span>{item.label}</span>
-                      </div>
-
-                      {/* Differentiated badges */}
-                      {badgeCount > 0 && item.badge && (
-                        <span
-                          className={cn(
-                            "text-[11px] font-bold px-[7px] py-px rounded-full shrink-0",
-                            badgeVariants[item.badge]
-                          )}
-                        >
-                          {badgeCount}
-                        </span>
-                      )}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ))}
-      </nav>
-
-      {/* ── Pinned footer ───────────────────────────────────────────────────── */}
-      <div className="shrink-0 border-t border-white/10 px-sm py-sm">
-        {footerItems.map((item) => {
-          const isActive = pathname === item.href;
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onClose}
+          <Dialog.Portal>
+            <Dialog.Overlay
               className={cn(
-                "flex items-center gap-sm rounded-medium px-sm py-[7px]",
-                "font-body text-lg text-white/40 transition-colors",
-                "hover:bg-white/10 hover:text-white/70",
-                isActive && "text-white/80"
+                "fixed inset-0 z-40 bg-black/50 transition-opacity duration-300",
+                "data-[state=open]:opacity-100 data-[state=closed]:opacity-0",
+                "data-[state=closed]:pointer-events-none",
+              )}
+            />
+            <Dialog.Content
+              id="admin-navigation-sidebar"
+              aria-modal={true}
+              aria-describedby={undefined}
+              onOpenAutoFocus={(event) => {
+                event.preventDefault();
+                focusWithVisibleIndicator(closeButtonRef.current);
+              }}
+              onCloseAutoFocus={(event) => {
+                event.preventDefault();
+                focusWithVisibleIndicator(sidebarToggleRef?.current ?? null);
+              }}
+              className={cn(
+                shellClassName,
+                "fixed left-0 top-0 z-50 outline-none",
+                "transition-transform duration-300 ease-in-out",
+                "data-[state=open]:translate-x-0 data-[state=closed]:-translate-x-full",
               )}
             >
-              <Icon className="h-4 w-4 shrink-0" />
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
-      </div>
-    </aside>
+              <Dialog.Title className="sr-only">Admin navigation</Dialog.Title>
+              <AdminSidebarPanel
+                {...panelProps}
+                showMobileClose
+                closeButtonRef={closeButtonRef}
+              />
+            </Dialog.Content>
+          </Dialog.Portal>
+        </Dialog.Root>
+      )}
+    </>
   );
 };
 

@@ -18,7 +18,7 @@ import type {
 import type { DraftSendPhase } from "../composeAnswer";
 import { formatPhoneForMessaging } from "@/lib/messages/draft";
 import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
+import { Button, buttonVariants } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 
 interface DraftMessageCardProps {
@@ -231,12 +231,13 @@ export function DraftMessageCard({
               href={whatsappHref}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-1"
+              className={cn(
+                buttonVariants({ variant: "secondary" }),
+                "flex-1 w-full",
+              )}
             >
-              <Button type="button" variant="secondary" className="w-full">
-                <MessageSquare className="mr-2 h-4 w-4" />
-                WhatsApp
-              </Button>
+              <MessageSquare className="mr-2 h-4 w-4" aria-hidden />
+              WhatsApp
             </a>
           ) : (
             <Button

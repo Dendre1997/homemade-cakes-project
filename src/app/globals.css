@@ -54,3 +54,11 @@
   transform: scale(3);
   transform-origin: center;
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-bounce,
+  .animate-arrow-wiggle,
+  .animate-page-enter {
+    animation: none !important;
+  }
+}

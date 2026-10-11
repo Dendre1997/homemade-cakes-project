@@ -6,7 +6,7 @@ import { auth } from "@/lib/firebase/client";
 import { confirmPasswordReset, verifyPasswordResetCode } from "firebase/auth";
 import Link from "next/link";
 
-import { Button } from "@/components/ui/Button";
+import { Button, buttonVariants } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import LoadingSpinner from "@/components/ui/Spinner";
 
@@ -60,8 +60,11 @@ const AuthActionContent = () => {
         </h2>
         <p className="mt-md font-body text-body text-primary/80">{error}</p>
         <div className="mt-lg">
-          <Link href="/forgot-password">
-            <Button variant="secondary">Request a New Link</Button>
+          <Link
+            href="/forgot-password"
+            className={buttonVariants({ variant: "secondary" })}
+          >
+            Request a New Link
           </Link>
         </div>
       </div>
@@ -78,8 +81,8 @@ const AuthActionContent = () => {
           You can now sign in with your new password.
         </p>
         <div className="mt-lg">
-          <Link href="/login">
-            <Button variant="primary">Go to Login</Button>
+          <Link href="/login" className={buttonVariants({ variant: "primary" })}>
+            Go to Login
           </Link>
         </div>
       </div>

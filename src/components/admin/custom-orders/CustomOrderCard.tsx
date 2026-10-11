@@ -9,9 +9,10 @@ import {
   ScrollText, Layers, Box, Cake
 } from "lucide-react";
 import Image from "next/image";
-import { useState } from "react";
-import { Button } from "@/components/ui/Button";
+import { useId, useState } from "react";
+import { Button, buttonVariants } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { Label } from "@/components/ui/Label";
 import { Textarea } from "@/components/ui/Textarea";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -34,6 +35,8 @@ export const CustomOrderCard = ({ order: rawOrder }: CustomOrderCardProps) => {
 
   const router = useRouter();
   const { showAlert } = useAlert();
+  const agreedPriceFieldId = useId();
+  const rejectReasonFieldId = useId();
   const [agreedPrice, setAgreedPrice] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
@@ -116,6 +119,7 @@ export const CustomOrderCard = ({ order: rawOrder }: CustomOrderCardProps) => {
     e.stopPropagation();
   };
 
+  const requestShortId = order._id.slice(-4).toUpperCase();
   const displayName = order.contact?.name || order.contact?.socialNickname || order.customerName || "Unknown Customer";
   const displayEmail = order.contact?.email || order.customerEmail;
   const displayPhone = order.contact?.phone || order.customerPhone;
@@ -306,29 +310,36 @@ export const CustomOrderCard = ({ order: rawOrder }: CustomOrderCardProps) => {
                     <div className="flex gap-2" onClick={stopPropagation}>
                        <Link
                          href={`/bakery-manufacturing-orders/custom-orders/${order._id}`}
-                         className="flex-1"
+                         className={cn(
+                           buttonVariants({ variant: "primary" }),
+                           "flex-1 w-full h-9 text-xs shadow-sm text-white",
+                         )}
                        >
-                         <Button className="w-full text-white h-9 text-xs shadow-sm">
-                           Quote {items.length} items
-                         </Button>
+                         Quote {items.length} items
                        </Link>
                        <Button
+                         type="button"
                          onClick={(e) => {
                            e.stopPropagation();
                            setIsRejectOpen(true);
                          }}
                          variant="ghost"
                          disabled={isProcessing || isRejecting}
+                         aria-label={`Reject custom request #${requestShortId}`}
                          className="px-3 text-red-500 hover:text-primary hover:bg-subtitleBackground h-9 transition-colors"
                        >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-4 h-4" aria-hidden />
                        </Button>
                     </div>
                  ) : (
                     <>
                        <div className="relative" onClick={stopPropagation}>
+                          <Label htmlFor={agreedPriceFieldId} className="sr-only">
+                            Agreed Price
+                          </Label>
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-semibold text-xs">$</span>
                           <Input 
+                            id={agreedPriceFieldId}
                             type="number" 
                             placeholder="Agreed Price" 
                             value={agreedPrice}
@@ -353,15 +364,17 @@ export const CustomOrderCard = ({ order: rawOrder }: CustomOrderCardProps) => {
                             {isProcessing ? "Finalizing..." : "Convert"}
                           </Button>
                           <Button 
+                            type="button"
                             onClick={(e) => {
                               e.stopPropagation();
                               setIsRejectOpen(true);
                             }}
                             variant="ghost" 
                             disabled={isProcessing || isRejecting}
+                            aria-label={`Reject custom request #${requestShortId}`}
                             className="px-3 text-red-500 hover:text-primary hover:bg-subtitleBackground h-9 transition-colors"
                           >
-                             <Trash2 className="w-4 h-4" />
+                             <Trash2 className="w-4 h-4" aria-hidden />
                           </Button>
                        </div>
                     </>
@@ -431,8 +444,11 @@ export const CustomOrderCard = ({ order: rawOrder }: CustomOrderCardProps) => {
               <span className="block mt-2 font-semibold">All associated reference images will be permanently purged from cloud storage.</span>
               
               <div className="space-y-2 mt-4 text-left">
-                <label className="text-sm font-medium text-primary">Reason for rejection (optional)</label>
+                <Label htmlFor={rejectReasonFieldId} className="text-sm font-medium text-primary">
+                  Reason for rejection (optional)
+                </Label>
                 <Textarea 
+                  id={rejectReasonFieldId}
                   value={rejectReason} 
                   onChange={(e) => setRejectReason(e.target.value)} 
                   placeholder="E.g., We are fully booked for this date."

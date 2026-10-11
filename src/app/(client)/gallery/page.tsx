@@ -513,22 +513,26 @@ function GalleryContent() {
 
               <div className="absolute inset-0 flex items-center justify-between px-md pointer-events-none z-20">
                 <button
+                  type="button"
+                  aria-label="Previous image"
                   onClick={(e) => {
                     e.stopPropagation();
                     handlePrev();
                   }}
-                  className="pointer-events-auto p-2 rounded-full bg-subtleBackground/60 backdrop-blur-md text-primary hover:text-white hover:bg-primary transition-all active:scale-95 hidden md:block"
+                  className="pointer-events-auto p-2 rounded-full bg-subtleBackground/60 backdrop-blur-md text-primary hover:text-white hover:bg-primary transition-all active:scale-95 hidden md:block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
                 >
-                  <ChevronLeft className="h-8 w-8" />
+                  <ChevronLeft className="h-8 w-8" aria-hidden="true" />
                 </button>
                 <button
+                  type="button"
+                  aria-label="Next image"
                   onClick={(e) => {
                     e.stopPropagation();
                     handleNext();
                   }}
-                  className="pointer-events-auto p-2 rounded-full bg-subtleBackground/60 backdrop-blur-md text-primary hover:text-white hover:bg-primary transition-all active:scale-95 hidden md:block"
+                  className="pointer-events-auto p-2 rounded-full bg-subtleBackground/60 backdrop-blur-md text-primary hover:text-white hover:bg-primary transition-all active:scale-95 hidden md:block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
                 >
-                  <ChevronRight className="h-8 w-8" />
+                  <ChevronRight className="h-8 w-8" aria-hidden="true" />
                 </button>
               </div>
             </div>

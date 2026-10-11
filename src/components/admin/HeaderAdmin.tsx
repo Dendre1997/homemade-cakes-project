@@ -1,26 +1,33 @@
 "use client";
 
+import type { RefObject } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/store/authStore";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
 import { Menu, User, LogOut, ExternalLink, Sparkles } from "lucide-react";
-import { Button } from "../ui/Button";
+import { buttonVariants } from "../ui/Button";
 import { cn } from "@/lib/utils";
 
 interface AdminHeaderProps {
   onToggleSidebar: () => void;
   title: string;
+  isSidebarOpen?: boolean;
+  sidebarToggleRef?: RefObject<HTMLButtonElement | null>;
   onToggleCopilot?: () => void;
   isCopilotOpen?: boolean;
+  copilotToggleRef?: RefObject<HTMLButtonElement | null>;
 }
 
 const AdminHeader = ({
   onToggleSidebar,
   title,
+  isSidebarOpen = false,
+  sidebarToggleRef,
   onToggleCopilot,
   isCopilotOpen = false,
+  copilotToggleRef,
 }: AdminHeaderProps) => {
   const { user, isLoading } = useAuthStore();
   const router = useRouter();
@@ -47,11 +54,15 @@ const AdminHeader = ({
       <div className="flex items-center justify-between p-md">
         <div className="flex items-center gap-md">
           <button
+            ref={sidebarToggleRef}
+            type="button"
             onClick={onToggleSidebar}
-            className="xl:hidden rounded-medium p-1 transition-colors hover:bg-subtleBackground"
+            className="xl:hidden rounded-medium p-1 transition-colors hover:bg-subtleBackground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
             aria-label="Toggle sidebar"
+            aria-expanded={isSidebarOpen}
+            aria-controls="admin-navigation-sidebar"
           >
-            <Menu className="h-6 w-6 text-primary" />
+            <Menu className="h-6 w-6 text-primary" aria-hidden />
           </button>
           <h1 className="hidden sm:block font-heading text-h2 text-primary">
             {title}
@@ -62,28 +73,34 @@ const AdminHeader = ({
         <div className="flex items-center gap-md">
           {onToggleCopilot && (
             <button
+              ref={copilotToggleRef}
+              type="button"
               onClick={onToggleCopilot}
               aria-label="Toggle Baker Copilot"
               aria-expanded={isCopilotOpen}
+              aria-controls="baker-copilot-panel"
               className={cn(
-                "inline-flex items-center gap-sm rounded-medium border px-sm py-1 transition-colors",
+                "inline-flex items-center gap-sm rounded-medium border px-sm py-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
                 isCopilotOpen
                   ? "border-accent bg-accent/15 text-accent"
                   : "border-border text-primary hover:border-accent hover:text-accent"
               )}
             >
-              <Sparkles className="h-4 w-4" />
+              <Sparkles className="h-4 w-4" aria-hidden />
               <span className="hidden font-body text-small sm:inline">
                 Copilot
               </span>
             </button>
           )}
 
-          <Link href="/" target="_blank" rel="noopener noreferrer">
-            <Button variant="secondary" size="sm">
-              <ExternalLink className="h-4 w-4 mr-sm" />
-              <span>View Site</span>
-            </Button>
+          <Link
+            href="/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={buttonVariants({ variant: "secondary", size: "sm" })}
+          >
+            <ExternalLink className="h-4 w-4 mr-sm" aria-hidden />
+            <span>View Site</span>
           </Link>
 
           {/* Auth Status */}
@@ -99,8 +116,11 @@ const AdminHeader = ({
               </button>
             </div>
           ) : (
-            <Link href="/bakery-manufacturing-orders/login">
-              <Button>Login</Button>
+            <Link
+              href="/bakery-manufacturing-orders/login"
+              className={buttonVariants({ variant: "primary" })}
+            >
+              Login
             </Link>
           )}
         </div>

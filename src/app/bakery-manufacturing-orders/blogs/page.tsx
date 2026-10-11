@@ -2,7 +2,8 @@ import { Blog } from "@/types";
 import clientPromise from "@/lib/db";
 import Link from "next/link";
 import Image from "next/image";
-import { Button } from "@/components/ui/Button";
+import { buttonVariants } from "@/components/ui/Button";
+import { cn } from "@/lib/utils";
 import { Plus, Edit, Eye } from "lucide-react";
 import { format, isValid } from "date-fns";
 import { isCloudinaryDeliveryUrl } from "@/lib/cloudinaryUtils";
@@ -54,10 +55,11 @@ export default async function AdminBlogsPage() {
           <h1 className="text-3xl font-heading font-bold text-primary">Blog Posts</h1>
           <p className="text-muted-foreground">Manage your articles and news.</p>
         </div>
-        <Link href="/bakery-manufacturing-orders/blogs/new">
-          <Button>
-            <Plus className="mr-2 h-4 w-4" /> Create New Post
-          </Button>
+        <Link
+          href="/bakery-manufacturing-orders/blogs/new"
+          className={buttonVariants({ variant: "primary" })}
+        >
+          <Plus className="mr-2 h-4 w-4" aria-hidden /> Create New Post
         </Link>
       </div>
 
@@ -128,15 +130,28 @@ export default async function AdminBlogsPage() {
                   </td>
                   <td className="p-4 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <Link href={`/blog/${blog.slug}`} target="_blank" title="View Live">
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                          <Eye className="h-4 w-4" />
-                        </Button>
+                      <Link
+                        href={`/blog/${blog.slug}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="View Live"
+                        aria-label={`View live post: ${blog.title}`}
+                        className={cn(
+                          buttonVariants({ variant: "ghost", size: "sm" }),
+                          "h-8 w-8 p-0",
+                        )}
+                      >
+                        <Eye className="h-4 w-4" aria-hidden />
                       </Link>
-                      <Link href={`/bakery-manufacturing-orders/blogs/${blog._id}/edit`}>
-                        <Button variant="secondary" size="sm" className="h-8 w-8 p-0">
-                          <Edit className="h-4 w-4" />
-                        </Button>
+                      <Link
+                        href={`/bakery-manufacturing-orders/blogs/${blog._id}/edit`}
+                        aria-label={`Edit post: ${blog.title}`}
+                        className={cn(
+                          buttonVariants({ variant: "secondary", size: "sm" }),
+                          "h-8 w-8 p-0",
+                        )}
+                      >
+                        <Edit className="h-4 w-4" aria-hidden />
                       </Link>
                     </div>
                   </td>

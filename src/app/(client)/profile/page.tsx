@@ -9,7 +9,8 @@ import ClientOrderCard from "@/components/profile/ClientOrderCard";
 import ProfileLogoutButton from "@/components/profile/ProfileLogoutButton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs";
 import Link from "next/link";
-import { Button } from "@/components/ui/Button";
+import { buttonVariants } from "@/components/ui/Button";
+import { cn } from "@/lib/utils";
 import ProductCard from "@/components/(client)/ProductCard";
 import { ObjectId } from "mongodb";
 import ProfileGuard from "@/components/auth/ProfileGuard";
@@ -175,8 +176,8 @@ export default async function ProfilePage() {
                   ) : (
                       <div className="text-center py-12 bg-white rounded-lg border border-dashed border-gray-300">
                           <p className="text-lg text-gray-500 mb-4">No active orders right now.</p>
-                          <Link href="/products">
-                              <Button>Browse Menu</Button>
+                          <Link href="/products" className={buttonVariants()}>
+                              Browse Menu
                           </Link>
                       </div>
                   )}
@@ -196,8 +197,14 @@ export default async function ProfilePage() {
                   ) : (
                       <div className="text-center py-12 text-gray-500">
                           <p>No past purchases found.</p>
-                          <Link href="/products" className="mt-4 inline-block">
-                              <Button variant="outline">Start Shopping</Button>
+                          <Link
+                              href="/products"
+                              className={cn(
+                                buttonVariants({ variant: "outline" }),
+                                "mt-4",
+                              )}
+                          >
+                              Start Shopping
                           </Link>
                       </div>
                   )}

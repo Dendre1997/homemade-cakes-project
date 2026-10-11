@@ -34,6 +34,10 @@ interface SearchInputProps {
   className?: string;
 }
 
+type SearchOutcome = "none" | "ok" | "empty" | "error";
+
+const SEARCH_FAILED_MESSAGE = "Search failed. Please try again.";
+
 export default function SearchInput({
   onExpandChange,
   onSelect,
@@ -44,10 +48,15 @@ export default function SearchInput({
   const [isLoading, setIsLoading] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [showResults, setShowResults] = useState(false);
+  const [searchStatus, setSearchStatus] = useState("");
+  const [searchOutcome, setSearchOutcome] = useState<SearchOutcome>("none");
 
   const wrapperRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const queryRef = useRef(query);
   const router = useRouter();
+
+  queryRef.current = query;
 
   useEffect(() => {
     onExpandChange?.(isExpanded);
@@ -61,7 +70,9 @@ export default function SearchInput({
       ) {
         setIsExpanded(false);
         setShowResults(false);
-        setQuery("")
+        setQuery("");
+        setSearchStatus("");
+        setSearchOutcome("none");
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -69,38 +80,70 @@ export default function SearchInput({
   }, []);
 
   useEffect(() => {
-    const fetchResults = async () => {
-      if (!query.trim()) {
-        setResults([]);
-        return;
-      }
-      setIsLoading(true);
-      try {
-        const res = await fetch(
-          `/api/products?search=${encodeURIComponent(query)}&limit=10`
-        );
-        if (res.ok) {
-          const data = await res.json();
-          setResults(data.products || []);
-        }
-      } catch (error) {
-        console.error("Error searching products:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    let cancelled = false;
 
     const timeoutId = setTimeout(() => {
-      if (query) {
-        fetchResults();
-        setShowResults(true);
-      } else {
+      const trimmed = query.trim();
+      if (!trimmed) {
         setResults([]);
         setShowResults(false);
+        setSearchStatus("");
+        setSearchOutcome("none");
+        setIsLoading(false);
+        return;
       }
+
+      setShowResults(true);
+
+      const runSearch = async (searchQuery: string) => {
+        setIsLoading(true);
+        try {
+          const res = await fetch(
+            `/api/products?search=${encodeURIComponent(searchQuery)}&limit=10`,
+          );
+          if (cancelled || searchQuery !== queryRef.current.trim()) {
+            return;
+          }
+          if (res.ok) {
+            const data = await res.json();
+            const products: ProductWithCategory[] = data.products || [];
+            setResults(products);
+            if (products.length === 0) {
+              setSearchOutcome("empty");
+              setSearchStatus("No matches found.");
+            } else {
+              setSearchOutcome("ok");
+              setSearchStatus(
+                `${products.length} result${products.length === 1 ? "" : "s"} found.`,
+              );
+            }
+          } else {
+            setResults([]);
+            setSearchOutcome("error");
+            setSearchStatus(SEARCH_FAILED_MESSAGE);
+          }
+        } catch (error) {
+          console.error("Error searching products:", error);
+          if (cancelled || searchQuery !== queryRef.current.trim()) {
+            return;
+          }
+          setResults([]);
+          setSearchOutcome("error");
+          setSearchStatus(SEARCH_FAILED_MESSAGE);
+        } finally {
+          if (!cancelled && searchQuery === queryRef.current.trim()) {
+            setIsLoading(false);
+          }
+        }
+      };
+
+      void runSearch(trimmed);
     }, 300);
 
-    return () => clearTimeout(timeoutId);
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
   }, [query]);
 
   const handleExpand = () => {
@@ -112,6 +155,8 @@ export default function SearchInput({
     setIsExpanded(false);
     setShowResults(false);
     setQuery("");
+    setSearchStatus("");
+    setSearchOutcome("none");
     onSelect?.();
   };
   return (
@@ -126,6 +171,7 @@ export default function SearchInput({
       <div
         className={cn(
           "absolute inset-0 rounded-full border transition-all duration-300 flex items-center bg-white/80 backdrop-blur-sm overflow-hidden",
+          "has-[input:focus-visible]:ring-2 has-[input:focus-visible]:ring-accent has-[input:focus-visible]:ring-offset-2",
           isExpanded
             ? "border-primary/20 shadow-sm w-full"
             : "border-transparent bg-transparent w-10 justify-center cursor-pointer hover:bg-accent",
@@ -134,12 +180,15 @@ export default function SearchInput({
         <button
           type="button"
           onClick={handleExpand}
+          aria-label="Open search"
+          aria-expanded={isExpanded}
           className={cn(
-            "flex items-center justify-center h-10 w-10 text-primary/50 transition-colors z-10 flex-shrink-0",
+            "flex items-center justify-center h-10 w-10 rounded-full text-primary/50 transition-colors z-10 flex-shrink-0",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
             !isExpanded && "hover:text-primary",
           )}
         >
-          <Search className="h-5 w-5" />
+          <Search className="h-5 w-5" aria-hidden />
         </button>
 
         <input
@@ -147,28 +196,34 @@ export default function SearchInput({
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
+          aria-label="Search products"
           placeholder="Search..."
           className={cn(
-            "w-full h-full bg-transparent text-primary placeholder:text-primary/50 text-sm focus:outline-none transition-opacity duration-200",
+            "w-full h-full bg-transparent text-primary placeholder:text-primary/50 text-sm focus-visible:outline-none transition-opacity duration-200",
             isExpanded ? "opacity-100 pr-10" : "opacity-0 pointer-events-none",
           )}
           tabIndex={isExpanded ? 0 : -1}
         />
-        <button
-          onClick={() => {
-            setQuery("");
-            setResults([]);
-            inputRef.current?.focus();
-          }}
-          className={cn(
-            "absolute right-0 h-10 w-10 flex items-center justify-center text-primary/50 hover:text-primary transition-all",
-            isExpanded && query
-              ? "opacity-100 scale-100"
-              : "opacity-0 scale-90 pointer-events-none",
-          )}
-        >
-          <X className="h-4 w-4" />
-        </button>
+        {isExpanded && query ? (
+          <button
+            type="button"
+            aria-label="Clear search"
+            onClick={() => {
+              setQuery("");
+              setResults([]);
+              setSearchStatus("");
+              setSearchOutcome("none");
+              inputRef.current?.focus();
+            }}
+            className="absolute right-0 h-10 w-10 flex items-center justify-center rounded-full text-primary/50 hover:text-primary transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+          >
+            <X className="h-4 w-4" aria-hidden />
+          </button>
+        ) : null}
+      </div>
+
+      <div aria-live="polite" role="status" className="sr-only">
+        {searchStatus}
       </div>
 
       {/* Results Dropdown */}
@@ -179,6 +234,15 @@ export default function SearchInput({
               <div className="p-8 flex flex-col items-center justify-center text-primary/50 gap-2">
                 <Loader2 className="h-6 w-6 animate-spin text-accent" />
                 <span className="text-xs font-medium">Searching...</span>
+              </div>
+            ) : searchOutcome === "error" ? (
+              <div className="p-8 text-center">
+                <p className="font-heading text-primary text-lg mb-1">
+                  {SEARCH_FAILED_MESSAGE}
+                </p>
+                <p className="text-sm text-primary/60">
+                  Check your connection and try again.
+                </p>
               </div>
             ) : results.length > 0 ? (
               <div className="py-2">
@@ -236,7 +300,7 @@ export default function SearchInput({
                   View all results
                 </Link>
               </div>
-            ) : (
+            ) : searchOutcome === "empty" ? (
               <div className="p-8 text-center">
                 <p className="font-heading text-primary text-lg mb-1">
                   No matches found
@@ -245,7 +309,7 @@ export default function SearchInput({
                   Try checking your spelling or use a different keyword.
                 </p>
               </div>
-            )}
+            ) : null}
           </div>
         </div>
       )}

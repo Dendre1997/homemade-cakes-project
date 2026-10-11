@@ -296,6 +296,7 @@ export default function ImagePreviewGallery({
           {images.length > 1 && (
             <button
               type="button"
+              aria-label="Previous image"
               onClick={(e) => {
                 e.stopPropagation();
                 handlePrev();
@@ -304,10 +305,10 @@ export default function ImagePreviewGallery({
                 "hidden md:flex absolute left-4 z-40 p-3 rounded-full",
                 "bg-subtleBackground text-primary transition-all",
                 "hover:bg-primary hover:text-white hover:scale-110 shadow-sm ring-1 ring-border/50",
-                "focus:outline-none focus:ring-2 focus:ring-accent"
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
               )}
             >
-              <ChevronLeft className="w-8 h-8" />
+              <ChevronLeft className="w-8 h-8" aria-hidden="true" />
             </button>
           )}
 
@@ -369,6 +370,7 @@ export default function ImagePreviewGallery({
           {images.length > 1 && (
             <button
               type="button"
+              aria-label="Next image"
               onClick={(e) => {
                 e.stopPropagation();
                 handleNext();
@@ -377,10 +379,10 @@ export default function ImagePreviewGallery({
                 "hidden md:flex absolute right-4 z-40 p-3 rounded-full",
                 "bg-subtleBackground text-primary transition-all",
                 "hover:bg-primary hover:text-white hover:scale-110 shadow-sm ring-1 ring-border/50",
-                "focus:outline-none focus:ring-2 focus:ring-accent"
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
               )}
             >
-              <ChevronRight className="w-8 h-8" />
+              <ChevronRight className="w-8 h-8" aria-hidden="true" />
             </button>
           )}
         </div>

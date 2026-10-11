@@ -8,7 +8,8 @@ import { OrdersToolbar } from "@/components/admin/orders/OrdersToolbar";
 import { OrderCard } from "@/components/admin/orders/OrderCard";
 import { startOfMonth, endOfMonth, format, isSameDay, startOfWeek, endOfWeek, isWithinInterval, startOfDay, isAfter } from "date-fns";
 import Link from "next/link";
-import { Button } from "@/components/ui/Button";
+import { buttonVariants } from "@/components/ui/Button";
+import { cn } from "@/lib/utils";
 import { Plus } from "lucide-react";
 
 // Helper for stable date comparison
@@ -311,11 +312,15 @@ const ManageOrdersPage = () => {
               <h1 className="text-3xl font-bold tracking-tight text-primary">Orders Dashboard</h1>
               <p className="text-muted-foreground">Manage All Orders.</p>
           </div>
-          <Link href="/bakery-manufacturing-orders/orders/new" className="shrink-0">
-                 <Button variant="primary" className="shadow-sm">
-                    <Plus className="w-4 h-4 mr-2" />
-                    <span className="whitespace-nowrap">Add Order</span>
-                 </Button>
+          <Link
+            href="/bakery-manufacturing-orders/orders/new"
+            className={cn(
+              buttonVariants({ variant: "primary" }),
+              "shrink-0 shadow-sm",
+            )}
+          >
+            <Plus className="w-4 h-4 mr-2" aria-hidden />
+            <span className="whitespace-nowrap">Add Order</span>
           </Link>
       </div>
 

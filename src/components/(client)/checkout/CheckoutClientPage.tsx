@@ -5,7 +5,7 @@ import { useCartStore } from "@/lib/store/cartStore";
 import Link from "next/link";
 import { useEffect, useState, useMemo } from "react";
 import SpinnerOverlay from "@/components/ui/SpinnerOverlay";
-import { Button } from "@/components/ui/Button";
+import { Button, buttonVariants } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { cn, createUnitId, extractOriginalItemId } from "../../../lib/utils";
 import { useAlert } from "@/contexts/AlertContext";
@@ -686,8 +686,11 @@ const CheckoutClientPage = ({ isDeliveryEnabled }: CheckoutClientPageProps) => {
               Your cart is empty
             </h2>
             <div className="mt-lg">
-              <Link href="/products">
-                <Button variant="secondary">Continue Shopping &rarr;</Button>
+              <Link
+                href="/products"
+                className={buttonVariants({ variant: "secondary" })}
+              >
+                Continue Shopping &rarr;
               </Link>
             </div>
           </div>
@@ -741,40 +744,58 @@ const CheckoutClientPage = ({ isDeliveryEnabled }: CheckoutClientPageProps) => {
                     <h3 className="mt-lg font-heading text-h3 text-primary">
                       Delivery Method
                     </h3>
-                    <div className={`mt-md grid grid-cols-1 gap-md ${isDeliveryEnabled ? 'sm:grid-cols-2' : ''}`}>
-                      <div
-                        onClick={() =>
-                          setFormData((p) => ({
-                            ...p,
-                            deliveryMethod: "pickup",
-                          }))
-                        }
+                    <div
+                      role="radiogroup"
+                      aria-label="Delivery method"
+                      className={`mt-md grid grid-cols-1 gap-md ${isDeliveryEnabled ? 'sm:grid-cols-2' : ''}`}
+                    >
+                      <label
                         className={cn(
-                          "rounded-medium border p-md cursor-pointer",
+                          "rounded-medium border p-md cursor-pointer has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-accent has-[:focus-visible]:ring-offset-2",
                           formData.deliveryMethod === "pickup"
                             ? "border-accent ring-2 ring-accent"
                             : "border-border"
                         )}
                       >
-                        <h4 className="font-body font-bold">Pickup</h4>
-                      </div>
+                        <input
+                          type="radio"
+                          name="checkout-delivery-method"
+                          value="pickup"
+                          checked={formData.deliveryMethod === "pickup"}
+                          onChange={() =>
+                            setFormData((p) => ({
+                              ...p,
+                              deliveryMethod: "pickup",
+                            }))
+                          }
+                          className="sr-only"
+                        />
+                        <span className="font-body font-bold">Pickup</span>
+                      </label>
                       {isDeliveryEnabled && (
-                      <div
-                        onClick={() =>
-                          setFormData((p) => ({
-                            ...p,
-                            deliveryMethod: "delivery",
-                          }))
-                        }
+                      <label
                         className={cn(
-                          "rounded-medium border p-md cursor-pointer",
+                          "rounded-medium border p-md cursor-pointer has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-accent has-[:focus-visible]:ring-offset-2",
                           formData.deliveryMethod === "delivery"
                             ? "border-accent ring-2 ring-accent"
                             : "border-border"
                         )}
                       >
-                        <h4 className="font-body font-bold">Delivery</h4>
-                      </div>
+                        <input
+                          type="radio"
+                          name="checkout-delivery-method"
+                          value="delivery"
+                          checked={formData.deliveryMethod === "delivery"}
+                          onChange={() =>
+                            setFormData((p) => ({
+                              ...p,
+                              deliveryMethod: "delivery",
+                            }))
+                          }
+                          className="sr-only"
+                        />
+                        <span className="font-body font-bold">Delivery</span>
+                      </label>
                       )}
                     </div>
                     {formData.deliveryMethod === "delivery" && isDeliveryEnabled && (

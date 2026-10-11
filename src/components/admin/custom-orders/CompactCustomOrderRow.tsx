@@ -4,8 +4,9 @@ import { CustomOrder } from "@/types";
 import { summarizeCustomOrderCategories } from "@/lib/customOrderCategory";
 import { format } from "date-fns";
 import { Trash2, ExternalLink } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { Button, buttonVariants } from "@/components/ui/Button";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAlert } from "@/contexts/AlertContext";
@@ -22,6 +23,7 @@ export function CompactCustomOrderRow({ order, type }: Props) {
   const [isRejectOpen, setIsRejectOpen] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
 
+  const requestShortId = order._id.slice(-4).toUpperCase();
   const displayName = order.contact?.name || order.contact?.socialNickname || order.customerName || "Unknown Customer";
   const orderDate = order.date || order.eventDate;
   const categoryLabel =
@@ -81,23 +83,29 @@ export function CompactCustomOrderRow({ order, type }: Props) {
 
       <div className="ml-4 flex items-center gap-2">
         {type === 'converted' && order.convertedOrderId && (
-          <Link href={`/bakery-manufacturing-orders/orders/${order.convertedOrderId}`}>
-            <Button variant="outline" size="sm" className="gap-2">
-               <ExternalLink className="w-4 h-4" />
-               View Order
-            </Button>
+          <Link
+            href={`/bakery-manufacturing-orders/orders/${order.convertedOrderId}`}
+            className={cn(
+              buttonVariants({ variant: "outline", size: "sm" }),
+              "gap-2",
+            )}
+          >
+            <ExternalLink className="w-4 h-4" aria-hidden />
+            View Order
           </Link>
         )}
 
         {type === 'rejected' && (
           <>
             <Button 
+              type="button"
               onClick={() => setIsRejectOpen(true)}
               variant="ghost" 
               disabled={isRejecting}
+              aria-label={`Permanently delete rejected request #${requestShortId}`}
               className="text-red-500 hover:text-red-600 hover:bg-red-50"
             >
-              <Trash2 className="w-4 h-4" />
+              <Trash2 className="w-4 h-4" aria-hidden />
             </Button>
 
             <ConfirmationModal

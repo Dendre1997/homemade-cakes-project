@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCartStore } from "@/lib/store/cartStore";
@@ -23,7 +23,7 @@ import {
   ArrowRight,
   Sparkles,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, focusWithVisibleIndicator } from "@/lib/utils";
 import { clearChatStorage } from "@/lib/chat/chatStorage";
 import { ProductCategory, SeasonalEvent, Collection } from "@/types";
 import HeaderLogo from '@/components/ui/HeaderLogo'
@@ -48,9 +48,6 @@ interface HeaderProps {
   activeSeasonalEvent: SeasonalEvent | null;
   collections: Collection[];
 }
-import { Button } from "@/components/ui/Button";
-
-
 const Header = ({ categories, activeSeasonalEvent, collections }: HeaderProps) => {
   const { user, isLoading, setUser } = useAuthStore();
   const router = useRouter();
@@ -65,18 +62,48 @@ const Header = ({ categories, activeSeasonalEvent, collections }: HeaderProps) =
 
   const [isAtTop, setIsAtTop] = useState(true);
   const [isOverlayOpen, setIsOverlayOpen] = useState(false);
+  const headerRef = useRef<HTMLElement>(null);
+  const revealRef = useRef<HTMLButtonElement>(null);
+  const cartLinkRef = useRef<HTMLAnchorElement>(null);
+  const menuOpenRef = useRef<HTMLButtonElement>(null);
+  const isOverlayOpenRef = useRef(isOverlayOpen);
+  isOverlayOpenRef.current = isOverlayOpen;
+  const headerClosed = !isAtTop && !isOverlayOpen;
 
   useEffect(() => {
     const handleScroll = () => {
-      const currentScrollY = window.scrollY;
-      const atTop = currentScrollY < 10;
-      
-      setIsAtTop(atTop);
-      
+      const atTop = window.scrollY < 10;
 
       if (atTop) {
+        if (document.activeElement === revealRef.current) {
+          const next = headerRef.current?.querySelector<HTMLElement>(
+            "a[href], button:not([disabled])",
+          );
+          if (next) focusWithVisibleIndicator(next);
+          else revealRef.current?.blur();
+        }
         setIsOverlayOpen(false);
+      } else if (!isOverlayOpenRef.current) {
+        const active = document.activeElement;
+        if (
+          active instanceof HTMLElement &&
+          headerRef.current?.contains(active)
+        ) {
+          const reveal = revealRef.current;
+          const wrap = reveal?.parentElement;
+          if (wrap) {
+            wrap.inert = false;
+            wrap.removeAttribute("aria-hidden");
+          }
+          if (reveal) {
+            reveal.tabIndex = 0;
+            reveal.removeAttribute("aria-hidden");
+            focusWithVisibleIndicator(reveal);
+          }
+        }
       }
+
+      setIsAtTop(atTop);
     };
 
 
@@ -118,24 +145,33 @@ const Header = ({ categories, activeSeasonalEvent, collections }: HeaderProps) =
   return (
     <>
       <div
+        inert={isAtTop ? true : undefined}
+        aria-hidden={isAtTop ? true : undefined}
         className={cn(
           "fixed top-0 left-0 right-0 z-50 flex justify-center pointer-events-none transition-opacity duration-300",
           !isAtTop ? "opacity-100" : "opacity-0",
         )}
       >
         <button
+          ref={revealRef}
+          type="button"
+          tabIndex={isAtTop ? -1 : 0}
+          aria-hidden={isAtTop ? true : undefined}
           onClick={() => setIsOverlayOpen(!isOverlayOpen)}
-          className="pointer-events-auto mt-2 flex h-8 w-12 items-center justify-center rounded-b-lg bg-white/90 shadow-md backdrop-blur-sm hover:bg-white transition-colors"
+          className="pointer-events-auto mt-2 flex h-8 w-12 items-center justify-center rounded-b-lg bg-white/90 shadow-md backdrop-blur-sm hover:bg-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
           aria-label={isOverlayOpen ? "Hide Header" : "Show Header"}
         >
           {isOverlayOpen ? (
-            <ChevronUp className="h-5 w-5 text-primary animate-bounce" />
+            <ChevronUp className="h-5 w-5 text-primary animate-bounce" aria-hidden="true" />
           ) : (
-            <ChevronDown className="h-5 w-5 text-primary animate-bounce" />
+            <ChevronDown className="h-5 w-5 text-primary animate-bounce" aria-hidden="true" />
           )}
         </button>
       </div>
       <header
+        ref={headerRef}
+        inert={headerClosed ? true : undefined}
+        aria-hidden={headerClosed ? true : undefined}
         className={cn(
           "transition-all duration-500 ease-in-out z-40 w-full",
           isAtTop && "relative translate-y-0 opacity-100",
@@ -183,6 +219,11 @@ const Header = ({ categories, activeSeasonalEvent, collections }: HeaderProps) =
           .animate-arrow-wiggle {
             animation: arrow-wiggle 1.2s ease-in-out infinite !important;
           }
+          @media (prefers-reduced-motion: reduce) {
+            .animate-arrow-wiggle {
+              animation: none !important;
+            }
+          }
         `}</style>
       </Link>
 
@@ -191,24 +232,26 @@ const Header = ({ categories, activeSeasonalEvent, collections }: HeaderProps) =
 )}
 
           <OfferBar />
-          <MiniCart isOpen={isMiniCartOpen} onClose={closeMiniCart} />
+          <MiniCart
+            isOpen={isMiniCartOpen}
+            onClose={closeMiniCart}
+            returnFocusRef={cartLinkRef}
+          />
 
           <div className="mx-auto max-w-7xl px-lg">
             <div className="relative flex h-20 items-center justify-between">
               <div className="flex items-center gap-md">
                 <button
+                  ref={menuOpenRef}
+                  type="button"
                   onClick={() => setIsMenuOpen(true)}
-                  className="md:hidden"
+                  className="md:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 rounded-md"
                   aria-label="Open menu"
+                  aria-expanded={isMenuOpen}
+                  aria-controls="mobile-navigation-menu"
                 >
                   <Menu className="h-6 w-6 text-primary" />
                 </button>
-                <div className="hidden md:block">
-                  <Link
-                    href="/"
-                    className="font-heading text-h3 text-primary"
-                  ></Link>
-                </div>
                 <div className="flex items-center gap-md justify-end">
                   <SearchInput
                     onExpandChange={setIsSearchExpanded}
@@ -286,8 +329,9 @@ const Header = ({ categories, activeSeasonalEvent, collections }: HeaderProps) =
                 </div>
 
                 <Link
+                  ref={cartLinkRef}
                   href="/cart"
-                  className="relative"
+                  className="relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 rounded-md"
                   aria-label={`Cart with ${itemCount} items`}
                 >
                   <ShoppingBasket className="h-6 w-6 text-primary" />
@@ -312,6 +356,7 @@ const Header = ({ categories, activeSeasonalEvent, collections }: HeaderProps) =
       <MobileMenu
         isOpen={isMenuOpen}
         onClose={() => setIsMenuOpen(false)}
+        menuTriggerRef={menuOpenRef}
         categories={navCategories}
         secondaryLinks={secondaryLinks}
         user={user}

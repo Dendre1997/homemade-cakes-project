@@ -20,7 +20,8 @@ import { OrderNotesSection } from "@/components/admin/orders/OrderNotesSection";
 import { useConfirmation } from "@/contexts/ConfirmationContext";
 import { ReceiptGeneratorModal } from "@/components/admin/orders/ReceiptGeneratorModal";
 import { Receipt, Printer, DollarSign, CheckCircle2, Copy } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { Button, buttonVariants } from "@/components/ui/Button";
+import { cn } from "@/lib/utils";
 import { Flavor } from "@/types";
 interface AvailabilityData {
   leadTimeDays: number;
@@ -828,11 +829,13 @@ const OrderDetailsPage = () => {
               Create a shareable image receipt
             </p>
             <Button
+              type="button"
               onClick={() => setIsReceiptModalOpen(true)}
               variant="outline"
+              aria-label="Preview and download receipt"
               className="w-full font-semibold border-accent/20 bg-accent/5 hover:bg-accent hover:text-white transition-colors text-accent flex items-center justify-center gap-2"
             >
-              <Receipt className="w-4 h-4" />
+              <Receipt className="w-4 h-4" aria-hidden />
               Preview & Download
             </Button>
           </div>
@@ -844,15 +847,15 @@ const OrderDetailsPage = () => {
               <Link
                 href={`/bakery-manufacturing-orders/orders/${order._id.toString()}/print`}
                 target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Print order production details"
+                className={cn(
+                  buttonVariants({ variant: "outline" }),
+                  "w-full font-semibold border-accent/20 bg-accent/5 hover:bg-accent hover:text-white transition-colors text-accent flex items-center justify-center gap-2",
+                )}
               >
-                <Button
-                  onClick={() => setIsReceiptModalOpen(true)}
-                  variant="outline"
-                  className="w-full font-semibold border-accent/20 bg-accent/5 hover:bg-accent hover:text-white transition-colors text-accent flex items-center justify-center gap-2"
-                >
-                  <Printer className="w-4 h-4" />
-                  Print
-                </Button>
+                <Printer className="w-4 h-4" aria-hidden />
+                Print
               </Link>
             </div>
           </div>

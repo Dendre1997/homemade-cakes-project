@@ -7,7 +7,8 @@ import {
   countSerializedRecipeIngredients,
   type SerializedRecipe,
 } from "@/lib/validation/recipe";
-import { Button } from "@/components/ui/Button";
+import { Button, buttonVariants } from "@/components/ui/Button";
+import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/Input";
 import LoadingSpinner from "@/components/ui/Spinner";
 import { useAlert } from "@/contexts/AlertContext";
@@ -107,11 +108,12 @@ export default function AdminRecipesPage() {
             Base recipes for kitchen prep and AI scaling.
           </p>
         </div>
-        <Link href="/bakery-manufacturing-orders/recipes/create">
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            Create New Recipe
-          </Button>
+        <Link
+          href="/bakery-manufacturing-orders/recipes/create"
+          className={buttonVariants({ variant: "primary" })}
+        >
+          <Plus className="mr-2 h-4 w-4" aria-hidden />
+          Create New Recipe
         </Link>
       </div>
 
@@ -189,15 +191,13 @@ export default function AdminRecipesPage() {
                     <div className="flex items-center justify-end gap-2">
                       <Link
                         href={`/bakery-manufacturing-orders/recipes/${recipe._id}/edit`}
+                        aria-label={`Edit recipe ${recipe.name}`}
+                        className={cn(
+                          buttonVariants({ variant: "secondary", size: "sm" }),
+                          "h-8 w-8 p-0",
+                        )}
                       >
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          className="h-8 w-8 p-0"
-                          title="Edit recipe"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
+                        <Edit className="h-4 w-4" aria-hidden />
                       </Link>
                       <Button
                         variant="ghost"

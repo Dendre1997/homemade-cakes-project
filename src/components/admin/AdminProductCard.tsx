@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ProductWithCategory } from "@/types";
-import { Button } from "../ui/Button";
+import { Button, buttonVariants } from "../ui/Button";
 import { Eye, EyeOff, FolderMinus, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -118,15 +118,17 @@ const AdminProductCard = ({
         )}
 
         <div className="mt-auto flex items-center justify-end gap-sm border-t border-border pt-md">
-          <Link href={`/bakery-manufacturing-orders/products/${product._id.toString()}`}>
-            <Button variant="primary" size="sm">
-              View
-            </Button>
+          <Link
+            href={`/bakery-manufacturing-orders/products/${product._id.toString()}`}
+            className={buttonVariants({ variant: "primary", size: "sm" })}
+          >
+            View
           </Link>
-          <Link href={`/bakery-manufacturing-orders/products/${product._id.toString()}/edit`}>
-            <Button variant="secondary" size="sm">
-              Edit
-            </Button>
+          <Link
+            href={`/bakery-manufacturing-orders/products/${product._id.toString()}/edit`}
+            className={buttonVariants({ variant: "secondary", size: "sm" })}
+          >
+            Edit
           </Link>
           <Button
             onClick={() => onDelete(product._id.toString())}

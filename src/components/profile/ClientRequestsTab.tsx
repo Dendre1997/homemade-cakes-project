@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { CustomOrder, CustomOrderItem } from "@/types";
 import { normalizeCustomOrder } from "@/lib/normalizeCustomOrder";
-import { Button } from "@/components/ui/Button";
+import { buttonVariants } from "@/components/ui/Button";
+import { cn } from "@/lib/utils";
 import { OrderItemTiersDisplay } from "@/components/shared/OrderItemTiersDisplay";
 import Link from "next/link";
 import LoadingSpinner from "@/components/ui/Spinner";
@@ -68,8 +69,8 @@ export default function ClientRequestsTab({ userId }: { userId: string }) {
       {pendingRequests.length === 0 && convertedRequests.length === 0 && rejectedRequests.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-lg border border-dashed border-gray-300">
           <p className="text-lg text-gray-500 mb-4">You have no custom order requests.</p>
-          <Link href="/custom-order">
-            <Button>Create a Custom Request</Button>
+          <Link href="/custom-order" className={buttonVariants()}>
+            Create a Custom Request
           </Link>
         </div>
       ) : (
@@ -263,12 +264,16 @@ export default function ClientRequestsTab({ userId }: { userId: string }) {
                       ? `Estimated: ~$${req.approximatePriceTotal.toFixed(2)}`
                       : "Price pending review"}
                   </span>
-                  <Link href={`/custom-order?category=${items[0]?.category ?? req.category ?? ""}`}>
-                     <Button variant="outline" size="sm" className="flex items-center gap-1">
+                  <Link
+                    href={`/custom-order?category=${items[0]?.category ?? req.category ?? ""}`}
+                    className={cn(
+                      buttonVariants({ variant: "outline", size: "sm" }),
+                      "gap-1",
+                    )}
+                  >
                        <PlusCircle className="w-4 h-4" />
                        <span className="hidden sm:inline">Submit Another</span>
                        <span className="sm:hidden">Another</span>
-                     </Button>
                   </Link>
                 </CardFooter>
               </Card>
@@ -289,10 +294,14 @@ export default function ClientRequestsTab({ userId }: { userId: string }) {
                         </p>
                       </div>
                       {req.convertedOrderId ? (
-                        <Link href="#orders">
-                           <Button variant="text" className="text-primary h-auto p-0 flex items-center gap-1 font-semibold">
+                        <Link
+                          href="#orders"
+                          className={cn(
+                            buttonVariants({ variant: "text" }),
+                            "text-primary h-auto p-0 gap-1 font-semibold",
+                          )}
+                        >
                              See Order <ExternalLink className="w-3 h-3" />
-                           </Button>
                         </Link>
                       ) : (
                         <Badge variant="outline" className="text-green-700 bg-green-50 border-green-200">Converted</Badge>
@@ -330,11 +339,15 @@ export default function ClientRequestsTab({ userId }: { userId: string }) {
                         </div>
                       </CardContent>
                       <CardFooter className="bg-red-50/50 border-t border-red-100 p-4 flex justify-end">
-                        <Link href={`/custom-order?category=${req.items?.[0]?.category ?? req.category ?? ""}`}>
-                           <Button variant="outline" size="sm" className="flex items-center gap-1 border-red-200 text-red-700 hover:bg-red-100">
+                        <Link
+                          href={`/custom-order?category=${req.items?.[0]?.category ?? req.category ?? ""}`}
+                          className={cn(
+                            buttonVariants({ variant: "outline", size: "sm" }),
+                            "gap-1 border-red-200 text-red-700 hover:bg-red-100",
+                          )}
+                        >
                              <PlusCircle className="w-4 h-4" />
                              Start New Request
-                           </Button>
                         </Link>
                       </CardFooter>
                     </Card>

@@ -1,24 +1,42 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useCartStore } from "@/lib/store/cartStore";
-import { Button } from "@/components/ui/Button";
+import { buttonVariants } from "@/components/ui/Button";
 import { X, ShoppingBag } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, focusWithVisibleIndicator } from "@/lib/utils";
 import { OrderItemTiersDisplay } from "@/components/shared/OrderItemTiersDisplay";
 
 interface MiniCartProps {
   isOpen: boolean;
   onClose: () => void;
+  returnFocusRef?: { readonly current: HTMLElement | null };
 }
 
 const AUTO_CLOSE_TIME = 10000;
 
-export const MiniCart = ({ isOpen, onClose }: MiniCartProps) => {
+export const MiniCart = ({ isOpen, onClose, returnFocusRef }: MiniCartProps) => {
   const { lastItemAdded } = useCartStore();
   const [timeLeft, setTimeLeft] = useState(AUTO_CLOSE_TIME);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const wasOpen = useRef(isOpen);
+
+  useEffect(() => {
+    if (wasOpen.current && !isOpen) {
+      const active = document.activeElement;
+      if (active instanceof HTMLElement && panelRef.current?.contains(active)) {
+        const target = returnFocusRef?.current;
+        if (target) {
+          focusWithVisibleIndicator(target);
+        } else {
+          active.blur();
+        }
+      }
+    }
+    wasOpen.current = isOpen;
+  }, [isOpen, returnFocusRef]);
 
   useEffect(() => {
     if (isOpen) {
@@ -43,6 +61,9 @@ export const MiniCart = ({ isOpen, onClose }: MiniCartProps) => {
 
   return (
     <div
+      ref={panelRef}
+      inert={isOpen ? undefined : true}
+      aria-hidden={isOpen ? undefined : true}
       className={cn(
         "absolute top-full right-lg z-50 w-80 max-w-sm rounded-medium border border-border bg-card-background shadow-lg transition-all duration-300 ease-in-out overflow-hidden",
         isOpen
@@ -61,8 +82,9 @@ export const MiniCart = ({ isOpen, onClose }: MiniCartProps) => {
         <div className="flex items-center justify-between border-b border-border pb-sm">
           <h4 className="font-heading text-h3 text-primary">Added to Cart</h4>
           <button
+            type="button"
             onClick={onClose}
-            className="p-1 rounded-full text-primary/60 transition-colors hover:bg-subtleBackground hover:text-primary"
+            className="p-1 rounded-full text-primary/60 transition-colors hover:bg-subtleBackground hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
             aria-label="Close cart popover"
           >
             <X className="h-5 w-5" />
@@ -129,15 +151,25 @@ export const MiniCart = ({ isOpen, onClose }: MiniCartProps) => {
             })()}
 
             <div className="mt-md flex gap-sm">
-              <Link href="/cart" onClick={onClose} className="flex-1">
-                <Button variant="secondary" className="w-full">
-                  Go to Cart
-                </Button>
+              <Link
+                href="/cart"
+                onClick={onClose}
+                className={cn(
+                  buttonVariants({ variant: "secondary" }),
+                  "flex-1",
+                )}
+              >
+                Go to Cart
               </Link>
-              <Link href="/checkout" onClick={onClose} className="flex-1">
-                <Button variant="primary" className="w-full">
-                  Checkout
-                </Button>
+              <Link
+                href="/checkout"
+                onClick={onClose}
+                className={cn(
+                  buttonVariants({ variant: "primary" }),
+                  "flex-1",
+                )}
+              >
+                Checkout
               </Link>
             </div>
           </div>

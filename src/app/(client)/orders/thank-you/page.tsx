@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Button } from "@/components/ui/Button";
+import { buttonVariants } from "@/components/ui/Button";
 import LoadingSpinner from "@/components/ui/Spinner";
 import { Order } from "@/types";
 import Image from "next/image";
@@ -59,8 +59,8 @@ const ThankYouPage = () => {
           {error || "We couldn't load your order details."}
         </p>
         <div className="mt-xl">
-          <Link href="/">
-            <Button variant="secondary">Return to Homepage</Button>
+          <Link href="/" className={buttonVariants({ variant: "secondary" })}>
+            Return to Homepage
           </Link>
         </div>
       </div>
@@ -170,8 +170,8 @@ const ThankYouPage = () => {
         </div>
 
         <div className="mt-xl">
-          <Link href="/">
-            <Button variant="secondary">Return to Homepage</Button>
+          <Link href="/" className={buttonVariants({ variant: "secondary" })}>
+            Return to Homepage
           </Link>
         </div>
       </div>

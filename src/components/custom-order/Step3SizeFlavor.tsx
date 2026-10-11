@@ -171,7 +171,7 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
     return filteredDiameters.map(d => ({
       id: d._id,
       name: d.name,
-      servings: d.servings || `Approx. ${d.sizeValue || 0} servings`,
+      servings: d.servings?.trim() || "",
       illustration: getIllustrationForSize(d.sizeValue || 0),
       imageUrl: d.imageUrl,
       sizeValue: d.sizeValue || 0,

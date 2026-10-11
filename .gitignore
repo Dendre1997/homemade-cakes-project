@@ -39,3 +39,8 @@ next-env.d.ts
 cypress/videos/
 cypress/screenshots/
 cypress/downloads/
+
+# local analysis / agent artifacts (root-scoped)
+/ui-audit/
+/project-context/
+/Ctempfilelist.txt

@@ -4,7 +4,7 @@ import { ObjectId } from "mongodb";
 import clientPromise from "@/lib/db";
 import { Blog, Product } from "@/types";
 import EditBlogClient from "./EditBlogClient";
-import { Button } from "@/components/ui/Button";
+import { buttonVariants } from "@/components/ui/Button";
 import { ArrowLeft } from "lucide-react";
 
 async function getProducts() {
@@ -47,10 +47,11 @@ export default async function EditBlogPage({ params }: { params: Promise<{ id: s
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Link href="/bakery-manufacturing-orders/blogs">
-            <Button variant="ghost" size="sm">
-                <ArrowLeft className="mr-2 h-4 w-4" /> Back to List
-            </Button>
+        <Link
+          href="/bakery-manufacturing-orders/blogs"
+          className={buttonVariants({ variant: "ghost", size: "sm" })}
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" aria-hidden /> Back to List
         </Link>
         <h1 className="text-3xl font-heading font-bold text-primary">
           Edit Post

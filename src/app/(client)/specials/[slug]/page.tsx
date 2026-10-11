@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import ProductCard from "@/components/(client)/ProductCard";
-import { Button } from "@/components/ui/Button";
+import { buttonVariants } from "@/components/ui/Button";
 import Link from "next/link";
 import { getSeasonalEventBySlug, getSeasonalProducts } from "@/lib/db/data";
 import { Sparkles } from "lucide-react";
@@ -80,8 +80,11 @@ const SeasonalPage = async ({ params }: PageProps) => {
             <p className="text-xl text-primary/60 mb-6 font-body">
               We are baking something special for this collection. Stay tuned!
             </p>
-            <Link href="/products">
-              <Button variant="primary">View All Products</Button>
+            <Link
+              href="/products"
+              className={buttonVariants({ variant: "primary" })}
+            >
+              View All Products
             </Link>
           </div>
         )}

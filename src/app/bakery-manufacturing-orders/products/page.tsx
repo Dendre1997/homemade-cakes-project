@@ -10,7 +10,8 @@ import {
 } from "@/types";
 import AdminProductCard from "@/components/admin/AdminProductCard";
 import LoadingSpinner from "@/components/ui/Spinner";
-import { Button } from "@/components/ui/Button";
+import { Button, buttonVariants } from "@/components/ui/Button";
+import { cn } from "@/lib/utils";
 import { useConfirmation } from "@/contexts/ConfirmationContext";
 import { useAlert } from "@/contexts/AlertContext";
 import { ContentCard } from "@/components/admin/ContentCard";
@@ -450,13 +451,14 @@ const ManageProductsPage = () => {
             </Button>
           )}
 
-          <Link href="/bakery-manufacturing-orders/products/create" className="w-full sm:w-auto">
-            <Button
-              variant="primary"
-              className="w-full sm:w-auto justify-center"
-            >
-              + Create Product
-            </Button>
+          <Link
+            href="/bakery-manufacturing-orders/products/create"
+            className={cn(
+              buttonVariants({ variant: "primary" }),
+              "w-full sm:w-auto justify-center",
+            )}
+          >
+            + Create Product
           </Link>
         </div>
       </div>

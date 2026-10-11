@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Button } from "@/components/ui/Button";
+import { Button, buttonVariants } from "@/components/ui/Button";
 import {
   signInWithGoogle,
   getGoogleRedirectSignInResult,
@@ -88,7 +88,11 @@ const RegisterPage = () => {
       </div>
 
       <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-sm space-y-6">
-        {error && <p className="text-sm text-red-600 text-center">{error}</p>}
+        {error && (
+          <p role="alert" className="text-sm text-red-600 text-center">
+            {error}
+          </p>
+        )}
 
         <Button
           id="google-signup-btn"
@@ -125,8 +129,8 @@ const RegisterPage = () => {
 
         <p className="mt-10 text-center text-sm text-gray-500">
           Already registered?{" "}
-          <Link href="/login">
-            <Button variant="text">Sign in here</Button>
+          <Link href="/login" className={buttonVariants({ variant: "text" })}>
+            Sign in here
           </Link>
         </p>
       </div>

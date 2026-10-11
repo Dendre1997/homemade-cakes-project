@@ -2,7 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Input } from "@/components/ui/Input";
-import { Button } from "@/components/ui/Button";
+import { Button, buttonVariants } from "@/components/ui/Button";
 import LoadingSpinner from "@/components/ui/Spinner";
 
 const ForgotPasswordPage = () => {
@@ -76,9 +76,19 @@ const ForgotPasswordPage = () => {
             </div>
           </div>
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && (
+            <p role="alert" className="text-sm text-red-600">
+              {error}
+            </p>
+          )}
           {successMessage && (
-            <p className="text-sm text-green-600">{successMessage}</p>
+            <p
+              role="status"
+              aria-live="polite"
+              className="text-sm text-green-600"
+            >
+              {successMessage}
+            </p>
           )}
 
           <div>
@@ -94,8 +104,8 @@ const ForgotPasswordPage = () => {
         </form>
         <p className="mt-10 text-center text-sm text-gray-500">
           Remembered your password?{" "}
-          <Link href="/login">
-            <Button variant="text">Back to Sign In</Button>
+          <Link href="/login" className={buttonVariants({ variant: "text" })}>
+            Back to Sign In
           </Link>
         </p>
       </div>

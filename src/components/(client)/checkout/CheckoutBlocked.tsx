@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { Sparkles, ArrowRight } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { buttonVariants } from "@/components/ui/Button";
+import { cn } from "@/lib/utils";
 
 export default function CheckoutBlocked() {
   return (
@@ -30,22 +31,25 @@ export default function CheckoutBlocked() {
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-          <Link href="/custom-order" className="w-full sm:w-auto">
-            <Button
-              className="w-full sm:w-auto px-8 h-12 text-md rounded-xl shadow-lg shadow-accent/25 hover:shadow-accent/40 bg-accent hover:bg-accent/90 text-white font-semibold flex items-center justify-center gap-2 transition-all active:scale-98"
-            >
-              Create Custom Cake Request
-              <ArrowRight className="w-4 h-4" />
-            </Button>
+          <Link
+            href="/custom-order"
+            className={cn(
+              buttonVariants(),
+              "w-full sm:w-auto px-8 h-12 text-md rounded-xl shadow-lg shadow-accent/25 hover:shadow-accent/40 bg-accent hover:bg-accent/90 text-white font-semibold gap-2 transition-all active:scale-98",
+            )}
+          >
+            Create Custom Cake Request
+            <ArrowRight className="w-4 h-4" />
           </Link>
 
-          <Link href="/gallery" className="w-full sm:w-auto">
-            <Button
-              variant="outline"
-              className="w-full sm:w-auto px-8 h-12 text-md rounded-xl bg-white border border-primary/20 hover:border-accent/40 hover:bg-subtleBackground text-primary/80 font-semibold transition-all active:scale-98"
-            >
-              Browse Gallery
-            </Button>
+          <Link
+            href="/gallery"
+            className={cn(
+              buttonVariants({ variant: "outline" }),
+              "w-full sm:w-auto px-8 h-12 text-md rounded-xl bg-white border border-primary/20 hover:border-accent/40 hover:bg-subtleBackground text-primary/80 font-semibold transition-all active:scale-98",
+            )}
+          >
+            Browse Gallery
           </Link>
         </div>
       </div>

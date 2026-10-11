@@ -12,7 +12,7 @@ import {
   type SerializedRecipe,
 } from "@/lib/validation/recipe";
 import type { Diameter, Flavor, IShape, ProductCategory } from "@/types";
-import { Button } from "@/components/ui/Button";
+import { buttonVariants } from "@/components/ui/Button";
 import LoadingSpinner from "@/components/ui/Spinner";
 import { useAlert } from "@/contexts/AlertContext";
 
@@ -117,11 +117,12 @@ export default function EditRecipePage() {
   if (error || !initialValues) {
     return (
       <div className="space-y-4">
-        <Link href="/bakery-manufacturing-orders/recipes">
-          <Button variant="ghost" size="sm">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Recipes
-          </Button>
+        <Link
+          href="/bakery-manufacturing-orders/recipes"
+          className={buttonVariants({ variant: "ghost", size: "sm" })}
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" aria-hidden />
+          Back to Recipes
         </Link>
         <p className="text-error">{error ?? "Recipe not found."}</p>
       </div>
@@ -131,11 +132,12 @@ export default function EditRecipePage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Link href="/bakery-manufacturing-orders/recipes">
-          <Button variant="ghost" size="sm">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Recipes
-          </Button>
+        <Link
+          href="/bakery-manufacturing-orders/recipes"
+          className={buttonVariants({ variant: "ghost", size: "sm" })}
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" aria-hidden />
+          Back to Recipes
         </Link>
         <h1 className="text-3xl font-heading font-bold text-primary">
           Edit Recipe: {recipeName}

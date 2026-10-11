@@ -1,5 +1,6 @@
 import ClientHeader from "@/components/(client)/layout/header/Header";
 import Footer from "@/components/(client)/layout/Footer";
+import { SkipToMain } from "@/components/(client)/layout/SkipToMain";
 import { getCategories } from "@/lib/data";
 import { getCollections } from "@/lib/db/collections";
 import { getActiveSeasonals } from "@/lib/db/seasonals";
@@ -44,12 +45,13 @@ export default async function ClientLayout({ children }: { children: React.React
 
   return (
     <div className="flex min-h-screen flex-col">
+      <SkipToMain />
       <ClientHeader
         categories={categories}
         activeSeasonalEvent={activeSeasonalEvent}
         collections={collections}
       />
-      <main className="flex-1">
+      <main id="site-main" tabIndex={-1} className="flex-1 outline-none">
         {children}
       </main>
       <Footer />

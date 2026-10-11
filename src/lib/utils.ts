@@ -6,6 +6,12 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+/** Requests a keyboard focus ring when the browser supports FocusOptions.focusVisible. */
+export function focusWithVisibleIndicator(element: HTMLElement | null | undefined) {
+  if (!element) return;
+  element.focus({ focusVisible: true } as FocusOptions);
+}
+
 export function generateSlug(name: string): string {
     return name
         .toLowerCase()
