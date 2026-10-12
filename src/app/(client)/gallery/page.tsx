@@ -3,7 +3,7 @@
 import { Suspense, useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/Dialog";
 import { Button } from "@/components/ui/Button";
@@ -14,6 +14,10 @@ import {
 } from "@/lib/gallery/constants";
 import LoadingSpinner from "@/components/ui/Spinner";
 import GalleryDrillDownItem from "@/components/gallery/GalleryDrillDownItem";
+import { GalleryBackChip } from "@/components/gallery/GalleryBackChip";
+import { GalleryCategoryChipBar } from "@/components/gallery/GalleryCategoryChipBar";
+import { useGalleryCategoryFilters } from "@/components/gallery/useGalleryCategoryFilters";
+import { buildGalleryPath } from "@/lib/gallery/buildGalleryPath";
 import { useAlert } from "@/contexts/AlertContext";
 
 function ExpandableDescription({ text }: { text: string }) {
@@ -49,20 +53,6 @@ function ExpandableDescription({ text }: { text: string }) {
   );
 }
 
-function buildGalleryPath(categoryId: string | null, collectionSlug: string | null) {
-  const params = new URLSearchParams();
-
-  if (categoryId && categoryId !== "all") {
-    params.set("categoryId", categoryId);
-  }
-  if (collectionSlug) {
-    params.set("collection", collectionSlug);
-  }
-
-  const query = params.toString();
-  return query ? `/gallery?${query}` : "/gallery";
-}
-
 function GalleryContent() {
   const { showAlert } = useAlert();
   const router = useRouter();
@@ -73,10 +63,12 @@ function GalleryContent() {
   const activeCategory = categoryId ?? "all";
   const isDrillDown = Boolean(collectionSlug);
 
-  const [categories, setCategories] = useState<ProductCategory[]>([]);
-  const [categoriesWithGallery, setCategoriesWithGallery] = useState<Set<string>>(
-    new Set()
-  );
+  const {
+    categories,
+    categoriesWithGallery,
+    designCountByCategoryId,
+    totalDesignCount,
+  } = useGalleryCategoryFilters();
   const [collectionCards, setCollectionCards] = useState<GalleryCollectionCard[]>([]);
   const [images, setImages] = useState<IGalleryImage[]>([]);
   const [collectionTitle, setCollectionTitle] = useState("");
@@ -92,59 +84,12 @@ function GalleryContent() {
         next.collection !== undefined ? next.collection : collectionSlug;
 
       router.push(
-        buildGalleryPath(
-          nextCategory ?? "all",
-          nextCollection ?? null
-        )
+        buildGalleryPath(nextCategory ?? "all", nextCollection ?? null),
+        { scroll: false },
       );
     },
     [router, categoryId, collectionSlug]
   );
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadCategories() {
-      try {
-        const response = await fetch("/api/categories");
-        if (!response.ok) throw new Error("Failed to load categories");
-
-        const data: ProductCategory[] = await response.json();
-        if (cancelled) return;
-
-        setCategories(data);
-
-        const checks = await Promise.all(
-          data.map(async (category) => {
-            const cardsResponse = await fetch(
-              `/api/gallery/collections?categoryId=${category._id}`
-            );
-            if (!cardsResponse.ok) return null;
-
-            const cards: GalleryCollectionCard[] = await cardsResponse.json();
-            return cards.length > 0 ? category._id : null;
-          })
-        );
-
-        if (!cancelled) {
-          setCategoriesWithGallery(
-            new Set(checks.filter((id): id is string => Boolean(id)))
-          );
-        }
-      } catch (error) {
-        console.error(error);
-        if (!cancelled) {
-          showAlert("Could not load the gallery. Please try again later.", "error");
-        }
-      }
-    }
-
-    loadCategories();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [showAlert]);
 
   useEffect(() => {
     if (isDrillDown) return;
@@ -355,50 +300,27 @@ function GalleryContent() {
       </header>
 
       {!isDrillDown && (
-        <section className="mb-lg overflow-x-auto pb-2 custom-scrollbar no-scrollbar">
-          <div className="flex items-center gap-sm min-w-max">
-            <Button
-              variant={activeCategory === "all" ? "primary" : "secondary"}
-              size="sm"
-              onClick={() =>
-                navigateGallery({ categoryId: null, collection: null })
-              }
-              className="rounded-full px-lg border border-border"
-            >
-              All
-            </Button>
-            {visibleCategories.map((category) => (
-              <Button
-                key={category._id}
-                variant={activeCategory === category._id ? "primary" : "secondary"}
-                size="sm"
-                onClick={() =>
-                  navigateGallery({
-                    categoryId: category._id,
-                    collection: null,
-                  })
-                }
-                className="rounded-full px-lg border border-border"
-              >
-                {category.name}
-              </Button>
-            ))}
-          </div>
+        <section className="mb-lg hidden md:block">
+          <GalleryCategoryChipBar
+            activeCategoryId={activeCategory}
+            categories={visibleCategories}
+            designCountByCategoryId={designCountByCategoryId}
+            totalDesignCount={totalDesignCount}
+            onSelect={(id) =>
+              navigateGallery({ categoryId: id, collection: null })
+            }
+            fadeFromClassName="from-background"
+          />
         </section>
       )}
 
       {isDrillDown ? (
         <>
-          <div className="mb-2 lg:mb-lg">
-            <Button
-              variant="secondary"
-              size="sm"
+          <div className="mb-2 hidden md:block lg:mb-lg">
+            <GalleryBackChip
               onClick={() => navigateGallery({ collection: null })}
-              className="rounded-full px-lg border border-border lg:mb-md"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Collections
-            </Button>
+              className="lg:mb-md"
+            />
             <h2 className="hidden lg:block font-heading text-h2 text-primary">
               {collectionTitle}
             </h2>

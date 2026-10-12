@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { Suspense, useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCartStore } from "@/lib/store/cartStore";
@@ -33,6 +33,7 @@ import CategoryNav from "./CategoryNav";
 import CollectionNav from "./CollectionNav";
 import SearchInput from "./SearchInput";
 import { CatalogDropdown } from "./CatalogDropdown";
+import GalleryMobileNav from "@/components/gallery/GalleryMobileNav";
 
 // Lazy-load off-screen components — never visible on initial paint.
 // This removes ~15KB from the critical JS bundle, reducing main thread work.
@@ -349,6 +350,14 @@ const Header = ({ categories, activeSeasonalEvent, collections }: HeaderProps) =
               <CategoryNav categories={navCategories} />
               <CollectionNav />
             </>
+          )}
+
+          {pathname === "/gallery" && (
+            <div className="block w-full md:hidden">
+              <Suspense fallback={null}>
+                <GalleryMobileNav />
+              </Suspense>
+            </div>
           )}
         </div>
       </header>
