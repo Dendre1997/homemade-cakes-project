@@ -45,7 +45,14 @@ export async function PUT(
 
   try {
     const { id } = await params;
-    const { name, manufacturingTimeInMinutes, imageUrl, basePrice, categoryType } = await request.json();
+    const {
+      name,
+      manufacturingTimeInMinutes,
+      imageUrl,
+      basePrice,
+      categoryType,
+      flavorDisplayOrder,
+    } = await request.json();
 
     if (!name)
       return NextResponse.json({ error: "Name is required" }, { status: 400 });
@@ -91,6 +98,13 @@ export async function PUT(
           imageUrl: finalImageUrl,
           basePrice: Number(basePrice) || 0,
           categoryType: categoryType || 'single',
+          ...(Array.isArray(flavorDisplayOrder)
+            ? {
+                flavorDisplayOrder: flavorDisplayOrder.filter(
+                  (id: unknown): id is string => typeof id === "string",
+                ),
+              }
+            : {}),
         },
       }
     );

@@ -69,11 +69,28 @@ const Header = ({ categories, activeSeasonalEvent, collections }: HeaderProps) =
   const menuOpenRef = useRef<HTMLButtonElement>(null);
   const isOverlayOpenRef = useRef(isOverlayOpen);
   isOverlayOpenRef.current = isOverlayOpen;
+  const lastScrollYRef = useRef(0);
   const headerClosed = !isAtTop && !isOverlayOpen;
 
   useEffect(() => {
     const handleScroll = () => {
-      const atTop = window.scrollY < 10;
+      const currentScrollY = Math.max(0, window.scrollY);
+
+      if (currentScrollY <= 0) {
+        if (document.activeElement === revealRef.current) {
+          const next = headerRef.current?.querySelector<HTMLElement>(
+            "a[href], button:not([disabled])",
+          );
+          if (next) focusWithVisibleIndicator(next);
+          else revealRef.current?.blur();
+        }
+        setIsOverlayOpen(false);
+        setIsAtTop(true);
+        lastScrollYRef.current = 0;
+        return;
+      }
+
+      const atTop = currentScrollY < 10;
 
       if (atTop) {
         if (document.activeElement === revealRef.current) {
@@ -104,6 +121,7 @@ const Header = ({ categories, activeSeasonalEvent, collections }: HeaderProps) =
         }
       }
 
+      lastScrollYRef.current = currentScrollY;
       setIsAtTop(atTop);
     };
 
@@ -176,7 +194,8 @@ const Header = ({ categories, activeSeasonalEvent, collections }: HeaderProps) =
         className={cn(
           "transition-all duration-500 ease-in-out z-40 w-full",
           isAtTop && "relative translate-y-0 opacity-100",
-          !isAtTop && "fixed top-0 left-0 right-0 shadow-md",
+          !isAtTop &&
+            "fixed top-0 left-0 right-0 pt-[env(safe-area-inset-top)] shadow-md",
           !isAtTop && !isOverlayOpen && "-translate-y-full opacity-0",
           !isAtTop && isOverlayOpen && "translate-y-0 opacity-100",
         )}

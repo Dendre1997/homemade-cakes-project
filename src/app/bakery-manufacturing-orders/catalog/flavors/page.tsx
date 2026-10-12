@@ -1,19 +1,87 @@
 "use client";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, type ReactNode } from "react";
 import FlavorForm from "@/components/admin/FlavorForm";
 import { Flavor, ProductCategory } from "@/types";
 import LoadingSpinner from "@/components/ui/Spinner";
 import { Button } from "@/components/ui/Button";
 import { useConfirmation } from "@/contexts/ConfirmationContext";
 import { useAlert } from "@/contexts/AlertContext";
-import { AdminListItem } from "@/components/admin/AdminListItem"; 
+import { AdminListItem } from "@/components/admin/AdminListItem";
+import { FloatingActionBar } from "@/components/admin/FloatingActionBar";
+import { sortFlavorsByDisplayOrder } from "@/lib/utils/sortFlavors";
 import { useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, GripVertical } from "lucide-react";
 import { Input } from "@/components/ui/Input";
+import { cn } from "@/lib/utils";
+import {
+  DndContext,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/Tabs";
 
 type FlavorFormData = Omit<Flavor, "_id">;
+
+const flavorTabClassName = cn(
+  "group relative inline-flex h-11 min-h-11 flex-shrink-0 snap-start items-center justify-center gap-1.5",
+  "whitespace-nowrap rounded-full border border-white/30 bg-white/40 px-4 py-2.5 text-sm font-medium text-primary shadow-sm backdrop-blur-md",
+  "ring-offset-background transition-all duration-150",
+  "data-[state=active]:border-transparent data-[state=active]:bg-accent data-[state=active]:font-bold data-[state=active]:text-white data-[state=active]:shadow-md",
+);
+
+const flavorTabCountClassName =
+  "text-xs tabular-nums text-primary/60 group-data-[state=active]:text-white/90";
+
+function flavorId(flavor: Flavor) {
+  return String(flavor._id);
+}
+
+function dragTransform(
+  transform: { x: number; y: number; scaleX: number; scaleY: number } | null,
+) {
+  if (!transform) return undefined;
+  return `translate3d(${Math.round(transform.x)}px, ${Math.round(transform.y)}px, 0) scaleX(${transform.scaleX}) scaleY(${transform.scaleY})`;
+}
+
+function SortableFlavorRow({
+  id,
+  children,
+}: {
+  id: string;
+  children: ReactNode;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id });
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: dragTransform(transform), transition }}
+      className={cn("flex items-center gap-2", isDragging && "z-10 opacity-90")}
+    >
+      <button
+        type="button"
+        className="shrink-0 cursor-grab touch-none rounded-medium p-1 text-primary/50 hover:bg-subtleBackground hover:text-primary active:cursor-grabbing"
+        aria-label="Drag to reorder"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="h-5 w-5" aria-hidden />
+      </button>
+      <div className="min-w-0 flex-1">{children}</div>
+    </div>
+  );
+}
 
 const ManageFlavorsPage = () => {
   const showConfirmation = useConfirmation();
@@ -25,8 +93,13 @@ const ManageFlavorsPage = () => {
   const [editingFlavor, setEditingFlavor] = useState<Flavor | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
+  const [orderedFlavors, setOrderedFlavors] = useState<Flavor[]>([]);
+  const [isSavingOrder, setIsSavingOrder] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const router = useRouter()
+  const router = useRouter();
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+  );
   
   const fetchFlavors = useCallback(async () => {
     try {
@@ -131,20 +204,145 @@ const ManageFlavorsPage = () => {
     return new Map(categories.map((cat) => [cat._id.toString(), cat.name]));
   }, [categories]);
 
-  const filteredFlavors = useMemo(() => {
-    return flavors.filter((flavor) => {
-      const matchesSearch = flavor.name.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      if (activeTab === "all") {
-        return matchesSearch;
+  const flavorCountByCategoryId = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const flavor of flavors) {
+      for (const categoryId of flavor.categoryIds || []) {
+        counts[categoryId] = (counts[categoryId] ?? 0) + 1;
       }
-      
-      const flavorCategories = flavor.categoryIds || [];
-      const matchesCategory = flavorCategories.includes(activeTab);
-      
-      return matchesSearch && matchesCategory;
+    }
+    return counts;
+  }, [flavors]);
+
+  const activeCategory = useMemo(
+    () =>
+      activeTab === "all"
+        ? null
+        : categories.find((category) => String(category._id) === activeTab) ?? null,
+    [activeTab, categories],
+  );
+
+  const categoryFlavors = useMemo(() => {
+    if (!activeCategory) return [];
+    return flavors.filter((flavor) =>
+      (flavor.categoryIds || []).includes(activeTab),
+    );
+  }, [flavors, activeCategory, activeTab]);
+
+  const baselineFlavors = useMemo(
+    () =>
+      sortFlavorsByDisplayOrder(
+        categoryFlavors,
+        activeCategory?.flavorDisplayOrder,
+      ),
+    [categoryFlavors, activeCategory],
+  );
+
+  useEffect(() => {
+    setOrderedFlavors(baselineFlavors);
+  }, [baselineFlavors]);
+
+  const isCategoryOrderMode = activeTab !== "all";
+  const canReorder = isCategoryOrderMode && searchQuery.trim().length === 0;
+
+  const visibleFlavors = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    const source = isCategoryOrderMode ? orderedFlavors : flavors;
+    return source.filter((flavor) => {
+      const matchesSearch = flavor.name.toLowerCase().includes(query);
+      if (!isCategoryOrderMode) return matchesSearch;
+      return matchesSearch;
     });
-  }, [flavors, searchQuery, activeTab]);
+  }, [flavors, orderedFlavors, searchQuery, isCategoryOrderMode]);
+
+  const isOrderDirty = useMemo(() => {
+    if (!isCategoryOrderMode) return false;
+    const current = orderedFlavors.map(flavorId).join("|");
+    const baseline = baselineFlavors.map(flavorId).join("|");
+    return current !== baseline;
+  }, [isCategoryOrderMode, orderedFlavors, baselineFlavors]);
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    setOrderedFlavors((items) => {
+      const oldIndex = items.findIndex((flavor) => flavorId(flavor) === String(active.id));
+      const newIndex = items.findIndex((flavor) => flavorId(flavor) === String(over.id));
+      if (oldIndex < 0 || newIndex < 0) return items;
+      return arrayMove(items, oldIndex, newIndex);
+    });
+  };
+
+  const handleDiscardOrder = () => {
+    setOrderedFlavors(baselineFlavors);
+  };
+
+  const renderFlavorItem = (flavor: Flavor) => {
+    const categoryNames = (flavor.categoryIds || [])
+      .map((id) => categoryMap.get(id))
+      .filter(Boolean)
+      .join(", ");
+
+    const partialCategoryIds = (flavor.categoryIds || [])
+      .map((id) => `...${id.slice(-4)}`)
+      .join(", ");
+
+    const detailsForModal = {
+      ...flavor,
+      price: `$${flavor.price.toFixed(2)}`,
+      categories: categoryNames || "None",
+      categoryIds: partialCategoryIds || "None",
+      _id: undefined,
+    };
+
+    return (
+      <AdminListItem
+        title={flavor.name}
+        description={`$${flavor.price.toFixed(2)}`}
+        imageUrl={flavor.imageUrl}
+        details={detailsForModal}
+        onEdit={() => setEditingFlavor(flavor)}
+        onDelete={() => handleDelete(flavorId(flavor), flavor.name)}
+      />
+    );
+  };
+
+  const handleSaveOrder = async () => {
+    if (!activeCategory) return;
+    setIsSavingOrder(true);
+    try {
+      const flavorDisplayOrder = orderedFlavors.map(flavorId);
+      const response = await fetch(
+        `/api/admin/categories/${activeTab}/flavor-order`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ flavorDisplayOrder }),
+        },
+      );
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to save flavor order");
+      }
+
+      setCategories((prev) =>
+        prev.map((category) =>
+          String(category._id) === activeTab
+            ? { ...category, flavorDisplayOrder }
+            : category,
+        ),
+      );
+      showAlert("Flavor order saved", "success");
+    } catch (err: unknown) {
+      showAlert(
+        err instanceof Error ? err.message : "Failed to save flavor order",
+        "error",
+      );
+    } finally {
+      setIsSavingOrder(false);
+    }
+  };
 
 
   return (
@@ -193,15 +391,35 @@ const ManageFlavorsPage = () => {
             Existing Flavors
           </h2>
 
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-4">
-             <TabsList className="w-full flex-wrap h-auto">
-                <TabsTrigger value="all">All</TabsTrigger>
-                {categories.map((cat) => (
-                   <TabsTrigger key={cat._id} value={cat._id}>
-                      {cat.name}
-                   </TabsTrigger>
-                ))}
-             </TabsList>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="relative mb-4">
+            <TabsList
+              className={cn(
+                "flex h-auto w-full flex-nowrap items-center justify-start gap-2 overflow-x-auto rounded-none bg-transparent p-0 py-2",
+                "no-scrollbar snap-x snap-mandatory",
+                "sm:flex-wrap sm:justify-center sm:overflow-visible",
+              )}
+            >
+              <TabsTrigger value="all" className={flavorTabClassName}>
+                All
+                <span className={flavorTabCountClassName}>({flavors.length})</span>
+              </TabsTrigger>
+              {categories.map((cat) => (
+                <TabsTrigger
+                  key={cat._id}
+                  value={String(cat._id)}
+                  className={flavorTabClassName}
+                >
+                  {cat.name}
+                  <span className={flavorTabCountClassName}>
+                    ({flavorCountByCategoryId[String(cat._id)] ?? 0})
+                  </span>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-background to-transparent sm:hidden"
+            />
           </Tabs>
 
           <div className="mb-4">
@@ -212,52 +430,59 @@ const ManageFlavorsPage = () => {
             />
           </div>
           {error && <p className="text-error">Error: {error}</p>}
+          {canReorder && (
+            <p className="mb-3 font-body text-small text-primary/70">
+              Drag flavors to set the order customers see for this category.
+            </p>
+          )}
+          {isCategoryOrderMode && searchQuery.trim().length > 0 && (
+            <p className="mb-3 font-body text-small text-primary/70">
+              Clear search to reorder flavors.
+            </p>
+          )}
           <div className="space-y-md">
             {isLoading ? (
               <div className="flex justify-center items-center p-xl">
                 <h1>Loading Flavors...</h1>
               </div>
-            ) : filteredFlavors.length === 0 ? (
+            ) : visibleFlavors.length === 0 ? (
               <p className="font-body text-primary/80 text-center p-lg">
                 No flavors found matching your search.
               </p>
+            ) : canReorder ? (
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext
+                  items={visibleFlavors.map(flavorId)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="space-y-md">
+                    {visibleFlavors.map((flavor) => (
+                      <SortableFlavorRow key={flavorId(flavor)} id={flavorId(flavor)}>
+                        {renderFlavorItem(flavor)}
+                      </SortableFlavorRow>
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
             ) : (
-              filteredFlavors.map((flavor) => {
-                const categoryNames = (flavor.categoryIds || [])
-                  .map((id) => categoryMap.get(id))
-                  .filter(Boolean)
-                  .join(", ");
-
-                const partialCategoryIds = (flavor.categoryIds || [])
-                  .map((id) => `...${id.slice(-4)}`)
-                  .join(", ");
-                
-                const detailsForModal = {
-                  ...flavor,
-                  price: `$${flavor.price.toFixed(2)}`,
-                  categories: categoryNames || "None",
-                  categoryIds: partialCategoryIds || "None",
-                  _id: undefined,
-                };
-
-                return (
-                  <AdminListItem
-                    key={flavor._id.toString()}
-                    title={flavor.name}
-                    description={`$${flavor.price.toFixed(2)}`}
-                    imageUrl={flavor.imageUrl}
-                    details={detailsForModal}
-                    onEdit={() => setEditingFlavor(flavor)}
-                    onDelete={() =>
-                      handleDelete(flavor._id.toString(), flavor.name)
-                    }
-                  />
-                );
-              })
+              visibleFlavors.map((flavor) => (
+                <div key={flavorId(flavor)}>{renderFlavorItem(flavor)}</div>
+              ))
             )}
           </div>
         </div>
       </div>
+
+      <FloatingActionBar
+        isDirty={isOrderDirty}
+        isSaving={isSavingOrder}
+        onDiscard={handleDiscardOrder}
+        onSave={handleSaveOrder}
+      />
     </section>
   );
 };

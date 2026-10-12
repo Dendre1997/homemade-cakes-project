@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { findCategoryForCustomOrderItem } from "@/lib/customOrderCategory";
+import { sortFlavorsByDisplayOrder } from "@/lib/utils/sortFlavors";
 import { IShape, CakeTierSelection } from "@/types";
 
 import { FourInchBentoIcon } from "@/components/icons/cake-sizes/FourInchBentoIcon";
@@ -136,10 +137,14 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
 
   const filteredFlavors = useMemo(() => {
     if (!activeCategoryId) return [];
-    return allFlavors.filter((f: any) => 
+    const filtered = allFlavors.filter((f: any) =>
        Array.isArray(f.categoryIds) && f.categoryIds.includes(activeCategoryId)
     );
-  }, [allFlavors, activeCategoryId]);
+    return sortFlavorsByDisplayOrder(
+      filtered,
+      activeCategoryObj?.flavorDisplayOrder,
+    );
+  }, [allFlavors, activeCategoryId, activeCategoryObj]);
 
   // Specific Flavor Segregations for Combo Sets
   const bentoCategoryId = useMemo(() => {
@@ -155,17 +160,25 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
 
   const bentoFlavors = useMemo(() => {
     if (!bentoCategoryId) return filteredFlavors; // Fallback to category defaults
-    return allFlavors.filter((f: any) => 
+    const filtered = allFlavors.filter((f: any) =>
        Array.isArray(f.categoryIds) && f.categoryIds.includes(bentoCategoryId)
     );
-  }, [allFlavors, bentoCategoryId, filteredFlavors]);
+    const displayOrder = categories.find(
+      (category) => String(category._id) === String(bentoCategoryId),
+    )?.flavorDisplayOrder;
+    return sortFlavorsByDisplayOrder(filtered, displayOrder);
+  }, [allFlavors, bentoCategoryId, filteredFlavors, categories]);
 
   const treatFlavors = useMemo(() => {
     if (!treatsCategoryId) return filteredFlavors; // Fallback to category defaults
-    return allFlavors.filter((f: any) => 
+    const filtered = allFlavors.filter((f: any) =>
        Array.isArray(f.categoryIds) && f.categoryIds.includes(treatsCategoryId)
     );
-  }, [allFlavors, treatsCategoryId, filteredFlavors]);
+    const displayOrder = categories.find(
+      (category) => String(category._id) === String(treatsCategoryId),
+    )?.flavorDisplayOrder;
+    return sortFlavorsByDisplayOrder(filtered, displayOrder);
+  }, [allFlavors, treatsCategoryId, filteredFlavors, categories]);
 
   const displayableDiameters: DiameterOption[] = useMemo(() => {
     return filteredDiameters.map(d => ({

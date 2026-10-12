@@ -189,6 +189,8 @@ export interface ProductCategory {
   imageUrl: string;
   basePrice?: number;
   categoryType?: 'single' | 'set' | 'combo';
+  /** Ordered flavor ids for public custom-order display. Unlisted flavors sort after these, by name. */
+  flavorDisplayOrder?: string[];
 }
 
 export interface ProductWithCategory extends Product {

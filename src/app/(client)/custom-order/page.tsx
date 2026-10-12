@@ -13,6 +13,7 @@ import { Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import LoadingSpinner from "@/components/ui/Spinner";
 import { FlavorCarousel } from "@/components/(client)/home/flavors/FlavorCarousel";
+import { sortFlavorsByDisplayOrder } from "@/lib/utils/sortFlavors";
 import { useAuthStore } from "@/lib/store/authStore";
 
 // Steps
@@ -234,10 +235,14 @@ function CustomOrderContent() {
 
   const filteredFlavors = useMemo(() => {
     if (!activeCategoryId) return [];
-    return flavors.filter((f: any) => 
+    const filtered = flavors.filter((f: any) =>
        Array.isArray(f.categoryIds) && f.categoryIds.includes(activeCategoryId)
     );
-  }, [flavors, activeCategoryId]);
+    return sortFlavorsByDisplayOrder(
+      filtered,
+      activeCategoryObj?.flavorDisplayOrder,
+    );
+  }, [flavors, activeCategoryId, activeCategoryObj]);
 
   const handleFlavorInfoClick = (flavorId: string) => {
     setCarouselFocusRequest({ id: flavorId, ts: Date.now() });

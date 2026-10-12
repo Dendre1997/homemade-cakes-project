@@ -1,6 +1,7 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
-import { ProductCategory } from "@/types";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
+import { Flavor, ProductCategory } from "@/types";
 import { slugify } from "@/lib/utils";
 import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
@@ -50,7 +51,9 @@ const CategoryForm = ({
     imageUrl: "",
     basePrice: 0,
     categoryType: "single" as "single" | "set" | "combo",
+    flavorDisplayOrder: [] as string[],
   });
+  const [categoryFlavors, setCategoryFlavors] = useState<Flavor[]>([]);
 
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -69,6 +72,7 @@ const CategoryForm = ({
         imageUrl: existingCategory.imageUrl || "",
         basePrice: existingCategory.basePrice || 0,
         categoryType: existingCategory.categoryType || "single",
+        flavorDisplayOrder: existingCategory.flavorDisplayOrder || [],
       });
     } else if (!isSubmitting) {
       setFormData({
@@ -78,9 +82,72 @@ const CategoryForm = ({
         imageUrl: "",
         basePrice: 0,
         categoryType: "single" as "single" | "set" | "combo",
+        flavorDisplayOrder: [],
       });
+      setCategoryFlavors([]);
     }
   }, [existingCategory, isSubmitting]);
+
+  useEffect(() => {
+    if (!existingCategory?._id) return;
+
+    let cancelled = false;
+    const categoryId = String(existingCategory._id);
+    const savedOrder = (existingCategory.flavorDisplayOrder || []).map(String);
+
+    async function loadFlavors() {
+      try {
+        const response = await fetch("/api/admin/flavors");
+        if (!response.ok) return;
+        const flavors: Flavor[] = await response.json();
+        if (cancelled) return;
+
+        const belonging = flavors.filter((flavor) =>
+          (flavor.categoryIds || []).map(String).includes(categoryId),
+        );
+        setCategoryFlavors(belonging);
+
+        setFormData((prev) => {
+          const belongingIds = new Set(belonging.map((flavor) => String(flavor._id)));
+          const ordered = savedOrder.filter((id) => belongingIds.has(id));
+          const missing = belonging
+            .filter((flavor) => !ordered.includes(String(flavor._id)))
+            .sort((a, b) => a.name.localeCompare(b.name))
+            .map((flavor) => String(flavor._id));
+          return { ...prev, flavorDisplayOrder: [...ordered, ...missing] };
+        });
+      } catch (error) {
+        console.error("Failed to load flavors for category order", error);
+      }
+    }
+
+    loadFlavors();
+    return () => {
+      cancelled = true;
+    };
+  }, [existingCategory]);
+
+  const orderedFlavors = useMemo(() => {
+    const byId = new Map(
+      categoryFlavors.map((flavor) => [String(flavor._id), flavor]),
+    );
+    return formData.flavorDisplayOrder
+      .map((id) => byId.get(id))
+      .filter((flavor): flavor is Flavor => Boolean(flavor));
+  }, [categoryFlavors, formData.flavorDisplayOrder]);
+
+  const moveFlavor = (index: number, direction: -1 | 1) => {
+    setFormData((prev) => {
+      const nextIndex = index + direction;
+      if (nextIndex < 0 || nextIndex >= prev.flavorDisplayOrder.length) {
+        return prev;
+      }
+      const nextOrder = [...prev.flavorDisplayOrder];
+      const [moved] = nextOrder.splice(index, 1);
+      nextOrder.splice(nextIndex, 0, moved);
+      return { ...prev, flavorDisplayOrder: nextOrder };
+    });
+  };
 
   useEffect(() => {
     if (!existingCategory) {
@@ -292,6 +359,54 @@ const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
           </Button>
         </div>
       </div>
+
+      {existingCategory && (
+        <div className="space-y-sm">
+          <p className="font-body text-small text-primary">Flavor Display Order</p>
+          <p className="text-xs text-primary/60">
+            Order shown to customers for this category only. Flavors not listed
+            here appear after these, alphabetically.
+          </p>
+          {orderedFlavors.length === 0 ? (
+            <p className="text-xs text-primary/60">
+              No flavors are assigned to this category yet.
+            </p>
+          ) : (
+            <ul className="space-y-xs">
+              {orderedFlavors.map((flavor, index) => (
+                <li
+                  key={String(flavor._id)}
+                  className="flex items-center justify-between gap-sm rounded-medium border border-border px-sm py-xs"
+                >
+                  <span className="font-body text-small text-primary">
+                    {flavor.name}
+                  </span>
+                  <span className="flex shrink-0 items-center gap-1">
+                    <button
+                      type="button"
+                      aria-label={`Move ${flavor.name} up`}
+                      disabled={index === 0}
+                      onClick={() => moveFlavor(index, -1)}
+                      className="rounded-medium p-1 text-primary hover:bg-subtleBackground disabled:opacity-30"
+                    >
+                      <ChevronUp className="h-4 w-4" aria-hidden />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={`Move ${flavor.name} down`}
+                      disabled={index === orderedFlavors.length - 1}
+                      onClick={() => moveFlavor(index, 1)}
+                      className="rounded-medium p-1 text-primary hover:bg-subtleBackground disabled:opacity-30"
+                    >
+                      <ChevronDown className="h-4 w-4" aria-hidden />
+                    </button>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       <div>
         <Button
