@@ -18,34 +18,54 @@ if (!process.env.MONGODB_URI) {
 }
 
 const uri = process.env.MONGODB_URI;
+// Tuned for Vercel functions, which are frozen between invocations: no background
+// pool maintenance across freezes, idle sockets dropped before they go stale, and a
+// server-selection window long enough for a full TLS/SCRAM re-handshake to Atlas.
 const options = {
-  maxPoolSize: 3,            // Shared Atlas tier: limit per serverless instance
-  minPoolSize: 1,            // Keep one warm socket per active instance
-  connectTimeoutMS: 15000,   // Prevent timing out on cold starts
-  socketTimeoutMS: 45000,
-  serverSelectionTimeoutMS: 5000,
-  maxIdleTimeMS: 120000,     // Outlast pauses between admin clicks (avoids TLS/SCRAM re-handshakes)
+  maxPoolSize: 10,                  // Fluid compute: several concurrent requests per instance
+  minPoolSize: 0,
+  maxIdleTimeMS: 60_000,
+  connectTimeoutMS: 10_000,
+  socketTimeoutMS: 30_000,
+  serverSelectionTimeoutMS: 10_000, // Must stay below MONGO_OPERATION_DEADLINE_MS
   // Cap pool checkout waits — default 0 waits forever and caused 300s Vercel timeouts
   waitQueueTimeoutMS: MONGO_WAIT_QUEUE_TIMEOUT_MS,
 };
-
-let clientPromise: Promise<MongoClient>;
 
 const globalWithMongo = global as typeof globalThis & {
   _mongoClientPromise?: Promise<MongoClient>;
 };
 
-if (!globalWithMongo._mongoClientPromise) {
+function createClientPromise(): Promise<MongoClient> {
   const client = new MongoClient(uri, options);
   const promise = client.connect();
-  // Clear cache on failure so the next request creates a fresh connection
   promise.catch((err) => {
-    console.error('[MongoDB] Connection failed, clearing cache:', err);
-    globalWithMongo._mongoClientPromise = undefined;
+    console.error('[MongoDB] Connection failed, resetting client:', err);
+    // Only reset if a newer client has not already replaced this one.
+    if (globalWithMongo._mongoClientPromise === promise) {
+      globalWithMongo._mongoClientPromise = undefined;
+    }
+    client.close().catch(() => {});
   });
-  globalWithMongo._mongoClientPromise = promise;
+  return promise;
 }
-clientPromise = globalWithMongo._mongoClientPromise!;
+
+/** Live client promise; recreated lazily after a failed connect. */
+export function getClientPromise(): Promise<MongoClient> {
+  if (!globalWithMongo._mongoClientPromise) {
+    globalWithMongo._mongoClientPromise = createClientPromise();
+  }
+  return globalWithMongo._mongoClientPromise;
+}
+
+// Default export stays awaitable for existing `await clientPromise` call sites, but
+// resolves the *current* client on every await instead of replaying a rejected promise.
+const clientPromise: Promise<MongoClient> = {
+  then: (onFulfilled, onRejected) => getClientPromise().then(onFulfilled, onRejected),
+  catch: (onRejected) => getClientPromise().catch(onRejected),
+  finally: (onFinally) => getClientPromise().finally(onFinally),
+  [Symbol.toStringTag]: 'Promise',
+};
 
 /**
  * Acquire the shared MongoClient under a per-call deadline.
@@ -54,7 +74,7 @@ clientPromise = globalWithMongo._mongoClientPromise!;
  */
 export function getMongoClient(): Promise<MongoClient> {
   return promiseWithTimeout(
-    clientPromise,
+    getClientPromise(),
     MONGO_OPERATION_DEADLINE_MS,
     `MongoDB client acquire timed out after ${MONGO_OPERATION_DEADLINE_MS}ms`
   );
@@ -70,7 +90,7 @@ export async function withMongoClient<T>(
 ): Promise<T> {
   try {
     return await withMongoDeadline(async () => {
-      const client = await clientPromise;
+      const client = await getClientPromise();
       return operation(client);
     }, MONGO_OPERATION_DEADLINE_MS);
   } catch (error) {
@@ -87,7 +107,7 @@ export async function withMongoClient<T>(
  */
 export async function getGalleryCollection(): Promise<Collection<IGalleryImage>> {
   return withMongoRetry(async () => {
-    const client = await clientPromise;
+    const client = await getClientPromise();
     return client.db(process.env.MONGODB_DB_NAME).collection<IGalleryImage>("gallery_images");
   });
 }

@@ -1,9 +1,11 @@
 import ClientHeader from "@/components/(client)/layout/header/Header";
 import Footer from "@/components/(client)/layout/Footer";
 import { SkipToMain } from "@/components/(client)/layout/SkipToMain";
-import { getCategories } from "@/lib/data";
-import { getCollections } from "@/lib/db/collections";
-import { getActiveSeasonals } from "@/lib/db/seasonals";
+import {
+  getCachedActiveSeasonals,
+  getCachedLayoutCategories,
+  getCachedLayoutCollections,
+} from "@/lib/cache/layoutQueries";
 import { MongoUnavailableError } from "@/lib/db/withMongoRetry";
 import { Collection, ProductCategory, SeasonalEvent } from "@/types";
 
@@ -15,9 +17,9 @@ export default async function ClientLayout({ children }: { children: React.React
   let collections: Collection[] = [];
 
   const results = await Promise.allSettled([
-    getCategories(),
-    getActiveSeasonals(),
-    getCollections(),
+    getCachedLayoutCategories(),
+    getCachedActiveSeasonals(),
+    getCachedLayoutCollections(),
   ]);
 
   if (results[0].status === "fulfilled") {

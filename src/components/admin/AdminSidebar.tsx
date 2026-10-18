@@ -267,7 +267,12 @@ const AdminSidebar = ({ isOpen, onClose, sidebarToggleRef }: SidebarProps) => {
   };
 
   React.useEffect(() => {
+    const POLL_INTERVAL_MS = 60000;
+    let lastFetchAt = 0;
+
     const fetchCounts = async () => {
+      // Hidden tabs / backgrounded PWAs do not poll; see visibilitychange below.
+      if (document.visibilityState !== "visible") return;
       if (countsInFlightRef.current) {
         console.debug(
           "[AdminSidebar] Skipping poll; previous badge-count fetch still in flight",
@@ -276,6 +281,7 @@ const AdminSidebar = ({ isOpen, onClose, sidebarToggleRef }: SidebarProps) => {
       }
 
       countsInFlightRef.current = true;
+      lastFetchAt = Date.now();
       try {
         const counts = await fetchSidebarCounts();
         if (counts) {
@@ -290,9 +296,22 @@ const AdminSidebar = ({ isOpen, onClose, sidebarToggleRef }: SidebarProps) => {
       }
     };
 
+    const onVisibilityChange = () => {
+      if (
+        document.visibilityState === "visible" &&
+        Date.now() - lastFetchAt >= POLL_INTERVAL_MS
+      ) {
+        fetchCounts();
+      }
+    };
+
     fetchCounts();
-    const interval = setInterval(fetchCounts, 60000);
-    return () => clearInterval(interval);
+    const interval = setInterval(fetchCounts, POLL_INTERVAL_MS);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
   }, []);
 
   React.useEffect(() => {

@@ -25,9 +25,9 @@ export async function getCollectionBySlug(slug: string) {
  * Fetches collections that have at least one active product.
  * Returns the same shape as GET /api/collections.
  */
-export async function getCollections(): Promise<Collection[]> {
-  try {
-    return await withMongoRetry(async () => {
+/** Throws on DB failure (no fallback) so callers like unstable_cache never store an empty result. */
+export async function fetchCollections(): Promise<Collection[]> {
+    return withMongoRetry(async () => {
       const client = await clientPromise;
       const db = client.db(process.env.MONGODB_DB_NAME);
 
@@ -60,6 +60,11 @@ export async function getCollections(): Promise<Collection[]> {
         _id: col._id.toString(),
       })) as Collection[];
     });
+}
+
+export async function getCollections(): Promise<Collection[]> {
+  try {
+    return await fetchCollections();
   } catch (error) {
     if (error instanceof MongoUnavailableError) {
       console.error("Error fetching collections after retries:", error);

@@ -1,6 +1,7 @@
 import { verifyAdminAPI } from "@/lib/auth/adminOnly";
 import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath } from "next/cache";
+import { revalidateLayoutData } from "@/lib/cache/layoutData";
 import clientPromise from '@/lib/db'
 import { SeasonalEvent } from '@/types'
 import { slugify } from '@/lib/utils'
@@ -67,6 +68,7 @@ export async function POST(request: NextRequest) {
         .insertOne(newSeasonalData);
 
       revalidatePath("/", "page");
+      revalidateLayoutData();
 
       return NextResponse.json(
         {

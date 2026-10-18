@@ -1,6 +1,7 @@
 import { verifyAdminAPI } from "@/lib/auth/adminOnly";
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { revalidateLayoutData } from "@/lib/cache/layoutData";
 import clientPromise from "@/lib/db";
 import { Collection } from "@/types";
 import cloudinary from "@/lib/cloudinary";
@@ -57,6 +58,7 @@ export async function POST(request: NextRequest) {
     const result = await db.collection("collections").insertOne(newCollection);
 
     revalidatePath("/", "page");
+    revalidateLayoutData();
 
     return NextResponse.json(
       { ...newCollection, _id: result.insertedId },

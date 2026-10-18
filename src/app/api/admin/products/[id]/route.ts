@@ -1,6 +1,7 @@
 import { verifyAdminAPI } from "@/lib/auth/adminOnly";
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from "next/cache";
+import { revalidateLayoutData } from "@/lib/cache/layoutData";
 import clientPromise from '@/lib/db';
 import { ObjectId } from 'mongodb';
 import cloudinary from "@/lib/cloudinary";
@@ -219,6 +220,7 @@ export async function PUT(
     }
 
     revalidatePath("/", "page");
+    revalidateLayoutData();
     return NextResponse.json({ message: "Product updated successfully" });
   } catch (error) {
     console.error("Error updating product:", error);
@@ -274,6 +276,7 @@ export async function DELETE(
     }
 
     revalidatePath("/", "page");
+    revalidateLayoutData();
 
     return NextResponse.json({
       message: "Product and associated images deleted successfully",

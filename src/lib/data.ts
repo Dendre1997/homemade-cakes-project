@@ -4,9 +4,9 @@ import { getCollections } from "@/lib/db/collections";
 import { calculateProductPrice } from "@/lib/discountUtils";
 import { ObjectId } from "mongodb";
 
-export async function getActiveCategories(): Promise<ProductCategory[]> {
-  try {
-    return await withMongoClient(async (client) => {
+/** Throws on DB failure (no fallback) so callers like unstable_cache never store an empty result. */
+export async function fetchActiveCategories(): Promise<ProductCategory[]> {
+    return withMongoClient(async (client) => {
       const db = client.db(process.env.MONGODB_DB_NAME);
 
       // 1. Fetch all categories
@@ -29,6 +29,11 @@ export async function getActiveCategories(): Promise<ProductCategory[]> {
         _id: cat._id.toString(),
       })) as ProductCategory[];
     });
+}
+
+export async function getActiveCategories(): Promise<ProductCategory[]> {
+  try {
+    return await fetchActiveCategories();
   } catch (error) {
     console.error("Error in getActiveCategories:", error);
     // Fallback: return all categories if filtering fails, or empty array?

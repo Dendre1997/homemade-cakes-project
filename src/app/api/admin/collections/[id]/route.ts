@@ -1,6 +1,7 @@
 import { verifyAdminAPI } from "@/lib/auth/adminOnly";
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { revalidateLayoutData } from "@/lib/cache/layoutData";
 import clientPromise from "@/lib/db";
 import { Collection } from "@/types";
 import { ObjectId } from "mongodb";
@@ -76,6 +77,7 @@ export async function PUT(request: NextRequest, { params }: Context) {
     }
     
     revalidatePath("/", "page");
+    revalidateLayoutData();
 
     return NextResponse.json({ message: "Collection updated successfully" });
   } catch (error) {
@@ -129,6 +131,7 @@ export async function DELETE(_request: Request, { params }: Context) {
     }
 
     revalidatePath("/", "page");
+    revalidateLayoutData();
 
     return NextResponse.json({ message: "Collection deleted successfully" });
   } catch (error) {

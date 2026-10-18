@@ -1,6 +1,7 @@
 import { verifyAdminAPI } from "@/lib/auth/adminOnly";
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { revalidateLayoutData } from "@/lib/cache/layoutData";
 import clientPromise from "@/lib/db";
 import { ObjectId } from "mongodb";
 import { getPublicIdFromUrl } from "@/lib/cloudinaryUtils";
@@ -110,6 +111,7 @@ export async function PUT(
     );
 
     revalidatePath("/", "page");
+    revalidateLayoutData();
     return NextResponse.json({ message: "Category updated" });
   } catch (error) {
     console.error("Error updating category:", error);
@@ -150,6 +152,7 @@ export async function DELETE(
     }
 
     revalidatePath("/", "page");
+    revalidateLayoutData();
     return NextResponse.json({ message: "Category deleted" });
   } catch (error) {
     console.error("Error deleting category:", error);

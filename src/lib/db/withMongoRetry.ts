@@ -4,8 +4,12 @@ import {
   withMongoDeadline,
 } from "@/lib/db/mongoTimeout";
 
-const RETRY_DELAYS_MS = [100, 300, 900] as const;
+// The driver already retries reads/writes once on network errors (retryReads/retryWrites),
+// so one app-level retry is enough to cover a client reset after a failed connect.
+const RETRY_DELAYS_MS = [500] as const;
 const MAX_ATTEMPTS = RETRY_DELAYS_MS.length + 1;
+// A retry only makes sense if a full server-selection window still fits in the deadline.
+const MIN_BUDGET_FOR_RETRY_MS = 10_000;
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -27,6 +31,7 @@ export function isMongoTransientError(error: unknown): boolean {
     name === "MongoTimeoutError" ||
     name === "MongoPoolClearedError" ||
     name === "WaitQueueTimeoutError" ||
+    name === "MongoWaitQueueTimeoutError" ||
     name === "MongoOperationTimeoutError" ||
     name === "MongoDeadlineError" ||
     message.includes("Server selection timed out") ||
@@ -49,8 +54,26 @@ export class MongoUnavailableError extends Error {
   }
 }
 
+/**
+ * Pool-queue timeouts mean the pool is already starved; re-queueing only adds load.
+ * They are still transient (mapped to MongoUnavailableError), just never retried.
+ */
+function isRetryableMongoError(error: unknown): boolean {
+  const name = (error as { name?: string } | null)?.name ?? "";
+  const message = (error as { message?: string } | null)?.message ?? "";
+  if (
+    name === "MongoWaitQueueTimeoutError" ||
+    name === "WaitQueueTimeoutError" ||
+    message.includes("Timed out while checking out a connection")
+  ) {
+    return false;
+  }
+  return isMongoTransientError(error);
+}
+
 async function runWithRetries<T>(operation: () => Promise<T>): Promise<T> {
   let lastError: unknown;
+  const startedAt = Date.now();
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     try {
@@ -64,15 +87,22 @@ async function runWithRetries<T>(operation: () => Promise<T>): Promise<T> {
         throw new MongoUnavailableError(error);
       }
 
-      if (!isMongoTransientError(error) || attempt === MAX_ATTEMPTS - 1) {
-        if (isMongoTransientError(error)) {
-          console.error(
-            `[MongoDB] Transient error after ${MAX_ATTEMPTS} attempts:`,
-            error
-          );
-          throw new MongoUnavailableError(error);
-        }
+      if (!isMongoTransientError(error)) {
         throw error;
+      }
+
+      const remainingMs = MONGO_OPERATION_DEADLINE_MS - (Date.now() - startedAt);
+      const canRetry =
+        attempt < MAX_ATTEMPTS - 1 &&
+        isRetryableMongoError(error) &&
+        remainingMs - RETRY_DELAYS_MS[attempt] >= MIN_BUDGET_FOR_RETRY_MS;
+
+      if (!canRetry) {
+        console.error(
+          `[MongoDB] Transient error, giving up after ${attempt + 1} attempt(s):`,
+          error
+        );
+        throw new MongoUnavailableError(error);
       }
 
       const delayMs = RETRY_DELAYS_MS[attempt];
