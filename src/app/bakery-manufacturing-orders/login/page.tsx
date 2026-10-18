@@ -1,60 +1,141 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { auth } from "@/lib/firebase/client";
-import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import {
+  GoogleAuthProvider,
+  getRedirectResult,
+  signInWithPopup,
+  signInWithRedirect,
+  type UserCredential,
+} from "firebase/auth";
+import { isStandaloneDisplayMode } from "@/lib/firebase/googleSignIn";
 import LoadingSpinner from "@/components/ui/Spinner";
+
+const ADMIN_HOME = "/bakery-manufacturing-orders";
 
 const provider = new GoogleAuthProvider();
 // Request profile & email scopes (default) — no extra scopes needed
 provider.setCustomParameters({ prompt: "select_account" });
 
+/** Only internal admin paths are honoured; anything else falls back to the admin home. */
+function resolveAdminCallbackUrl(): string {
+  const raw = new URLSearchParams(window.location.search).get("callbackUrl");
+  if (
+    raw &&
+    raw.startsWith(ADMIN_HOME) &&
+    !raw.startsWith(`${ADMIN_HOME}/login`)
+  ) {
+    return raw;
+  }
+  return ADMIN_HOME;
+}
+
+function getFirebaseErrorCode(err: unknown): string | null {
+  return err && typeof err === "object" && "code" in err
+    ? String((err as { code: unknown }).code)
+    : null;
+}
+
 const AdminLoginPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  /**
+   * Exchanges the Firebase credential for the admin session cookie.
+   * Returns true when the page is navigating away (keep the spinner up).
+   */
+  const completeAdminSession = async (userCredential: UserCredential): Promise<boolean> => {
+    const idToken = await userCredential.user.getIdToken();
+
+    // Pass the raw Firebase ID token to the backend for server-side validation
+    const response = await fetch("/api/admin/auth/sessionLogin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ idToken }),
+    });
+
+    if (response.status === 403) {
+      // Explicit 403 means authenticated but not an authorised admin — do not leak details
+      setError("Access denied. This account is not authorised to access the admin portal.");
+      return false;
+    }
+
+    if (!response.ok) {
+      throw new Error("Authentication failed. Please try again.");
+    }
+
+    // Hard redirect to prevent stale client-side state from leaking into the admin context
+    window.location.href = resolveAdminCallbackUrl();
+    return true;
+  };
+
+  const handleSignInError = (err: unknown) => {
+    const code = getFirebaseErrorCode(err);
+    if (code === "auth/cancelled-popup-request") return;
+    if (code === "auth/popup-closed-by-user") {
+      setError("Sign-in was cancelled. Please try again.");
+      return;
+    }
+    if (code === "auth/too-many-requests") {
+      setError("Too many sign-in attempts. Please wait a moment and try again.");
+      return;
+    }
+    if (code) console.error("Firebase Auth Error:", code);
+    setError(err instanceof Error ? err.message : "An unexpected error occurred. Please try again.");
+  };
+
+  // Completes the redirect flow (standalone PWA, or popup-blocked fallback) after Google returns here.
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (!result || cancelled) return;
+
+        setIsLoading(true);
+        setError(null);
+        const navigating = await completeAdminSession(result);
+        if (!navigating && !cancelled) setIsLoading(false);
+      } catch (err) {
+        if (cancelled) return;
+        handleSignInError(err);
+        setIsLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      // 1. Authenticate with Google via Firebase on the client
-      const userCredential = await signInWithPopup(auth, provider);
-      const idToken = await userCredential.user.getIdToken();
-
-      // 2. Pass the raw Firebase ID token to the backend for server-side validation
-      const response = await fetch("/api/admin/auth/sessionLogin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken }),
-      });
-
-      if (response.status === 403) {
-        // Explicit 403 means authenticated but not an authorised admin — do not leak details
-        setError("Access denied. This account is not authorised to access the admin portal.");
-        return;
+      // A popup opens outside an installed PWA's window and never reports back.
+      if (isStandaloneDisplayMode()) {
+        await signInWithRedirect(auth, provider);
+        return; // page navigates away to Google
       }
 
-      if (!response.ok) {
-        throw new Error("Authentication failed. Please try again.");
+      let userCredential: UserCredential;
+      try {
+        userCredential = await signInWithPopup(auth, provider);
+      } catch (err) {
+        if (getFirebaseErrorCode(err) === "auth/popup-blocked") {
+          await signInWithRedirect(auth, provider);
+          return; // page navigates away to Google
+        }
+        throw err;
       }
 
-      // 3. Hard redirect to prevent stale client-side state from leaking into the admin context
-      window.location.href = "/bakery-manufacturing-orders";
+      const navigating = await completeAdminSession(userCredential);
+      if (!navigating) setIsLoading(false);
     } catch (err) {
-      // Firebase client-side errors (popup closed, network, etc.)
-      if (err && typeof err === "object" && "code" in err) {
-        const firebaseError = err as { code: string };
-        if (firebaseError.code === "auth/popup-closed-by-user" || firebaseError.code === "auth/cancelled-popup-request") {
-          // User dismissed the popup — not an error worth surfacing
-          return;
-        }
-        if (firebaseError.code === "auth/too-many-requests") {
-          setError("Too many sign-in attempts. Please wait a moment and try again.");
-          return;
-        }
-      }
-      setError(err instanceof Error ? err.message : "An unexpected error occurred. Please try again.");
-    } finally {
+      handleSignInError(err);
       setIsLoading(false);
     }
   };

@@ -29,18 +29,13 @@ export async function POST(request: Request) {
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
 
-    const totalUsers = await db.collection("users").countDocuments();
-
-    const allUsers = await db
-      .collection("users")
-      .find({}, { projection: { _id: 0, email: 1, firebaseUid: 1, role: 1 } })
-      .toArray();
-
     const adminUser = await db
       .collection<User>("users")
-      .findOne({ firebaseUid: decodedToken.uid });
+      .findOne(
+        { firebaseUid: decodedToken.uid },
+        { projection: { _id: 1, role: 1 } }
+      );
 
-    
     // If no document is found by UID, immediately deny — no secondary lookups.
     if (!adminUser) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
