@@ -1,8 +1,12 @@
 'use client'
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import HeaderAdmin from '@/components/admin/HeaderAdmin'
-import CopilotPanel from '@/components/admin/Copilot/CopilotPanel';
+
+const CopilotPanel = dynamic(() => import('@/components/admin/Copilot/CopilotPanel'), {
+  ssr: false,
+});
 
 export default function AdminLayoutClient({
   children,
@@ -11,8 +15,25 @@ export default function AdminLayoutClient({
 }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isCopilotOpen, setIsCopilotOpen] = useState(false);
+  // Mounted closed during idle time so the first open still gets the slide-in transition.
+  const [shouldMountCopilot, setShouldMountCopilot] = useState(false);
   const sidebarToggleRef = useRef<HTMLButtonElement>(null);
   const copilotToggleRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const mount = () => setShouldMountCopilot(true);
+    if (typeof window.requestIdleCallback === 'function') {
+      const id = window.requestIdleCallback(mount, { timeout: 3000 });
+      return () => window.cancelIdleCallback(id);
+    }
+    const id = window.setTimeout(mount, 1500);
+    return () => window.clearTimeout(id);
+  }, []);
+
+  const handleToggleCopilot = () => {
+    setShouldMountCopilot(true);
+    setIsCopilotOpen((open) => !open);
+  };
 
   return (
     <>
@@ -28,7 +49,7 @@ export default function AdminLayoutClient({
             isSidebarOpen={isSidebarOpen}
             sidebarToggleRef={sidebarToggleRef}
             onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-            onToggleCopilot={() => setIsCopilotOpen((open) => !open)}
+            onToggleCopilot={handleToggleCopilot}
             isCopilotOpen={isCopilotOpen}
             copilotToggleRef={copilotToggleRef}
           />
@@ -36,11 +57,13 @@ export default function AdminLayoutClient({
         </div>
       </div>
 
-      <CopilotPanel
-        isOpen={isCopilotOpen}
-        onClose={() => setIsCopilotOpen(false)}
-        copilotToggleRef={copilotToggleRef}
-      />
+      {shouldMountCopilot && (
+        <CopilotPanel
+          isOpen={isCopilotOpen}
+          onClose={() => setIsCopilotOpen(false)}
+          copilotToggleRef={copilotToggleRef}
+        />
+      )}
     </>
   );
 }

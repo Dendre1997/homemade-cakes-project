@@ -20,11 +20,11 @@ if (!process.env.MONGODB_URI) {
 const uri = process.env.MONGODB_URI;
 const options = {
   maxPoolSize: 3,            // Shared Atlas tier: limit per serverless instance
-  minPoolSize: 0,            // Allow idle connections to close
+  minPoolSize: 1,            // Keep one warm socket per active instance
   connectTimeoutMS: 15000,   // Prevent timing out on cold starts
   socketTimeoutMS: 45000,
   serverSelectionTimeoutMS: 5000,
-  maxIdleTimeMS: 10000,      // Terminate idle connections quickly
+  maxIdleTimeMS: 120000,     // Outlast pauses between admin clicks (avoids TLS/SCRAM re-handshakes)
   // Cap pool checkout waits — default 0 waits forever and caused 300s Vercel timeouts
   waitQueueTimeoutMS: MONGO_WAIT_QUEUE_TIMEOUT_MS,
 };

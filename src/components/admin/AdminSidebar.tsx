@@ -229,6 +229,18 @@ function AdminSidebarPanel({
   );
 }
 
+type SidebarCounts = {
+  customRequestsCount: number;
+  activeOrdersCount: number;
+  supportChats: { _id: string; hasUnread: boolean }[];
+};
+
+async function fetchSidebarCounts(): Promise<SidebarCounts | null> {
+  const res = await fetch("/api/admin/sidebar-counts", { cache: "no-store" });
+  if (!res.ok) return null;
+  return (await res.json()) as SidebarCounts;
+}
+
 const AdminSidebar = ({ isOpen, onClose, sidebarToggleRef }: SidebarProps) => {
   const pathname = usePathname();
   const isXlLayout = useIsXlSidebarLayout();
@@ -265,32 +277,11 @@ const AdminSidebar = ({ isOpen, onClose, sidebarToggleRef }: SidebarProps) => {
 
       countsInFlightRef.current = true;
       try {
-        const customRes = await fetch("/api/admin/custom-orders");
-        if (customRes.ok) {
-          const customOrders = await customRes.json();
-          const pendingCustomCount = customOrders.filter(
-            (o: any) => !["converted", "rejected"].includes(o.status),
-          ).length;
-          setTotalCustomRequestsCount(pendingCustomCount);
-        }
-
-        const ordersRes = await fetch("/api/admin/orders");
-        if (ordersRes.ok) {
-          const orders = await ordersRes.json();
-          if (Array.isArray(orders)) {
-            const newOrderCount = orders.filter(
-              (o: any) => !["delivered", "cancelled"].includes(o.status),
-            ).length;
-            setNewOrdersCount(newOrderCount);
-          }
-        }
-
-        const supportRes = await fetch("/api/admin/chats");
-        if (supportRes.ok) {
-          const chats = await supportRes.json();
-          if (Array.isArray(chats)) {
-            setSupportChats(chats);
-          }
+        const counts = await fetchSidebarCounts();
+        if (counts) {
+          setTotalCustomRequestsCount(counts.customRequestsCount);
+          setNewOrdersCount(counts.activeOrdersCount);
+          setSupportChats(counts.supportChats);
         }
       } catch (error) {
         console.error("Failed to fetch sidebar counts", error);
@@ -325,11 +316,11 @@ const AdminSidebar = ({ isOpen, onClose, sidebarToggleRef }: SidebarProps) => {
             if (!Array.isArray(prev)) prev = [];
             const exists = prev.some((c) => c._id === data.chatId);
             if (!exists) {
-              fetch("/api/admin/chats")
-                .then((res) => res.json())
-                .then((chats) => {
-                  if (Array.isArray(chats)) setSupportChats(chats);
-                });
+              fetchSidebarCounts()
+                .then((counts) => {
+                  if (counts) setSupportChats(counts.supportChats);
+                })
+                .catch(() => {});
               return prev;
             }
             return prev.map((c) =>
@@ -337,11 +328,11 @@ const AdminSidebar = ({ isOpen, onClose, sidebarToggleRef }: SidebarProps) => {
             );
           });
         } else {
-          fetch("/api/admin/chats")
-            .then((res) => res.json())
-            .then((chats) => {
-              if (Array.isArray(chats)) setSupportChats(chats);
-            });
+          fetchSidebarCounts()
+            .then((counts) => {
+              if (counts) setSupportChats(counts.supportChats);
+            })
+            .catch(() => {});
         }
       });
     }

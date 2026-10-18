@@ -1,21 +1,29 @@
 import { withMongoClient } from "@/lib/db";
 import { MessageCircle } from "lucide-react";
 import { CustomOrder } from "@/types";
-import { CustomOrderCard } from "@/components/admin/custom-orders/CustomOrderCard";
+import { PendingCustomOrdersList } from "@/components/admin/custom-orders/PendingCustomOrdersList";
 import { CompactCustomOrderRow } from "@/components/admin/custom-orders/CompactCustomOrderRow";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs";
-import { 
-  Carousel, 
-  CarouselContent, 
-  CarouselItem, 
-  CarouselNext, 
-  CarouselPrevious 
-} from "@/components/ui/shadcn-carousel";
 import RefreshTrigger from "@/components/admin/RefreshTrigger";
+import { normalizeCustomOrder } from "@/lib/normalizeCustomOrder";
 
 // Ensure Next.js does not statically cache this page
 export const dynamic = 'force-dynamic';
 export const revalidate = 0; 
+
+// Fields never read by CustomOrderCard / CompactCustomOrderRow on the list view.
+// referenceImages stay whole: the card renders every thumbnail, not just the first.
+const CUSTOM_ORDER_LIST_PROJECTION = {
+  addons: 0,
+  priceBreakdown: 0,
+  "items.addons": 0,
+  "items.priceBreakdown": 0,
+  adminNotes: 0,
+  idempotencyKey: 0,
+  userId: 0,
+  updatedAt: 0,
+  "contact.phoneDigits": 0,
+} as const;
 
 export default async function CustomOrdersListPage() {
   let customOrders: CustomOrder[] = [];
@@ -30,12 +38,12 @@ export default async function CustomOrdersListPage() {
 
       const rawOrders = await db
         .collection("custom_orders")
-        .find({})
+        .find({}, { projection: CUSTOM_ORDER_LIST_PROJECTION })
         .sort({ date: 1 }) // Upcoming first
         .toArray();
 
       return rawOrders.map((order) => {
-        return {
+        return normalizeCustomOrder({
           ...order,
           _id: order._id.toString(),
           // Legacy schema fallbacks to prevent undefined UI errors
@@ -53,8 +61,8 @@ export default async function CustomOrdersListPage() {
             designNotes: order.description || ""
           },
           referenceImages: order.referenceImages || order.referenceImageUrls || []
-        };
-      }) as unknown as CustomOrder[];
+        });
+      });
     });
 
     pendingOrders = customOrders.filter(o => o.status === 'pending_review' || !o.status);
@@ -111,31 +119,7 @@ export default async function CustomOrdersListPage() {
                 <p>Wait for customers to submit the "Dream Cake" form.</p>
               </div>
             ) : (
-              <>
-                {/* Mobile Carousel (sm and below) */}
-                <div className="block md:hidden">
-                  <Carousel className="w-full">
-                    <CarouselContent>
-                      {pendingOrders.map((order) => (
-                        <CarouselItem key={order._id} className="basis-[85%]">
-                          <CustomOrderCard order={order} />
-                        </CarouselItem>
-                      ))}
-                    </CarouselContent>
-                    <div className="flex justify-center gap-4 mt-6">
-                       <CarouselPrevious className="static translate-y-0" />
-                       <CarouselNext className="static translate-y-0" />
-                    </div>
-                  </Carousel>
-                </div>
-
-                {/* Desktop Grid (md and up) */}
-                <div className="hidden md:grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {pendingOrders.map((order) => (
-                    <CustomOrderCard key={order._id} order={order} />
-                  ))}
-                </div>
-              </>
+              <PendingCustomOrdersList orders={pendingOrders} />
             )}
           </TabsContent>
 

@@ -1,7 +1,6 @@
 "use client";
 
 import { CustomOrder, CustomOrderItem } from "@/types";
-import { normalizeCustomOrder } from "@/lib/normalizeCustomOrder";
 import { format } from "date-fns";
 import { 
   Calendar, Phone, Mail, Copy, CheckCircle2, 
@@ -26,10 +25,8 @@ interface CustomOrderCardProps {
   order: CustomOrder & Record<string, any>;
 }
 
-export const CustomOrderCard = ({ order: rawOrder }: CustomOrderCardProps) => {
-  // Normalize legacy flat requests into the canonical multi-item shape so the
-  // card always renders from `order.items[]`.
-  const order = normalizeCustomOrder(rawOrder) as CustomOrder & Record<string, any>;
+/** Expects an order already passed through normalizeCustomOrder() on the server. */
+export const CustomOrderCard = ({ order }: CustomOrderCardProps) => {
   const items: CustomOrderItem[] = order.items ?? [];
   const isMultiItem = items.length > 1;
 

@@ -1,9 +1,12 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { adminAuth } from "@/lib/firebase/adminApp";
 import clientPromise from "@/lib/db";
 
-export async function verifyAdmin() {
+// Page/layout renders only: signature is verified locally against cached certs.
+// Revocation is still enforced by verifyAdminAPI on every API route / mutation.
+export const verifyAdmin = cache(async () => {
   const cookieStore = await cookies();
   const sessionCookie = cookieStore.get("admin_session")?.value;
   if (!sessionCookie) redirect("/bakery-manufacturing-orders/login");
@@ -11,7 +14,7 @@ export async function verifyAdmin() {
   try {
     const decodedToken = await adminAuth.verifySessionCookie(
       sessionCookie,
-      true
+      false
     );
 
     if (decodedToken.admin === true) {
@@ -22,7 +25,7 @@ export async function verifyAdmin() {
   } catch (error) {
     redirect("/bakery-manufacturing-orders/login");
   }
-}
+});
 
 export async function verifyAdminAPI() {
   const cookieStore = await cookies();
