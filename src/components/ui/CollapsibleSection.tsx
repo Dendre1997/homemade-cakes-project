@@ -7,6 +7,8 @@ interface CollapsibleSectionProps {
   onToggle: () => void;
   children: React.ReactNode;
   className?: string;
+  /** Glass header matches schedule / dashboard surfaces */
+  variant?: "default" | "glass";
 }
 
 export const CollapsibleSection = ({
@@ -15,11 +17,17 @@ export const CollapsibleSection = ({
   onToggle,
   children,
   className,
+  variant = "default",
 }: CollapsibleSectionProps) => {
+  const isGlass = variant === "glass";
+
   return (
     <div
       className={cn(
-        "mb-4 overflow-hidden rounded-medium border border-border transition-all duration-200",
+        "mb-4 overflow-hidden transition-all duration-200",
+        isGlass
+          ? "rounded-2xl border border-primary/15 shadow-sm backdrop-blur-xl"
+          : "rounded-medium border border-border",
         className
       )}
     >
@@ -27,8 +35,12 @@ export const CollapsibleSection = ({
         type="button"
         onClick={onToggle}
         className={cn(
-            "flex w-full items-center justify-between bg-subtleBackground px-6 py-4 text-left transition-colors hover:bg-subtleBackground/80",
-            isOpen && "border-b border-border"
+          "flex w-full items-center justify-between px-5 py-4 text-left transition-colors sm:px-6",
+          isGlass
+            ? "bg-background/25 hover:bg-background/40"
+            : "bg-subtleBackground hover:bg-subtleBackground/80",
+          isOpen &&
+            (isGlass ? "border-b border-primary/10" : "border-b border-border")
         )}
       >
         <span className="font-heading text-h4 font-bold text-primary">
@@ -42,7 +54,12 @@ export const CollapsibleSection = ({
       </button>
       
       {isOpen && (
-        <div className="bg-background p-6 animate-in fade-in slide-in-from-top-1 duration-200">
+        <div
+          className={cn(
+            "animate-in fade-in slide-in-from-top-1 p-5 duration-200 sm:p-6",
+            isGlass ? "bg-background/10" : "bg-background"
+          )}
+        >
           {children}
         </div>
       )}

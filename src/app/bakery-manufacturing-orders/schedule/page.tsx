@@ -1,15 +1,25 @@
 "use client";
+
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { FloatingActionBar } from "@/components/admin/FloatingActionBar";
 import { ScheduleSettings } from "@/types";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import AdminDatePicker from "@/components/admin/AdminDatePicker";
+import AdminDatePicker, {
+  type ScheduleAvailability,
+} from "@/components/admin/AdminDatePicker";
 import LoadingSpinner from "@/components/ui/Spinner";
 import { TimeSlotManager } from "@/components/ui/TimeSlotManager";
+import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
+import { DashboardGlassCard } from "@/components/admin/dashboard/DashboardGlassCard";
+import {
+  ScheduleWeekdayStrip,
+  SCHEDULE_WEEKDAYS,
+} from "@/components/admin/schedule/ScheduleWeekdayStrip";
 import { useAlert } from "@/contexts/AlertContext";
 import { useConfirmation } from "@/contexts/ConfirmationContext";
-import { cn } from "@/lib/utils";
+import { getBakeryToday, toDateKey } from "@/lib/db/capacity";
+import { dateKeyToStoredDate } from "@/lib/dates/bakeryCalendar";
 import {
   Dialog,
   DialogContent,
@@ -19,22 +29,81 @@ import {
   DialogFooter,
 } from "@/components/ui/Dialog";
 
+const EMPTY_AVAILABILITY: ScheduleAvailability = {
+  availableMinutesPerDay: {},
+  defaultWorkMinutes: 240,
+  leadTimeDays: 3,
+};
+
+const WEEKDAYS = SCHEDULE_WEEKDAYS;
+
+function parseAvailability(payload: unknown): ScheduleAvailability {
+  if (!payload || typeof payload !== "object") return EMPTY_AVAILABILITY;
+  const data = payload as {
+    availableMinutesPerDay?: Record<string, number>;
+    defaultWorkMinutes?: number;
+    leadTimeDays?: number;
+  };
+  return {
+    availableMinutesPerDay: data.availableMinutesPerDay ?? {},
+    defaultWorkMinutes: data.defaultWorkMinutes ?? 240,
+    leadTimeDays: data.leadTimeDays ?? 3,
+  };
+}
+
+function withBlockChange(
+  settings: Partial<ScheduleSettings>,
+  dateKey: string,
+  action: "block" | "unblock"
+): Partial<ScheduleSettings> {
+  const overrides = [...(settings.dateOverrides ?? [])];
+  if (action === "unblock") {
+    return {
+      ...settings,
+      dateOverrides: overrides.filter(
+        (entry) => toDateKey(entry.date) !== dateKey
+      ),
+    };
+  }
+
+  const index = overrides.findIndex(
+    (entry) => toDateKey(entry.date) === dateKey
+  );
+  if (index >= 0) {
+    overrides[index] = {
+      ...overrides[index],
+      date: dateKeyToStoredDate(dateKey),
+      isBlocked: true,
+    };
+  } else {
+    overrides.push({
+      date: dateKeyToStoredDate(dateKey),
+      isBlocked: true,
+      availableHours: [],
+    });
+  }
+  return { ...settings, dateOverrides: overrides };
+}
+
 const SchedulePage = () => {
-  const { showAlert } = useAlert()
-  const showConfirmation = useConfirmation()
+  const { showAlert } = useAlert();
+  const showConfirmation = useConfirmation();
   const [settings, setSettings] = useState<Partial<ScheduleSettings>>({
     leadTimeDays: 3,
-    defaultWorkMinutes: 240, 
+    defaultWorkMinutes: 240,
     dateOverrides: [],
   });
+  const [availability, setAvailability] =
+    useState<ScheduleAvailability>(EMPTY_AVAILABILITY);
+  const [todayKey, setTodayKey] = useState(getBakeryToday);
   const [selectedWeekday, setSelectedWeekday] = useState<number | null>(null);
   const [isWeekdayModalOpen, setIsWeekdayModalOpen] = useState(false);
   const [draftWeekdaySlots, setDraftWeekdaySlots] = useState<string[]>([]);
-  const [minutesBooked, setMinutesBooked] = useState<Record<string, number>>(
-    {}
-  );
+  const [rulesOpen, setRulesOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [blockingDateKey, setBlockingDateKey] = useState<string | null>(null);
+  const [isDayEditorOpen, setIsDayEditorOpen] = useState(false);
   const savedSettingsRef = useRef<Partial<ScheduleSettings> | null>(null);
 
   const serializeSettings = (value: Partial<ScheduleSettings>) =>
@@ -47,6 +116,19 @@ const SchedulePage = () => {
     );
   }, [settings]);
 
+  const refreshAvailability = useCallback(async () => {
+    const bookedMinutesRes = await fetch("/api/availability", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ itemsInCart: [] }),
+    });
+    if (!bookedMinutesRes.ok) {
+      throw new Error("Failed to fetch schedule availability");
+    }
+    setAvailability(parseAvailability(await bookedMinutesRes.json()));
+    setTodayKey(getBakeryToday());
+  }, []);
+
   const fetchSettings = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -57,7 +139,6 @@ const SchedulePage = () => {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ itemsInCart: [] }),
         }),
-        ,
       ]);
 
       if (!settingsRes.ok || !bookedMinutesRes.ok) {
@@ -67,7 +148,8 @@ const SchedulePage = () => {
       const loadedSettings = (await settingsRes.json()) as Partial<ScheduleSettings>;
       setSettings(loadedSettings);
       savedSettingsRef.current = structuredClone(loadedSettings);
-      setMinutesBooked(await bookedMinutesRes.json());
+      setAvailability(parseAvailability(await bookedMinutesRes.json()));
+      setTodayKey(getBakeryToday());
     } catch (error) {
       console.error(error);
       showAlert("Failed to load schedule data", "error");
@@ -101,45 +183,72 @@ const SchedulePage = () => {
       });
       if (!res.ok) throw new Error("Failed to save settings");
       savedSettingsRef.current = structuredClone(settings);
-      showAlert("Settings saved successfully!", 'success');
+      await refreshAvailability();
+      showAlert("Settings saved successfully!", "success");
     } catch (error) {
       console.error(error);
-      showAlert("Error saving settings", 'error');
+      showAlert("Error saving settings", "error");
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleInputChange = (key: keyof ScheduleSettings, value: any) => {
+  const handleBlockToggle = async (
+    dateKey: string,
+    action: "block" | "unblock"
+  ): Promise<boolean> => {
+    setBlockingDateKey(dateKey);
+    try {
+      const res = await fetch("/api/admin/schedule/block-dates", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dates: [dateKey], action }),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        throw new Error(body?.error || "Failed to update this date");
+      }
+
+      setSettings((current) => withBlockChange(current, dateKey, action));
+      if (savedSettingsRef.current) {
+        savedSettingsRef.current = withBlockChange(
+          savedSettingsRef.current,
+          dateKey,
+          action
+        );
+      }
+      await refreshAvailability();
+      showAlert(
+        action === "block" ? "Date blocked" : "Date unblocked",
+        "success"
+      );
+      return true;
+    } catch (error) {
+      console.error(error);
+      showAlert(
+        error instanceof Error ? error.message : "Failed to update this date",
+        "error"
+      );
+      return false;
+    } finally {
+      setBlockingDateKey(null);
+    }
+  };
+
+  const handleInputChange = (key: keyof ScheduleSettings, value: unknown) => {
     let processedValue = value;
 
     if (key === "leadTimeDays" || key === "defaultWorkMinutes") {
-      processedValue = parseInt(value, 10) || 0;
+      processedValue = parseInt(String(value), 10) || 0;
     }
 
     setSettings((prev) => ({
       ...prev,
-      [key]: processedValue, 
+      [key]: processedValue,
     }));
   };
-
-  const handleBlockedDatesChange = (dates: Date[]) => {
-    const newOverrides = dates.map((date) => ({
-      date: date,
-      isBlocked: true,
-    }));
-    setSettings((prev) => ({ ...prev, dateOverrides: newOverrides }));
-  };
-
-  const WEEKDAYS = [
-    { label: 'Sun', value: 0 },
-    { label: 'Mon', value: 1 },
-    { label: 'Tue', value: 2 },
-    { label: 'Wed', value: 3 },
-    { label: 'Thu', value: 4 },
-    { label: 'Fri', value: 5 },
-    { label: 'Sat', value: 6 },
-  ];
 
   const handleOpenWeekdayModal = (day: number) => {
     setSelectedWeekday(day);
@@ -154,7 +263,7 @@ const SchedulePage = () => {
     } else {
       updated[selectedWeekday!] = draftWeekdaySlots;
     }
-    handleInputChange('weekdayHours', updated);
+    handleInputChange("weekdayHours", updated);
     setIsWeekdayModalOpen(false);
     setSelectedWeekday(null);
   };
@@ -162,169 +271,157 @@ const SchedulePage = () => {
   const handleClearWeekday = () => {
     const updated = { ...(settings.weekdayHours || {}) };
     delete updated[selectedWeekday!];
-    handleInputChange('weekdayHours', updated);
+    handleInputChange("weekdayHours", updated);
     setIsWeekdayModalOpen(false);
     setSelectedWeekday(null);
   };
 
-  const blockedDates =
-    settings.dateOverrides?.filter((o) => o.isBlocked).map((o) => o.date) || [];
-
   if (isLoading) return <LoadingSpinner />;
 
   return (
-    <section>
-      <h1 className="text-3xl font-bold font-heading mb-6">
-        Schedule Management
-      </h1>
-      <div className=" space-y-6">
-        <div className="bg-white p-6 rounded-large shadow">
-          <h2 className="text-xl font-semibold font-heading">Booking Rules</h2>
-          <div className="mt-4 space-y-4">
-            <div>
-              <label htmlFor="leadTime" className="block text-sm font-medium">
-                Lead Time (days)
-              </label>
-              <Input
-                id="leadTime"
-                type="number"
-                value={settings.leadTimeDays || ""}
-                onChange={(e) =>
-                  handleInputChange("leadTimeDays", e.target.value)
-                }
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                Minimum number of days in advance a customer must order.
-              </p>
-            </div>
-            <div>
-              <label htmlFor="orderLimit" className="block text-sm font-medium">
-                Default Work Time (minutes/day)
-              </label>
-              <Input
-                id="defaultWorkMinutes"
-                type="number"
-                value={settings.defaultWorkMinutes || ""}
-                onChange={(e) =>
-                  handleInputChange("defaultWorkMinutes", e.target.value)
-                }
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                Defaulut time you can work every day.
-              </p>
-            </div>
-            <div className="bg-card-background p-lg rounded-large shadow-md">
-              <h2 className="font-heading text-h3 text-primary">
-                Default Time Slots
-              </h2>
-              <p className="mt-xs font-body text-small text-primary/80 mb-md">
-                These are the master time slots available every day.
-              </p>
+    <section className="space-y-6 pb-24">
+      <div>
+        <h1 className="font-heading text-3xl font-bold text-primary">
+          Schedule
+        </h1>
+        <p className="mt-1 text-sm text-primary/70">
+          Block days and see booked versus available minutes. Dates use
+          America/Edmonton.
+        </p>
+      </div>
+
+      <ScheduleWeekdayStrip
+        weekdayHours={settings.weekdayHours}
+        onSelectDay={handleOpenWeekdayModal}
+      />
+
+      <div className="rounded-2xl border border-primary/15 bg-background/20 p-4 shadow-sm backdrop-blur-xl backdrop-saturate-150 sm:p-6">
+        <AdminDatePicker
+          settings={settings}
+          onSettingsChange={setSettings}
+          availability={availability}
+          todayKey={todayKey}
+          onBlockToggle={handleBlockToggle}
+          blockingDateKey={blockingDateKey}
+          onDayEditorOpenChange={setIsDayEditorOpen}
+        />
+      </div>
+
+      <CollapsibleSection
+        title="Booking rules"
+        variant="glass"
+        isOpen={rulesOpen}
+        onToggle={() => setRulesOpen((open) => !open)}
+        className="bg-background/20"
+      >
+        <div className="space-y-4">
+          <DashboardGlassCard className="border-primary/10 bg-background/30">
+            <h3 className="font-heading text-base font-semibold text-primary">
+              Lead time
+            </h3>
+            <p className="mt-1 text-sm text-primary/70">
+              Minimum days in advance a customer must order.
+            </p>
+            <label htmlFor="leadTime" className="sr-only">
+              Lead time (days)
+            </label>
+            <Input
+              id="leadTime"
+              type="number"
+              className="mt-3"
+              value={settings.leadTimeDays || ""}
+              onChange={(event) =>
+                handleInputChange("leadTimeDays", event.target.value)
+              }
+            />
+          </DashboardGlassCard>
+
+          <DashboardGlassCard className="border-primary/10 bg-background/30">
+            <h3 className="font-heading text-base font-semibold text-primary">
+              Default capacity
+            </h3>
+            <p className="mt-1 text-sm text-primary/70">
+              Work minutes available on a typical day before overrides.
+            </p>
+            <label htmlFor="defaultWorkMinutes" className="sr-only">
+              Default work time (minutes/day)
+            </label>
+            <Input
+              id="defaultWorkMinutes"
+              type="number"
+              className="mt-3"
+              value={settings.defaultWorkMinutes || ""}
+              onChange={(event) =>
+                handleInputChange("defaultWorkMinutes", event.target.value)
+              }
+            />
+          </DashboardGlassCard>
+
+          <DashboardGlassCard className="border-primary/10 bg-background/30">
+            <h3 className="font-heading text-base font-semibold text-primary">
+              Default pickup slots
+            </h3>
+            <p className="mt-1 text-sm text-primary/70">
+              Used when a weekday chip is set to default and the day has no
+              custom slots.
+            </p>
+            <div className="mt-3">
               <TimeSlotManager
+                variant="schedule"
                 value={settings.defaultAvailableHours || []}
                 onChange={(newHours) =>
                   handleInputChange("defaultAvailableHours", newHours)
                 }
               />
             </div>
-          </div>
+          </DashboardGlassCard>
         </div>
+      </CollapsibleSection>
 
-        {/* Weekday Time Slots section */}
-        <div className="bg-card-background p-lg rounded-large shadow-md">
-          <h2 className="font-heading text-h3 text-primary">Weekday Time Slots</h2>
-          <p className="mt-xs font-body text-small text-primary/80 mb-md">
-            Set specific time slots for each day of the week. Days without custom slots will use the Default Time Slots above.
-          </p>
-          <div className="grid grid-cols-7 gap-2">
-            {WEEKDAYS.map((day) => {
-              const slots = settings.weekdayHours?.[day.value];
-              const hasSlots = slots && slots.length > 0;
-              return (
-                <button
-                  key={day.value}
-                  type="button"
-                  onClick={() => handleOpenWeekdayModal(day.value)}
-                  className={cn(
-                    "flex flex-col items-center gap-1 p-3 rounded-xl border-2 transition-all hover:shadow-md",
-                    hasSlots
-                      ? "border-accent bg-accent/5"
-                      : "border-border bg-white hover:border-accent/50"
-                  )}
-                >
-                  <span className={cn(
-                    "font-heading text-sm font-bold",
-                    hasSlots ? "text-accent" : "text-primary"
-                  )}>
-                    {day.label}
-                  </span>
-                  <span className={cn(
-                    "text-xs font-body",
-                    hasSlots ? "text-accent/80" : "text-primary/40"
-                  )}>
-                    {hasSlots ? `${slots.length} slot${slots.length > 1 ? 's' : ''}` : 'default'}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Weekday Modal */}
-        <Dialog open={isWeekdayModalOpen} onOpenChange={(open) => {
+      <Dialog
+        open={isWeekdayModalOpen}
+        onOpenChange={(open) => {
           if (!open) {
             setIsWeekdayModalOpen(false);
             setSelectedWeekday(null);
           }
-        }}>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle className="font-heading text-primary">
-                {selectedWeekday !== null ? WEEKDAYS[selectedWeekday].label : ''} Time Slots
-              </DialogTitle>
-              <DialogDescription className="font-body text-small text-primary/70">
-                Slots set here override the Default Time Slots for every {selectedWeekday !== null ? WEEKDAYS[selectedWeekday].label : ''}.
-                Leave empty to use defaults.
-              </DialogDescription>
-            </DialogHeader>
-            <TimeSlotManager
-              value={draftWeekdaySlots}
-              onChange={setDraftWeekdaySlots}
-            />
-            <DialogFooter className="flex gap-2 mt-4">
-              <Button
-                variant="outline"
-                onClick={handleClearWeekday}
-                className="text-red-500 border-red-200 hover:bg-red-50"
-              >
-                Clear → Use Default
-              </Button>
-              <Button variant="primary" onClick={handleSaveWeekdaySlots}>
-                Save
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Column: Calendar */}
-        <div className="bg-card-background p-lg rounded-large shadow-md">
-          <h2 className="font-heading text-h3 text-primary">Blocked Dates</h2>
-          <p className="mt-xs font-body text-small text-primary/80">
-            Select dates when you are unavailable for new orders.
-          </p>
-          <div className="mt-md">
-            <AdminDatePicker
-              settings={settings}
-              onSettingsChange={setSettings}
-              minutesBookedPerDay={minutesBooked}
-            />
-          </div>
-        </div>
-        
-      </div>
+        }}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-primary">
+              {selectedWeekday !== null ? WEEKDAYS[selectedWeekday].label : ""}{" "}
+              time slots
+            </DialogTitle>
+            <DialogDescription className="text-sm text-primary/70">
+              Slots set here override the default slots for every{" "}
+              {selectedWeekday !== null
+                ? WEEKDAYS[selectedWeekday].label
+                : "selected day"}
+              . Leave empty to use defaults.
+            </DialogDescription>
+          </DialogHeader>
+          <TimeSlotManager
+            value={draftWeekdaySlots}
+            onChange={setDraftWeekdaySlots}
+          />
+          <DialogFooter className="mt-4 flex gap-2">
+            <Button
+              variant="outline"
+              onClick={handleClearWeekday}
+              className="border-red-200 text-red-500 hover:bg-red-50"
+            >
+              Clear → Use default
+            </Button>
+            <Button variant="primary" onClick={handleSaveWeekdaySlots}>
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <FloatingActionBar
-        isDirty={isDirty}
+        isDirty={isDirty && !isDayEditorOpen}
         isSaving={isSaving}
         onDiscard={() => {
           if (savedSettingsRef.current) {

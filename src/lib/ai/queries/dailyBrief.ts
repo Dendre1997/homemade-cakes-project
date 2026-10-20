@@ -22,6 +22,10 @@ import {
 } from "@/lib/ai/serialize";
 import { normalizeCustomOrder } from "@/lib/normalizeCustomOrder";
 import { isSendableEmail } from "@/lib/db/messages";
+import {
+  CUSTOM_ORDER_BRIEF_PROJECTION,
+  ORDER_LIST_PROJECTION,
+} from "@/lib/db/orderProjections";
 
 /**
  * The single aggregation behind the daily briefing. Extracted from the route so
@@ -44,22 +48,8 @@ const FULFILLED_STATUSES = ["delivered"] as const;
  * Heavy fields an LLM never needs. Excluding them at the driver level means
  * they never cross the wire, not just that they get dropped afterwards.
  */
-const ORDER_PROJECTION = {
-  notesLog: 0,
-  paymentToken: 0,
-  referenceImages: 0,
-  "items.imageUrl": 0,
-  "items.imageUrls": 0,
-  "items.selectedConfig": 0,
-} as const;
-
-const CUSTOM_ORDER_PROJECTION = {
-  "items.referenceImages": 0,
-  "items.priceBreakdown": 0,
-  referenceImages: 0,
-  referenceImageUrls: 0,
-  adminSelectedImage: 0,
-} as const;
+const ORDER_PROJECTION = ORDER_LIST_PROJECTION;
+const CUSTOM_ORDER_PROJECTION = CUSTOM_ORDER_BRIEF_PROJECTION;
 
 export class InvalidDateKeyError extends Error {
   constructor() {

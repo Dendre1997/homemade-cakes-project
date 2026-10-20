@@ -1,19 +1,30 @@
 "use client";
-import { useState, useEffect, useCallback, useMemo } from "react";
+
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Order, OrderStatus } from "@/types";
 import LoadingSpinner from "@/components/ui/Spinner";
 import { useAlert } from "@/contexts/AlertContext";
 import { OrdersCalendar } from "@/components/admin/orders/OrdersCalendar";
 import { OrdersToolbar } from "@/components/admin/orders/OrdersToolbar";
 import { OrderCard } from "@/components/admin/orders/OrderCard";
-import { startOfMonth, endOfMonth, format, isSameDay, startOfWeek, endOfWeek, isWithinInterval, startOfDay, isAfter } from "date-fns";
+import { OrdersDayPreviewSheet } from "@/components/admin/orders/OrdersDayPreviewSheet";
+import { DashboardGlassCard } from "@/components/admin/dashboard/DashboardGlassCard";
+import { DashboardSectionHeading } from "@/components/admin/dashboard/DashboardSectionHeading";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 import { Plus } from "lucide-react";
-
-// Helper for stable date comparison
-const toISODate = (d: Date) => format(d, "yyyy-MM-dd");
+import { getBakeryToday, toDateKey, utcDayRange } from "@/lib/db/capacity";
+import {
+  bakeryMonthKeyFromDateKey,
+  daysInBakeryMonth,
+  formatBakeryDate,
+  isDateKeyInBakeryWeek,
+} from "@/lib/dates/bakeryCalendar";
+import {
+  buildOrderStatsByDateKey,
+  ordersForDeliveryDateKey,
+} from "@/lib/admin/orderCalendarStats";
 
 const parseTimeSlot = (slot: string) => {
   const match = slot.match(/(\d+):(\d+)\s*(AM|PM)/i);
@@ -26,7 +37,6 @@ const parseTimeSlot = (slot: string) => {
   return hours * 60 + minutes;
 };
 
-/** Earliest scheduled pickup/delivery slot on the order (for chronological sort). */
 const getOrderScheduleSortKey = (order: Order) => {
   const deliveryDates = order.deliveryInfo?.deliveryDates ?? [];
 
@@ -41,7 +51,10 @@ const getOrderScheduleSortKey = (order: Order) => {
   let timeMinutes = Number.MAX_SAFE_INTEGER;
 
   for (const entry of deliveryDates) {
-    const entryDateMs = startOfDay(new Date(entry.date)).getTime();
+    const key = toDateKey(entry.date);
+    const entryDateMs = key
+      ? new Date(`${key}T12:00:00.000Z`).getTime()
+      : Number.MAX_SAFE_INTEGER;
     const entryTimeMinutes = parseTimeSlot(entry.timeSlot || "");
 
     if (
@@ -70,41 +83,51 @@ const sortOrdersByDeliverySchedule = (list: Order[]) =>
 
 const ManageOrdersPage = () => {
   const { showAlert } = useAlert();
-  
-  // Data
+  const listRef = useRef<HTMLDivElement>(null);
+
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [availabilityData, setAvailabilityData] = useState<any>(null); // New State for availability
   const [diametersMap, setDiametersMap] = useState<Record<string, number>>({});
   const [flavorMap, setFlavorMap] = useState<Record<string, string>>({});
 
-  // Filters
-  const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
+  const todayKey = useMemo(() => getBakeryToday(), []);
+  const [monthKey, setMonthKey] = useState(() =>
+    bakeryMonthKeyFromDateKey(todayKey)
+  );
+  const [selectedDateKey, setSelectedDateKey] = useState<string | null>(
+    todayKey
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [viewMode, setViewMode] = useState<'table' | 'grid'>('grid'); // Layout Mode
-  const [timeScope, setTimeScope] = useState<'day' | 'week' | 'month'>('month'); // Date Scope
-  const [hasInitialized, setHasInitialized] = useState(false); // Guard for initial smart selection
+  const [timeScope, setTimeScope] = useState<"day" | "week" | "month">("day");
+  const [hasInitialized, setHasInitialized] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
-  // Fetch Orders
+  const statsByDate = useMemo(
+    () => buildOrderStatsByDateKey(orders),
+    [orders]
+  );
+
   const fetchOrders = useCallback(async () => {
     try {
       setIsLoading(true);
-      setOrders([]); // Clear orders to avoid stale data race condition
-      
-      const start = startOfMonth(currentMonth);
-      const end = endOfMonth(currentMonth);
+      setOrders([]);
+
+      const days = daysInBakeryMonth(monthKey);
+      if (days.length === 0) return;
+
+      const { start } = utcDayRange(days[0]);
+      const { end } = utcDayRange(days[days.length - 1]);
 
       const params = new URLSearchParams({
-          startDate: start.toISOString(),
-          endDate: end.toISOString()
+        startDate: start.toISOString(),
+        endDate: end.toISOString(),
       });
 
       const res = await fetch(`/api/admin/orders?${params.toString()}`);
       if (!res.ok) throw new Error("Failed to fetch orders");
-      
-      const data = await res.json();
+
+      const data = (await res.json()) as Order[];
       setOrders(data);
     } catch (error) {
       console.error(error);
@@ -112,19 +135,7 @@ const ManageOrdersPage = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [currentMonth, showAlert]);
-
-  const fetchAvailability = useCallback(async () => {
-    try {
-        const res = await fetch("/api/availability", { method: "POST" });
-        if (res.ok) {
-            const data = await res.json();
-            setAvailabilityData(data);
-        }
-    } catch (e) {
-        console.error("Failed to load availability", e);
-    }
-  }, []);
+  }, [monthKey, showAlert]);
 
   const fetchDiameters = useCallback(async () => {
     try {
@@ -132,13 +143,13 @@ const ManageOrdersPage = () => {
       if (res.ok) {
         const data = await res.json();
         const map: Record<string, number> = {};
-        data.forEach((d: any) => {
+        data.forEach((d: { _id: string; sizeValue: number }) => {
           map[d._id] = d.sizeValue;
         });
         setDiametersMap(map);
       }
-    } catch (e) {
-      console.error("Failed to load diameters", e);
+    } catch (error) {
+      console.error("Failed to load diameters", error);
     }
   }, []);
 
@@ -148,242 +159,271 @@ const ManageOrdersPage = () => {
       if (res.ok) {
         const data = await res.json();
         const map: Record<string, string> = {};
-        data.forEach((f: any) => {
+        data.forEach((f: { _id: string; name: string }) => {
           map[f._id] = f.name;
         });
         setFlavorMap(map);
       }
-    } catch (e) {
-      console.error("Failed to load flavors", e);
+    } catch (error) {
+      console.error("Failed to load flavors", error);
     }
   }, []);
 
   useEffect(() => {
     fetchOrders();
-    fetchAvailability(); // Load availability on mount
     fetchDiameters();
     fetchFlavors();
-  }, [fetchOrders, fetchAvailability, fetchDiameters, fetchFlavors]);
+  }, [fetchOrders, fetchDiameters, fetchFlavors]);
 
-  // Smart Initial Date Selection
   useEffect(() => {
-    if (!isLoading && orders.length > 0 && !hasInitialized) {
-        const today = startOfDay(new Date());
-        
-        // 1. Check for orders Today
-        const todayStr = toISODate(today);
-        const hasOrdersToday = orders.some(o => 
-            o.deliveryInfo.deliveryDates.some(d => toISODate(new Date(d.date)) === todayStr)
+    if (!isLoading && !hasInitialized) {
+      const hasToday = statsByDate.has(todayKey);
+      if (hasToday) {
+        setSelectedDateKey(todayKey);
+        setTimeScope("day");
+      } else {
+        const futureDay = daysInBakeryMonth(monthKey).find(
+          (key) => key >= todayKey && statsByDate.has(key)
         );
-
-        if (hasOrdersToday) {
-            setSelectedDate(today);
-            setTimeScope('day');
+        if (futureDay) {
+          setSelectedDateKey(futureDay);
+          setTimeScope("day");
         } else {
-            // 2. Find Closest Future Date
-            const futureDates = orders
-                .flatMap(o => o.deliveryInfo.deliveryDates.map(d => new Date(d.date)))
-                .filter(d => isAfter(d, today) || isSameDay(d, today)) // Include today just in case, primarily for future
-                .sort((a, b) => a.getTime() - b.getTime());
-
-            if (futureDates.length > 0) {
-                // Found a future date
-                setSelectedDate(futureDates[0]);
-                setTimeScope('day');
-            } else {
-                // 3. Fallback to Today (no future orders found in this month/batch)
-                setSelectedDate(today);
-                setTimeScope('day');
-            }
+          setSelectedDateKey(todayKey);
+          setTimeScope("day");
         }
-        setHasInitialized(true);
-    } else if (!isLoading && orders.length === 0 && !hasInitialized) {
-         // No orders at all, just default to today
-         setSelectedDate(startOfDay(new Date()));
-         setTimeScope('day');
-         setHasInitialized(true);
+      }
+      setHasInitialized(true);
     }
-  }, [orders, isLoading, hasInitialized]);
+  }, [isLoading, hasInitialized, statsByDate, todayKey, monthKey]);
 
-  // Handle Month Navigation
-  const handleMonthChange = (newMonth: Date) => {
-      setCurrentMonth(newMonth);
-      setTimeScope('month'); // Switch to month view when navigating months
-      setSelectedDate(null); // Optional: Clear specific date selection
+  const handleMonthChange = (nextMonthKey: string) => {
+    setMonthKey(nextMonthKey);
+    setTimeScope("month");
+    setSelectedDateKey(null);
+    setPreviewOpen(false);
   };
 
-  // Handle Date Selection (with Cross-Month support)
-  const handleDateSelect = (date: Date | null) => {
-      if (!date) {
-          setSelectedDate(null);
-          return;
-      }
-
-      // Check if the clicked date is in the currently fetched month
-      if (!isSameDay(startOfMonth(date), startOfMonth(currentMonth))) {
-          // It's a different month! We need to switch context.
-          setCurrentMonth(startOfMonth(date)); // This triggers fetchOrders via useEffect
-      }
-
-      setSelectedDate(date);
-      setTimeScope('day');
+  const handleDateSelect = (
+    dateKey: string,
+    _anchor?: HTMLButtonElement | null
+  ) => {
+    if (bakeryMonthKeyFromDateKey(dateKey) !== monthKey) {
+      setMonthKey(bakeryMonthKeyFromDateKey(dateKey));
+    }
+    setSelectedDateKey(dateKey);
+    setTimeScope("day");
+    setPreviewOpen(true);
   };
 
-
-  // Status Update Handler
   const handleStatusChange = async (orderId: string, newStatus: OrderStatus) => {
-      const oldOrders = [...orders];
-      setOrders(prev => prev.map(o => o._id.toString() === orderId ? { ...o, status: newStatus } : o));
+    const oldOrders = [...orders];
+    setOrders((prev) =>
+      prev.map((order) =>
+        order._id.toString() === orderId
+          ? { ...order, status: newStatus }
+          : order
+      )
+    );
 
-      try {
-           const res = await fetch(`/api/admin/orders/${orderId}/status`, {
-               method: "PATCH",
-               headers: { "Content-Type": "application/json" },
-               body: JSON.stringify({ status: newStatus })
-           });
+    try {
+      const res = await fetch(`/api/admin/orders/${orderId}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
 
-           if (!res.ok) throw new Error("Failed to update status");
-      } catch (e) {
-          setOrders(oldOrders);
-          throw e; 
-      }
+      if (!res.ok) throw new Error("Failed to update status");
+    } catch (error) {
+      setOrders(oldOrders);
+      throw error;
+    }
   };
 
-  // Smart Filtering Logic
   const filteredOrders = useMemo(() => {
     let result = orders;
 
-    // 1. Status Filter (Step 1: The Tabs)
-    if (statusFilter === 'all') {
-         // "Active Work" View: Show everything EXCEPT 'cancelled' and 'delivered'
-         result = result.filter(o => o.status !== OrderStatus.CANCELLED && o.status !== OrderStatus.DELIVERED);
-    } else if (statusFilter === 'pending_confirmation') {
-         result = result.filter(o => o.status === OrderStatus.PENDING_CONFIRMATION);
-    } else if (statusFilter === 'processing') {
-         result = result.filter(o => o.status === OrderStatus.IN_PROGRESS);
-    } else if (statusFilter === 'ready') {
-         result = result.filter(o => o.status === OrderStatus.READY);
-    } else if (statusFilter === 'delivered') {
-         result = result.filter(o => o.status === OrderStatus.DELIVERED);
-    } else if (statusFilter === 'cancelled') {
-         result = result.filter(o => o.status === OrderStatus.CANCELLED);
+    if (statusFilter === "all") {
+      result = result.filter(
+        (order) =>
+          order.status !== OrderStatus.CANCELLED &&
+          order.status !== OrderStatus.DELIVERED
+      );
+    } else if (statusFilter === "pending_confirmation") {
+      result = result.filter(
+        (order) => order.status === OrderStatus.PENDING_CONFIRMATION
+      );
+    } else if (statusFilter === "processing") {
+      result = result.filter(
+        (order) => order.status === OrderStatus.IN_PROGRESS
+      );
+    } else if (statusFilter === "ready") {
+      result = result.filter((order) => order.status === OrderStatus.READY);
+    } else if (statusFilter === "delivered") {
+      result = result.filter(
+        (order) => order.status === OrderStatus.DELIVERED
+      );
+    } else if (statusFilter === "cancelled") {
+      result = result.filter(
+        (order) => order.status === OrderStatus.CANCELLED
+      );
     }
 
-    // 2. Time Scope Filter (Step 2: The Calendar)
-    if (timeScope === 'day' && selectedDate) {
-         const targetDateStr = toISODate(selectedDate);
-         result = result.filter(order => 
-             // Check if ANY delivery date matches the selected date
-             order.deliveryInfo.deliveryDates.some(d => toISODate(new Date(d.date)) === targetDateStr)
-         );
-    } else if (timeScope === 'week' && selectedDate) {
-         const start = startOfWeek(selectedDate);
-         const end = endOfWeek(selectedDate);
-         result = result.filter(order => 
-             order.deliveryInfo.deliveryDates.some(d => 
-                isWithinInterval(new Date(d.date), { start, end })
-             )
-         );
+    if (timeScope === "day" && selectedDateKey) {
+      result = result.filter((order) =>
+        (order.deliveryInfo?.deliveryDates ?? []).some(
+          (entry) => toDateKey(entry.date) === selectedDateKey
+        )
+      );
+    } else if (timeScope === "week" && selectedDateKey) {
+      result = result.filter((order) =>
+        (order.deliveryInfo?.deliveryDates ?? []).some((entry) => {
+          const key = toDateKey(entry.date);
+          return key && isDateKeyInBakeryWeek(key, selectedDateKey);
+        })
+      );
     }
 
-    // 3. Search Filter
     if (searchQuery) {
-         const lowerQ = searchQuery.toLowerCase();
-         result = result.filter(order => 
-             order._id.toLowerCase().includes(lowerQ) ||
-             order.customerInfo.name.toLowerCase().includes(lowerQ) ||
-             order.customerInfo.phone.includes(lowerQ) ||
-             (order.customerInfo.email || "").toLowerCase().includes(lowerQ) ||
-             (order.customerInfo.socialNickname || "").toLowerCase().includes(lowerQ)
-         );
+      const lowerQ = searchQuery.toLowerCase();
+      result = result.filter(
+        (order) =>
+          order._id.toString().toLowerCase().includes(lowerQ) ||
+          order.customerInfo.name.toLowerCase().includes(lowerQ) ||
+          order.customerInfo.phone.includes(lowerQ) ||
+          (order.customerInfo.email || "").toLowerCase().includes(lowerQ) ||
+          (order.customerInfo.socialNickname || "")
+            .toLowerCase()
+            .includes(lowerQ)
+      );
     }
 
     return sortOrdersByDeliverySchedule(result);
-  }, [orders, searchQuery, statusFilter, timeScope, selectedDate]);
+  }, [orders, searchQuery, statusFilter, timeScope, selectedDateKey]);
 
+  const previewOrders = useMemo(() => {
+    if (!selectedDateKey) return [];
+    return sortOrdersByDeliverySchedule(
+      ordersForDeliveryDateKey(orders, selectedDateKey)
+    );
+  }, [orders, selectedDateKey]);
 
-  if (isLoading && orders.length === 0) return <div className="flex justify-center p-12"><LoadingSpinner /></div>;
+  const listTitle = useMemo(() => {
+    if (timeScope === "day" && selectedDateKey) {
+      return `Orders · ${formatBakeryDate(selectedDateKey, {
+        month: "short",
+        day: "numeric",
+      })}`;
+    }
+    if (timeScope === "week" && selectedDateKey) {
+      return `Orders · week of ${formatBakeryDate(selectedDateKey, {
+        month: "short",
+        day: "numeric",
+      })}`;
+    }
+    return `Orders · ${formatBakeryDate(`${monthKey}-01`, {
+      month: "long",
+      year: "numeric",
+    })}`;
+  }, [timeScope, selectedDateKey, monthKey]);
+
+  if (isLoading && orders.length === 0) {
+    return (
+      <div className="flex justify-center p-12">
+        <LoadingSpinner />
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col gap-6 p-6 mx-auto max-w-[1600px] min-h-screen bg-background text-foreground">
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div className="space-y-1">
-              <h1 className="text-3xl font-bold tracking-tight text-primary">Orders Dashboard</h1>
-              <p className="text-muted-foreground">Manage All Orders.</p>
-          </div>
-          <Link
-            href="/bakery-manufacturing-orders/orders/new"
-            className={cn(
-              buttonVariants({ variant: "primary" }),
-              "shrink-0 shadow-sm",
-            )}
-          >
-            <Plus className="w-4 h-4 mr-2" aria-hidden />
-            <span className="whitespace-nowrap">Add Order</span>
-          </Link>
+    <section className="mx-auto max-w-[1600px] space-y-6 pb-24">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="font-heading text-3xl font-bold text-primary">
+            Orders
+          </h1>
+          <p className="mt-1 text-sm text-primary/70">
+            Calendar shows active orders per day (not delivered or cancelled).
+            America/Edmonton.
+          </p>
+        </div>
+        <Link
+          href="/bakery-manufacturing-orders/orders/new"
+          className={cn(buttonVariants({ variant: "primary" }), "shrink-0")}
+        >
+          <Plus className="mr-2 h-4 w-4" aria-hidden />
+          Add order
+        </Link>
       </div>
 
-      <div className="flex flex-col gap-6">
-          <div className="space-y-4">
-               <OrdersCalendar 
-                  orders={orders}
-                  currentMonth={currentMonth}
-                   onMonthChange={handleMonthChange}
-                   selectedDate={selectedDate}
-                   onSelectDate={handleDateSelect}
-                   timeScope={timeScope}
-               />
-           </div>
-          {/* TOP SECTION: Orders List (Toolbar + View) */}
-           <div className="bg-card rounded-xl border border-border shadow-sm flex flex-col overflow-hidden min-h-[500px]">
-               {/* Header / Toolbar */}
-               <div className="flex flex-col border-b border-border">
-                   <div className="px-6 py-4 bg-muted/20 border-b border-border flex justify-between items-center">
-                       <h2 className="font-semibold text-lg">
-                            {timeScope === 'day' && selectedDate && `Orders for ${format(selectedDate, "MMM do")}`}
-                            {timeScope === 'week' && selectedDate && `Orders for Week of ${format(startOfWeek(selectedDate), "MMM do")}`}
-                            {(timeScope === 'month' || !selectedDate) && `All Orders (${format(currentMonth, "MMMM")})`}
-                            <span className="ml-2 text-sm font-normal text-muted-foreground">({filteredOrders.length})</span>
-                       </h2>
+      <DashboardGlassCard>
+        <OrdersCalendar
+          monthKey={monthKey}
+          onMonthChange={handleMonthChange}
+          selectedDateKey={selectedDateKey}
+          onSelectDateKey={handleDateSelect}
+          timeScope={timeScope}
+          todayKey={todayKey}
+          statsByDate={statsByDate}
+        />
+      </DashboardGlassCard>
+
+      <div ref={listRef}>
+      <DashboardGlassCard className="overflow-hidden p-0">
+        <div className="border-b border-primary/10 px-4 py-4 sm:px-5">
+          <DashboardSectionHeading
+            title={listTitle}
+            accent="none"
+            action={
+              <span className="rounded-full bg-background/50 px-2.5 py-1 text-sm font-medium text-primary/70">
+                {filteredOrders.length}
+              </span>
+            }
+          />
+        </div>
+
+        <OrdersToolbar
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          statusFilter={statusFilter}
+          setStatusFilter={setStatusFilter}
+          timeScope={timeScope}
+          setTimeScope={setTimeScope}
+        />
+
+        <div className="p-4 sm:p-5">
+          {filteredOrders.length === 0 ? (
+            <div className="flex h-48 flex-col items-center justify-center text-primary/60">
+              <p>No orders match this view.</p>
             </div>
-            
-            
-                   
-                   <OrdersToolbar 
-                      searchQuery={searchQuery} 
-                      setSearchQuery={setSearchQuery}
-                      statusFilter={statusFilter}
-                      setStatusFilter={setStatusFilter}
-                      viewMode={viewMode}
-                      setViewMode={setViewMode}
-                      timeScope={timeScope}
-                      setTimeScope={setTimeScope}
-                   />
-               </div>
-
-               <div className="flex-1 p-4 bg-background">
-                   {filteredOrders.length === 0 ? (
-                       <div className="h-64 flex flex-col items-center justify-center text-muted-foreground">
-                           <p>No orders found for this view.</p>
-                       </div>
-                   ) : (
-                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-                           {filteredOrders.map(order => (
-                                <OrderCard 
-                                     key={order._id} 
-                                     order={order} 
-                                     onStatusChange={handleStatusChange} 
-                                     diametersMap={diametersMap}
-                                     flavorMap={flavorMap}
-                                />
-                           ))}
-                       </div>
-                   )}
-               </div>
-           </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
+              {filteredOrders.map((order) => (
+                <OrderCard
+                  key={order._id.toString()}
+                  order={order}
+                  onStatusChange={handleStatusChange}
+                  diametersMap={diametersMap}
+                  flavorMap={flavorMap}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </DashboardGlassCard>
       </div>
-    </div>
+
+      <OrdersDayPreviewSheet
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        dateKey={selectedDateKey}
+        orders={previewOrders}
+        onViewAll={() => {
+          setTimeScope("day");
+          listRef.current?.scrollIntoView({ behavior: "smooth" });
+        }}
+      />
+    </section>
   );
 };
 

@@ -31,8 +31,8 @@ export default function PendingOrdersCard({ pendingOrders }: PendingOrdersCardPr
   return (
     <>
       <Card
-        className={`border-l-4 shadow-sm cursor-pointer transition-colors hover:bg-accent/5 ${
-          isHighPriority ? "border-l-orange-500" : "border-l-gray-200"
+        className={`cursor-pointer border-primary/15 bg-background/20 shadow-sm backdrop-blur-xl backdrop-saturate-150 transition-colors hover:bg-background/30 border-l-4 ${
+          isHighPriority ? "border-l-orange-500" : "border-l-primary/20"
         }`}
         onClick={() => {
           if (count > 0) setIsOpen(true);

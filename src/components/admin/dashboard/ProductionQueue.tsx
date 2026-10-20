@@ -56,7 +56,7 @@ export default function ProductionQueue({ orders, flavorMap }: ProductionQueuePr
 
   if (localOrders.length === 0) {
       return (
-        <div className="bg-white p-8 rounded-lg border border-dashed border-gray-300 text-center text-muted-foreground">
+        <div className="rounded-xl border border-dashed border-primary/20 bg-background/10 p-8 text-center text-muted-foreground">
             <p>Kitchen quiet for now.</p>
         </div>
       );

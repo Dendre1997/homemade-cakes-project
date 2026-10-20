@@ -52,9 +52,16 @@ const PRESETS = [
 interface TimeSlotManagerProps {
   value: string[];
   onChange: (newSlots: string[]) => void;
+  /** Glass styling for schedule day editor / booking rules */
+  variant?: "default" | "schedule";
 }
 
-export const TimeSlotManager = ({ value, onChange }: TimeSlotManagerProps) => {
+export const TimeSlotManager = ({
+  value,
+  onChange,
+  variant = "default",
+}: TimeSlotManagerProps) => {
+  const isSchedule = variant === "schedule";
   const [startHour, setStartHour] = useState("09");
   const [startMinute, setStartMinute] = useState("00");
   const [startPeriod, setStartPeriod] = useState("AM");
@@ -129,9 +136,8 @@ export const TimeSlotManager = ({ value, onChange }: TimeSlotManagerProps) => {
   return (
     <div
       className={cn(
-        "mt-md space-y-sm",
-        "max-h-80 overflow-y-auto",
-        "pr-sm custom-scrollbar" 
+        isSchedule ? "space-y-3" : "mt-md space-y-sm",
+        isSchedule ? "max-h-56 overflow-y-auto pr-1" : "max-h-80 overflow-y-auto pr-sm custom-scrollbar"
       )}
     >
       {/* Quick Add Presets */}
@@ -163,9 +169,16 @@ export const TimeSlotManager = ({ value, onChange }: TimeSlotManagerProps) => {
       </div>
 
       {/* Time Picker Controls */}
-      <div className="flex flex-col gap-sm p-md rounded-medium bg-subtleBackground shadow-inset">
+      <div
+        className={cn(
+          "flex flex-col gap-sm rounded-medium p-md",
+          isSchedule
+            ? "border border-primary/10 bg-background/40"
+            : "bg-subtleBackground shadow-inset"
+        )}
+      >
         <h3 className="font-body text-normal font-semibold text-primary">
-          Select Time Range
+          Select time range
         </h3>
 
         {/* Start Time Picker */}

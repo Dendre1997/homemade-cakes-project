@@ -1,261 +1,294 @@
 "use client";
-import { useState,  useMemo } from "react";
-import {
-  format,
-  startOfMonth,
-  endOfMonth,
-  startOfWeek,
-  endOfWeek,
-  eachDayOfInterval,
-  isSameMonth,
-  isToday,
-  isSameDay,
-  addMonths,
-  subMonths,
-} from "date-fns";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
-import { cn } from "@/lib/utils";
-import * as Dialog from "@radix-ui/react-dialog";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
+
+import { useMemo, useState } from "react";
 import { ScheduleSettings } from "@/types";
-import { TimeSlotManager } from "@/components/ui/TimeSlotManager";
+import { addDaysToKey, toDateKey } from "@/lib/db/capacity";
+import {
+  bakeryMonthKeyFromDateKey,
+  dateKeyToStoredDate,
+  formatBakeryDate,
+} from "@/lib/dates/bakeryCalendar";
+import { cn } from "@/lib/utils";
+import { BakeryMonthGrid } from "@/components/admin/calendar/BakeryMonthGrid";
+import {
+  ScheduleDayEditor,
+  type DayEditorOriginRect,
+} from "@/components/admin/schedule/ScheduleDayEditor";
 
 type DateOverride = {
-  date: Date;
+  date: Date | string;
   workMinutes?: number;
   isBlocked?: boolean;
   availableHours?: string[];
 };
 
+export type ScheduleAvailability = {
+  availableMinutesPerDay: Record<string, number>;
+  defaultWorkMinutes: number;
+  leadTimeDays: number;
+};
+
 interface AdminDatePickerProps {
   settings: Partial<ScheduleSettings>;
   onSettingsChange: (newSettings: Partial<ScheduleSettings>) => void;
-  minutesBookedPerDay: Record<string, number>;
+  availability: ScheduleAvailability;
+  todayKey: string;
+  onBlockToggle: (
+    dateKey: string,
+    action: "block" | "unblock"
+  ) => Promise<boolean>;
+  blockingDateKey: string | null;
+  onDayEditorOpenChange?: (open: boolean) => void;
+}
+
+function dayNumber(dateKey: string): string {
+  return dateKey.slice(8, 10).replace(/^0/, "");
 }
 
 export const AdminDatePicker = ({
   settings,
   onSettingsChange,
-  minutesBookedPerDay = {},
+  availability,
+  todayKey,
+  onBlockToggle,
+  blockingDateKey,
+  onDayEditorOpenChange,
 }: AdminDatePickerProps) => {
-  const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [currentOverrideMinutes, setCurrentOverrideMinutes] = useState("");
-  const [currentOverrideHours, setCurrentOverrideHours] = useState<string[]>(
-    []
+  const [monthKey, setMonthKey] = useState(() =>
+    bakeryMonthKeyFromDateKey(todayKey)
+  );
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
+  const [editorSeed, setEditorSeed] = useState(0);
+  const [editorOrigin, setEditorOrigin] = useState<DayEditorOriginRect | null>(
+    null
   );
 
-  const {
-    dateOverrides = [],
-    defaultWorkMinutes = 240,
-    defaultAvailableHours = [],
-  } = settings;
+  const dateOverrides = (settings.dateOverrides ?? []) as DateOverride[];
+  const defaultWorkMinutes =
+    settings.defaultWorkMinutes ?? availability.defaultWorkMinutes ?? 240;
+  const defaultAvailableHours = settings.defaultAvailableHours ?? [];
+  const leadTimeDays = settings.leadTimeDays ?? availability.leadTimeDays ?? 3;
 
-  const minutesBookedMap = useMemo(
-    () => new Map(Object.entries(minutesBookedPerDay)),
-    [minutesBookedPerDay]
-  );
+  const overrideByKey = useMemo(() => {
+    const map = new Map<string, DateOverride>();
+    for (const override of dateOverrides) {
+      const key = toDateKey(override.date);
+      if (key) map.set(key, override);
+    }
+    return map;
+  }, [dateOverrides]);
 
-  const goToPreviousMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
-  const goToNextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
-
-  const handleDateClick = (day: Date) => {
-    const override = dateOverrides.find((o) => isSameDay(o.date, day));
-    setSelectedDate(day);
-    setCurrentOverrideMinutes(override?.workMinutes?.toString() || "");
-    setCurrentOverrideHours(
-      override?.availableHours || settings.defaultAvailableHours || []
-    );
-    setIsModalOpen(true);
+  const describeDay = (dateKey: string) => {
+    const override = overrideByKey.get(dateKey);
+    const isBlocked = override?.isBlocked === true;
+    const workMinutes = override?.workMinutes ?? defaultWorkMinutes;
+    const available = availability.availableMinutesPerDay[dateKey];
+    const hasAvailability = typeof available === "number" && !isBlocked;
+    const booked = hasAvailability
+      ? Math.max(0, workMinutes - available)
+      : null;
+    const utilization =
+      hasAvailability && workMinutes > 0 && booked !== null
+        ? Math.min(100, Math.round((booked / workMinutes) * 100))
+        : 0;
+    const isWithinLeadTime =
+      !isBlocked && dateKey < addDaysToKey(todayKey, leadTimeDays);
+    return {
+      override,
+      isBlocked,
+      workMinutes,
+      available: hasAvailability ? available : null,
+      booked,
+      utilization,
+      isWithinLeadTime,
+    };
   };
 
-  const handleSaveOverride = (action: "save" | "block" | "reset") => {
-    if (!selectedDate) return;
-    let newOverrides = [...dateOverrides];
-    newOverrides = newOverrides.filter((o) => !isSameDay(o.date, selectedDate));
+  const setEditorOpen = (open: boolean) => {
+    setIsEditorOpen(open);
+    onDayEditorOpenChange?.(open);
+  };
 
-    if (action === "save") {
-      const minutes = parseInt(currentOverrideMinutes, 10);
-      const newOverride: DateOverride = { date: selectedDate };
+  const openDay = (
+    dateKey: string,
+    anchor: HTMLButtonElement | null
+  ) => {
+    if (anchor) {
+      const rect = anchor.getBoundingClientRect();
+      setEditorOrigin({
+        left: rect.left,
+        top: rect.top,
+        width: rect.width,
+        height: rect.height,
+      });
+    } else {
+      setEditorOrigin(null);
+    }
+    setSelectedDateKey(dateKey);
+    setEditorSeed((seed) => seed + 1);
+    setEditorOpen(true);
+  };
 
+  const applyDayOverride = (
+    action: "apply" | "reset",
+    payload?: { workMinutes: string; availableHours: string[] }
+  ) => {
+    if (!selectedDateKey) return;
+    let newOverrides = dateOverrides.filter(
+      (override) => toDateKey(override.date) !== selectedDateKey
+    );
+
+    if (action === "apply" && payload) {
+      const minutes = parseInt(payload.workMinutes, 10);
+      const next: DateOverride = { date: dateKeyToStoredDate(selectedDateKey) };
       let hasCustomData = false;
 
-      if (!isNaN(minutes)) {
-        newOverride.workMinutes = minutes;
+      if (!isNaN(minutes) && payload.workMinutes.trim() !== "") {
+        next.workMinutes = minutes;
         hasCustomData = true;
       }
 
       if (
-        JSON.stringify(currentOverrideHours) !==
+        JSON.stringify(payload.availableHours) !==
         JSON.stringify(settings.defaultAvailableHours)
       ) {
-        newOverride.availableHours = currentOverrideHours;
+        next.availableHours = payload.availableHours;
         hasCustomData = true;
       }
 
-      if (hasCustomData) {
-        newOverrides.push(newOverride);
+      const existing = overrideByKey.get(selectedDateKey);
+      if (existing?.isBlocked) {
+        next.isBlocked = true;
+        hasCustomData = true;
       }
-    } else if (action === "block") {
-      newOverrides.push({ date: selectedDate, isBlocked: true });
+
+      if (hasCustomData) newOverrides.push(next);
     }
 
-    onSettingsChange({ ...settings, dateOverrides: newOverrides });
-    setIsModalOpen(false);
+    onSettingsChange({
+      ...settings,
+      dateOverrides: newOverrides.map((override) => ({
+        ...override,
+        date:
+          override.date instanceof Date
+            ? override.date
+            : new Date(override.date),
+      })),
+    });
+    setEditorSeed((seed) => seed + 1);
   };
 
-  const daysInGrid = eachDayOfInterval({
-    start: startOfWeek(startOfMonth(currentMonth), { weekStartsOn: 1 }),
-    end: endOfWeek(endOfMonth(currentMonth), { weekStartsOn: 1 }),
-  });
-  const weekdays = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
+  const selected = selectedDateKey ? describeDay(selectedDateKey) : null;
+  const selectedOverride = selectedDateKey
+    ? overrideByKey.get(selectedDateKey)
+    : undefined;
+  const selectedLabel = selectedDateKey
+    ? formatBakeryDate(selectedDateKey, {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      })
+    : "";
+
+  const initialWorkMinutes =
+    selectedOverride?.workMinutes?.toString() ?? "";
+  const initialAvailableHours =
+    selectedOverride?.availableHours ?? defaultAvailableHours;
 
   return (
-    <Dialog.Root open={isModalOpen} onOpenChange={setIsModalOpen}>
-      <div className="w-full bg-card-background p-lg rounded-large shadow-md">
-        {/* --- Navigation Header --- */}
-        <div className="relative flex items-center justify-center pt-2 pb-4">
-          <h2 className="font-heading text-h3 text-primary">
-            {format(currentMonth, "MMMM yyyy")}
-          </h2>
-          <div className="absolute inset-0 flex items-center justify-between">
+    <>
+      <BakeryMonthGrid
+        monthKey={monthKey}
+        onMonthChange={setMonthKey}
+        footer={
+          <p className="text-center text-xs text-primary/60">
+            Numbers are booked · available minutes. Times use America/Edmonton.
+          </p>
+        }
+        renderDay={(dateKey) => {
+          const day = describeDay(dateKey);
+          const isToday = dateKey === todayKey;
+
+          return (
             <button
-              onClick={goToPreviousMonth}
-              className="p-sm rounded-full transition-colors hover:bg-background"
-              aria-label="Go to previous month"
+              type="button"
+              onClick={(event) => openDay(dateKey, event.currentTarget)}
+              className={cn(
+                "flex min-h-16 w-full flex-col items-center justify-center gap-0.5 rounded-lg px-0.5 py-1 text-primary transition-colors",
+                day.isBlocked
+                  ? "bg-error text-white hover:bg-error/90"
+                  : "hover:bg-background/50",
+                !day.isBlocked &&
+                  day.override?.workMinutes &&
+                  "bg-accent/15 font-semibold",
+                !day.isBlocked &&
+                  day.override?.availableHours &&
+                  "ring-1 ring-accent",
+                isToday && !day.isBlocked && "ring-2 ring-primary/40"
+              )}
+              aria-label={
+                day.isBlocked
+                  ? `${dateKey} blocked`
+                  : `${dateKey}, ${day.booked ?? "unknown"} booked, ${day.available ?? "unknown"} available`
+              }
             >
-              <ChevronLeft className="h-5 w-5 text-primary" />
+              <span className="text-xs font-semibold leading-none">
+                {dayNumber(dateKey)}
+              </span>
+              {day.isBlocked ? (
+                <span className="text-[9px] font-bold uppercase leading-none">
+                  Blocked
+                </span>
+              ) : (
+                <>
+                  <span className="h-1 w-full max-w-9 overflow-hidden rounded-full bg-primary/10">
+                    <span
+                      className="block h-full rounded-full bg-accent"
+                      style={{ width: `${day.utilization}%` }}
+                    />
+                  </span>
+                  <span className="text-[9px] tabular-nums leading-none text-primary/70">
+                    {day.booked === null || day.available === null
+                      ? "— · —"
+                      : `${day.booked} · ${day.available}`}
+                  </span>
+                </>
+              )}
             </button>
-            <button
-              onClick={goToNextMonth}
-              className="p-sm rounded-full transition-colors hover:bg-background"
-              aria-label="Go to next month"
-            >
-              <ChevronRight className="h-5 w-5 text-primary" />
-            </button>
-          </div>
-        </div>
+          );
+        }}
+      />
 
-        {/* --- Calendar Grid --- */}
-        <div className="grid grid-cols-7 gap-1">
-          {weekdays.map((day) => (
-            <div
-              key={day}
-              className="text-center font-body text-small text-primary/60 pb-sm"
-            >
-              {day}
-            </div>
-          ))}
-
-          {daysInGrid.map((day, i) => {
-            const isCurrentMonth = isSameMonth(day, currentMonth);
-            const override = dateOverrides.find((o) => isSameDay(o.date, day));
-
-            return (
-              <div
-                key={i}
-                className="flex items-center justify-center aspect-square"
-              >
-                <button
-                  type="button"
-                  onClick={() => handleDateClick(day)}
-                  disabled={!isCurrentMonth}
-                  className={cn(
-                    "flex h-full w-full items-center justify-center rounded-medium font-body transition-all duration-200 ease-in-out",
-                    !isCurrentMonth && "text-primary/40 opacity-50",
-
-                    // --- Blocked State ---
-                    override?.isBlocked &&
-                      "bg-error text-white hover:bg-error/90",
-
-                    // --- Available State ---
-                    !override?.isBlocked && [
-                      "hover:bg-subtleBackground",
-                      override?.workMinutes &&
-                        "bg-accent/20 text-accent font-bold",
-                      override?.availableHours && "ring-1 ring-accent",
-                      isToday(day) && !override && "font-bold text-accent",
-                    ]
-                  )}
-                >
-                  {format(day, "d")}
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* --- Dialog Content --- */}
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
-        <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-card-background p-lg rounded-large shadow-lg w-full max-w-sm z-50">
-          <Dialog.Title className="font-heading text-h3 text-primary">
-            Edit Date:{" "}
-            {selectedDate ? format(selectedDate, "MMMM d, yyyy") : ""}
-          </Dialog.Title>
-          <div className="mt-md space-y-md">
-            <div>
-              <label
-                htmlFor="custom-minutes"
-                className="block font-body text-small text-primary/80 mb-sm"
-              >
-                Custom Work Minutes (Default: {defaultWorkMinutes})
-              </label>
-              <Input
-                id="custom-minutes"
-                type="number"
-                value={currentOverrideMinutes}
-                onChange={(e) => setCurrentOverrideMinutes(e.target.value)}
-                placeholder={`e.g., 360 (for 6 hours)`}
-              />
-            </div>
-            <div>
-              <label className="block font-body text-small text-primary/80 mb-sm">
-                Available Time Slots (Default: {defaultAvailableHours.length}{" "}
-                slots)
-              </label>
-              <TimeSlotManager
-                value={currentOverrideHours}
-                onChange={setCurrentOverrideHours}
-              />
-            </div>
-          </div>
-
-          <div className="mt-lg space-y-sm border-t border-border pt-md">
-            <Button
-              onClick={() => handleSaveOverride("save")}
-              className="w-full"
-              variant="primary"
-            >
-              Save Changes
-            </Button>
-            <Button
-              onClick={() => handleSaveOverride("block")}
-              variant="danger"
-              className="w-full"
-            >
-              Block this Date
-            </Button>
-            <Button
-              onClick={() => handleSaveOverride("reset")}
-              variant="text"
-              className="w-full"
-            >
-              Reset to Default
-            </Button>
-          </div>
-          <Dialog.Close asChild>
-            <button className="absolute top-md right-md p-1 rounded-full transition-colors text-primary/60 hover:bg-subtleBackground">
-              <span className="sr-only">Close</span>
-              <X className="h-5 w-5" />
-            </button>
-          </Dialog.Close>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+      <ScheduleDayEditor
+        key={`${selectedDateKey ?? "none"}-${editorSeed}`}
+        open={isEditorOpen}
+        onOpenChange={setEditorOpen}
+        dateKey={selectedDateKey}
+        dateLabel={selectedLabel}
+        overview={
+          selected
+            ? {
+                isBlocked: selected.isBlocked,
+                isWithinLeadTime: selected.isWithinLeadTime,
+                booked: selected.booked,
+                available: selected.available,
+                utilization: selected.utilization,
+              }
+            : null
+        }
+        defaultWorkMinutes={defaultWorkMinutes}
+        defaultSlotCount={defaultAvailableHours.length}
+        initialWorkMinutes={initialWorkMinutes}
+        initialAvailableHours={initialAvailableHours}
+        defaultAvailableHours={defaultAvailableHours}
+        onApply={(payload) => applyDayOverride("apply", payload)}
+        onResetToDefault={() => applyDayOverride("reset")}
+        onBlockToggle={onBlockToggle}
+        blockingDateKey={blockingDateKey}
+        originRect={editorOrigin}
+      />
+    </>
   );
 };
 

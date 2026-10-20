@@ -1,270 +1,120 @@
-import { withMongoClient } from "@/lib/db";
-import { Order, OrderStatus } from "@/types";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
+import { getAdminDashboardPayload } from "@/lib/admin/dashboardData";
 import { buttonVariants } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
-import { 
-  DollarSign, 
-  Clock, 
-  Plus, 
-  Calendar, 
-  Utensils,
-  MapPin,
-    Truck,
-  ShoppingCart
-} from "lucide-react";
+import { Plus, Utensils } from "lucide-react";
 import Link from "next/link";
-import { formatDistanceToNow, isToday, format } from "date-fns";
-import InboxQueue from "@/components/admin/dashboard/InboxQueue";
-import PendingOrdersCard from "@/components/admin/dashboard/PendingOrdersCard";
+import DashboardKpiStrip from "@/components/admin/dashboard/DashboardKpiStrip";
+import DashboardNeedsActionSection from "@/components/admin/dashboard/DashboardNeedsActionSection";
+import DashboardTodayCapacityCard from "@/components/admin/dashboard/DashboardTodayCapacityCard";
+import DashboardCustomLeadsList from "@/components/admin/dashboard/DashboardCustomLeadsList";
+import DashboardAnalyticsSnippet from "@/components/admin/dashboard/DashboardAnalyticsSnippet";
+import DashboardRefreshControls from "@/components/admin/dashboard/DashboardRefreshControls";
+import { DashboardGlassCard } from "@/components/admin/dashboard/DashboardGlassCard";
+import { DashboardSectionHeading } from "@/components/admin/dashboard/DashboardSectionHeading";
 import ProductionQueue from "@/components/admin/dashboard/ProductionQueue";
-import RefreshTrigger from "@/components/admin/RefreshTrigger";
 
-// Ensure Next.js does not statically cache this page
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-async function getDashboardData() {
-  try {
-    return await withMongoClient(async (client) => {
-      const db = client.db(process.env.MONGODB_DB_NAME);
-      const collection = db.collection<Order>("orders");
-
-      const now = new Date();
-      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-      const revenueOrders = await collection.find({
-        createdAt: { $gte: startOfToday },
-        status: { $ne: OrderStatus.CANCELLED }
-      }).toArray();
-
-      const revenueToday = revenueOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
-
-      const pendingConfirmationOrders = await collection.find({
-        status: OrderStatus.PENDING_CONFIRMATION
-      })
-      .sort({ createdAt: 1 })
-      .toArray();
-
-      const inboxOrdersRaw = await collection.find({
-         status: { $in: [OrderStatus.NEW, OrderStatus.PAID] }
-      })
-      .sort({ createdAt: 1 })
-      .toArray();
-
-      const inboxOrders = inboxOrdersRaw.map(order => ({
-          ...order,
-          _id: order._id.toString(),
-          deliveryInfo: {
-              ...order.deliveryInfo,
-              deliveryDates: order.deliveryInfo.deliveryDates.map(d => ({
-                  ...d,
-                  date: new Date(d.date)
-              }))
-          }
-      }));
-
-      const nextDeliveries = await collection.find({
-        "deliveryInfo.deliveryDates.date": { $gte: startOfToday },
-        status: { $in: [OrderStatus.NEW, OrderStatus.PAID, OrderStatus.IN_PROGRESS, OrderStatus.READY] }
-      })
-      .sort({ "deliveryInfo.deliveryDates.date": 1 })
-      .limit(5)
-      .toArray();
-
-      const productionQueue = nextDeliveries.map(order => {
-         const sortedDates = order.deliveryInfo.deliveryDates
-            .map(d => ({ ...d, dateObj: new Date(d.date) }))
-            .sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime());
-
-         const upcoming = sortedDates.filter(d => d.dateObj >= startOfToday);
-         const past = sortedDates.filter(d => d.dateObj < startOfToday);
-
-         const reorderedDates = [...upcoming, ...past].map(d => ({
-             ...d,
-             date: d.dateObj
-         }));
-
-         return {
-            ...order,
-            _id: order._id.toString(),
-            deliveryInfo: {
-                ...order.deliveryInfo,
-                deliveryDates: reorderedDates
-            }
-         };
-      });
-
-      const flavors = await db.collection("flavors").find({}).toArray();
-      const flavorMap: Record<string, string> = {};
-      flavors.forEach(f => flavorMap[f._id.toString()] = f.name);
-
-      return {
-        revenueToday,
-        ordersCountToday: revenueOrders.length,
-        pendingConfirmationOrders: JSON.parse(JSON.stringify(pendingConfirmationOrders)),
-        inboxOrders: JSON.parse(JSON.stringify(inboxOrders)),
-        productionQueue: JSON.parse(JSON.stringify(productionQueue)),
-        flavorMap,
-        errorMsg: null
-      };
-    });
-  } catch (error) {
-    console.error("Dashboard database fetch failed:", error);
-    return {
-      revenueToday: 0,
-      ordersCountToday: 0,
-      pendingConfirmationOrders: [],
-      inboxOrders: [],
-      productionQueue: [],
-      flavorMap: {},
-      errorMsg: "We timed out trying to connect to the database. This frequently occurs during cold starts. Please reload the page to try again."
-    };
-  }
-}
-
-
 export default async function AdminDashboard() {
-  const data = await getDashboardData();
-  const { revenueToday, ordersCountToday, pendingConfirmationOrders, inboxOrders, productionQueue, flavorMap, errorMsg } = data;
-  
-  const nextOrder = productionQueue[0];
-  const nextDeliveryItem = nextOrder ? {
-      customerName: nextOrder.customerInfo?.name || "Customer",
-      deliveryDate: nextOrder.deliveryInfo.deliveryDates[0]?.date,
-      method: nextOrder.deliveryInfo.method
-  } : null;
+  const data = await getAdminDashboardPayload();
 
   return (
-    <div className="space-y-8 p-6 pb-20 max-w-[1600px] mx-auto">
-      {/* Background auto-polling (every 30 seconds) */}
-      <RefreshTrigger intervalMs={30000} />
-
-      {errorMsg && (
-        <div className="p-4 rounded-xl border border-destructive/20 bg-destructive/10 text-destructive flex items-center gap-3">
-          <div className="text-lg">⚠️</div>
+    <div className="mx-auto max-w-[1600px] space-y-8 p-6 pb-20">
+      {data.errorMsg && (
+        <div className="flex items-center gap-3 rounded-xl border border-destructive/20 bg-destructive/10 p-4 text-destructive">
+          <div className="text-lg" aria-hidden>
+            ⚠️
+          </div>
           <div>
             <span className="font-semibold">Database Connection Issue: </span>
-            <span>{errorMsg}</span>
+            <span>{data.errorMsg}</span>
           </div>
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
-          <h1 className="text-3xl font-heading font-bold text-primary">
+          <h1 className="font-heading text-3xl font-bold text-primary">
             My Bakery
           </h1>
-          <p className="text-muted-foreground mt-1">
-            Overview of daily baking and orders
+          <p className="mt-1 text-muted-foreground">
+            Command center for today&apos;s baking and orders
           </p>
         </div>
 
-        {/* Quick Actions */}
-        <div className="flex gap-3 flex-col md:flex-row">
-          <Link
-            href="/bakery-manufacturing-orders/orders/new"
-            className={cn(buttonVariants({ variant: "primary" }), "gap-2 shadow-sm")}
-          >
-            <Plus className="w-4 h-4" aria-hidden /> Manual Order
-          </Link>
-          <Link
-            href="/bakery-manufacturing-orders/products/create"
-            className={cn(
-              buttonVariants({ variant: "outline" }),
-              "gap-2 shadow-sm bg-white",
-            )}
-          >
-            <Plus className="w-4 h-4" aria-hidden />
-            New Product
-          </Link>
+        <div className="flex w-full min-w-0 flex-col gap-3 md:w-auto md:max-w-none">
+          <DashboardRefreshControls className="w-full sm:w-auto" />
+          <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2 md:flex md:w-auto md:gap-3">
+            <Link
+              href="/bakery-manufacturing-orders/orders/new"
+              className={cn(
+                buttonVariants({ variant: "primary" }),
+                "w-full justify-center gap-2 shadow-sm md:w-auto"
+              )}
+            >
+              <Plus className="h-4 w-4 shrink-0" aria-hidden /> Manual Order
+            </Link>
+            <Link
+              href="/bakery-manufacturing-orders/products/create"
+              className={cn(
+                buttonVariants({ variant: "outline" }),
+                "w-full justify-center gap-2 border-primary/15 bg-background/20 shadow-sm backdrop-blur-md md:w-auto"
+              )}
+            >
+              <Plus className="h-4 w-4 shrink-0" aria-hidden />
+              New Product
+            </Link>
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="border-l-4 border-l-green-500 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Revenue Today
-            </CardTitle>
-            <DollarSign className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">${revenueToday.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground">
-              You have {ordersCountToday} new orders for today
-            </p>
-          </CardContent>
-        </Card>
+      <DashboardKpiStrip
+        inboxCount={data.kpi.inboxCount}
+        pendingConfirmationCount={data.kpi.pendingConfirmationCount}
+        dueTodayCount={data.kpi.dueTodayCount}
+      />
 
-        <PendingOrdersCard pendingOrders={pendingConfirmationOrders} />
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:items-start">
+        <div className="flex flex-col gap-8">
+          <DashboardNeedsActionSection
+            pendingConfirmationOrders={data.pendingConfirmationOrders}
+            inboxOrders={data.inboxOrders}
+            flavorMap={data.flavorMap}
+            supportUnreadCount={data.support.unreadCount}
+            supportPreview={data.support.preview}
+          />
 
-        <Card className="border-l-4 border-l-blue-500 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              {nextDeliveryItem?.method === "pickup"
-                ? "Next Pickup"
-                : "Next Delivery"}
-            </CardTitle>
-            {nextDeliveryItem?.method === "pickup" ? (
-              <MapPin className="h-4 w-4 text-blue-500" />
-            ) : (
-              <Truck className="h-4 w-4 text-blue-500" />
-            )}
-          </CardHeader>
-          <CardContent>
-            {nextDeliveryItem ? (
-              <>
-                <div className="text-lg font-bold truncate">
-                  {format(
-                    new Date(nextDeliveryItem.deliveryDate),
-                    "EEEE, MMM do"
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground truncate">
-                  {nextDeliveryItem.customerName} •{" "}
-                  {format(new Date(nextDeliveryItem.deliveryDate), "h:mm a")}
-                </p>
-              </>
-            ) : (
-              <div className="text-sm text-muted-foreground py-1">
-                No upcoming tasks
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+          <DashboardTodayCapacityCard
+            capacity={data.todayCapacity}
+            todayKey={data.todayKey}
+          />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <section className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-heading font-semibold text-primary flex items-center gap-2">
-              <span className="w-2 h-8 bg-orange-500 rounded-sm inline-block"></span>
-              Inbox ({inboxOrders.length})
-            </h2>
-            <Link
-              href="/bakery-manufacturing-orders/orders"
-              className="text-sm text-primary hover:underline"
-            >
-              View All
-            </Link>
-          </div>
+          <DashboardCustomLeadsList leads={data.customLeadsTop3} />
+        </div>
 
-          <InboxQueue orders={inboxOrders} flavorMap={flavorMap} />
-        </section>
+        <div className="flex flex-col gap-8">
+          <section className="space-y-4">
+            <DashboardSectionHeading
+              title="What to bake next"
+              icon={<Utensils className="h-5 w-5" aria-hidden />}
+              accent="none"
+              action={
+                <span className="text-sm text-muted-foreground">
+                  Next 5 tasks
+                </span>
+              }
+            />
+            <DashboardGlassCard>
+              <ProductionQueue
+                orders={data.productionQueue}
+                flavorMap={data.flavorMap}
+              />
+            </DashboardGlassCard>
+          </section>
 
-        <section className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-heading font-semibold text-primary flex items-center gap-2">
-              <Utensils className="w-5 h-5" />
-              What to Bake Next
-            </h2>
-            <span className="text-sm text-muted-foreground">Next 5 tasks</span>
-          </div>
-
-          <ProductionQueue orders={productionQueue} flavorMap={flavorMap} />
-        </section>
+          <DashboardAnalyticsSnippet topFlavors={data.analytics.topFlavors7d} />
+        </div>
       </div>
     </div>
   );

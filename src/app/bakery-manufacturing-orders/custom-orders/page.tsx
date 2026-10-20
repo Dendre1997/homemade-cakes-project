@@ -6,24 +6,11 @@ import { CompactCustomOrderRow } from "@/components/admin/custom-orders/CompactC
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs";
 import RefreshTrigger from "@/components/admin/RefreshTrigger";
 import { normalizeCustomOrder } from "@/lib/normalizeCustomOrder";
+import { CUSTOM_ORDER_LIST_PROJECTION } from "@/lib/db/orderProjections";
 
 // Ensure Next.js does not statically cache this page
 export const dynamic = 'force-dynamic';
 export const revalidate = 0; 
-
-// Fields never read by CustomOrderCard / CompactCustomOrderRow on the list view.
-// referenceImages stay whole: the card renders every thumbnail, not just the first.
-const CUSTOM_ORDER_LIST_PROJECTION = {
-  addons: 0,
-  priceBreakdown: 0,
-  "items.addons": 0,
-  "items.priceBreakdown": 0,
-  adminNotes: 0,
-  idempotencyKey: 0,
-  userId: 0,
-  updatedAt: 0,
-  "contact.phoneDigits": 0,
-} as const;
 
 export default async function CustomOrdersListPage() {
   let customOrders: CustomOrder[] = [];
