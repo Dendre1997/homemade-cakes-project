@@ -48,28 +48,69 @@ function CategoryAvatar({
   );
 }
 
+function CollageTile({ url, sizes = "128px" }: { url: string; sizes?: string }) {
+  return (
+    <div className="relative min-h-0 min-w-0 h-full w-full bg-gray-100">
+      <Image
+        src={url}
+        alt=""
+        fill
+        sizes={sizes}
+        quality={85}
+        className="object-cover"
+        crossOrigin="anonymous"
+      />
+    </div>
+  );
+}
+
+/** 1–4 set images only; no empty cells. Zero URLs → single placeholder. */
 function CandyBarCollageAvatar({ imageUrls }: { imageUrls: string[] }) {
-  const cells = Array.from({ length: 4 }, (_, i) => imageUrls[i] ?? null);
+  const urls = imageUrls.slice(0, 4);
+  const n = urls.length;
+
+  if (n === 0) {
+    return <CategoryAvatar alt={CANDY_BAR_GROUP_LABEL} />;
+  }
+
+  if (n === 1) {
+    return <CategoryAvatar imageUrl={urls[0]} alt={CANDY_BAR_GROUP_LABEL} />;
+  }
+
+  const shell =
+    "relative h-32 w-32 shrink-0 overflow-hidden rounded-full border border-black/5 shadow-sm";
+
+  if (n === 2) {
+    return (
+      <div className={shell}>
+        <div className="grid h-full w-full grid-cols-2">
+          {urls.map((url, i) => (
+            <CollageTile key={i} url={url} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (n === 3) {
+    return (
+      <div className={shell}>
+        <div className="grid h-full w-full grid-cols-2 grid-rows-2">
+          <CollageTile url={urls[0]} />
+          <CollageTile url={urls[1]} />
+          <div className="relative col-span-2 min-h-0">
+            <CollageTile url={urls[2]} sizes="256px" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="relative h-32 w-32 shrink-0 overflow-hidden rounded-full border border-black/5 shadow-sm">
+    <div className={shell}>
       <div className="grid h-full w-full grid-cols-2 grid-rows-2">
-        {cells.map((url, i) => (
-          <div key={i} className="relative min-h-0 min-w-0 bg-gray-100">
-            {url ? (
-              <Image
-                src={url}
-                alt=""
-                fill
-                sizes="128px"
-                quality={85}
-                className="object-cover"
-                crossOrigin="anonymous"
-              />
-            ) : (
-              <div className="h-full w-full bg-gray-200/80" aria-hidden />
-            )}
-          </div>
+        {urls.map((url, i) => (
+          <CollageTile key={i} url={url} />
         ))}
       </div>
     </div>

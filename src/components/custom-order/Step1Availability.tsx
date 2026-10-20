@@ -184,7 +184,6 @@ export default function Step1Availability({ onNext }: { onNext: () => void }) {
                     selected={field.value}
                     onSelect={(date) => {
                       field.onChange(date);
-                      setValue("timeSlot", "", { shouldValidate: true });
                     }}
                     unavailableDates={availability?.unavailableDates || []}
                     leadTimeDays={availability?.leadTimeDays || 7}
@@ -223,9 +222,8 @@ export default function Step1Availability({ onNext }: { onNext: () => void }) {
                     {field.value && (
                       <p className="mb-3 flex items-start gap-2 rounded-lg border border-accent/25 bg-accent/5 p-3 text-sm text-primary/80 leading-relaxed">
                         <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden />
-                        Once you pick a pickup time slot, it cannot be changed.
-                        To choose a different time, select another date first
-                        (that will clear your slot).
+                        After you submit, pickup time is final. You can change
+                        it here until then.
                       </p>
                     )}
 
