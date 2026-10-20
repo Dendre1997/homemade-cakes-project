@@ -1,17 +1,37 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { auth } from "@/lib/firebase/client";
 import {
   GoogleAuthProvider,
   getRedirectResult,
   signInWithPopup,
   signInWithRedirect,
-  type UserCredential,
+  type User,
 } from "firebase/auth";
-import { isStandaloneDisplayMode } from "@/lib/firebase/googleSignIn";
+import { shouldFallBackToRedirect } from "@/lib/firebase/googleSignIn";
 import LoadingSpinner from "@/components/ui/Spinner";
 
 const ADMIN_HOME = "/bakery-manufacturing-orders";
+const OAUTH_REDIRECT_FLAG = "admin_oauth_redirect";
+
+function markRedirectPending() {
+  try {
+    sessionStorage.setItem(OAUTH_REDIRECT_FLAG, "1");
+  } catch {
+    // Storage unavailable: the redirect result itself is the only signal.
+  }
+}
+
+/** Reads and clears the flag set right before `signInWithRedirect`. */
+function consumeRedirectPending(): boolean {
+  try {
+    const pending = sessionStorage.getItem(OAUTH_REDIRECT_FLAG) === "1";
+    sessionStorage.removeItem(OAUTH_REDIRECT_FLAG);
+    return pending;
+  } catch {
+    return false;
+  }
+}
 
 const provider = new GoogleAuthProvider();
 // Request profile & email scopes (default) — no extra scopes needed
@@ -39,13 +59,14 @@ function getFirebaseErrorCode(err: unknown): string | null {
 const AdminLoginPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const redirectHandledRef = useRef(false);
 
   /**
-   * Exchanges the Firebase credential for the admin session cookie.
+   * Exchanges the Firebase user for the admin session cookie.
    * Returns true when the page is navigating away (keep the spinner up).
    */
-  const completeAdminSession = async (userCredential: UserCredential): Promise<boolean> => {
-    const idToken = await userCredential.user.getIdToken();
+  const completeAdminSession = async (user: User): Promise<boolean> => {
+    const idToken = await user.getIdToken();
 
     // Pass the raw Firebase ID token to the backend for server-side validation
     const response = await fetch("/api/admin/auth/sessionLogin", {
@@ -84,29 +105,35 @@ const AdminLoginPage = () => {
     setError(err instanceof Error ? err.message : "An unexpected error occurred. Please try again.");
   };
 
-  // Completes the redirect flow (standalone PWA, or popup-blocked fallback) after Google returns here.
+  // Completes the redirect fallback after Google returns here. The ref (not a
+  // cleanup flag) guards it: getRedirectResult is single-use, so a StrictMode
+  // remount must neither re-run it nor abandon the first run's session call.
   useEffect(() => {
-    let cancelled = false;
+    if (redirectHandledRef.current) return;
+    redirectHandledRef.current = true;
 
     (async () => {
       try {
         const result = await getRedirectResult(auth);
-        if (!result || cancelled) return;
+        const returningFromRedirect = consumeRedirectPending();
+
+        let user = result?.user ?? null;
+        if (!user && returningFromRedirect) {
+          // The result may already have been consumed; the signed-in user persists.
+          await auth.authStateReady();
+          user = auth.currentUser;
+        }
+        if (!user) return;
 
         setIsLoading(true);
         setError(null);
-        const navigating = await completeAdminSession(result);
-        if (!navigating && !cancelled) setIsLoading(false);
+        const navigating = await completeAdminSession(user);
+        if (!navigating) setIsLoading(false);
       } catch (err) {
-        if (cancelled) return;
         handleSignInError(err);
         setIsLoading(false);
       }
     })();
-
-    return () => {
-      cancelled = true;
-    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -115,24 +142,19 @@ const AdminLoginPage = () => {
     setError(null);
 
     try {
-      // A popup opens outside an installed PWA's window and never reports back.
-      if (isStandaloneDisplayMode()) {
-        await signInWithRedirect(auth, provider);
-        return; // page navigates away to Google
-      }
-
-      let userCredential: UserCredential;
+      let user: User;
       try {
-        userCredential = await signInWithPopup(auth, provider);
+        user = (await signInWithPopup(auth, provider)).user;
       } catch (err) {
-        if (getFirebaseErrorCode(err) === "auth/popup-blocked") {
+        if (shouldFallBackToRedirect(err)) {
+          markRedirectPending();
           await signInWithRedirect(auth, provider);
           return; // page navigates away to Google
         }
         throw err;
       }
 
-      const navigating = await completeAdminSession(userCredential);
+      const navigating = await completeAdminSession(user);
       if (!navigating) setIsLoading(false);
     } catch (err) {
       handleSignInError(err);

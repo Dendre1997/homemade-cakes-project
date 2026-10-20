@@ -20,24 +20,29 @@ export function isStandaloneDisplayMode(): boolean {
   );
 }
 
+const REDIRECT_FALLBACK_CODES = new Set([
+  "auth/popup-blocked",
+  "auth/operation-not-supported-in-this-environment",
+  "auth/web-storage-unsupported",
+]);
+
+/** Popup errors where a full-page redirect is the only remaining option. */
+export function shouldFallBackToRedirect(err: unknown): boolean {
+  return isFirebaseAuthError(err) && REDIRECT_FALLBACK_CODES.has(err.code);
+}
+
 /**
- * Opens Google OAuth via popup. Falls back to full-page redirect when the
- * browser blocks popups (`auth/popup-blocked`). Installed PWAs always use the
- * redirect flow: a popup opens outside the app window and never reports back.
+ * Opens Google OAuth via popup, including in installed PWAs: the auth helpers
+ * are served same-origin via `/__/auth/*`, so the popup can report back.
+ * Falls back to a full-page redirect only when the popup cannot run.
  */
 export async function signInWithGoogle(): Promise<UserCredential> {
   const provider = new GoogleAuthProvider();
 
-  if (isStandaloneDisplayMode()) {
-    await signInWithRedirect(auth, provider);
-    // Page navigates away; this promise never settles in the current document.
-    return new Promise(() => {});
-  }
-
   try {
     return await signInWithPopup(auth, provider);
   } catch (err) {
-    if (isFirebaseAuthError(err) && err.code === "auth/popup-blocked") {
+    if (shouldFallBackToRedirect(err)) {
       await signInWithRedirect(auth, provider);
       // Page navigates away; this promise never settles in the current document.
       return new Promise(() => {});

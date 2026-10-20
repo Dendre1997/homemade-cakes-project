@@ -2,7 +2,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { Order, Diameter, OrderStatus, ScheduleSettings, IShape } from "@/types"; // Import OrderStatus
-import Link from "next/link";
 import LoadingSpinner from "@/components/ui/Spinner";
 import OrderDetailAssignedDates from "@/components/admin/orders/OrderDetailAssignedDates";
 import { useAlert } from "@/contexts/AlertContext";
@@ -19,9 +18,14 @@ import { OrderDetailActions } from "@/components/admin/orders/OrderDetailActions
 import { OrderNotesSection } from "@/components/admin/orders/OrderNotesSection";
 import { useConfirmation } from "@/contexts/ConfirmationContext";
 import { ReceiptGeneratorModal } from "@/components/admin/orders/ReceiptGeneratorModal";
-import { Receipt, Printer, DollarSign, CheckCircle2, Copy } from "lucide-react";
-import { Button, buttonVariants } from "@/components/ui/Button";
-import { cn } from "@/lib/utils";
+import { OrderDetailShell } from "@/components/admin/orders/OrderDetailShell";
+import { OrderDetailHeader } from "@/components/admin/orders/OrderDetailHeader";
+import { OrderDetailMobileBar } from "@/components/admin/orders/OrderDetailMobileBar";
+import {
+  OrderToolsDrawer,
+  OrderToolsTriggerButton,
+} from "@/components/admin/orders/OrderToolsDrawer";
+import { DashboardGlassCard } from "@/components/admin/dashboard/DashboardGlassCard";
 import { Flavor } from "@/types";
 interface AvailabilityData {
   leadTimeDays: number;
@@ -73,6 +77,7 @@ const OrderDetailsPage = () => {
   const [flavorMap, setFlavorMap] = useState<Record<string, string>>({});
   const [isMarkingPaid, setIsMarkingPaid] = useState(false);
   const [isGeneratingToken, setIsGeneratingToken] = useState(false);
+  const [isToolsOpen, setIsToolsOpen] = useState(false);
 
   // --- Data Fetching ---
   const fetchOrderAndDiameters = useCallback(async () => {
@@ -705,204 +710,121 @@ const OrderDetailsPage = () => {
     order.status === OrderStatus.PENDING_CONFIRMATION;
 
   return (
-    <section>
-      <Link
-        href="/bakery-manufacturing-orders/orders"
-        className="font-body text-accent hover:underline mb-lg inline-block"
-      >
-        &larr; Back to all orders
-      </Link>
-      <h1 className="font-heading text-h1 text-primary mb-lg flex items-center gap-md">
-        {" "}
-        <span>Order #{order._id.toString().slice(-6).toUpperCase()}</span>
-        {requiresConfirmation && (
-          <span className="font-body text-small font-semibold bg-accent/10 text-accent px-md py-xs rounded-full">
-            {" "}
-            Pending Confirmation
-          </span>
-        )}
-      </h1>
-
+    <>
       {isLoading && !isConfirmingDate && (
-        <div className="flex justify-center my-md">
+        <div className="mb-4 flex justify-center">
           <LoadingSpinner />
         </div>
       )}
       {error && (
-        <p className="mb-md text-center p-md bg-error/10 text-error rounded-medium">
+        <p className="mb-4 rounded-xl border border-error/20 bg-error/10 p-3 text-center text-sm text-error">
           {error}
         </p>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-lg">
-        {" "}
-        {/* --- Left Column --- */}
-        <div className="md:col-span-2 space-y-lg">
-          <OrderDetailItems
-            items={order.items}
-            diameters={diameters}
-            shapes={shapes}
-            totalAmount={order.totalAmount}
-            onUpdate={fetchOrderAndDiameters}
-            referenceImages={order.referenceImages}
-            flavorMap={flavorMap}
+      <OrderDetailShell
+        header={
+          <OrderDetailHeader
+            order={order}
+            toolsTrigger={
+              <OrderToolsTriggerButton onClick={() => setIsToolsOpen(true)} />
+            }
           />
+        }
+        main={
+          <>
+            <DashboardGlassCard>
+              <OrderDetailItems
+                items={order.items}
+                diameters={diameters}
+                shapes={shapes}
+                totalAmount={order.totalAmount}
+                onUpdate={fetchOrderAndDiameters}
+                referenceImages={order.referenceImages}
+                flavorMap={flavorMap}
+              />
+            </DashboardGlassCard>
 
-          {/* --- Assigned Delivery Dates (Shown for non-pending orders) --- */}
-          {!requiresConfirmation &&
-            order.deliveryInfo.deliveryDates &&
-            order.deliveryInfo.deliveryDates.length > 0 && (
-              <OrderDetailAssignedDates order={order} />
-            )}
-        </div>{" "}
-        {/* --- Right Column --- */}
-        <div className="space-y-lg">
-          {/* ── Payment Status Banner ─────────────────────────────────────── */}
-          <div
-            className={`rounded-medium p-lg shadow-sm border flex flex-col gap-3 ${order.isPaid
-                ? "bg-green-50 border-green-200"
-                : "bg-primary-100 border-primary"
-              }`}
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                {order.isPaid ? (
-                  <CheckCircle2 className="w-5 h-5 text-green-600" />
-                ) : (
-                  <DollarSign className="w-5 h-5 text-primary" />
-                )}
-                <h2 className={`font-heading text-h5 tracking-tight ${order.isPaid ? "text-green-800" : "text-primary"
-                  }`}>
-                  {order.isPaid ? "Payment Received" : "Payment Pending"}
-                </h2>
-              </div>
-              {order.isPaid ? (
-                <span className="text-xs font-bold bg-green-100 text-green-700 px-2.5 py-1 rounded-full uppercase tracking-wide">
-                  PAID
-                </span>
-              ) : (
-                <span className="text-xs font-bold bg-primary-100 text-primary px-2.5 py-1 rounded-full uppercase tracking-wide">
-                  UNPAID
-                </span>
+            {!requiresConfirmation &&
+              order.deliveryInfo.deliveryDates &&
+              order.deliveryInfo.deliveryDates.length > 0 && (
+                <OrderDetailAssignedDates order={order} />
               )}
+          </>
+        }
+        aside={
+          <>
+            <OrderDetailCustomer
+              customerInfo={order.customerInfo}
+              deliveryInfo={order.deliveryInfo}
+              orderId={order._id.toString()}
+              onUpdate={fetchOrderAndDiameters}
+            />
+            <OrderDetailActions
+              order={order}
+              newStatus={newStatus}
+              setNewStatus={setNewStatus}
+              handleStatusUpdate={handleStatusUpdate}
+              requiresConfirmation={requiresConfirmation}
+              availabilityData={availabilityData}
+              capacityPercentages={capacityPercentages}
+              adminSelectedSingleDate={adminSelectedSingleDate}
+              handleAdminDateSelect={handleAdminDateSelect}
+              handleConfirmDates={handleConfirmDates}
+              isConfirmingDate={isConfirmingDate}
+              isLoading={isLoading}
+              minutesBooked={minutesBooked}
+              settings={settings}
+              isEditingDates={isEditingDates}
+              editMode={editMode}
+              adminPopupDate={adminPopupDate}
+              editedDeliveryDates={editedDeliveryDates}
+              adminUnallocatedItems={adminUnallocatedItems}
+              handleToggleEditDates={handleToggleEditDates}
+              handleSetEditModeSingle={handleSetEditModeSingle}
+              handleSetEditModeSplit={handleSetEditModeSplit}
+              handleBackToModeSelection={handleBackToModeSelection}
+              handleSaveSingleDate={handleSaveSingleDate}
+              handleSaveSplitDates={handleSaveSplitDates}
+              handleAdminAllocateItem={handleAdminAllocateItem}
+              handleAdminUnallocateItem={handleAdminUnallocateItem}
+              setAdminPopupDate={setAdminPopupDate}
+              onSourceUpdate={handleSourceUpdate}
+            />
+          </>
+        }
+        notes={
+          <DashboardGlassCard className="p-0 sm:p-0">
+            <div className="p-4 sm:p-5">
+              <OrderNotesSection order={order} onUpdate={fetchOrderAndDiameters} />
             </div>
-
-            {!order.isPaid && order.paymentDetails?.expectedMethod && (
-              <p className="text-md text-primary font-medium">
-                Expected:{" "}
-                <span className="font-bold capitalize">
-                  {order.paymentDetails.expectedMethod === "e-transfer"
-                    ? "E-Transfer"
-                    : "Cash at Pickup"}
-                </span>
-              </p>
-            )}
-
-            {!order.isPaid && (
-              <Button
-                onClick={handleMarkAsPaid}
-                disabled={isMarkingPaid}
-                className="w-full font-semibold bg-green-600 hover:bg-green-700 text-white transition-colors flex items-center justify-center gap-2"
-              >
-                <CheckCircle2 className="w-4 h-4" />
-                {isMarkingPaid ? "Updating..." : "Mark as Paid"}
-              </Button>
-            )}
-
-            {!order.isPaid && (
-              <Button
-                onClick={handleCopyPaymentLink}
-                disabled={isGeneratingToken}
-                variant="outline"
-                className="w-full font-semibold border-primary/20 bg-white hover:bg-primary hover:text-white transition-colors text-primary flex items-center justify-center gap-2"
-              >
-                <Copy className="w-4 h-4" />
-                {isGeneratingToken ? "Generating..." : "Copy Payment Link"}
-              </Button>
-            )}
-          </div>
-          <div className="bg-card-background rounded-medium p-lg shadow-sm border border-border/40">
-            <h2 className="font-heading text-h5 text-primary tracking-tight mb-2">
-              Generate Receipt
-            </h2>
-            <p className="text-sm text-primary-500 mb-4 leading-relaxed">
-              Create a shareable image receipt
-            </p>
-            <Button
-              type="button"
-              onClick={() => setIsReceiptModalOpen(true)}
-              variant="outline"
-              aria-label="Preview and download receipt"
-              className="w-full font-semibold border-accent/20 bg-accent/5 hover:bg-accent hover:text-white transition-colors text-accent flex items-center justify-center gap-2"
-            >
-              <Receipt className="w-4 h-4" aria-hidden />
-              Preview & Download
-            </Button>
-          </div>
-          <div className="space-y-lg">
-            <div className="bg-card-background rounded-medium p-lg shadow-sm border border-border/40">
-              <h2 className="font-heading text-h5 text-primary tracking-tight mb-2">
-                Print Order Production Details
-              </h2>
-              <Link
-                href={`/bakery-manufacturing-orders/orders/${order._id.toString()}/print`}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Print order production details"
-                className={cn(
-                  buttonVariants({ variant: "outline" }),
-                  "w-full font-semibold border-accent/20 bg-accent/5 hover:bg-accent hover:text-white transition-colors text-accent flex items-center justify-center gap-2",
-                )}
-              >
-                <Printer className="w-4 h-4" aria-hidden />
-                Print
-              </Link>
-            </div>
-          </div>
-          <OrderDetailCustomer
-            customerInfo={order.customerInfo}
-            deliveryInfo={order.deliveryInfo}
-            orderId={order._id.toString()}
-            onUpdate={fetchOrderAndDiameters}
-          />
-
-          <OrderDetailActions
+          </DashboardGlassCard>
+        }
+        mobileBar={
+          <OrderDetailMobileBar
             order={order}
             newStatus={newStatus}
             setNewStatus={setNewStatus}
-            handleStatusUpdate={handleStatusUpdate}
-            requiresConfirmation={requiresConfirmation}
-            availabilityData={availabilityData}
-            capacityPercentages={capacityPercentages}
-            adminSelectedSingleDate={adminSelectedSingleDate}
-            handleAdminDateSelect={handleAdminDateSelect}
-            handleConfirmDates={handleConfirmDates}
-            isConfirmingDate={isConfirmingDate}
+            onStatusUpdate={handleStatusUpdate}
             isLoading={isLoading}
-            minutesBooked={minutesBooked}
-            settings={settings}
-            isEditingDates={isEditingDates}
-            editMode={editMode}
-            adminPopupDate={adminPopupDate}
-            editedDeliveryDates={editedDeliveryDates}
-            adminUnallocatedItems={adminUnallocatedItems}
-            handleToggleEditDates={handleToggleEditDates}
-            handleSetEditModeSingle={handleSetEditModeSingle}
-            handleSetEditModeSplit={handleSetEditModeSplit}
-            handleBackToModeSelection={handleBackToModeSelection}
-            handleSaveSingleDate={handleSaveSingleDate}
-            handleSaveSplitDates={handleSaveSplitDates}
-            handleAdminAllocateItem={handleAdminAllocateItem}
-            handleAdminUnallocateItem={handleAdminUnallocateItem}
-            setAdminPopupDate={setAdminPopupDate}
-            onSourceUpdate={handleSourceUpdate}
+            isMarkingPaid={isMarkingPaid}
+            onMarkAsPaid={handleMarkAsPaid}
+            requiresConfirmation={requiresConfirmation}
           />
-        </div>
-      </div>
-      {/* Internal Notes Section */}
-      <div className="mt-8">
-        <OrderNotesSection order={order} onUpdate={fetchOrderAndDiameters} />
-      </div>
+        }
+      />
+
+      <OrderToolsDrawer
+        open={isToolsOpen}
+        onOpenChange={setIsToolsOpen}
+        orderId={order._id.toString()}
+        isPaid={order.isPaid}
+        isMarkingPaid={isMarkingPaid}
+        isGeneratingToken={isGeneratingToken}
+        onMarkAsPaid={handleMarkAsPaid}
+        onCopyPaymentLink={handleCopyPaymentLink}
+        onOpenReceipt={() => setIsReceiptModalOpen(true)}
+      />
 
       <ReceiptGeneratorModal
         isOpen={isReceiptModalOpen}
@@ -912,7 +834,7 @@ const OrderDetailsPage = () => {
         shapes={shapes}
         flavorMap={flavorMap}
       />
-    </section>
+    </>
   );
 };
 

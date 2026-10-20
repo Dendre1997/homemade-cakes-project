@@ -382,8 +382,8 @@ const OrderDetailItems = ({
   }, []);
 
   return (
-    <div className="bg-card-background p-lg rounded-large shadow-md">
-      <h2 className="font-heading text-h3 text-primary mb-md">Items</h2>
+    <div className="space-y-4">
+      <h2 className="font-heading text-lg font-semibold text-primary">Line items</h2>
       <div className="flex flex-col">
         {(() => {
             const orderSubtotal = items.reduce((sum, it) => sum + (it.rowTotal || (it.price * it.quantity)), 0);
@@ -418,7 +418,7 @@ const OrderDetailItems = ({
             ));
         })()}
       </div>
-      <div className="mt-md pt-md border-t border-border text-right">
+      <div className="mt-4 border-t border-primary/10 pt-4 text-right">
         <p className="font-body text-lg font-bold text-primary">
           Total: ${totalAmount.toFixed(2)}
         </p>

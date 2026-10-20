@@ -2,7 +2,8 @@
 
 import { Order, OrderStatus, CartItem, ScheduleSettings } from "@/types";
 import { format } from "date-fns";
-import { OrderAssignmentDatePicker } from "@/components/admin/OrderAssignmentDatePicker";
+import { formatOrderDeliveryDateLabel } from "@/lib/admin/orderDetailDisplay";
+import { OrderAssignmentMonthCalendar } from "@/components/admin/orders/OrderAssignmentMonthCalendar";
 import LoadingSpinner from "@/components/ui/Spinner";
 import { Button } from "@/components/ui/Button";
 import { extractOriginalItemId } from "../../../lib/utils";
@@ -88,18 +89,18 @@ export const OrderDetailActions = ({
   };
 
   return (
-    <div className="bg-card-background p-lg rounded-large shadow-md space-y-md">
+    <div className="space-y-4 rounded-2xl border border-primary/15 bg-background/20 p-4 shadow-sm backdrop-blur-xl backdrop-saturate-150 sm:p-5">
       {requiresConfirmation ? (
         <>
-          <h2 className="font-heading text-h3 text-primary mb-sm">
-            Assign Date
+          <h2 className="font-heading text-lg font-semibold text-primary">
+            Assign date
           </h2>
-          <p className="font-body text-small text-primary/80 mb-md">
+          <p className="text-sm text-primary/70">
             Select a date below based on availability. The order will be
             assigned to status `New` upon confirmation.
           </p>
           {availabilityData ? (
-            <OrderAssignmentDatePicker
+            <OrderAssignmentMonthCalendar
               capacityPercentages={capacityPercentages}
               adminBlockedDates={availabilityData.adminBlockedDates}
               leadTimeDays={availabilityData.leadTimeDays}
@@ -115,7 +116,7 @@ export const OrderDetailActions = ({
             <p className="text-center font-body text-primary text-sm">
               Target date selected:{" "}
               <span className="font-semibold">
-                {format(adminSelectedSingleDate, "EEEE, MMM d")}
+                {formatOrderDeliveryDateLabel(adminSelectedSingleDate)}
               </span>
             </p>
           )}
@@ -148,8 +149,8 @@ export const OrderDetailActions = ({
         </>
       ) : (
         <>
-          <h2 className="font-heading text-h3 text-primary mb-md">
-            Order Status & Actions
+          <h2 className="font-heading text-lg font-semibold text-primary">
+            Workflow
           </h2>
           {/* ── Order Source ───────────────────────────────────── */}
           <div>
@@ -220,7 +221,7 @@ export const OrderDetailActions = ({
                     </Button>
                   </div>
                   {availabilityData ? (
-                    <OrderAssignmentDatePicker
+                    <OrderAssignmentMonthCalendar
                       capacityPercentages={capacityPercentages}
                       adminBlockedDates={availabilityData.adminBlockedDates}
                       leadTimeDays={availabilityData.leadTimeDays}
@@ -234,7 +235,7 @@ export const OrderDetailActions = ({
                     <p className="text-center font-body text-primary text-sm">
                       New Selected Date:{" "}
                       <span className="font-semibold">
-                        {format(adminSelectedSingleDate, "EEEE, MMM d, yyyy")}
+                        {formatOrderDeliveryDateLabel(adminSelectedSingleDate)}
                       </span>
                     </p>
                   )}
@@ -278,7 +279,7 @@ export const OrderDetailActions = ({
                     </Button>
                   </div>
                   {availabilityData ? (
-                    <OrderAssignmentDatePicker
+                    <OrderAssignmentMonthCalendar
                       capacityPercentages={capacityPercentages}
                       adminBlockedDates={[]}
                       leadTimeDays={0}
@@ -305,7 +306,7 @@ export const OrderDetailActions = ({
                           .map((entry) => (
                             <div key={format(entry.date, "yyyy-MM-dd")}>
                               <p className="font-body font-semibold text-primary mb-xs">
-                                {format(entry.date, "EEEE, MMM d")}
+                                {formatOrderDeliveryDateLabel(entry.date)}
                               </p>
                               <div className="space-y-sm pl-md border-l-2 border-border ml-sm">
                                 {entry.itemIds.map((unitId) => {
@@ -388,48 +389,58 @@ export const OrderDetailActions = ({
             </>
           ) : (
             <>
-              <p className="font-body">
+              <p className="hidden text-sm text-primary/80 lg:block">
                 Current status:{" "}
-                <span className="font-bold capitalize">
+                <span className="font-semibold capitalize text-primary">
                   {order.status.replace(/_/g, " ")}
                 </span>
               </p>
-              <div>
-                <label
-                  htmlFor="status-select"
-                  className="block font-body text-small text-primary/80 mb-sm"
+              <div className="hidden space-y-3 lg:block">
+                <div>
+                  <label
+                    htmlFor="status-select"
+                    className="mb-1.5 block text-sm text-primary/70"
+                  >
+                    Change status
+                  </label>
+                  <Select
+                    value={newStatus}
+                    onValueChange={(value) =>
+                      setNewStatus(value as OrderStatus)
+                    }
+                  >
+                    <SelectTrigger id="status-select">
+                      <SelectValue placeholder="Select new status…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.values(OrderStatus)
+                        .filter(
+                          (status) =>
+                            status !== OrderStatus.PENDING_CONFIRMATION
+                        )
+                        .map((status) => (
+                          <SelectItem key={status} value={status}>
+                            {status
+                              .replace(/_/g, " ")
+                              .replace(/\b\w/g, (l) => l.toUpperCase())}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button
+                  onClick={handleStatusUpdate}
+                  className="w-full"
+                  disabled={
+                    isLoading || newStatus === order.status || !newStatus
+                  }
                 >
-                  Change status
-                </label>
-                <Select
-                  value={newStatus}
-                  onValueChange={(value) => setNewStatus(value as OrderStatus)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select new status..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.values(OrderStatus)
-                      .filter(
-                        (status) => status !== OrderStatus.PENDING_CONFIRMATION
-                      )
-                      .map((status) => (
-                        <SelectItem key={status} value={status}>
-                          {status
-                            .replace(/_/g, " ")
-                            .replace(/\b\w/g, (l) => l.toUpperCase())}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
+                  {isLoading ? "Updating…" : "Update status"}
+                </Button>
               </div>
-              <Button
-                onClick={handleStatusUpdate}
-                className="w-full"
-                disabled={isLoading || newStatus === order.status || !newStatus}
-              >
-                {isLoading ? <p>Updating...</p> : "Update Status"}
-              </Button>
+              <p className="text-sm text-primary/65 lg:hidden">
+                Use the bar below to change status on mobile.
+              </p>
               {order.deliveryInfo.deliveryDates &&
                 order.deliveryInfo.deliveryDates.length > 0 && (
                   <Button
@@ -438,7 +449,7 @@ export const OrderDetailActions = ({
                     variant="secondary"
                     disabled={isLoading || isConfirmingDate}
                   >
-                    Edit Assigned Date(s)
+                    Edit assigned date(s)
                   </Button>
                 )}
             </>

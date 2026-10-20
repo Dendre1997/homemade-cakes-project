@@ -46,6 +46,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    // verifyAdmin() reads the `admin` claim from the session cookie.
+    if (decodedToken.admin !== true) {
+      await adminAuth.setCustomUserClaims(decodedToken.uid, { admin: true });
+    }
+
     // ── Step 4: Mint a short-lived (5-day) session cookie ────────────────────
     const expiresIn = 60 * 60 * 24 * 5 * 1000; // 5 days in milliseconds
     const sessionCookie = await adminAuth.createSessionCookie(idToken, {
@@ -58,7 +63,7 @@ export async function POST(request: Request) {
       maxAge: expiresIn / 1000, // maxAge is in seconds
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      sameSite: "lax",
       path: "/",
     });
 

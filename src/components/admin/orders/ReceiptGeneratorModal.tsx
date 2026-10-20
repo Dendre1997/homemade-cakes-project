@@ -7,6 +7,77 @@ import { Download, Loader2 } from "lucide-react";
 import { toPng } from "html-to-image";
 import { Order, Diameter, IShape } from "@/types";
 import { ClientReceiptCard } from "./ClientReceiptCard";
+import { isStandaloneDisplayMode } from "@/lib/firebase/googleSignIn";
+
+function isMobileUserAgent(): boolean {
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+}
+
+function saveBlobViaAnchor(blob: Blob, filename: string) {
+  const blobUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = blobUrl;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+}
+
+type PreparedReceipt = { file: File; blob: Blob; filename: string };
+
+const EXPORT_WIDTH = 400; // Optimal width for the receipt ticket
+/** Quiet period after the last card DOM change before pre-rendering. */
+const PREPARE_DEBOUNCE_MS = 500;
+
+function prefersShareSheet(): boolean {
+  return isStandaloneDisplayMode() || isMobileUserAgent();
+}
+
+function isDomError(err: unknown, name: string): boolean {
+  return err instanceof DOMException && err.name === name;
+}
+
+async function renderReceipt(
+  node: HTMLElement,
+  orderId: string
+): Promise<PreparedReceipt> {
+  const dataUrl = await toPng(node, {
+    cacheBust: true, // Fixes CORS inside canvas rendering for external images
+    // Mobile canvases hit memory limits well below desktop at 3x.
+    pixelRatio: prefersShareSheet() ? Math.min(window.devicePixelRatio || 2, 2) : 3,
+    width: EXPORT_WIDTH,
+    imagePlaceholder:
+      "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7", // Transparent 1x1 gif fallback
+    style: {
+      transform: "none",
+      transformOrigin: "top left",
+    },
+  });
+
+  const filename = `dk-creations-Receipt-${orderId.slice(-6).toUpperCase()}.png`;
+  const blob = await (await fetch(dataUrl)).blob();
+  const file = new File([blob], filename, { type: "image/png" });
+  return { file, blob, filename };
+}
+
+/**
+ * Must be reached with no `await` before `navigator.share`: iOS rejects the
+ * share with NotAllowedError once the click's transient activation expires.
+ */
+async function deliverReceipt(receipt: PreparedReceipt): Promise<void> {
+  // Installed PWAs (notably iOS) ignore <a download>; the share sheet offers "Save Image".
+  if (prefersShareSheet() && navigator.canShare?.({ files: [receipt.file] })) {
+    try {
+      await navigator.share({ files: [receipt.file], title: receipt.filename });
+      return;
+    } catch (err) {
+      if (isDomError(err, "AbortError")) return;
+      if (!isDomError(err, "NotAllowedError")) throw err;
+    }
+  }
+  saveBlobViaAnchor(receipt.blob, receipt.filename);
+}
 
 interface ReceiptGeneratorModalProps {
   isOpen: boolean;
@@ -18,12 +89,17 @@ interface ReceiptGeneratorModalProps {
 }
 
 export function ReceiptGeneratorModal({ isOpen, onClose, order, diameters, shapes = [], flavorMap }: ReceiptGeneratorModalProps) {
-  const cardRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [scale, setScale] = useState(1);
   const [eTransferEmail, setETransferEmail] = useState("");
   const [pickupAddress, setPickupAddress] = useState("");
+  // Radix portals mount content a render after `isOpen` flips, so the effect
+  // keys off the node itself rather than a ref read once.
+  const [cardNode, setCardNode] = useState<HTMLDivElement | null>(null);
+  const [preparedReceipt, setPreparedReceipt] = useState<PreparedReceipt | null>(null);
+  const preparingRef = useRef<Promise<PreparedReceipt> | null>(null);
+  const orderId = order._id.toString();
 
   useEffect(() => {
     if (!isOpen) return;
@@ -41,9 +117,58 @@ export function ReceiptGeneratorModal({ isOpen, onClose, order, diameters, shape
       .catch((err) => console.error("Failed to load e-transfer email for receipt:", err));
   }, [isOpen]);
 
-  // Constants
-  const EXPORT_WIDTH = 400; // Optimal width for the receipt ticket
-  const EXPORT_PADDING = 24;
+  // Pre-render the PNG so a click can share it without awaiting first. The
+  // card keeps changing after open (settings fetch, item images loading), so
+  // every DOM change discards the prepared file and restarts the quiet timer.
+  useEffect(() => {
+    const node = cardNode;
+    if (!isOpen || !node) return;
+
+    let disposed = false;
+    let generation = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const prepare = () => {
+      const current = ++generation;
+      const pending = renderReceipt(node, orderId);
+      preparingRef.current = pending;
+      pending
+        .then((receipt) => {
+          if (!disposed && current === generation) setPreparedReceipt(receipt);
+        })
+        .catch((err) => {
+          // A click retries on demand and reports the error there.
+          console.warn("Background receipt pre-render failed:", err);
+        })
+        .finally(() => {
+          if (preparingRef.current === pending) preparingRef.current = null;
+        });
+    };
+
+    const schedule = () => {
+      generation++;
+      setPreparedReceipt(null);
+      clearTimeout(timer);
+      timer = setTimeout(prepare, PREPARE_DEBOUNCE_MS);
+    };
+
+    const observer = new MutationObserver(schedule);
+    observer.observe(node, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      characterData: true,
+    });
+    schedule();
+
+    return () => {
+      disposed = true;
+      observer.disconnect();
+      clearTimeout(timer);
+      preparingRef.current = null;
+      setPreparedReceipt(null);
+    };
+  }, [isOpen, cardNode, orderId]);
 
   // Handle responsive scaling
   useEffect(() => {
@@ -75,42 +200,38 @@ export function ReceiptGeneratorModal({ isOpen, onClose, order, diameters, shape
   }, [isOpen]);
 
   const handleDownload = useCallback(async () => {
-    if (!cardRef.current) return;
-    
+    if (preparedReceipt) {
+      try {
+        await deliverReceipt(preparedReceipt);
+      } catch (err) {
+        console.error("Failed to share receipt", err);
+        alert("Failed to share the receipt. Check console for details.");
+      }
+      return;
+    }
+
+    if (!cardNode) return;
+
+    let receipt: PreparedReceipt;
     try {
       setIsGenerating(true);
-      
-      const dataUrl = await toPng(cardRef.current, { 
-        cacheBust: true, // Fixes CORS inside canvas rendering for external images
-        pixelRatio: 3, 
-        width: EXPORT_WIDTH,
-        imagePlaceholder: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', // Transparent 1x1 gif fallback
-        filter: (node) => {
-           // Skip any rendering of cross-origin or problematic elements if they error out
-           return true;
-        },
-        style: {
-           transform: 'none',
-           transformOrigin: 'top left'
-        }
-      });
-      
-      const link = document.createElement("a");
-      const orderIdShort = order._id.toString().slice(-6).toUpperCase();
-      link.download = `d&kcreations-Receipt-${orderIdShort}.png`;
-      link.href = dataUrl;
-      link.click();
+      receipt = await (preparingRef.current ?? renderReceipt(cardNode, orderId));
     } catch (err) {
       console.error("Failed to generate image", err);
-      if (err instanceof Error) {
-        console.error("Error message:", err.message);
-        console.error("Error stack:", err.stack);
-      }
       alert("Failed to generate image. This is often due to Cross-Origin (CORS) image issues. Check console for details.");
+      return;
     } finally {
-        setIsGenerating(false);
+      setIsGenerating(false);
     }
-  }, [order._id]);
+
+    try {
+      // Activation has likely expired here; NotAllowedError falls back to a download.
+      await deliverReceipt(receipt);
+    } catch (err) {
+      console.error("Failed to share receipt", err);
+      alert("Failed to share the receipt. Check console for details.");
+    }
+  }, [preparedReceipt, cardNode, orderId]);
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -140,7 +261,7 @@ export function ReceiptGeneratorModal({ isOpen, onClose, order, diameters, shape
                 className="rounded-2xl bg-white flex-shrink-0 shadow-2xl"
                   >
                       
-                <div ref={cardRef} className="bg-white rounded-2xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.05)] border border-gray-100">
+                <div ref={setCardNode} className="bg-white rounded-2xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.05)] border border-gray-100">
                     <ClientReceiptCard
                       order={order}
                       diameters={diameters}

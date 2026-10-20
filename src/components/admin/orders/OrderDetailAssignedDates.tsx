@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Order } from "@/types"; 
 import { format, isSameDay } from "date-fns";
+import { formatOrderDeliveryDateLabel } from "@/lib/admin/orderDetailDisplay";
 import { extractOriginalItemId } from "../../../lib/utils";
 import { useAlert } from "@/contexts/AlertContext";
 import * as Dialog from "@radix-ui/react-dialog";
@@ -93,9 +94,9 @@ const OrderDetailAssignedDates = ({ order }: OrderDetailAssignedDatesProps) => {
 
   return (
     <Dialog.Root open={isModalOpen} onOpenChange={setIsModalOpen}>
-      <div className="bg-card-background p-lg rounded-large shadow-md">
-        <h2 className="font-heading text-h3 text-primary mb-md">
-          Assigned Dates
+      <div className="rounded-2xl border border-primary/15 bg-background/20 p-4 shadow-sm backdrop-blur-xl sm:p-5">
+        <h2 className="font-heading text-lg font-semibold text-primary">
+          Pickup schedule
         </h2>
         <div className="space-y-md">
           {currentDates
@@ -106,7 +107,7 @@ const OrderDetailAssignedDates = ({ order }: OrderDetailAssignedDatesProps) => {
               <div key={new Date(entry.date).toISOString() + entry.timeSlot}>
                 <div className="flex justify-between items-center mb-2 flex-col md:flex-row">
                   <p className="font-body font-bold text-primary">
-                    {format(new Date(entry.date), "EEEE, MMM d, yyyy")}
+                    {formatOrderDeliveryDateLabel(entry.date)}
                   </p>
 
                   <Button
