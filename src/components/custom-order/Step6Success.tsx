@@ -5,6 +5,7 @@ import HeaderLogo from "@/components/ui/HeaderLogo";
 import { SocialHandleAnchor } from "@/components/ui/SocialHandleAnchor";
 import { OrderItemTiersDisplay } from "@/components/shared/OrderItemTiersDisplay";
 import { Button } from "@/components/ui/Button"
+import { customOrderLineImages } from "@/lib/sets/customOrderSets";
 
 interface Step6Props {
   orderData: CustomOrderRequestData | null;
@@ -37,6 +38,7 @@ function ItemSummary({ item, index, total }: { item: any; index: number; total: 
   const flavorUpcharge = pb?.flavorUpcharge ?? 0;
   const flavorName = details?.flavor ?? "";
   const referenceImages: string[] = item?.referenceImages ?? [];
+  const lineImages = customOrderLineImages(item);
 
   return (
     <div className="px-6 py-4 border-b border-gray-100">
@@ -111,13 +113,15 @@ function ItemSummary({ item, index, total }: { item: any; index: number; total: 
       </div>
 
       {/* Reference Images */}
-      {referenceImages.length > 0 && (
+      {lineImages.length > 0 && (
         <div className="mt-3">
-          <p className="text-[10px] text-primary/40 font-bold uppercase tracking-widest mb-2">
-            Reference Images ({referenceImages.length})
-          </p>
+          {referenceImages.length > 0 && (
+            <p className="text-[10px] text-primary/40 font-bold uppercase tracking-widest mb-2">
+              Reference Images ({referenceImages.length})
+            </p>
+          )}
           <div className="flex gap-2 overflow-hidden">
-            {referenceImages.map((img, i) => {
+            {lineImages.map((img, i) => {
               const cbImg = img.includes("?") ? `${img}&_cb=${i}` : `${img}?_cb=${i}`;
               return (
                 <div

@@ -188,6 +188,7 @@ export default function Step2Category({
     setValue(ip("details.size"), "");
     setValue(ip("details.flavor"), "");
     setValue(ip("details.setId"), undefined);
+    setValue(ip("details.setImageUrl"), undefined);
     setValue(ip("details.diameterId"), undefined);
     setValue(ip("details.tiers"), undefined);
     if (cat.categoryType === "set") {

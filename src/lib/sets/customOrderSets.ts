@@ -7,8 +7,50 @@ export interface CustomOrderCatalogSet {
   name?: string;
   pieceCount?: number;
   maxFlavors?: number;
+  imageUrl?: string;
   basePrice?: unknown;
   categoryIds?: unknown[];
+}
+
+/**
+ * Match a saved flavor label to a catalog flavor.
+ * Labels are joined with ", ". A catalog name may itself start or end with a space,
+ * so only the single space that belongs to the separator is removed before an exact match.
+ */
+export function findFlavorBySavedName<T extends { name?: string }>(
+  flavors: T[],
+  token: string
+): T | undefined {
+  const withoutSeparatorSpace = token.replace(/^ /, "");
+  const exact = flavors.find((flavor) => flavor.name === withoutSeparatorSpace);
+  if (exact) return exact;
+  const trimmed = withoutSeparatorSpace.trim();
+  if (!trimmed || trimmed === "None") return undefined;
+  return flavors.find((flavor) => (flavor.name ?? "").trim() === trimmed);
+}
+
+/** Catalog ids for every flavor named in a saved comma-separated label. */
+export function flavorIdsFromSavedNames<T extends { _id?: unknown; name?: string }>(
+  flavors: T[],
+  saved: string
+): string[] {
+  const ids = saved
+    .split(",")
+    .map((token) => findFlavorBySavedName(flavors, token))
+    .map((flavor) => (flavor?._id == null ? "" : String(flavor._id)))
+    .filter(Boolean);
+  return [...new Set(ids)];
+}
+
+/** Design photos when the line has them, otherwise the set image saved on the line. */
+export function customOrderLineImages(item: {
+  referenceImages?: string[] | null;
+  details?: { setImageUrl?: string | null };
+}): string[] {
+  const references = (item.referenceImages ?? []).map((url) => url.trim()).filter(Boolean);
+  if (references.length > 0) return references;
+  const setImage = item.details?.setImageUrl?.trim();
+  return setImage ? [setImage] : [];
 }
 
 /**
@@ -75,6 +117,7 @@ export type ResolvedCustomOrderSet =
       setName: string;
       pieceCount: number;
       sizeText: string;
+      setImageUrl?: string;
       baseCakePrice: number;
     };
 
@@ -121,6 +164,10 @@ export function resolveCustomOrderSetLine(input: {
     setName,
     pieceCount,
     sizeText: customOrderSetSizeText({ name: setName, pieceCount }, categoryType),
+    setImageUrl:
+      typeof set.imageUrl === "string" && set.imageUrl.trim()
+        ? set.imageUrl.trim()
+        : undefined,
     baseCakePrice: customOrderSetEstimate({
       categoryType,
       categoryBasePrice: input.categoryBasePrice,
@@ -169,7 +216,7 @@ export async function applyCustomOrderCatalogSets<T extends CustomOrderLine>(
           .collection("sets")
           .find(
             { categoryIds: { $in: setCategoryIds } },
-            { projection: { name: 1, pieceCount: 1, maxFlavors: 1, basePrice: 1, categoryIds: 1 } }
+            { projection: { name: 1, pieceCount: 1, maxFlavors: 1, imageUrl: 1, basePrice: 1, categoryIds: 1 } }
           )
           .toArray();
 
@@ -215,7 +262,12 @@ export async function applyCustomOrderCatalogSets<T extends CustomOrderLine>(
     });
     applied.push({
       ...item,
-      details: { ...item.details, setId: resolved.setId, size: resolved.sizeText },
+      details: {
+        ...item.details,
+        setId: resolved.setId,
+        size: resolved.sizeText,
+        setImageUrl: resolved.setImageUrl,
+      },
       priceBreakdown,
       approximatePrice: priceBreakdown.grandTotal,
     });

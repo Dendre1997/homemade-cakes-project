@@ -21,6 +21,7 @@ import { useAlert } from "@/contexts/AlertContext";
 import { OrderItemTiersDisplay } from "@/components/shared/OrderItemTiersDisplay";
 import { addonQuantityMark, addonUnitCost } from "@/lib/addons/selectedAddonMath";
 import { SocialHandleAnchor } from "@/components/ui/SocialHandleAnchor";
+import { customOrderLineImages } from "@/lib/sets/customOrderSets";
 
 interface CustomOrderCardProps {
   order: CustomOrder & Record<string, any>;
@@ -48,7 +49,7 @@ export const CustomOrderCard = ({ order }: CustomOrderCardProps) => {
   );
 
   // Aggregate reference images across every item (falling back to legacy roots).
-  const images: string[] = items.flatMap((it) => it.referenceImages || []);
+  const images: string[] = items.flatMap((it) => customOrderLineImages(it));
   if (images.length === 0) {
     const legacyImages = order.referenceImages || order.referenceImageUrls || [];
     images.push(...legacyImages);

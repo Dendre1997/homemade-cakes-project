@@ -22,6 +22,8 @@ import {
   catalogSetPortion,
   customOrderSetEstimate,
   customOrderSetSizeText,
+  findFlavorBySavedName,
+  flavorIdsFromSavedNames,
 } from "@/lib/sets/customOrderSets";
 
 import { FourInchBentoIcon } from "@/components/icons/cake-sizes/FourInchBentoIcon";
@@ -51,6 +53,14 @@ const BOX_SIZES = [
 ];
 
 const flavorWord = (count: number) => (count === 1 ? "flavor" : "flavors");
+
+function nameForFlavorId(
+  flavors: { _id?: unknown; name?: string }[],
+  id: unknown
+) {
+  if (id == null || id === "") return undefined;
+  return flavors.find((flavor) => String(flavor._id) === String(id))?.name;
+}
 
 export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }: { onNext: () => void; onFlavorInfoClick?: (id: string) => void; itemIndex: number }) {
   const { showAlert } = useAlert();
@@ -462,8 +472,11 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
             ? customOrderSetSizeText(selectedCatalogSet, "combo")
             : `Combo Box: ${comboPieceQuantity || "TBD"} pieces + 4" Pick`;
           
-          const tFlavors = comboTreatFlavorIds.map(id => treatFlavors.find(f => f._id === id)?.name).filter(Boolean).join(", ");
-          const cFlavor = bentoFlavors.find(f => f._id === comboCakeFlavorId)?.name;
+          const tFlavors = comboTreatFlavorIds
+            .map((id) => nameForFlavorId(treatFlavors, id))
+            .filter(Boolean)
+            .join(", ");
+          const cFlavor = nameForFlavorId(bentoFlavors, comboCakeFlavorId);
           
           finalFlavor = `Treats: [${tFlavors || "None"}]. Cake: ${cFlavor || "None"}`;
 
@@ -471,7 +484,10 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
           finalSize = selectedCatalogSet
             ? customOrderSetSizeText(selectedCatalogSet, "set")
             : discreteQuantity ? `Quantity: ${discreteQuantity}` : "";
-          finalFlavor = discreteFlavorIds.map(id => filteredFlavors.find(f => f._id === id)?.name).filter(Boolean).join(", ");
+          finalFlavor = discreteFlavorIds
+            .map((id) => nameForFlavorId(filteredFlavors, id))
+            .filter(Boolean)
+            .join(", ");
           
       } else {
           // Standard
@@ -498,7 +514,9 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
             if (allTiersSelected) {
               finalTiers = Array.from({ length: tiersCount }, (_, index) => {
                 const flavorId = tierFlavors[index];
-                const flavorDoc = filteredFlavors.find((f: any) => f._id === flavorId);
+                const flavorDoc = filteredFlavors.find(
+                  (flavor: { _id?: unknown }) => String(flavor._id) === String(flavorId)
+                );
                 const sizeLabel = tierSizes[index] ?? `Tier ${index + 1}`;
                 return {
                   tierIndex: index,
@@ -519,8 +537,7 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
             }
           } else {
             const flavorId = tierFlavors[0];
-            finalFlavor =
-              filteredFlavors.find((f: any) => f._id === flavorId)?.name || "";
+            finalFlavor = nameForFlavorId(filteredFlavors, flavorId) || "";
             finalTiers = undefined;
           }
       }
@@ -542,6 +559,10 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
         setValue(ip("details.setId"), String(selectedCatalogSet._id), { shouldValidate: false });
       } else if ((isDiscrete || isCombo) && sizeTouched.current) {
         setValue(ip("details.setId"), undefined, { shouldValidate: false });
+      }
+      if (isDiscrete || isCombo) {
+        const setImage = selectedCatalogSet?.imageUrl?.trim();
+        setValue(ip("details.setImageUrl"), setImage || undefined, { shouldValidate: false });
       }
       if (finalFlavor || flavorTouched.current) {
         setValue(ip("details.flavor"), finalFlavor, { shouldValidate: true });
@@ -610,22 +631,13 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
       }
       const parsed = savedFlavor.match(/Treats:\s*\[([^\]]*)\]\.\s*Cake:\s*(.*)$/);
       if (parsed) {
-        const treatIds = parsed[1]
-          .split(",")
-          .map((name) => name.trim())
-          .filter((name) => name && name !== "None")
-          .map((name) => treatFlavors.find((flavor) => flavor.name === name)?._id)
-          .filter((id): id is string => Boolean(id))
-          .map(String);
+        const treatIds = flavorIdsFromSavedNames(treatFlavors, parsed[1]);
         const keptTreats = restoredSet ? treatIds.slice(0, restoredSet.maxFlavors) : treatIds;
         if (keptTreats.length > 0) {
           setComboTreatFlavorIds(keptTreats);
           restored = true;
         }
-        const cakeName = parsed[2].trim();
-        const cake = cakeName && cakeName !== "None"
-          ? bentoFlavors.find((flavor) => flavor.name === cakeName)
-          : undefined;
+        const cake = findFlavorBySavedName(bentoFlavors, parsed[2] ?? "");
         if (cake) {
           setComboCakeFlavorId(String(cake._id));
           restored = true;
@@ -639,13 +651,7 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
           restored = true;
         }
       }
-      const flavorIds = savedFlavor
-        .split(",")
-        .map((name) => name.trim())
-        .filter(Boolean)
-        .map((name) => filteredFlavors.find((flavor: { name?: string; _id?: unknown }) => flavor.name === name)?._id)
-        .filter((id: unknown): id is string => Boolean(id))
-        .map(String);
+      const flavorIds = flavorIdsFromSavedNames(filteredFlavors, savedFlavor);
       const keptFlavors = restoredSet ? flavorIds.slice(0, restoredSet.maxFlavors) : flavorIds;
       if (keptFlavors.length > 0) {
         setDiscreteFlavorIds(keptFlavors);
@@ -668,12 +674,14 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
               (flavor: { _id: unknown }) => String(flavor._id) === flavorId
             );
             if (known) next[tier.tierIndex] = flavorId;
+            else if (tier.flavorName) {
+              const named = findFlavorBySavedName(filteredFlavors, tier.flavorName);
+              if (named?._id != null) next[tier.tierIndex] = String(named._id);
+            }
           }
           if (Object.keys(next).length > 0) setTierFlavors(next);
         } else if (savedFlavor) {
-          const flavor = filteredFlavors.find(
-            (item: { name?: string }) => item.name === savedFlavor
-          );
+          const flavor = findFlavorBySavedName(filteredFlavors, savedFlavor);
           if (flavor) setTierFlavors({ 0: String(flavor._id) });
         }
       }

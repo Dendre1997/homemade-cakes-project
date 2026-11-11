@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/Button";
 import { OrderItemTiersDisplay } from "@/components/shared/OrderItemTiersDisplay";
 import { Pencil, Trash2, PlusCircle, ArrowRight } from "lucide-react";
 import Image from "next/image";
+import { customOrderLineImages } from "@/lib/sets/customOrderSets";
 
 interface StepCartSummaryProps {
   onAddAnother: () => void;
@@ -44,7 +45,7 @@ export default function StepCartSummary({
       <div className="space-y-4">
         {items.map((item: any, index: number) => {
           const canRemove = items.length > 1;
-          const firstImage = item?.referenceImages?.[0];
+          const firstImage = customOrderLineImages(item)[0];
           const estimate = Number(item?.approximatePrice) || 0;
 
           return (

@@ -632,6 +632,8 @@ export interface CustomOrderItemDetails {
   tiers?: CakeTierSelection[];
   /** Catalog set chosen for a set or combo line. */
   setId?: string;
+  /** Image of that set at the time the customer confirmed it. */
+  setImageUrl?: string;
   [key: string]: any;
 }
 
