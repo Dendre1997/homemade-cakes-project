@@ -366,7 +366,7 @@ function CustomOrderContent() {
     switch (currentStep) {
       case 0: return <Step1Availability onNext={handleNext} />;
       case 1: return <Step2Category onNext={handleNext} itemIndex={activeItemIndex} />;
-      case 2: return <Step3SizeFlavor onNext={handleNext} onFlavorInfoClick={handleFlavorInfoClick} itemIndex={activeItemIndex} />;
+      case 2: return <Step3SizeFlavor key={activeItemIndex} onNext={handleNext} onFlavorInfoClick={handleFlavorInfoClick} itemIndex={activeItemIndex} />;
       case 3: return <Step4Design itemIndex={activeItemIndex} />;
       case CART_STEP: return (
           <StepCartSummary

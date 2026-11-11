@@ -8,6 +8,10 @@ Language for how a customer’s cake or product line is priced, including extras
 One cake or product entry inside an order, with its own line quantity.
 _Avoid_: Order line, row
 
+**Cake size**:
+The diameter, or the box count, chosen for one custom-order line item.
+_Avoid_: Addon variant
+
 **Line quantity**:
 How many of that same cake or product the line item contains.
 _Avoid_: Item count, qty

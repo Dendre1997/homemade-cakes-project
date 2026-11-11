@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useCallback } from "react";
+import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useFormContext } from "react-hook-form";
 import { CustomOrderRequestData } from "@/lib/validation/customOrderSchema";
@@ -92,6 +92,22 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
   const [comboTreatFlavorIds, setComboTreatFlavorIds] = useState<string[]>([]);
   const [comboCakeFlavorId, setComboCakeFlavorId] = useState<string | null>(null);
 
+  // The picker state lives only while this step is open. Edit mounts it again,
+  // so the saved line item has to be copied back in before we write the form.
+  const selectionHydrated = useRef(-1);
+  const previousDiameterId = useRef<string | null>(null);
+  const sizeTouched = useRef(false);
+  const flavorTouched = useRef(false);
+  const shapeTouched = useRef(false);
+  const preserveSavedEstimate = useRef(false);
+  const [selectionReady, setSelectionReady] = useState(false);
+
+  const noteEdit = (field: "size" | "flavor" | "shape") => {
+    preserveSavedEstimate.current = false;
+    if (field === "size") sizeTouched.current = true;
+    if (field === "flavor") flavorTouched.current = true;
+    if (field === "shape") shapeTouched.current = true;
+  };
 
   useEffect(() => {
     async function fetchDBDocs() {
@@ -212,7 +228,12 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
   }, [selectedStandardDiameter, standardTiersCount]);
 
   useEffect(() => {
-    setTierFlavors({});
+    const previous = previousDiameterId.current;
+    previousDiameterId.current = standardDiameterId;
+    if (previous && standardDiameterId && previous !== standardDiameterId) {
+      flavorTouched.current = true;
+      setTierFlavors({});
+    }
   }, [standardDiameterId]);
 
   const availableShapesForDiameter = useMemo(() => {
@@ -226,7 +247,10 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
 
   useEffect(() => {
     if (!isStandard || !standardDiameterId || standardTiersCount > 1) {
-      setStandardShapeId("");
+      if (standardTiersCount > 1 && standardDiameterId) {
+        shapeTouched.current = true;
+        setStandardShapeId("");
+      }
       return;
     }
 
@@ -236,7 +260,13 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
     }
 
     setStandardShapeId((prev) => {
-      if (prev && availableShapesForDiameter.some((shape) => shape._id === prev)) {
+      if (prev && availableShapesForDiameter.some((shape) => String(shape._id) === String(prev))) {
+        return prev;
+      }
+      const savedShape = String(getValues(ip("details.shape")) ?? "");
+      if (!shapeTouched.current && savedShape) {
+        const mapped = availableShapesForDiameter.find((shape) => shape.name === savedShape);
+        if (mapped) return String(mapped._id);
         return prev;
       }
       const defaultShape =
@@ -244,7 +274,7 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
         availableShapesForDiameter[0];
       return defaultShape?._id || "";
     });
-  }, [isStandard, standardDiameterId, standardTiersCount, availableShapesForDiameter]);
+  }, [isStandard, standardDiameterId, standardTiersCount, availableShapesForDiameter, getValues, itemIndex]);
 
   const standardShapeSurcharge = useMemo(() => {
     if (standardTiersCount > 1 || !standardShapeId) return 0;
@@ -298,6 +328,7 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
   // included if the user navigates back to Step 3, without creating a circular dep.
   // Step 4 has its OWN effect that re-runs the engine when addons change.
   useEffect(() => {
+    if (!selectionReady || preserveSavedEstimate.current) return;
     if (isStandard) {
       // cakeSizePrice = the size-multiplied cake price (the existing useMemo formula)
       const cakeSizePrice = approximatePrice > 0 ? approximatePrice : (basePrice || 0);
@@ -342,7 +373,7 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
       setValue(ip("priceBreakdown"), result);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [approximatePrice, discretePrice, isStandard, isDiscrete, isCombo, standardFlavorUpcharge, basePrice, itemIndex]);
+  }, [approximatePrice, discretePrice, isStandard, isDiscrete, isCombo, standardFlavorUpcharge, basePrice, itemIndex, selectionReady]);
 
 
   // --- COMPILATION LOGIC ---
@@ -421,14 +452,27 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
           ? allShapes.find((s) => s._id === standardShapeId)?.name || ""
           : "";
 
-      setValue(ip("details.size"), finalSize, { shouldValidate: true });
-      setValue(ip("details.flavor"), finalFlavor, { shouldValidate: true });
-      setValue(ip("details.shape"), finalShape, { shouldValidate: true });
+      // A category with no catalog diameters keeps whatever the customer typed.
+      if (isStandard && filteredDiameters.length === 0) {
+        return;
+      }
 
-      if (isStandard) {
+      if (finalSize || sizeTouched.current) {
+        setValue(ip("details.size"), finalSize, { shouldValidate: true });
+      }
+      if (finalFlavor || flavorTouched.current) {
+        setValue(ip("details.flavor"), finalFlavor, { shouldValidate: true });
+      }
+      if (finalShape || shapeTouched.current) {
+        setValue(ip("details.shape"), finalShape, { shouldValidate: true });
+      }
+
+      if (isStandard && finalDiameterId) {
         setValue(ip("details.diameterId"), finalDiameterId, { shouldValidate: true });
-        setValue(ip("details.tiers"), finalTiers, { shouldValidate: true });
-      } else {
+        if (finalTiers || flavorTouched.current) {
+          setValue(ip("details.tiers"), finalTiers, { shouldValidate: true });
+        }
+      } else if (!isStandard && sizeTouched.current) {
         setValue(ip("details.diameterId"), undefined, { shouldValidate: false });
         setValue(ip("details.tiers"), undefined, { shouldValidate: false });
       }
@@ -438,16 +482,123 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
 
   // Sync back local state compilation
   useEffect(() => {
+      if (!selectionReady || preserveSavedEstimate.current) return;
       compilePayload();
-  }, [compilePayload]);
+  }, [compilePayload, selectionReady]);
+
+  useEffect(() => {
+    if (isLoading || !activeCategoryObj || selectionHydrated.current === itemIndex) return;
+    selectionHydrated.current = itemIndex;
+
+    const savedSize = String(getValues(ip("details.size")) ?? "");
+    const savedFlavor = String(getValues(ip("details.flavor")) ?? "");
+    const savedShape = String(getValues(ip("details.shape")) ?? "");
+    const savedDiameterId = String(getValues(ip("details.diameterId")) ?? "");
+    const savedTiers = getValues(ip("details.tiers")) as CakeTierSelection[] | undefined;
+    let restored = false;
+
+    if (isCombo) {
+      const quantity = savedSize.match(/Combo Box:\s*(\d+)/)?.[1];
+      if (quantity) {
+        setComboPieceQuantity(quantity);
+        restored = true;
+      }
+      const parsed = savedFlavor.match(/Treats:\s*\[([^\]]*)\]\.\s*Cake:\s*(.*)$/);
+      if (parsed) {
+        const treatIds = parsed[1]
+          .split(",")
+          .map((name) => name.trim())
+          .filter((name) => name && name !== "None")
+          .map((name) => treatFlavors.find((flavor) => flavor.name === name)?._id)
+          .filter((id): id is string => Boolean(id))
+          .map(String);
+        if (treatIds.length > 0) {
+          setComboTreatFlavorIds(treatIds);
+          restored = true;
+        }
+        const cakeName = parsed[2].trim();
+        const cake = cakeName && cakeName !== "None"
+          ? bentoFlavors.find((flavor) => flavor.name === cakeName)
+          : undefined;
+        if (cake) {
+          setComboCakeFlavorId(String(cake._id));
+          restored = true;
+        }
+      }
+    } else if (isDiscrete) {
+      const quantity = savedSize.match(/Quantity:\s*(\d+)/)?.[1];
+      if (quantity) {
+        setDiscreteQuantity(quantity);
+        restored = true;
+      }
+      const flavorIds = savedFlavor
+        .split(",")
+        .map((name) => name.trim())
+        .filter(Boolean)
+        .map((name) => filteredFlavors.find((flavor: { name?: string; _id?: unknown }) => flavor.name === name)?._id)
+        .filter((id: unknown): id is string => Boolean(id))
+        .map(String);
+      if (flavorIds.length > 0) {
+        setDiscreteFlavorIds(flavorIds);
+        restored = true;
+      }
+    } else if (filteredDiameters.length > 0) {
+      const diameter =
+        filteredDiameters.find((item: { _id: unknown }) => String(item._id) === savedDiameterId) ||
+        filteredDiameters.find((item: { name?: string }) => item.name === savedSize);
+      if (diameter) {
+        setStandardDiameterId(String(diameter._id));
+        restored = true;
+        const tiersCount = diameter.tiersCount ?? 1;
+        if (tiersCount > 1 && Array.isArray(savedTiers)) {
+          const next: Record<number, string> = {};
+          for (const tier of savedTiers) {
+            if (tier?.flavorId == null) continue;
+            const flavorId = String(tier.flavorId);
+            const known = filteredFlavors.some(
+              (flavor: { _id: unknown }) => String(flavor._id) === flavorId
+            );
+            if (known) next[tier.tierIndex] = flavorId;
+          }
+          if (Object.keys(next).length > 0) setTierFlavors(next);
+        } else if (savedFlavor) {
+          const flavor = filteredFlavors.find(
+            (item: { name?: string }) => item.name === savedFlavor
+          );
+          if (flavor) setTierFlavors({ 0: String(flavor._id) });
+        }
+      }
+      if (savedShape) {
+        const shape = allShapes.find((item) => item.name === savedShape);
+        if (shape) setStandardShapeId(String(shape._id));
+      }
+    }
+
+    preserveSavedEstimate.current = Boolean(savedSize || savedFlavor || savedShape) && !restored;
+    setSelectionReady(true);
+  }, [
+    isLoading,
+    activeCategoryObj,
+    isCombo,
+    isDiscrete,
+    itemIndex,
+    filteredDiameters,
+    filteredFlavors,
+    treatFlavors,
+    bentoFlavors,
+    allShapes,
+    getValues,
+  ]);
 
 
   // Helper Handlers for Arrays (Multi Select)
   const handleToggleDiscreteFlavor = (id: string) => {
+     noteEdit("flavor");
      setDiscreteFlavorIds(prev => prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id]);
   };
   
   const handleToggleComboTreatFlavor = (id: string) => {
+     noteEdit("flavor");
      setComboTreatFlavorIds(prev => {
         if (prev.includes(id)) return prev.filter(f => f !== id);
         if (prev.length >= 3) return prev; // max 3
@@ -456,6 +607,7 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
   };
 
   const handleTierFlavorSelect = (tierIndex: number, flavorId: string) => {
+    noteEdit("flavor");
     setTierFlavors((prev) => ({ ...prev, [tierIndex]: flavorId }));
   };
 
@@ -517,9 +669,10 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
                   <button
                     key={box.value}
                     type="button"
-                    onClick={() =>
-                      setComboPieceQuantity(String(Number(box.value) - 1))
-                    }
+                    onClick={() => {
+                      noteEdit("size");
+                      setComboPieceQuantity(String(Number(box.value) - 1));
+                    }}
                     className={`flex w-40 shrink-0 flex-col items-center gap-2 rounded-2xl border p-4 text-center transition-all duration-200 ${
                       comboPieceQuantity === String(Number(box.value) - 1)
                         ? "border-accent bg-accent/5 shadow-md shadow-accent/10"
@@ -596,7 +749,10 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
                   mode="single"
                   flavors={bentoFlavors}
                   selectedId={comboCakeFlavorId}
-                  onSelectId={setComboCakeFlavorId}
+                  onSelectId={(id) => {
+                    noteEdit("flavor");
+                    setComboCakeFlavorId(id);
+                  }}
                   hidePrice={true}
                   onInfoClick={onFlavorInfoClick}
                 />
@@ -640,7 +796,10 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
                   <button
                     key={box.value}
                     type="button"
-                    onClick={() => setDiscreteQuantity(box.value)}
+                    onClick={() => {
+                      noteEdit("size");
+                      setDiscreteQuantity(box.value);
+                    }}
                     className={`flex w-40 shrink-0 flex-col items-center gap-2 rounded-2xl border p-4 text-center transition-all duration-200 ${
                       discreteQuantity === box.value
                         ? "border-accent bg-accent/5 shadow-md shadow-accent/10"
@@ -719,13 +878,20 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
                   <DiameterSelector
                     diameters={displayableDiameters}
                     selectedDiameterId={standardDiameterId}
-                    onSelectDiameter={setStandardDiameterId}
+                    onSelectDiameter={(id) => {
+                      noteEdit("size");
+                      noteEdit("flavor");
+                      setStandardDiameterId(id);
+                    }}
                   />
                   {availableShapesForDiameter.length > 0 && standardTiersCount <= 1 && (
                     <ShapeSelector
                       shapes={availableShapesForDiameter}
                       selectedShapeId={standardShapeId}
-                      onChange={setStandardShapeId}
+                      onChange={(id) => {
+                        noteEdit("shape");
+                        setStandardShapeId(id);
+                      }}
                       className="mt-md"
                     />
                   )}
@@ -741,11 +907,12 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
                   <Input
                     placeholder="e.g. 15 guests, 3-tiers"
                     value={currentSize || ""} // Fallback if no DB configs exist
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      noteEdit("size");
                       setValue(ip("details.size"), e.target.value, {
                         shouldValidate: true,
-                      })
-                    }
+                      });
+                    }}
                     className="w-full max-w-sm bg-white"
                   />
                 </div>
@@ -807,11 +974,12 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
                 <Input
                   placeholder="e.g. Vanilla Bean with Jam"
                   value={currentFlavor || ""}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    noteEdit("flavor");
                     setValue(ip("details.flavor"), e.target.value, {
                       shouldValidate: true,
-                    })
-                  }
+                    });
+                  }}
                   className="w-full max-w-sm bg-white"
                 />
               )}
