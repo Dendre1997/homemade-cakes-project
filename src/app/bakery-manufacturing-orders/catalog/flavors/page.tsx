@@ -10,8 +10,13 @@ import { AdminListItem } from "@/components/admin/AdminListItem";
 import { FloatingActionBar } from "@/components/admin/FloatingActionBar";
 import { sortFlavorsByDisplayOrder } from "@/lib/utils/sortFlavors";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, GripVertical } from "lucide-react";
-import { Input } from "@/components/ui/Input";
+import { GripVertical } from "lucide-react";
+import {
+  CatalogPageHeader,
+  CatalogSearchField,
+  catalogListColumnClass,
+  catalogListHeadingClass,
+} from "@/components/admin/catalog/CatalogListChrome";
 import { cn } from "@/lib/utils";
 import {
   DndContext,
@@ -35,7 +40,7 @@ type FlavorFormData = Omit<Flavor, "_id">;
 const flavorTabClassName = cn(
   "group relative inline-flex h-11 min-h-11 flex-shrink-0 snap-start items-center justify-center gap-1.5",
   "whitespace-nowrap rounded-full border border-white/30 bg-white/40 px-4 py-2.5 text-sm font-medium text-primary shadow-sm backdrop-blur-md",
-  "ring-offset-background transition-all duration-150",
+  "ring-offset-background transition-[color,background-color,border-color,box-shadow] duration-150 motion-reduce:transition-none",
   "data-[state=active]:border-transparent data-[state=active]:bg-accent data-[state=active]:font-bold data-[state=active]:text-white data-[state=active]:shadow-md",
 );
 
@@ -71,7 +76,7 @@ function SortableFlavorRow({
     >
       <button
         type="button"
-        className="shrink-0 cursor-grab touch-none rounded-medium p-1 text-primary/50 hover:bg-subtleBackground hover:text-primary active:cursor-grabbing"
+        className="flex h-11 w-11 shrink-0 cursor-grab touch-none items-center justify-center rounded-xl text-primary/50 transition-colors hover:bg-subtleBackground hover:text-primary active:cursor-grabbing sm:h-10 sm:w-10"
         aria-label="Drag to reorder"
         {...attributes}
         {...listeners}
@@ -346,23 +351,17 @@ const ManageFlavorsPage = () => {
 
 
   return (
-    <section className="relative">
+    <section className={cn("relative", isOrderDirty && "pb-28")}>
       {isSubmitting && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
           <LoadingSpinner />
         </div>
       )}
 
-      <Button
-              variant="ghost"
-              className="gap-2 pl-0 text-muted-foreground hover:text-foreground"
-              onClick={() => router.push("/bakery-manufacturing-orders/catalog")}
-            >
-              <ArrowLeft className="w-4 h-4" /> Back to Catalog
-            </Button>
-      <h1 className="font-heading text-h1 text-primary mb-lg">
-        Manage Flavors
-      </h1>
+      <CatalogPageHeader
+        title="Manage Flavors"
+        onBack={() => router.push("/bakery-manufacturing-orders/catalog")}
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-lg">
         <div className="md:col-span-1">
@@ -386,10 +385,8 @@ const ManageFlavorsPage = () => {
           )}
         </div>
 
-        <div className="md:col-span-2">
-          <h2 className="font-heading text-h3 text-primary mb-md">
-            Existing Flavors
-          </h2>
+        <div className={catalogListColumnClass}>
+          <h2 className={catalogListHeadingClass}>Existing Flavors</h2>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="relative mb-4">
             <TabsList
@@ -422,13 +419,13 @@ const ManageFlavorsPage = () => {
             />
           </Tabs>
 
-          <div className="mb-4">
-            <Input
-              placeholder="Search flavors..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
+          <CatalogSearchField
+            id="catalog-flavors-search"
+            label="Search flavors"
+            placeholder="Search flavors…"
+            value={searchQuery}
+            onChange={setSearchQuery}
+          />
           {error && <p className="text-error">Error: {error}</p>}
           {canReorder && (
             <p className="mb-3 font-body text-small text-primary/70">
@@ -443,7 +440,7 @@ const ManageFlavorsPage = () => {
           <div className="space-y-md">
             {isLoading ? (
               <div className="flex justify-center items-center p-xl">
-                <h1>Loading Flavors...</h1>
+                <p className="font-body text-primary/70">Loading Flavors…</p>
               </div>
             ) : visibleFlavors.length === 0 ? (
               <p className="font-body text-primary/80 text-center p-lg">
@@ -482,6 +479,7 @@ const ManageFlavorsPage = () => {
         isSaving={isSavingOrder}
         onDiscard={handleDiscardOrder}
         onSave={handleSaveOrder}
+        className="bottom-[max(1.5rem,env(safe-area-inset-bottom))] xl:left-64"
       />
     </section>
   );

@@ -45,7 +45,7 @@ const catalogSections = [
   },
   {
     title: "Sets",
-    description: "Configure boxes, piece counts, and flavor limits.",
+    description: "Configure sets, piece counts, and flavor limits.",
     icon: <Package className="h-8 w-8" />,
     href: "/bakery-manufacturing-orders/catalog/sets",
   },
@@ -66,15 +66,15 @@ const catalogSections = [
 const CatalogDashboardPage = () => {
   return (
     <section>
-      <h1 className="font-heading text-h1 text-primary mb-lg">
+      <h1 className="mb-3 font-heading text-2xl font-bold tracking-tight text-primary text-balance sm:text-3xl">
         Catalog Management
       </h1>
-      <p className="font-body text-primary/80 mb-xl max-w-2xl">
+      <p className="mb-8 max-w-2xl font-body text-primary/70 text-pretty">
         Manage the building blocks of your products. These attributes are used
         to create and customize your cakes.
       </p>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-lg">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {catalogSections.map((section) => (
           <ContentCard
             key={section.title}

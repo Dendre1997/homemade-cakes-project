@@ -10,8 +10,12 @@ import LoadingSpinner from "@/components/ui/Spinner";
 import Image from "next/image";
 import { AdminListItem } from "@/components/admin/AdminListItem";
 import { useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
-import { Input } from "@/components/ui/Input";
+import {
+  CatalogPageHeader,
+  CatalogSearchField,
+  catalogListColumnClass,
+  catalogListHeadingClass,
+} from "@/components/admin/catalog/CatalogListChrome";
 
 const ManageCollectionsPage = () => {
   const [collections, setCollections] = useState<Collection[]>([]);
@@ -133,16 +137,10 @@ const ManageCollectionsPage = () => {
           <LoadingSpinner />
         </div>
       )}
-  <Button
-          variant="ghost"
-          className="gap-2 pl-0 text-muted-foreground hover:text-foreground"
-          onClick={() => router.push("/bakery-manufacturing-orders/catalog")}
-        >
-          <ArrowLeft className="w-4 h-4" /> Back to Catalog
-        </Button>
-      <h1 className="font-heading text-h1 text-primary mb-lg">
-        Manage Collections
-      </h1>
+      <CatalogPageHeader
+        title="Manage Collections"
+        onBack={() => router.push("/bakery-manufacturing-orders/catalog")}
+      />
       <div className="grid grid-cols-1 md:grid-cols-3 gap-lg">
         {/* Form Column */}
         <div className="md:col-span-1">
@@ -166,17 +164,15 @@ const ManageCollectionsPage = () => {
         </div>
 
         {/* List Column */}
-        <div className="md:col-span-2">
-          <h2 className="font-heading text-h3 text-primary mb-md">
-            Existing Collections
-          </h2>
-          <div className="mb-4">
-            <Input
-              placeholder="Search collections..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
+        <div className={catalogListColumnClass}>
+          <h2 className={catalogListHeadingClass}>Existing Collections</h2>
+          <CatalogSearchField
+            id="catalog-collections-search"
+            label="Search collections"
+            placeholder="Search collections…"
+            value={searchQuery}
+            onChange={setSearchQuery}
+          />
           <div className="space-y-md">
             {isLoading ? (
               <div className="flex justify-center items-center p-xl">

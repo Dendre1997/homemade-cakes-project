@@ -10,8 +10,12 @@ import { useAlert } from "@/contexts/AlertContext";
 import { AdminListItem } from "@/components/admin/AdminListItem";
 import { SetBoxIcon } from "@/components/ui/SetBoxIcon";
 import { useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
-import { Input } from "@/components/ui/Input";
+import {
+  CatalogPageHeader,
+  CatalogSearchField,
+  catalogListColumnClass,
+  catalogListHeadingClass,
+} from "@/components/admin/catalog/CatalogListChrome";
 
 const ManageSetsPage = () => {
   const showConfirmation = useConfirmation();
@@ -136,14 +140,10 @@ const ManageSetsPage = () => {
           <LoadingSpinner />
         </div>
       )}
-      <Button
-        variant="ghost"
-        className="gap-2 pl-0 text-muted-foreground hover:text-foreground"
-        onClick={() => router.push("/bakery-manufacturing-orders/catalog")}
-      >
-        <ArrowLeft className="w-4 h-4" /> Back to Catalog
-      </Button>
-      <h1 className="font-heading text-h1 text-primary mb-lg">Manage Sets</h1>
+      <CatalogPageHeader
+        title="Manage Sets"
+        onBack={() => router.push("/bakery-manufacturing-orders/catalog")}
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-lg">
         <div className="md:col-span-1">
@@ -167,22 +167,20 @@ const ManageSetsPage = () => {
           )}
         </div>
 
-        <div className="md:col-span-2">
-          <h2 className="font-heading text-h3 text-primary mb-md">
-            Existing Sets
-          </h2>
-          <div className="mb-4">
-            <Input
-              placeholder="Search sets..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
+        <div className={catalogListColumnClass}>
+          <h2 className={catalogListHeadingClass}>Existing Sets</h2>
+          <CatalogSearchField
+            id="catalog-sets-search"
+            label="Search sets"
+            placeholder="Search sets…"
+            value={searchQuery}
+            onChange={setSearchQuery}
+          />
           {error && <p className="text-error text-center p-lg">{error}</p>}
           <div className="space-y-md">
             {isLoading ? (
               <div className="flex justify-center items-center p-xl">
-                <h1>Loading Sets...</h1>
+                <p className="font-body text-primary/70">Loading Sets…</p>
               </div>
             ) : filteredSets.length === 0 ? (
               <p className="font-body text-primary/80 text-center p-lg">

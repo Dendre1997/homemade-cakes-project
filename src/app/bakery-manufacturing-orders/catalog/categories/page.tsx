@@ -9,8 +9,12 @@ import { useAlert } from "@/contexts/AlertContext";
 import { useConfirmation } from "@/contexts/ConfirmationContext";
 import { AdminListItem } from "@/components/admin/AdminListItem";
 import { useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
-import { Input } from "@/components/ui/Input";
+import {
+  CatalogPageHeader,
+  CatalogSearchField,
+  catalogListColumnClass,
+  catalogListHeadingClass,
+} from "@/components/admin/catalog/CatalogListChrome";
 
 type CategoryFormData = Omit<ProductCategory, "_id">;
 
@@ -131,16 +135,10 @@ const ManageCategoriesPage = () => {
           <LoadingSpinner />
         </div>
       )}
-      <Button
-        variant="ghost"
-        className="gap-2 pl-0 text-muted-foreground hover:text-foreground"
-        onClick={() => router.push("/bakery-manufacturing-orders/catalog")}
-      >
-        <ArrowLeft className="w-4 h-4" /> Back to Catalog
-      </Button>
-      <h1 className="font-heading text-h1 text-primary mb-lg">
-        Manage Categories
-      </h1>
+      <CatalogPageHeader
+        title="Manage Categories"
+        onBack={() => router.push("/bakery-manufacturing-orders/catalog")}
+      />
       <div className="grid grid-cols-1 md:grid-cols-3 gap-lg">
         <div className="md:col-span-1">
           <h2 className="font-heading text-h3 text-primary mb-md">
@@ -163,21 +161,19 @@ const ManageCategoriesPage = () => {
         </div>
 
         {/* List Column */}
-        <div className="md:col-span-2">
-          <h2 className="font-heading text-h3 text-primary mb-md">
-            Existing Categories
-          </h2>
-          <div className="mb-4">
-            <Input
-              placeholder="Search categories..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
+        <div className={catalogListColumnClass}>
+          <h2 className={catalogListHeadingClass}>Existing Categories</h2>
+          <CatalogSearchField
+            id="catalog-categories-search"
+            label="Search categories"
+            placeholder="Search categories…"
+            value={searchQuery}
+            onChange={setSearchQuery}
+          />
           <div className="space-y-md">
             {isLoading ? (
               <div className="flex justify-center items-center p-xl">
-                <h1>Loading Categories...</h1>
+                <p className="font-body text-primary/70">Loading Categories…</p>
               </div>
             ) : filteredCategories.length === 0 ? (
               <p className="font-body text-primary/80 text-center p-lg">

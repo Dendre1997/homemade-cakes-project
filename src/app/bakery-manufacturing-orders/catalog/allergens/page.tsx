@@ -7,9 +7,13 @@ import { Button } from "@/components/ui/Button";
 import { useAlert } from "@/contexts/AlertContext";
 import { useConfirmation } from "@/contexts/ConfirmationContext";
 import { AdminListItem } from "@/components/admin/AdminListItem"; 
-import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Input } from "@/components/ui/Input";
+import {
+  CatalogPageHeader,
+  CatalogSearchField,
+  catalogListColumnClass,
+  catalogListHeadingClass,
+} from "@/components/admin/catalog/CatalogListChrome";
 
 type AllergenFormData = Omit<Allergen, "_id">;
 
@@ -131,16 +135,10 @@ const ManageAllergensPage = () => {
           <LoadingSpinner />
         </div>
       )}
-      <Button
-        variant="ghost"
-        className="gap-2 pl-0 text-muted-foreground hover:text-foreground"
-        onClick={() => router.push("/bakery-manufacturing-orders/catalog")}
-      >
-        <ArrowLeft className="w-4 h-4" /> Back to Catalog
-      </Button>
-      <h1 className="font-heading text-h1 text-primary mb-lg">
-        Manage Allergens
-      </h1>
+      <CatalogPageHeader
+        title="Manage Allergens"
+        onBack={() => router.push("/bakery-manufacturing-orders/catalog")}
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-lg">
         <div className="md:col-span-1">
@@ -163,22 +161,20 @@ const ManageAllergensPage = () => {
           )}
         </div>
 
-        <div className="md:col-span-2">
-          <h2 className="font-heading text-h3 text-primary mb-md">
-            Existing Allergens
-          </h2>
-          <div className="mb-4">
-            <Input
-              placeholder="Search allergens..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
+        <div className={catalogListColumnClass}>
+          <h2 className={catalogListHeadingClass}>Existing Allergens</h2>
+          <CatalogSearchField
+            id="catalog-allergens-search"
+            label="Search allergens"
+            placeholder="Search allergens…"
+            value={searchQuery}
+            onChange={setSearchQuery}
+          />
           {error && <p className="text-error text-center p-lg">{error}</p>}
           <div className="space-y-md">
             {isLoading ? (
               <div className="flex justify-center items-center p-xl">
-                <h1>Loading Allergens</h1>
+                <p className="font-body text-primary/70">Loading Allergens…</p>
               </div>
             ) : allergens.length === 0 ? (
               <p className="font-body text-primary/80 text-center p-lg">
