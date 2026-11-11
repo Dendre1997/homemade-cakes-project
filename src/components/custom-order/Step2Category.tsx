@@ -186,6 +186,7 @@ export default function Step2Category({
     setValue(ip("category"), cat.name, { shouldValidate: true });
     setValue(ip("details.size"), "");
     setValue(ip("details.flavor"), "");
+    setValue(ip("details.setId"), undefined);
     setValue(ip("details.diameterId"), undefined);
     setValue(ip("details.tiers"), undefined);
   };

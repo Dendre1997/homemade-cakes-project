@@ -630,6 +630,8 @@ export interface CustomOrderItemDetails {
   diameterId?: string;
   /** Per-tier flavor selections (multi-tier cakes). */
   tiers?: CakeTierSelection[];
+  /** Catalog set chosen for a set or combo line. */
+  setId?: string;
   [key: string]: any;
 }
 

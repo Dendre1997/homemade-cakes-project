@@ -5,6 +5,7 @@ import { normalizeCustomOrders } from "@/lib/normalizeCustomOrder";
 import { normalizePhoneDigits } from "@/lib/crm/normalize";
 import { normalizeCartItemAddons } from "@/lib/addons/selectedAddon";
 import { calculateCustomOrderTotal } from "@/lib/pricing/customOrderPricing";
+import { applyCustomOrderCatalogSets } from "@/lib/sets/customOrderSets";
 
 export async function GET(req: Request) {
   try {
@@ -62,7 +63,11 @@ export async function POST(req: Request) {
     const collection = db.collection("custom_orders");
 
     const catalogItems = await normalizeCartItemAddons(db, data.items);
-    const items = catalogItems.map((item) => {
+    const withSets = await applyCustomOrderCatalogSets(db, catalogItems);
+    if (!withSets.ok) {
+      return NextResponse.json({ error: withSets.error }, { status: 400 });
+    }
+    const items = withSets.items.map((item) => {
       if (!item.priceBreakdown) return item;
       const priceBreakdown = calculateCustomOrderTotal({
         cakeSizePrice: item.priceBreakdown.baseCakePrice,

@@ -15,7 +15,14 @@ import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { findCategoryForCustomOrderItem } from "@/lib/customOrderCategory";
 import { sortFlavorsByDisplayOrder } from "@/lib/utils/sortFlavors";
-import { IShape, CakeTierSelection } from "@/types";
+import { IShape, CakeTierSelection, CatalogSet } from "@/types";
+import { useAlert } from "@/contexts/AlertContext";
+import { SetBoxIcon } from "@/components/ui/SetBoxIcon";
+import {
+  catalogSetPortion,
+  customOrderSetEstimate,
+  customOrderSetSizeText,
+} from "@/lib/sets/customOrderSets";
 
 import { FourInchBentoIcon } from "@/components/icons/cake-sizes/FourInchBentoIcon";
 import { FiveInchBentoIcon } from "@/components/icons/cake-sizes/FiveInchBentoIcon";
@@ -43,7 +50,10 @@ const BOX_SIZES = [
   { value: "24", label: "Box of", Icon: BoxIconTwentyFour },
 ];
 
+const flavorWord = (count: number) => (count === 1 ? "flavor" : "flavors");
+
 export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }: { onNext: () => void; onFlavorInfoClick?: (id: string) => void; itemIndex: number }) {
+  const { showAlert } = useAlert();
   const { setValue, watch, getValues, formState: { errors } } = useFormContext<CustomOrderRequestData>();
   const ip = (sub: string): any => `items.${itemIndex}.${sub}`;
   const itemErrors = (errors.items?.[itemIndex] as any) ?? undefined;
@@ -61,6 +71,12 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
   const [allDiameters, setAllDiameters] = useState<any[]>([]);
   const [allFlavors, setAllFlavors] = useState<any[]>([]);
   const [allShapes, setAllShapes] = useState<IShape[]>([]);
+  /** The catalog sets fetched for one category, or a failed fetch for that category. */
+  const [loadedSets, setLoadedSets] = useState<
+    | { status: "ready"; categoryId: string; sets: CatalogSet[] }
+    | { status: "error"; categoryId: string }
+    | null
+  >(null);
 
   const activeCategoryObj = useMemo(() => {
     if (!categoryId && !categoryName) return null;
@@ -89,6 +105,8 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
 
   // If isCombo (Sets)
   const [comboPieceQuantity, setComboPieceQuantity] = useState<string>("");
+  /** Catalog set chosen for a set or combo category that has assigned sets. */
+  const [selectedSetId, setSelectedSetId] = useState<string | null>(null);
   const [comboTreatFlavorIds, setComboTreatFlavorIds] = useState<string[]>([]);
   const [comboCakeFlavorId, setComboCakeFlavorId] = useState<string | null>(null);
 
@@ -140,6 +158,42 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
     }
     fetchDBDocs();
   }, []);
+
+  // null while a set or combo category's sets are still loading, so the fixed
+  // boxes are not shown before we know the category has none.
+  const catalogSets: CatalogSet[] | null =
+    isDiscrete || isCombo
+      ? loadedSets?.status === "ready" && loadedSets.categoryId === String(activeCategoryId)
+        ? loadedSets.sets
+        : null
+      : [];
+  const setsFailed =
+    (isDiscrete || isCombo) &&
+    loadedSets?.status === "error" &&
+    loadedSets.categoryId === String(activeCategoryId);
+
+  useEffect(() => {
+    if (!activeCategoryId || (!isDiscrete && !isCombo)) return;
+    let cancelled = false;
+    const categoryId = String(activeCategoryId);
+    fetch(`/api/sets?categoryId=${categoryId}`)
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => {
+        if (!cancelled) {
+          setLoadedSets({
+            status: "ready",
+            categoryId,
+            sets: Array.isArray(data) ? data : [],
+          });
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setLoadedSets({ status: "error", categoryId });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeCategoryId, isDiscrete, isCombo]);
 
 
 
@@ -301,12 +355,33 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
     return Math.ceil(basePrice * (1 + idx * 0.30) / 10) * 10 + standardShapeSurcharge;
   }, [isStandard, basePrice, standardDiameterId, filteredDiameters, standardShapeSurcharge]);
 
-  // Discrete: basePrice × quantity
+  const selectedCatalogSet = useMemo(
+    () => catalogSets?.find((set) => String(set._id) === selectedSetId) ?? null,
+    [catalogSets, selectedSetId]
+  );
+  const hasCatalogSets = (catalogSets?.length ?? 0) > 0;
+
+  // Discrete: a catalog set's price, else basePrice × quantity
   const discretePrice = useMemo(() => {
-    if (!isDiscrete || basePrice <= 0) return 0;
+    if (!isDiscrete) return 0;
+    if (selectedCatalogSet) return catalogSetPortion(selectedCatalogSet, basePrice);
+    if (basePrice <= 0) return 0;
     const qty = Number(discreteQuantity) || Number(BOX_SIZES[0].value);
     return basePrice * qty;
-  }, [isDiscrete, basePrice, discreteQuantity]);
+  }, [isDiscrete, basePrice, discreteQuantity, selectedCatalogSet]);
+
+  // Combo: the category base price is the cake. A catalog set adds its own portion.
+  const comboEstimate = useMemo(() => {
+    if (!isCombo) return 0;
+    if (selectedCatalogSet) {
+      return customOrderSetEstimate({
+        categoryType: "combo",
+        categoryBasePrice: basePrice,
+        set: selectedCatalogSet,
+      });
+    }
+    return basePrice > 0 ? basePrice : 0;
+  }, [isCombo, basePrice, selectedCatalogSet]);
 
   const standardFlavorUpcharge = useMemo(() => {
     if (!isStandard) return 0;
@@ -357,10 +432,9 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
       setValue(ip("approximatePrice"), result.grandTotal > 0 ? result.grandTotal : undefined);
       setValue(ip("priceBreakdown"), result);
     } else if (isCombo) {
-      // Combo bug fix: previously combos never populated approximatePrice /
-      // priceBreakdown. Use the combo category's basePrice as the box price and
-      // fold in any add-ons; combo flavors carry no per-flavor upcharge.
-      const cakeSizePrice = basePrice > 0 ? basePrice : 0;
+      // The cake is the category base price. A catalog set adds its own portion;
+      // without one the whole estimate stays the category base price.
+      const cakeSizePrice = comboEstimate > 0 ? comboEstimate : 0;
       const existingAddons = (getValues(ip("addons")) as any[]) ?? [];
 
       const result = calculateCustomOrderTotal({
@@ -373,7 +447,7 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
       setValue(ip("priceBreakdown"), result);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [approximatePrice, discretePrice, isStandard, isDiscrete, isCombo, standardFlavorUpcharge, basePrice, itemIndex, selectionReady]);
+  }, [approximatePrice, discretePrice, comboEstimate, isStandard, isDiscrete, isCombo, standardFlavorUpcharge, basePrice, itemIndex, selectionReady]);
 
 
   // --- COMPILATION LOGIC ---
@@ -384,7 +458,9 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
       let finalDiameterId: string | undefined;
 
       if (isCombo) {
-          finalSize = `Combo Box: ${comboPieceQuantity || "TBD"} pieces + 4" Pick`;
+          finalSize = selectedCatalogSet
+            ? customOrderSetSizeText(selectedCatalogSet, "combo")
+            : `Combo Box: ${comboPieceQuantity || "TBD"} pieces + 4" Pick`;
           
           const tFlavors = comboTreatFlavorIds.map(id => treatFlavors.find(f => f._id === id)?.name).filter(Boolean).join(", ");
           const cFlavor = bentoFlavors.find(f => f._id === comboCakeFlavorId)?.name;
@@ -392,7 +468,9 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
           finalFlavor = `Treats: [${tFlavors || "None"}]. Cake: ${cFlavor || "None"}`;
 
       } else if (isDiscrete) {
-          finalSize = discreteQuantity ? `Quantity: ${discreteQuantity}` : "";
+          finalSize = selectedCatalogSet
+            ? customOrderSetSizeText(selectedCatalogSet, "set")
+            : discreteQuantity ? `Quantity: ${discreteQuantity}` : "";
           finalFlavor = discreteFlavorIds.map(id => filteredFlavors.find(f => f._id === id)?.name).filter(Boolean).join(", ");
           
       } else {
@@ -460,6 +538,11 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
       if (finalSize || sizeTouched.current) {
         setValue(ip("details.size"), finalSize, { shouldValidate: true });
       }
+      if (selectedCatalogSet) {
+        setValue(ip("details.setId"), String(selectedCatalogSet._id), { shouldValidate: false });
+      } else if ((isDiscrete || isCombo) && sizeTouched.current) {
+        setValue(ip("details.setId"), undefined, { shouldValidate: false });
+      }
       if (finalFlavor || flavorTouched.current) {
         setValue(ip("details.flavor"), finalFlavor, { shouldValidate: true });
       }
@@ -478,7 +561,7 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
       }
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isCombo, isDiscrete, comboPieceQuantity, comboTreatFlavorIds, comboCakeFlavorId, discreteQuantity, discreteFlavorIds, standardDiameterId, tierFlavors, standardShapeId, standardTiersCount, filteredFlavors, filteredDiameters, allShapes, isStandard, setValue, treatFlavors, bentoFlavors, itemIndex]);
+  }, [isCombo, isDiscrete, comboPieceQuantity, comboTreatFlavorIds, comboCakeFlavorId, discreteQuantity, discreteFlavorIds, selectedCatalogSet, standardDiameterId, tierFlavors, standardShapeId, standardTiersCount, filteredFlavors, filteredDiameters, allShapes, isStandard, setValue, treatFlavors, bentoFlavors, itemIndex]);
 
   // Sync back local state compilation
   useEffect(() => {
@@ -488,20 +571,42 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
 
   useEffect(() => {
     if (isLoading || !activeCategoryObj || selectionHydrated.current === itemIndex) return;
+    if ((isDiscrete || isCombo) && (catalogSets === null || setsFailed)) return;
     selectionHydrated.current = itemIndex;
 
     const savedSize = String(getValues(ip("details.size")) ?? "");
     const savedFlavor = String(getValues(ip("details.flavor")) ?? "");
     const savedShape = String(getValues(ip("details.shape")) ?? "");
+    const savedSetId = String(getValues(ip("details.setId")) ?? "");
     const savedDiameterId = String(getValues(ip("details.diameterId")) ?? "");
     const savedTiers = getValues(ip("details.tiers")) as CakeTierSelection[] | undefined;
     let restored = false;
 
+    const savedPieceCount = isCombo
+      ? savedSize.match(/Combo Box:\s*(\d+)/)?.[1]
+      : savedSize.match(/Quantity:\s*(\d+)/)?.[1];
+    const restoredSet =
+      (catalogSets ?? []).find((set) => String(set._id) === savedSetId) ||
+      (savedPieceCount
+        ? (catalogSets ?? []).find((set) => String(set.pieceCount) === savedPieceCount)
+        : undefined) ||
+      (!savedSize ? catalogSets?.[0] : undefined);
+
+    if (restoredSet && (isCombo || isDiscrete)) {
+      setSelectedSetId(String(restoredSet._id));
+      const pieceCount = String(restoredSet.pieceCount);
+      if (isCombo) setComboPieceQuantity(pieceCount);
+      else setDiscreteQuantity(pieceCount);
+      restored = true;
+    }
+
     if (isCombo) {
-      const quantity = savedSize.match(/Combo Box:\s*(\d+)/)?.[1];
-      if (quantity) {
-        setComboPieceQuantity(quantity);
-        restored = true;
+      if (!restoredSet) {
+        const quantity = savedPieceCount;
+        if (quantity) {
+          setComboPieceQuantity(quantity);
+          restored = true;
+        }
       }
       const parsed = savedFlavor.match(/Treats:\s*\[([^\]]*)\]\.\s*Cake:\s*(.*)$/);
       if (parsed) {
@@ -512,8 +617,9 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
           .map((name) => treatFlavors.find((flavor) => flavor.name === name)?._id)
           .filter((id): id is string => Boolean(id))
           .map(String);
-        if (treatIds.length > 0) {
-          setComboTreatFlavorIds(treatIds);
+        const keptTreats = restoredSet ? treatIds.slice(0, restoredSet.maxFlavors) : treatIds;
+        if (keptTreats.length > 0) {
+          setComboTreatFlavorIds(keptTreats);
           restored = true;
         }
         const cakeName = parsed[2].trim();
@@ -526,10 +632,12 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
         }
       }
     } else if (isDiscrete) {
-      const quantity = savedSize.match(/Quantity:\s*(\d+)/)?.[1];
-      if (quantity) {
-        setDiscreteQuantity(quantity);
-        restored = true;
+      if (!restoredSet) {
+        const quantity = savedPieceCount;
+        if (quantity) {
+          setDiscreteQuantity(quantity);
+          restored = true;
+        }
       }
       const flavorIds = savedFlavor
         .split(",")
@@ -538,8 +646,9 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
         .map((name) => filteredFlavors.find((flavor: { name?: string; _id?: unknown }) => flavor.name === name)?._id)
         .filter((id: unknown): id is string => Boolean(id))
         .map(String);
-      if (flavorIds.length > 0) {
-        setDiscreteFlavorIds(flavorIds);
+      const keptFlavors = restoredSet ? flavorIds.slice(0, restoredSet.maxFlavors) : flavorIds;
+      if (keptFlavors.length > 0) {
+        setDiscreteFlavorIds(keptFlavors);
         restored = true;
       }
     } else if (filteredDiameters.length > 0) {
@@ -587,21 +696,51 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
     treatFlavors,
     bentoFlavors,
     allShapes,
+    catalogSets,
+    setsFailed,
     getValues,
   ]);
 
 
   // Helper Handlers for Arrays (Multi Select)
+  const catalogFlavorLimit = hasCatalogSets ? selectedCatalogSet?.maxFlavors ?? 1 : undefined;
+  const comboTreatLimit = hasCatalogSets ? catalogFlavorLimit ?? 1 : 3;
+
+  const selectCatalogSet = (setId: string) => {
+    noteEdit("size");
+    const set = catalogSets?.find((candidate) => String(candidate._id) === setId);
+    setSelectedSetId(setId);
+    if (!set) return;
+    const pieceCount = String(set.pieceCount);
+    if (isCombo) setComboPieceQuantity(pieceCount);
+    else setDiscreteQuantity(pieceCount);
+    const current = isCombo ? comboTreatFlavorIds : discreteFlavorIds;
+    if (current.length > set.maxFlavors) {
+      const kept = current.slice(0, set.maxFlavors);
+      if (isCombo) setComboTreatFlavorIds(kept);
+      else setDiscreteFlavorIds(kept);
+      noteEdit("flavor");
+      showAlert(
+        `${set.name} takes up to ${set.maxFlavors} ${flavorWord(set.maxFlavors)}, so we kept your first ${set.maxFlavors}.`,
+        "info"
+      );
+    }
+  };
+
   const handleToggleDiscreteFlavor = (id: string) => {
      noteEdit("flavor");
-     setDiscreteFlavorIds(prev => prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id]);
+     setDiscreteFlavorIds(prev => {
+        if (prev.includes(id)) return prev.filter(f => f !== id);
+        if (catalogFlavorLimit && prev.length >= catalogFlavorLimit) return prev;
+        return [...prev, id];
+     });
   };
   
   const handleToggleComboTreatFlavor = (id: string) => {
      noteEdit("flavor");
      setComboTreatFlavorIds(prev => {
         if (prev.includes(id)) return prev.filter(f => f !== id);
-        if (prev.length >= 3) return prev; // max 3
+        if (prev.length >= comboTreatLimit) return prev;
         return [...prev, id];
      });
   };
@@ -642,6 +781,39 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
       );
   }
 
+  const catalogSetButtons = (catalogSets ?? []).map((set) => {
+    const setId = String(set._id);
+    const selected = selectedSetId === setId;
+    return (
+      <button
+        key={setId}
+        type="button"
+        aria-pressed={selected}
+        onClick={() => selectCatalogSet(setId)}
+        className={`flex w-40 shrink-0 flex-col items-center gap-2 rounded-2xl border p-4 text-center transition-all duration-200 ${
+          selected
+            ? "border-accent bg-accent/5 shadow-md shadow-accent/10"
+            : "border-primary/10 bg-white hover:border-accent/50 hover:bg-subtleBackground hover:shadow-sm"
+        }`}
+      >
+        <div className="relative flex h-24 w-24 items-center justify-center pointer-events-none">
+          {set.imageUrl ? (
+            <Image src={set.imageUrl} alt="" fill sizes="96px" className="object-contain" />
+          ) : (
+            <SetBoxIcon pieceCount={set.pieceCount} className={`h-full w-full ${selected ? "text-accent" : "text-primary"}`} />
+          )}
+        </div>
+        <p className="font-body text-body font-bold text-primary">{set.name}</p>
+        <p className="text-xs text-primary/60">
+          {set.pieceCount} pieces · up to {set.maxFlavors} {flavorWord(set.maxFlavors)}
+        </p>
+        <p className="font-body text-body font-bold text-accent">
+          ${catalogSetPortion(set, basePrice)}
+        </p>
+      </button>
+    );
+  });
+
   return (
     <div className="space-y-2 animate-in fade-in duration-500">
       <div className="text-center">
@@ -659,13 +831,25 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
           <div className="space-y-10">
             <div className="border-b border-primary/10 pb-8">
               <h3 className="font-heading text-xl text-primary mb-2">
-                1. Choose Box Size
+                {hasCatalogSets ? "1. Choose your set" : "1. Choose Box Size"}
               </h3>
               <p className="text-sm text-primary/60 mb-4">
                 How many treats should be included alongside the mini cake?
               </p>
+              {hasCatalogSets && selectedCatalogSet && (
+                <p className="text-sm text-primary/60 mb-4">
+                  Estimate ${comboEstimate}: cake ${basePrice} + {selectedCatalogSet.name} $
+                  {catalogSetPortion(selectedCatalogSet, basePrice)}
+                </p>
+              )}
               <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
-                {BOX_SIZES.map((box) => (
+                {setsFailed ? (
+                  <p className="text-sm text-primary/60">
+                    The sets for this category could not be loaded. Go back and open this step again.
+                  </p>
+                ) : catalogSets === null ? (
+                  <LoadingSpinner />
+                ) : hasCatalogSets ? catalogSetButtons : BOX_SIZES.map((box) => (
                   <button
                     key={box.value}
                     type="button"
@@ -697,7 +881,7 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
                 2. Treats Flavors
               </h3>
               <p className="text-sm text-primary/60 mb-4">
-                Choose up to 3 flavors for the treats in your box.
+                Choose up to {comboTreatLimit} {flavorWord(comboTreatLimit)} for the treats in your box.
               </p>
               <div className="bg-background rounded-2xl shadow-sm border p-4">
                 <FlavorSelector
@@ -705,7 +889,7 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
                   flavors={treatFlavors}
                   selectedIds={comboTreatFlavorIds}
                   onToggleId={handleToggleComboTreatFlavor}
-                  maxSelection={3}
+                  maxSelection={comboTreatLimit}
                   hidePrice={true}
                   onInfoClick={onFlavorInfoClick}
                 />
@@ -768,7 +952,7 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
           <div className="space-y-10">
             <div className="border-b border-primary/10 pb-8">
               {/* ── Live price badge ── */}
-              {basePrice > 0 && (
+              {(basePrice > 0 || selectedCatalogSet) && (
                 <div className="flex items-center justify-between mb-6 px-4 py-3 rounded-2xl bg-gradient-to-r from-accent/5 to-accent/10 border border-accent/20">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wider text-primary/40">
@@ -778,21 +962,33 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
                       Final after review
                     </p>
                     <p className="text-sm text-primary/60 mt-0.5">
-                      {discreteQuantity
-                        ? `${discreteQuantity} pieces × $${basePrice} each`
-                        : "Select a quantity to see your price"}
+                      {selectedCatalogSet
+                        ? typeof selectedCatalogSet.basePrice === "number"
+                          ? selectedCatalogSet.name
+                          : `${selectedCatalogSet.pieceCount} pieces × $${basePrice} each`
+                        : discreteQuantity
+                          ? `${discreteQuantity} pieces × $${basePrice} each`
+                          : "Select a quantity to see your price"}
                     </p>
                   </div>
                   <p className="text-2xl font-extrabold text-accent tabular-nums">
                     $
                     {discretePrice > 0
                       ? discretePrice
-                      : basePrice * Number(BOX_SIZES[0].value)}
+                      : selectedCatalogSet
+                        ? discretePrice
+                        : basePrice * Number(BOX_SIZES[0].value)}
                   </p>
                 </div>
               )}
               <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
-                {BOX_SIZES.map((box) => (
+                {setsFailed ? (
+                  <p className="text-sm text-primary/60">
+                    The sets for this category could not be loaded. Go back and open this step again.
+                  </p>
+                ) : catalogSets === null ? (
+                  <LoadingSpinner />
+                ) : hasCatalogSets ? catalogSetButtons : BOX_SIZES.map((box) => (
                   <button
                     key={box.value}
                     type="button"
@@ -829,12 +1025,15 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
                   flavors={filteredFlavors}
                   selectedIds={discreteFlavorIds}
                   onToggleId={handleToggleDiscreteFlavor}
+                  maxSelection={catalogFlavorLimit}
                   hidePrice={true}
                   onInfoClick={onFlavorInfoClick}
                 />
               </div>
               <p className="text-sm text-primary/60 mb-4">
-                Select multiple flavors for a mixed set, or pick one.
+                {catalogFlavorLimit
+                  ? `Choose up to ${catalogFlavorLimit} ${flavorWord(catalogFlavorLimit)}.`
+                  : "Select multiple flavors for a mixed set, or pick one."}
               </p>
             </div>
           </div>

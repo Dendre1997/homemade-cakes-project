@@ -72,6 +72,8 @@ export const customOrderSchema = z.object({
     shape: z.string().optional(),
     diameterId: z.string().optional(),
     tiers: z.array(cakeTierSelectionSchema).optional(),
+    /** Catalog set chosen for a set or combo line. */
+    setId: z.string().optional(),
   }),
   allergies: z.string().min(2, "Please indicate if you have any allergies"),
   referenceImages: z
@@ -126,6 +128,8 @@ export const customOrderItemSchema = z.object({
     shape: z.string().optional(),
     diameterId: z.string().optional(),
     tiers: z.array(cakeTierSelectionSchema).optional(),
+    /** Catalog set chosen for a set or combo line. */
+    setId: z.string().optional(),
   }),
   referenceImages: z
     .array(z.string().url("Invalid image URL"))

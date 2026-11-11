@@ -346,7 +346,14 @@ function CustomOrderContent() {
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) throw new Error("Failed to submit");
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(
+          res.status === 400 && body.error
+            ? body.error
+            : "Failed to submit"
+        );
+      }
       const created = await res.json().catch(() => ({}));
       setSubmittedCustomOrderId(
         typeof created?.orderId === "string" ? created.orderId : null
@@ -356,7 +363,11 @@ function CustomOrderContent() {
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (error) {
       console.error(error);
-      alert("Something went wrong processing your request. Please try again.");
+      alert(
+        error instanceof Error && error.message !== "Failed to submit"
+          ? error.message
+          : "Something went wrong processing your request. Please try again."
+      );
     } finally {
       setIsSubmitting(false);
     }
