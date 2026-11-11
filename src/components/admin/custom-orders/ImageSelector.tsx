@@ -25,7 +25,7 @@ export default function ImageSelector({
   // Parent logic handles fallback, this just renders state.
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4">
       <div className="flex w-full items-center justify-between">
          <Button 
            variant="secondary"

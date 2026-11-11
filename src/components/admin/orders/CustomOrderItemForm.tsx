@@ -70,6 +70,7 @@ interface CustomOrderItemFormProps {
   shapes?: IShape[];
   onSubmit: (item: OrderItem) => void;
   onCancel?: () => void;
+  pinnedActions?: boolean;
   initialValues?: {
       id?: string;
       images: string[];
@@ -96,6 +97,7 @@ export default function CustomOrderItemForm({
   onSubmit,
   onCancel,
   initialValues,
+  pinnedActions = false,
   submitLabel = "Add to Order",
 }: CustomOrderItemFormProps) {
   const { showAlert } = useAlert();
@@ -455,13 +457,8 @@ export default function CustomOrderItemForm({
   const isIconPicked = activeDiameters.some(d => d._id === sizeValue) || BOX_SIZES.some(b => b.value === sizeValue);
 
   return (
-    <div className="p-4 rounded-lg bg-background/50 border w-full min-w-0 max-w-full overflow-hidden">
-       <div className="flex justify-between items-center mb-6 border-b pb-4">
-           <h3 className="text-lg font-bold text-primary">New Custom Item Design</h3>
-       </div>
-
-       {/* STEP 1: CATEGORY SELECTION */}
-       <div className="mb-8">
+    <div className={pinnedActions ? "flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden" : "w-full min-w-0 max-w-full space-y-5"}>
+       <section className={pinnedActions ? "mx-4 mt-4 max-h-40 min-w-0 shrink-0 space-y-3.5 overflow-y-auto overscroll-contain rounded-2xl border border-primary/10 bg-background/40 p-3.5 sm:mx-6 sm:p-4" : "min-w-0 space-y-3.5 rounded-2xl border border-primary/10 bg-background/40 p-3.5 sm:p-4"}>
            <Label className="mb-3 block text-md">1. Select Core Category</Label>
            {categories.length === 0 ? (
              <p className="text-sm text-gray-400">Loading categories…</p>
@@ -479,12 +476,13 @@ export default function CustomOrderItemForm({
                  ))}
              </div>
            )}
-       </div>
+       </section>
 
        {selectedCategoryId && (
            (activeCategoryObj?.categoryType as string) === 'combo' ? (
-               <div className="mt-6 border-t border-primary/10 pt-8 w-full min-w-0 max-w-full overflow-hidden">
+               <div className={pinnedActions ? "mt-4 min-h-0 flex-1 overflow-hidden" : "mt-5 w-full min-w-0 max-w-full overflow-hidden"}>
                    <ComboProductForm
+                       pinnedActions={pinnedActions}
                        allCategories={categories}
                        allFlavors={flavors}
                        allDiameters={diameters}
@@ -493,12 +491,13 @@ export default function CustomOrderItemForm({
                    />
                </div>
            ) : (
-             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 mt-6 border-t border-primary/10 pt-8">
+             <div className={pinnedActions ? "mt-4 flex min-h-0 flex-1 flex-col overflow-hidden" : "mt-5"}>
+             <div className={pinnedActions ? "grid min-h-0 flex-1 grid-cols-1 gap-5 overflow-y-auto overscroll-contain px-4 py-4 sm:grid-cols-2 sm:px-6" : "grid grid-cols-1 gap-5 sm:grid-cols-2"}>
                  {/* LEFT: Images & Description */}
              <div className="space-y-8 min-w-0">
                  
                  {/* GALLERY REFERENCES */}
-                 <div className="space-y-3">
+                 <div className="min-w-0 space-y-3.5 rounded-2xl border border-primary/10 bg-background/40 p-3.5 sm:p-4">
                     <Label className="block border-b pb-2">Integrated Portfolio Gallery</Label>
                     {activeGalleryImages.length > 0 ? (
                         <div className="flex overflow-x-auto gap-3 pb-2 custom-scrollbar">
@@ -506,7 +505,7 @@ export default function CustomOrderItemForm({
                                <div 
                                   key={img._id.toString()}
                                   onClick={() => handlePickFromGallery(img.imageUrl)}
-                                  className="relative h-20 w-20 shrink-0 cursor-pointer overflow-hidden rounded-xl transition-[border-color,transform] hover:scale-105 hover:border-2 hover:border-accent"
+                                  className="relative h-20 w-20 shrink-0 cursor-pointer overflow-hidden rounded-xl border border-border transition-[border-color] hover:border-accent"
                                   title="Click to add as reference"
                                >
                                   <Image src={img.imageUrl} alt={img.title} fill quality={90} className="object-cover" />
@@ -519,7 +518,7 @@ export default function CustomOrderItemForm({
                  </div>
 
                  {/* FINAL IMAGES IN CART */}
-                 <div className="pt-4 border-t">
+                 <div className="min-w-0 space-y-3.5 rounded-2xl border border-primary/10 bg-background/40 p-3.5 sm:p-4">
                      <Label className="mb-2 flex items-center justify-between">
                         Active Order References
                         <span className="text-xs font-normal text-muted-foreground">{images.length} images</span>
@@ -542,7 +541,7 @@ export default function CustomOrderItemForm({
                      {isUploading && <p className="text-xs text-primary mt-1 animate-pulse">Uploading…</p>}
                  </div>
 
-                 <div className="space-y-4">
+                 <div className="min-w-0 space-y-3.5 rounded-2xl border border-primary/10 bg-background/40 p-3.5 sm:p-4">
                      <div>
                          <Label className="mb-2 block">Inscription (Text on Cake)</Label>
                          <Input 
@@ -569,7 +568,7 @@ export default function CustomOrderItemForm({
              <div className="space-y-6 min-w-0 flex flex-col">
                  
                  {/* SIZE SELECTION UI */}
-                 <div className="space-y-3">
+                 <div className="min-w-0 space-y-3.5 rounded-2xl border border-primary/10 bg-background/40 p-3.5 sm:p-4">
                      <Label className="block text-md border-b pb-2">Size / Quantity Config</Label>
                      
                      <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
@@ -641,7 +640,7 @@ export default function CustomOrderItemForm({
 
                  {/* SHAPE SELECTION UI (only when a real diameter is chosen and single-tier) */}
                  {!isMultiTier && availableShapes.length > 0 && (
-                     <div className="space-y-2">
+                     <div className="min-w-0 space-y-3.5 rounded-2xl border border-primary/10 bg-background/40 p-3.5 sm:p-4">
                          <Label className="block text-md border-b pb-2">Shape</Label>
                          <Select value={selectedShapeId} onValueChange={setSelectedShapeId}>
                              <SelectTrigger className="h-11 rounded-xl bg-white sm:h-10">
@@ -659,7 +658,7 @@ export default function CustomOrderItemForm({
                  )}
 
                  {/* FLAVOR SELECTION UI */}
-                 <div className="pt-2">
+                 <div className="min-w-0 space-y-3.5 rounded-2xl border border-primary/10 bg-background/40 p-3.5 sm:p-4">
                      {activeCategoryObj?.categoryType === "set" || activeCategoryObj?.categoryType === "combo" ? (
                          <div className="mt-2 space-y-3 rounded-xl border border-primary/15 bg-background/40 p-4">
                              {activeCategoryObj.categoryType === "combo" && (
@@ -757,7 +756,7 @@ export default function CustomOrderItemForm({
                  </div>
 
                  <div className="pt-4 border-t mt-4">
-                     <div className="gap-4">
+                     <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
                          <div>
                              <Label className="mb-2 block">Quantity Multiplier</Label>
                              <Input 
@@ -787,11 +786,11 @@ export default function CustomOrderItemForm({
                      {/* Pushes to bottom if right column is shorter */}
                  </div>
              </div>
+             </div>
 
-             {/* BOTTOM: Action Buttons */}
-             <div className="lg:col-span-2 flex flex-col sm:flex-row items-center gap-4 pt-6 mt-4 border-t border-primary/20 bg-primary/5 p-4 rounded-xl w-full">
-                 <div className="font-bold text-2xl text-primary shrink-0 sm:w-1/3 text-center sm:text-left flex flex-col">
-                     <span>Total: ${(price * quantity).toFixed(2)}</span>
+             <div className={pinnedActions ? "flex w-full min-w-0 shrink-0 flex-col gap-3 border-t border-primary/10 bg-background/95 px-4 py-3 backdrop-blur-md pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-4 sm:pb-4" : "flex w-full min-w-0 flex-col gap-3 border-t border-primary/10 pt-4 sm:flex-row sm:items-center sm:justify-between"}>
+                 <div className="flex min-w-0 flex-col text-center font-bold text-primary sm:w-1/3 sm:text-left">
+                     <span className="break-words text-xl">Total: ${(price * quantity).toFixed(2)}</span>
                      {selectedAddons.length > 0 && (
                          <span className="text-xs font-normal text-muted-foreground">
                              Addons total: +${addonsUnitCost(selectedAddons).toFixed(2)} (Must be manually added to Fixed Price if desired)
@@ -805,7 +804,7 @@ export default function CustomOrderItemForm({
                          </Button>
                      )}
                      <Button onClick={handleSubmit} disabled={isUploading} className="h-11 w-full rounded-xl sm:h-10 sm:w-auto">
-                         <Plus className="w-5 h-5 mr-2" />
+                         <Plus className="mr-2 h-4 w-4 shrink-0" />
                          {submitLabel}
                      </Button>
                  </div>

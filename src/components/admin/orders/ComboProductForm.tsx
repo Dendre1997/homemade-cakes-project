@@ -32,6 +32,8 @@ interface ComboProductFormProps {
   onAdd: (item: any) => void;
   onCancel: () => void;
   initialValues?: any;
+  pinnedActions?: boolean;
+  insetSafeArea?: boolean;
 }
 
 export const ComboProductForm = ({
@@ -40,7 +42,9 @@ export const ComboProductForm = ({
   allDiameters,
   onAdd,
   onCancel,
-  initialValues
+  initialValues,
+  pinnedActions = false,
+  insetSafeArea = true,
 }: ComboProductFormProps) => {
   const { showAlert } = useAlert();
 
@@ -368,16 +372,20 @@ export const ComboProductForm = ({
        onAdd(newItem);
   };
 
-  return (
-    <div className="w-full min-w-0 max-w-full overflow-hidden space-y-6 animate-in fade-in slide-in-from-top-2 border p-3 sm:p-6 rounded-lg bg-gray-50 relative">
-        <h3 className="font-bold text-gray-800 text-lg flex items-center justify-between min-w-0 gap-2">
-            <span className="min-w-0 truncate">Configure Combo Item</span>
-            <span className="text-xs bg-accent text-white px-2 py-1 rounded">Combo</span>
-        </h3>
+  const sheetScroll = pinnedActions
+    ? "min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 sm:py-5"
+    : "space-y-5";
+  const sheetActions = pinnedActions
+    ? `flex w-full min-w-0 shrink-0 gap-2 border-t border-primary/10 bg-background/95 px-4 py-3 backdrop-blur-md sm:px-6 sm:py-4 ${insetSafeArea ? "pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:pb-4" : ""}`
+    : "flex w-full min-w-0 gap-2 border-t border-primary/10 pt-4";
 
+  return (
+    <div className={pinnedActions ? "flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden" : "w-full min-w-0 space-y-5"}>
         {step === 1 ? (
-          <div className="w-full min-w-0 max-w-full overflow-hidden space-y-4">
-              <h4 className="font-bold text-gray-700 uppercase text-sm">Step 1: Center Cake</h4>
+          <>
+          <div className={sheetScroll}>
+              <section className="min-w-0 space-y-3.5 rounded-2xl border border-primary/10 bg-background/40 p-3.5 sm:p-4">
+              <h4 className="text-sm font-bold uppercase text-primary/70">Step 1: Center Cake</h4>
               
               <div>
                   <label className="block text-sm font-bold text-gray-700 mb-1">Cake Category</label>
@@ -398,7 +406,7 @@ export const ComboProductForm = ({
               </div>
 
               {selectedSingleCategoryId && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 min-w-0 max-w-full w-full">
+                  <div className="grid min-w-0 w-full grid-cols-1 gap-4 sm:grid-cols-2">
                       <div className="min-w-0">
                           <label className="block text-sm font-medium mb-1">Cake Size</label>
                           <Select value={selectedSingleDiameterId} onValueChange={setSelectedSingleDiameterId}>
@@ -428,9 +436,10 @@ export const ComboProductForm = ({
                       </div>
                   </div>
               )}
+              </section>
 
               {selectedSingleCategoryId && (
-                  <div className="w-full min-w-0 max-w-full overflow-hidden">
+                  <section className="min-w-0 space-y-3.5 rounded-2xl border border-primary/10 bg-background/40 p-3.5 sm:p-4">
                   <div className="space-y-3 mt-4 min-w-0 max-w-full w-full overflow-hidden">
                      <Label className="block border-b pb-2">Integrated Portfolio Gallery</Label>
                      {singleGalleryImages.length > 0 ? (
@@ -440,7 +449,7 @@ export const ComboProductForm = ({
                                 <div 
                                    key={img._id.toString()}
                                    onClick={() => handlePickFromGallery(img.imageUrl)}
-                                   className="relative h-24 w-24 shrink-0 cursor-pointer overflow-hidden rounded-xl border border-border transition-[border-color,transform] hover:scale-105 hover:border-2 hover:border-accent"
+                                   className="relative h-24 w-24 shrink-0 cursor-pointer overflow-hidden rounded-xl border border-border transition-[border-color] hover:border-accent"
                                    title="Click to add as reference"
                                 >
                                    <Image src={img.imageUrl} alt={img.title} fill quality={90} className="object-cover" sizes="96px" />
@@ -474,10 +483,10 @@ export const ComboProductForm = ({
                       />
                       {isUploading && <p className="text-xs text-primary mt-1 animate-pulse">Uploading…</p>}
                   </div>
-                  </div>
+                  </section>
               )}
 
-              <div>
+              <section className="min-w-0 space-y-3.5 rounded-2xl border border-primary/10 bg-background/40 p-3.5 sm:p-4">
                   <label className="block text-sm font-medium mb-1">Cake Inscription</label>
                   <input 
                       value={inscription}
@@ -485,15 +494,15 @@ export const ComboProductForm = ({
                       placeholder="Happy Birthday…"
                       className="h-11 w-full rounded-xl border bg-white sm:h-10"
                   />
-              </div>
 
               <AddonAdminSelector 
                   categoryId={selectedSingleCategoryId}
                   selectedAddons={singleAddons}
                   onChange={setSingleAddons}
               />
-
-              <div className="flex gap-2 pt-4 min-w-0 w-full">
+              </section>
+          </div>
+              <div className={sheetActions}>
                   <Button variant="outline" onClick={onCancel} className="h-11 flex-1 rounded-xl sm:h-10">
                       Cancel
                   </Button>
@@ -501,10 +510,12 @@ export const ComboProductForm = ({
                       Next Step <ArrowRight className="ml-2 h-4 w-4 shrink-0" />
                   </Button>
               </div>
-          </div>
+          </>
         ) : (
-          <div className="w-full min-w-0 max-w-full overflow-hidden space-y-4">
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 bg-white p-3 rounded border min-w-0 max-w-full">
+          <>
+          <div className={sheetScroll}>
+              <section className="min-w-0 space-y-3.5 rounded-2xl border border-primary/10 bg-background/40 p-3.5 sm:p-4">
+              <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div className="text-sm min-w-0">
                       <span className="font-bold block">Cake Selected:</span>
                       <span className="text-gray-600">
@@ -512,11 +523,13 @@ export const ComboProductForm = ({
                       </span>
                   </div>
                   <Button variant="outline" onClick={() => setStep(1)} className="h-11 self-start rounded-xl sm:h-10 sm:self-auto">
-                      <ArrowLeft className="w-3 h-3 mr-1" /> Edit
+                      <ArrowLeft className="mr-1 h-4 w-4 shrink-0" /> Edit
                   </Button>
               </div>
+              </section>
 
-              <h4 className="font-bold text-gray-700 uppercase text-sm mt-6">Step 2: Box Items</h4>
+              <section className="min-w-0 space-y-3.5 rounded-2xl border border-primary/10 bg-background/40 p-3.5 sm:p-4">
+              <h4 className="text-sm font-bold uppercase text-primary/70">Step 2: Treats</h4>
               
               <div>
                   <label className="block text-sm font-bold text-gray-700 mb-1">Box Category</label>
@@ -534,10 +547,11 @@ export const ComboProductForm = ({
                       </SelectContent>
                   </Select>
               </div>
+              </section>
 
               {selectedSetCategoryId && (
-                <div className="w-full min-w-0 max-w-full overflow-hidden">
-                  <div className="space-y-3 mt-4 min-w-0 max-w-full w-full overflow-hidden">
+                <div className="flex w-full min-w-0 max-w-full flex-col gap-5">
+                  <section className="min-w-0 space-y-3.5 rounded-2xl border border-primary/10 bg-background/40 p-3.5 sm:p-4">
                      <Label className="block border-b pb-2">Integrated Portfolio Gallery</Label>
                      {setGalleryImagesList.length > 0 ? (
                          <div className="min-w-0 w-full max-w-full overflow-hidden">
@@ -546,7 +560,7 @@ export const ComboProductForm = ({
                                 <div 
                                    key={img._id.toString()}
                                    onClick={() => handlePickFromGallery(img.imageUrl)}
-                                   className="relative h-24 w-24 shrink-0 cursor-pointer overflow-hidden rounded-xl border border-border transition-[border-color,transform] hover:scale-105 hover:border-2 hover:border-accent"
+                                   className="relative h-24 w-24 shrink-0 cursor-pointer overflow-hidden rounded-xl border border-border transition-[border-color] hover:border-accent"
                                    title="Click to add as reference"
                                 >
                                    <Image src={img.imageUrl} alt={img.title} fill quality={90} className="object-cover" sizes="96px" />
@@ -557,10 +571,10 @@ export const ComboProductForm = ({
                      ) : (
                          <p className="text-xs text-gray-400 italic">No gallery images available for this category.</p>
                      )}
-                  </div>
+                  </section>
 
-                  <div className="pt-4 border-t mt-4 mb-6 min-w-0 max-w-full w-full overflow-hidden">
-                      <Label className="mb-2 flex items-center justify-between min-w-0">
+                  <section className="min-w-0 space-y-3.5 rounded-2xl border border-primary/10 bg-background/40 p-3.5 sm:p-4">
+                      <Label className="mb-2 flex min-w-0 items-center justify-between">
                          Active Order References
                          <span className="text-xs font-normal text-muted-foreground">{images.length} images</span>
                       </Label>
@@ -580,9 +594,9 @@ export const ComboProductForm = ({
                           onChange={handleFileChange}
                       />
                       {isUploading && <p className="text-xs text-primary mt-1 animate-pulse">Uploading…</p>}
-                  </div>
+                  </section>
 
-                  <div className="mb-6">
+                  <div className="min-w-0 space-y-3.5 rounded-2xl border border-primary/10 bg-background/40 p-3.5 sm:p-4">
                     <Label className="block text-sm font-medium mb-1">Design Description</Label>
                     <Textarea
                       placeholder="Any special design instructions for the combo…"
@@ -593,7 +607,7 @@ export const ComboProductForm = ({
                     />
                   </div>
 
-                  <div>
+                  <div className="min-w-0 space-y-3.5 rounded-2xl border border-primary/10 bg-background/40 p-3.5 sm:p-4">
                       <Label className="block text-sm font-medium mb-2">Box Size</Label>
                       <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
                         <Input
@@ -645,8 +659,8 @@ export const ComboProductForm = ({
                   </div>
 
                   {selectedBoxSize && (
-                      <div className="bg-white p-4 rounded-md border border-gray-200 mt-4">
-                          <div className="flex justify-between items-center mb-2">
+                      <div className="min-w-0 rounded-xl border border-primary/10 bg-background/60 p-3">
+                          <div className="mb-2 flex min-w-0 flex-wrap items-center justify-between gap-2">
                               <label className="text-sm font-bold text-gray-700">
                                 {selectedCategorySet
                                   ? `Distribute flavors. This set allows up to ${selectedCategorySet.maxFlavors} ${selectedCategorySet.maxFlavors === 1 ? "flavor" : "flavors"}; you can choose more.`
@@ -656,12 +670,12 @@ export const ComboProductForm = ({
                                   {remainingItems === 0 ? "Box Full" : `Remaining slots: ${remainingItems}`}
                               </span>
                           </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-60 overflow-y-auto p-1">
+                          <div className="grid max-h-60 min-w-0 grid-cols-1 gap-2 overflow-y-auto overscroll-contain p-1 sm:grid-cols-2">
                                {setFlavors.map(f => {
                                    const count = flavorCounts[f._id] || 0;
                                    return (
-                                       <div key={f._id} className="flex items-center justify-between p-2 bg-gray-50 rounded border gap-2">
-                                           <span className="text-sm truncate flex-1 min-w-0 mr-2" title={f.name}>{f.name}</span>
+                                       <div key={f._id} className="flex min-w-0 items-center justify-between gap-2 rounded-xl border border-primary/10 bg-background/80 p-2">
+                                           <span className="min-w-0 flex-1 break-words text-sm" title={f.name}>{f.name}</span>
                                            <div className="flex items-center gap-2 flex-shrink-0">
                                                <button 
                                                   type="button"
@@ -688,7 +702,7 @@ export const ComboProductForm = ({
                       </div>
                   )}
 
-                  <div className="mt-4">
+                  <div className="min-w-0 space-y-3.5 rounded-2xl border border-primary/10 bg-background/40 p-3.5 sm:p-4">
                        <label className="block text-sm font-medium mb-1">Flavor Note (Optional)</label>
                        <input 
                           value={flavorNote}
@@ -696,15 +710,14 @@ export const ComboProductForm = ({
                           placeholder="e.g. less sweet, specific inquiry"
                           className="h-11 w-full rounded-xl border sm:h-10"
                        />
-                  </div>
-
                   <AddonAdminSelector 
                       categoryId={selectedSetCategoryId}
                       selectedAddons={setAddons}
                       onChange={setSetAddons}
                   />
+                  </div>
 
-                  <div className="grid grid-cols-2 gap-4 pt-4">
+                  <div className="grid min-w-0 grid-cols-1 gap-4 rounded-2xl border border-primary/10 bg-background/40 p-3.5 sm:grid-cols-2 sm:p-4">
                       <div>
                            <label className="block text-sm font-medium mb-1">Order Qty (Combos)</label>
                            <input 
@@ -728,8 +741,8 @@ export const ComboProductForm = ({
                   </div>
                 </div>
               )}
-
-              <div className="flex gap-2 pt-6 min-w-0 w-full">
+          </div>
+              <div className={sheetActions}>
                   <Button variant="outline" onClick={onCancel} className="h-11 flex-1 rounded-xl sm:h-10">
                       Cancel
                   </Button>
@@ -738,7 +751,7 @@ export const ComboProductForm = ({
                       Add to Order
                   </Button>
               </div>
-          </div>
+          </>
         )}
     </div>
   );

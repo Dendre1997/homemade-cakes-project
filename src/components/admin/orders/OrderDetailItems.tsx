@@ -12,11 +12,12 @@ import {
 import { Button } from "@/components/ui/Button";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
-  DialogHeader,
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/Dialog";
+import { X } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
 import {
@@ -448,28 +449,40 @@ const OrderDetailItems = ({
 
       {/* EDIT MODAL */}
       <Dialog open={!!editingItem} onOpenChange={(open) => !open && setEditingItem(null)}>
-        <DialogContent className="w-[calc(100vw-2rem)] max-w-2xl max-h-[90vh] min-w-0 overflow-x-hidden overflow-y-auto overscroll-contain [&>button]:!h-11 [&>button]:!w-11 [&>button]:!rounded-xl [&>button]:sm:!h-10 [&>button]:sm:!w-10">
-            <DialogHeader className="flex flex-col items-stretch gap-3 pr-14 sm:flex-row sm:items-center sm:justify-between">
-                <DialogTitle className="min-w-0 break-words text-left">Edit Item: {editingItem?.name}</DialogTitle>
-                {editingItem && (
-                    <div className="flex min-w-0 flex-wrap items-center gap-2">
-                        <Label className="text-xs font-bold text-gray-500 uppercase">
-                            {isCustomMode ? "Custom Mode" : "Standard Mode"}
-                        </Label>
-                        <Button 
-                            variant={isCustomMode ? "default" : "outline"}
-                            onClick={() => setIsCustomMode(!isCustomMode)}
-                            className={isCustomMode ? "h-11 rounded-xl bg-accent px-4 sm:h-10 border-accent" : "h-11 rounded-xl px-4 sm:h-10"}
-                        >
-                            Switch to {isCustomMode ? "Standard" : "Custom"}
-                        </Button>
-                    </div>
-                )}
-            </DialogHeader>
+        <DialogContent className="bottom-0 left-0 right-0 top-auto flex max-h-[92dvh] w-full max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-t-2xl border-primary/15 bg-background/95 p-0 shadow-2xl backdrop-blur-xl sm:bottom-auto sm:left-[50%] sm:right-auto sm:top-[50%] sm:max-h-[88vh] sm:max-w-2xl sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-2xl lg:max-w-3xl [&>button]:hidden">
+            <header className="flex shrink-0 items-start gap-3 border-b border-primary/10 px-4 py-3.5 sm:px-6 sm:py-4">
+                <div className="min-w-0 flex-1 space-y-2">
+                    <DialogTitle className="min-w-0 break-words text-left">Edit Item</DialogTitle>
+                    <p className="min-w-0 break-words text-sm text-primary/70">{editingItem?.name}</p>
+                    {editingItem && (
+                        <div className="flex min-w-0 flex-wrap items-center gap-2">
+                            <Label className="text-xs font-bold uppercase text-primary/50">
+                                {isCustomMode ? "Custom Mode" : "Standard Mode"}
+                            </Label>
+                            <Button
+                                variant={isCustomMode ? "default" : "outline"}
+                                onClick={() => setIsCustomMode(!isCustomMode)}
+                                className={isCustomMode ? "h-11 rounded-xl border-accent bg-accent px-4 sm:h-10" : "h-11 rounded-xl px-4 sm:h-10"}
+                            >
+                                Switch to {isCustomMode ? "Standard" : "Custom"}
+                            </Button>
+                        </div>
+                    )}
+                </div>
+                <DialogClose
+                    aria-label="Close"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-primary/15 text-primary transition-colors hover:bg-background/60 sm:h-10 sm:w-10"
+                >
+                    <X className="h-4 w-4 shrink-0" />
+                </DialogClose>
+            </header>
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             
              {editingItem?.isCombo === true ? (
-                <div className="py-4 w-full min-w-0 max-w-full overflow-hidden">
+                <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
                   <ComboProductForm
+                    pinnedActions
+                    insetSafeArea={isCustomMode}
                     allCategories={allCategories}
                     allFlavors={allFlavors}
                     allDiameters={diameters}
@@ -505,12 +518,13 @@ const OrderDetailItems = ({
                   />
                 </div>
             ) : editingItem && isCustomMode ? (
-                  <div className="py-4 w-full min-w-0 max-w-full overflow-hidden">
+                  <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
                       <CustomOrderItemForm 
                          flavors={allFlavors} 
                          diameters={diameters}
                          shapes={shapes}
                         submitLabel="Save Changes"
+                        pinnedActions
                         
                         initialValues={{
                             id: editingItem.id,
@@ -603,9 +617,9 @@ const OrderDetailItems = ({
                      />
                  </div>
             ) : editingItem && !isCustomMode && (
-                <div className="space-y-6 py-4">
+                <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 sm:py-5">
                     {/* Common Product Selection (Caution advised changing this mid-edit) */}
-                    <div className="space-y-2">
+                    <div className="min-w-0 space-y-3.5 rounded-2xl border border-primary/10 bg-background/40 p-3.5 sm:p-4">
                         <Label>Product Context (Read Only logic preferred but picker kept for swapping)</Label>
                         <ProductPicker 
                             availableProducts={products}
@@ -617,7 +631,8 @@ const OrderDetailItems = ({
 
                     {/* POLYMORPHIC FORM */}
                     {draftProduct?.productType === 'set' ? (
-                        <div className="border p-4 rounded bg-gray-50 flex flex-col gap-4">
+                        <>
+                        <div className="flex min-w-0 flex-col gap-4 rounded-2xl border border-primary/10 bg-background/40 p-3.5 sm:p-4">
                             <h3 className="font-bold text-accent">Edit Set Configuration</h3>
                             
                             {/* Box Size */}
@@ -697,16 +712,16 @@ const OrderDetailItems = ({
                                   </p>
                                 )}
                             </div>
+                        </div>
 
-                            {/* Flavor Editor */}
-                            <div>
+                            <div className="min-w-0 space-y-3.5 rounded-2xl border border-primary/10 bg-background/40 p-3.5 sm:p-4">
                                 <Label>Treat Flavors Distribution</Label>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2 max-h-48 overflow-y-auto border p-2 bg-white rounded">
+                                <div className="mt-2 grid max-h-60 min-w-0 grid-cols-1 gap-2 overflow-y-auto overscroll-contain rounded-xl border border-primary/10 bg-background/60 p-2 sm:grid-cols-2">
                                     {availableFlavors.map(f => {
                                         const count = draftSelectedConfig?.items?.find((i: any) => i.flavorId === f._id)?.count || 0;
                                         return (
-                                            <div key={f._id} className="flex justify-between items-center p-2 border-b">
-                                                <span className="min-w-0 truncate text-sm">{f.name}</span>
+                                            <div key={f._id} className="flex min-w-0 items-center justify-between gap-2 border-b border-primary/10 p-2">
+                                                <span className="min-w-0 flex-1 break-words text-sm">{f.name}</span>
                                                 <div className="flex items-center gap-2">
                                                     <Button className="h-11 w-11 shrink-0 rounded-xl p-0 sm:h-10 sm:w-10" variant="outline" aria-label="Remove one flavor" onClick={() => handleConfigFlavorChange(f._id, -1)}>-</Button>
                                                     <span className="w-6 text-center font-bold">{count}</span>
@@ -722,7 +737,7 @@ const OrderDetailItems = ({
                             {draftProduct.comboConfig?.hasCake && (
                                 <div className="p-3 border rounded bg-white mt-2">
                                     <Label className="uppercase text-xs font-bold text-gray-500">Bento Cake Details</Label>
-                                    <div className="grid grid-cols-2 gap-4 mt-2">
+                                <div className="mt-2 grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
                                         <div>
                                             <Label>Cake Flavor</Label>
                                             <Select 
@@ -751,11 +766,12 @@ const OrderDetailItems = ({
                                 </div>
                             )}
 
-                        </div>
+                        </>
                     ) : (
                         /* STANDARD CAKE FORM */
-                        <div className="grid grid-cols-2 gap-4">
-                             <div className={`space-y-2 ${isDraftMultiTier ? "col-span-2" : ""}`}>
+                        <>
+                        <div className="min-w-0 space-y-3.5 rounded-2xl border border-primary/10 bg-background/40 p-3.5 sm:p-4">
+                             <div className="space-y-2">
                                  <Label>{isDraftMultiTier ? "Tier Flavors" : "Flavor"}</Label>
                                  {isDraftMultiTier ? (
                                    <AdminTierFlavorEditor
@@ -780,7 +796,8 @@ const OrderDetailItems = ({
                                  </Select>
                                  )}
                              </div>
-
+                        </div>
+                        <div className="grid min-w-0 grid-cols-1 gap-4 rounded-2xl border border-primary/10 bg-background/40 p-3.5 sm:grid-cols-2 sm:p-4">
                              <div className="space-y-2">
                                  <Label>Size</Label>
                                  <Select
@@ -823,10 +840,11 @@ const OrderDetailItems = ({
                              </div>
                              )}
                         </div>
+                        </>
                     )}
 
                     {/* Common Fields */}
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="min-w-0 space-y-3.5 rounded-2xl border border-primary/10 bg-background/40 p-3.5 sm:p-4">
                          <div className="space-y-2">
                              <Label>Quantity</Label>
                              <Input 
@@ -837,7 +855,8 @@ const OrderDetailItems = ({
                                 onChange={e => setDraftQuantity(parseInt(e.target.value) || 1)} 
                              />
                          </div>
-
+                    </div>
+                    <div className="min-w-0 space-y-3.5 rounded-2xl border border-primary/10 bg-background/40 p-3.5 sm:p-4">
                          <div className="space-y-2">
                              <Label>Unit Price Override ($)</Label>
                              <Input 
@@ -851,7 +870,7 @@ const OrderDetailItems = ({
                          </div>
                     </div>
 
-                    <div className="space-y-2">
+                    <div className="min-w-0 space-y-3.5 rounded-2xl border border-primary/10 bg-background/40 p-3.5 sm:p-4">
                         <Label>Global Inscription / Notes</Label>
                         <Input 
                             className="h-11 rounded-xl sm:h-10"
@@ -859,9 +878,6 @@ const OrderDetailItems = ({
                             onChange={e => setDraftInscription(e.target.value)}
                             placeholder="Optional notes or inscription…"
                         />
-                    </div>
-
-                    <div className="space-y-2">
                         <AddonAdminSelector 
                             categoryId={draftProduct?.categoryId}
                             selectedAddons={draftAddons}
@@ -872,7 +888,7 @@ const OrderDetailItems = ({
             )}
 
             {!isCustomMode && (
-            <DialogFooter>
+            <DialogFooter className="shrink-0 border-t border-primary/10 bg-background/95 px-4 py-3 backdrop-blur-md pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:flex-row sm:px-6 sm:py-4 sm:pb-4">
                 <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <p className="min-w-0 break-words font-bold text-lg">New Total: ${(draftQuantity * (draftPriceOverride ? parseFloat(draftPriceOverride) : currentTotalUnitCost)).toFixed(2)}</p>
                     <div className="flex shrink-0 gap-2">
@@ -884,6 +900,7 @@ const OrderDetailItems = ({
                 </div>
             </DialogFooter>
             )}
+            </div>
         </DialogContent>
       </Dialog>
     </div>

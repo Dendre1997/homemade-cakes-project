@@ -56,7 +56,7 @@ export const ProductPicker = ({
         {selectedIds.length} products have been added
       </p>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-sm max-h-[400px] overflow-y-auto custom-scrollbar p-1">
+      <div className="custom-scrollbar grid max-h-[400px] min-w-0 grid-cols-2 gap-sm overflow-y-auto overscroll-contain p-1 sm:grid-cols-3 md:grid-cols-4">
         {filteredProducts.map((product) => {
           const isSelected = selectedIds.includes(product._id.toString());
 
@@ -89,9 +89,9 @@ function ProductPickerCard({ product, isSelected, themeColor, onToggle }: Produc
         <div
             onClick={onToggle}
             className={cn(
-            "group relative min-h-11 cursor-pointer overflow-hidden rounded-xl border-2 transition-[border-color,transform,box-shadow] duration-200",
+            "group relative min-h-11 min-w-0 cursor-pointer overflow-hidden rounded-xl border-2 transition-[border-color,transform,box-shadow] duration-200",
             isSelected
-                ? "border-current shadow-md scale-[1.02]"
+                ? "scale-[1.02] border-current shadow-md"
                 : "border-transparent hover:border-border bg-neutral-50"
             )}
             style={isSelected ? { borderColor: themeColor } : {}}
@@ -127,11 +127,11 @@ function ProductPickerCard({ product, isSelected, themeColor, onToggle }: Produc
                 )}
             </div>
 
-            <div className="p-xs text-center border-t border-primary/5">
-                <p className="text-xs font-bold text-primary truncate">
+            <div className="min-w-0 p-xs text-center border-t border-primary/5">
+                <p className="min-w-0 truncate text-xs font-bold text-primary">
                     {product.name}
                 </p>
-                <p className="text-[10px] text-primary/60 truncate">
+                <p className="min-w-0 truncate text-[10px] text-primary/60">
                     {product?.category?.name || "Uncategorized"}
                 </p>
             </div>
