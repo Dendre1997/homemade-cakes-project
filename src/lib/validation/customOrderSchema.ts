@@ -10,7 +10,7 @@ const cakeTierSelectionSchema = z.object({
 const priceBreakdownSchema = z.object({
   baseCakePrice: z.number(),   // Cake structure price after diameter multiplier
   flavorUpcharge: z.number(),  // Extra cost from premium flavor selection (0 if standard)
-  addonsCost: z.number(),      // Sum of all addon prices (mirrors addons[].price)
+  addonsCost: z.number(),      // Sum of addon unit price × addon quantity for this cake
   grandTotal: z.number(),      // baseCakePrice + flavorUpcharge + addonsCost
 });
 
@@ -21,6 +21,7 @@ const addonSchema = z.object({
   variantName: z.string(),
   price: z.number(),
   imageUrl: z.string().optional(),
+  quantity: z.number().optional(),
 });
 
 const contactSchema = z.object({

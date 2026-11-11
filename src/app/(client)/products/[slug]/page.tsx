@@ -32,6 +32,7 @@ import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 import { Switch } from "@/components/ui/Switch";
 import { Label } from "@/components/ui/Label";
 import Image from "next/image";
+import { addonsUnitCost } from "@/lib/addons/selectedAddonMath";
 
 // Translator Page Pattern
 const SingleProductPage = () => {
@@ -524,7 +525,7 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
     }
   }
 
-  const AddonsTotal = selectedAddons.reduce((sum, d) => sum + d.price, 0);
+  const AddonsTotal = addonsUnitCost(selectedAddons);
   const displayFinalPrice = finalPrice + AddonsTotal;
   const displayOriginalPrice = calculatedPrice + AddonsTotal;
 

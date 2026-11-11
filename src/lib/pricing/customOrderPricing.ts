@@ -8,7 +8,7 @@
  * Architecture — strictly forward addition:
  *   baseCakePrice   = category.basePrice × size-multiplier (already computed by Step 3)
  *   flavorUpcharge  = flavor.price for the selected premium flavor (0 if standard)
- *   addonsCost      = sum of every selectedAddon.price
+ *   addonsCost      = sum of selectedAddon.price × (quantity ?? 1) for this cake
  *   ─────────────────────────────────────────────────────
  *   grandTotal      = baseCakePrice + flavorUpcharge + addonsCost
  *
@@ -24,12 +24,14 @@
  *   // result            → write to form as priceBreakdown
  */
 
+import { addonsUnitCost } from "@/lib/addons/selectedAddonMath";
+
 export interface PriceBreakdown {
   /** Size-adjusted cake price (category.basePrice × diameter multiplier, rounded). */
   baseCakePrice: number;
   /** Extra cost from a premium flavor selection — 0 for standard free flavors. */
   flavorUpcharge: number;
-  /** Sum of all selected addon variant prices. Mirrors addons[].price. */
+  /** Sum of addon unit price × addon quantity for this one cake. */
   addonsCost: number;
   /** The final grand total: baseCakePrice + flavorUpcharge + addonsCost. */
   grandTotal: number;
@@ -45,11 +47,11 @@ export function calculateCustomOrderTotal({
   /** The price field from the selected Flavor document. Defaults to 0. */
   flavorPrice?: number;
   /** The current addons array from form state. Defaults to empty array. */
-  addons?: Array<{ price: number }>;
+  addons?: Array<{ price: number; quantity?: number }>;
 }): PriceBreakdown {
   const baseCakePrice = cakeSizePrice;
   const flavorUpcharge = flavorPrice;
-  const addonsCost = addons.reduce((sum, a) => sum + (a.price ?? 0), 0);
+  const addonsCost = addonsUnitCost(addons);
   const grandTotal = baseCakePrice + flavorUpcharge + addonsCost;
 
   return { baseCakePrice, flavorUpcharge, addonsCost, grandTotal };

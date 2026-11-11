@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { OrderItemTiersDisplay } from "@/components/shared/OrderItemTiersDisplay";
 import { Loader2, Tag } from "lucide-react";
+import { addonsUnitCost } from "@/lib/addons/selectedAddonMath";
 
 // Types for the pricing data we get from the server
 interface ItemBreakdown {
@@ -46,7 +47,7 @@ const OrderSummary = () => {
 
   // Basic client-side subtotal (for initial render)
   const subtotal = items.reduce((acc, item) => {
-    const itemDecos = item.addons?.reduce((sum, d) => sum + d.price, 0) || 0;
+    const itemDecos = addonsUnitCost(item.addons);
     return acc + ((item.price + itemDecos) * item.quantity);
   }, 0);
 
@@ -126,7 +127,7 @@ const OrderSummary = () => {
       ? items.reduce((acc: number, item: any) => {
           // If server data exists for this item, use it. Otherwise, use base price + decos.
           const pricing = itemPricing[item.id];
-          const itemDecos = item.addons?.reduce((sum: number, d: any) => sum + d.price, 0) || 0;
+          const itemDecos = addonsUnitCost(item.addons);
           const price = pricing
             ? pricing.finalPrice
             : (item.price + itemDecos) * item.quantity;
@@ -166,7 +167,7 @@ const OrderSummary = () => {
              ? flavors.find(f => f._id.toString() === item.selectedConfig!.cake!.flavorId) 
              : null;
 
-          const itemDecos = item.addons?.reduce((sum: number, d: any) => sum + d.price, 0) || 0;
+          const itemDecos = addonsUnitCost(item.addons);
           const itemDisplayPrice = item.price + itemDecos;
 
           return (
@@ -253,7 +254,8 @@ const OrderSummary = () => {
                                 </span>
                                 {deco.price > 0 && (
                                   <span className="text-primary/70 ml-1 font-semibold">
-                                    +${deco.price.toFixed(2)}
+                                    +${(deco.price * (deco.quantity ?? 1)).toFixed(2)}
+                                    {(deco.quantity ?? 1) > 1 ? ` × ${deco.quantity}` : ""}
                                   </span>
                                 )}
                               </li>

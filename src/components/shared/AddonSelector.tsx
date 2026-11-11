@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
-import { Check, ChevronDown, ChevronUp } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Minus, Plus } from "lucide-react";
 import { Addon, SelectedAddon } from "@/types";
+import { catalogAllowsQuantity } from "@/lib/addons/selectedAddonMath";
 
 interface AddonSelectorProps {
   categoryId?: string | string[];
@@ -82,17 +83,16 @@ export function AddonSelector({
       );
     } else {
       const filtered = selectedAddons.filter((d) => d.addonId !== deco._id);
-      onChange([
-        ...filtered,
-        {
-          addonId: deco._id,
-          name: deco.name,
-          variantId: variant._id,
-          variantName: variant.name,
-          price: variant.price,
-          imageUrl: variant.imageUrl || deco.imageUrl,
-        },
-      ]);
+      const selection: SelectedAddon = {
+        addonId: deco._id,
+        name: deco.name,
+        variantId: variant._id,
+        variantName: variant.name,
+        price: variant.price,
+        imageUrl: variant.imageUrl || deco.imageUrl,
+      };
+      if (catalogAllowsQuantity(deco)) selection.quantity = 1;
+      onChange([...filtered, selection]);
     }
   };
 
@@ -228,6 +228,52 @@ export function AddonSelector({
                     );
                   })}
                 </div>
+                {(() => {
+                  if (!catalogAllowsQuantity(activeDeco)) return null;
+                  const selected = selectedAddons.find((d) => d.addonId === activeDeco._id);
+                  if (!selected) return null;
+                  const max = activeDeco.maxQuantity ?? 1;
+                  const quantity = selected.quantity ?? 1;
+                  const setQuantity = (next: number) => {
+                    const clamped = Math.min(Math.max(1, next), max);
+                    onChange(
+                      selectedAddons.map((d) =>
+                        d.addonId === activeDeco._id ? { ...d, quantity: clamped } : d
+                      )
+                    );
+                  };
+                  return (
+                    <div className="flex items-center justify-between gap-4 border-t border-primary/10 pt-4">
+                      <div>
+                        <p className="text-sm font-semibold text-primary">Quantity</p>
+                        <p className="text-xs text-primary/60">
+                          +${(selected.price * quantity).toFixed(2)} for this cake
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          aria-label="Decrease addon quantity"
+                          disabled={quantity <= 1}
+                          onClick={() => setQuantity(quantity - 1)}
+                          className="flex h-9 w-9 items-center justify-center rounded-full border border-border text-primary disabled:opacity-40"
+                        >
+                          <Minus className="h-4 w-4" />
+                        </button>
+                        <span className="w-8 text-center font-semibold text-primary">{quantity}</span>
+                        <button
+                          type="button"
+                          aria-label="Increase addon quantity"
+                          disabled={quantity >= max}
+                          onClick={() => setQuantity(quantity + 1)}
+                          className="flex h-9 w-9 items-center justify-center rounded-full border border-border text-primary disabled:opacity-40"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             );
           })()}

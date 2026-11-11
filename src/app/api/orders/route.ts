@@ -12,6 +12,8 @@ import PendingOrderAdminEmail  from "@/emails/PendingOrderAdminEmail";
 
 
 import { calculateOrderPricing } from "@/lib/pricing";
+import { normalizeCartItemAddons } from "@/lib/addons/selectedAddon";
+import { addonsUnitCost } from "@/lib/addons/selectedAddonMath";
 import { getAppSettings } from "@/lib/api/settings";
 import { normalizePhoneDigits } from "@/lib/crm/normalize";
 
@@ -83,10 +85,11 @@ export async function POST(request: NextRequest) {
          }
       }
 
-      const pricingResult = await calculateOrderPricing(db, items, promoCode);
+      const catalogItems = await normalizeCartItemAddons(db, items);
+      const pricingResult = await calculateOrderPricing(db, catalogItems, promoCode);
       
       // Map items with updated pricing + Penny Drop fix (rowTotal)
-      const itemsForDb = await Promise.all(items.map(
+      const itemsForDb = await Promise.all(catalogItems.map(
         async (item: CartItem): Promise<OrderItem> => {
            // 1. Fetch Product to determine Type (Source of Truth)
            const product = await db.collection("products").findOne({ _id: new ObjectId(item.productId) });
@@ -152,7 +155,9 @@ export async function POST(request: NextRequest) {
                         finalCalculatedPrice += flavorPrice;
                     }
                }
-               
+
+               finalCalculatedPrice += addonsUnitCost(item.addons);
+
                return {
                   ...item,
                   quantity: Number(item.quantity),
@@ -347,10 +352,11 @@ export async function POST(request: NextRequest) {
          }
       }
 
-      const pricingResult = await calculateOrderPricing(db, items, promoCode);
+      const catalogItems = await normalizeCartItemAddons(db, items);
+      const pricingResult = await calculateOrderPricing(db, catalogItems, promoCode);
 
       // Map items with updated pricing + Penny Drop fix (rowTotal)
-      const itemsForDb = await Promise.all(items.map(
+      const itemsForDb = await Promise.all(catalogItems.map(
         async (item: CartItem): Promise<OrderItem> => {
            // 1. Fetch Product to determine Type (Source of Truth)
            const product = await db.collection("products").findOne({ _id: new ObjectId(item.productId) });
@@ -415,7 +421,9 @@ export async function POST(request: NextRequest) {
                         finalCalculatedPrice += flavorPrice;
                     }
                }
-               
+
+               finalCalculatedPrice += addonsUnitCost(item.addons);
+
                return {
                   ...item,
                   quantity: Number(item.quantity),

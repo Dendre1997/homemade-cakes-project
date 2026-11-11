@@ -8,6 +8,7 @@ import { buttonVariants } from "@/components/ui/Button";
 import { X, ShoppingBag } from "lucide-react";
 import { cn, focusWithVisibleIndicator } from "@/lib/utils";
 import { OrderItemTiersDisplay } from "@/components/shared/OrderItemTiersDisplay";
+import { addonsUnitCost, addonUnitCost } from "@/lib/addons/selectedAddonMath";
 
 interface MiniCartProps {
   isOpen: boolean;
@@ -94,7 +95,7 @@ export const MiniCart = ({ isOpen, onClose, returnFocusRef }: MiniCartProps) => 
         {lastItemAdded ? (
           <div className="mt-md">
             {(() => {
-              const itemDecos = lastItemAdded.addons?.reduce((sum, d) => sum + d.price, 0) || 0;
+              const itemDecos = addonsUnitCost(lastItemAdded.addons);
               const displayPrice = lastItemAdded.price + itemDecos;
               const displayOriginal = lastItemAdded.originalPrice ? lastItemAdded.originalPrice + itemDecos : undefined;
               return (
@@ -121,7 +122,8 @@ export const MiniCart = ({ isOpen, onClose, returnFocusRef }: MiniCartProps) => 
                       <ul className="mt-0.5 space-y-0">
                         {lastItemAdded.addons.map((d, i) => (
                           <li key={i} className="text-[10px] text-primary/60">
-                            + {d.variantName} ${d.price.toFixed(2)}
+                            + {d.variantName} ${addonUnitCost(d).toFixed(2)}
+                            {(d.quantity ?? 1) > 1 ? ` × ${d.quantity}` : ""}
                           </li>
                         ))}
                       </ul>

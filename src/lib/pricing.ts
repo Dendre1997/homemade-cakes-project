@@ -1,6 +1,7 @@
 import { Db, ObjectId } from "mongodb";
 import { CartItem, Discount, Product, Flavor, Addon, IShape } from "@/types";
 import { parseCartItemId, OBJECT_ID_RE } from "@/lib/cartItemId";
+import { addonsUnitCost, normalizeSelectedAddons } from "@/lib/addons/selectedAddonMath";
 
 interface PriceResult {
   subtotal: number;
@@ -140,17 +141,8 @@ export async function calculateOrderPricing(
     // --- ADDON COST VALIDATION ---
     let addonCost = 0;
     if (item.addons && item.addons.length > 0) {
-      for (const add of item.addons) {
-        const dbAdd = addonMap.get(add.addonId);
-        if (dbAdd) {
-          const variant = dbAdd.variants.find(
-            (v) => v.name === add.variantName
-          );
-          if (variant) {
-            addonCost += safePrice(variant.price);
-          }
-        }
-      }
+      const resolved = normalizeSelectedAddons(addonMap, item.addons);
+      addonCost = addonsUnitCost(resolved);
     }
 
     let unitPrice = 0;

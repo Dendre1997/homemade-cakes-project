@@ -11,6 +11,7 @@ import { Trash2 } from "lucide-react";
 import QuantityStepper from "@/components/ui/QuantityStepper";
 import { OrderItemTiersDisplay } from "@/components/shared/OrderItemTiersDisplay";
 import { cn } from "@/lib/utils";
+import { addonsUnitCost, addonUnitCost } from "@/lib/addons/selectedAddonMath";
 
 const CartPage = () => {
   const { items, removeItem, increaseQuantity, decreaseQuantity } = useCartStore();
@@ -68,7 +69,7 @@ const CartPage = () => {
   }, []);
 
   const subtotal = items.reduce((acc, item) => {
-    const itemDecos = item.addons?.reduce((sum, d) => sum + d.price, 0) || 0;
+    const itemDecos = addonsUnitCost(item.addons);
     return acc + ((item.price + itemDecos) * item.quantity);
   }, 0);
 
@@ -120,7 +121,7 @@ const CartPage = () => {
                     ? flavors.find(f => f._id.toString() === item.selectedConfig!.cake!.flavorId.toString())
                     : null;
 
-                  const itemDecos = item.addons?.reduce((sum, d) => sum + d.price, 0) || 0;
+                  const itemDecos = addonsUnitCost(item.addons);
                   const itemDisplayPrice = item.price + itemDecos;
                   const itemDisplayOriginal = item.originalPrice ? item.originalPrice + itemDecos : undefined;
 
@@ -230,7 +231,8 @@ const CartPage = () => {
                                         </span>
                                         {deco.price > 0 && (
                                           <span className="text-xs text-primary/70 ml-2 font-semibold">
-                                            +${deco.price.toFixed(2)}
+                                            +${addonUnitCost(deco).toFixed(2)}
+                                            {(deco.quantity ?? 1) > 1 ? ` × ${deco.quantity}` : ""}
                                           </span>
                                         )}
                                       </li>

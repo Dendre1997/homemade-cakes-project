@@ -187,10 +187,13 @@ function ItemSummary({ item, index, total }: { item: any; index: number; total: 
                   {addon.variantName && (
                     <span className="text-primary/40 font-normal"> · {addon.variantName}</span>
                   )}
+                  {(addon.quantity ?? 1) > 1 && (
+                    <span className="text-primary/40 font-normal"> × {addon.quantity}</span>
+                  )}
                 </span>
                 <span className="font-semibold text-primary/70 tabular-nums">
                   {addon.price > 0 ? (
-                    `+$${addon.price.toFixed(2)}`
+                    `+$${(addon.price * (addon.quantity ?? 1)).toFixed(2)}`
                   ) : (
                     <span className="italic text-primary/30">Free</span>
                   )}

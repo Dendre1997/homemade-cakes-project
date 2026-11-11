@@ -13,6 +13,7 @@ import { MultiImageUpload } from "@/components/custom-order/MultiImageUpload";
 import { AddonSelector } from "@/components/shared/AddonSelector";
 import { Addon, IGalleryImage, SelectedAddon, Collection, ProductCategory } from "@/types";
 import { calculateCustomOrderTotal } from "@/lib/pricing/customOrderPricing";
+import { catalogAllowsQuantity } from "@/lib/addons/selectedAddonMath";
 import { findCategoryForCustomOrderItem } from "@/lib/customOrderCategory";
 
 export default function Step4Design({ itemIndex }: { itemIndex: number }) {
@@ -201,7 +202,8 @@ export default function Step4Design({ itemIndex }: { itemIndex: number }) {
                            name: addonObj.name,
                            variantName: variantObj.name,
                            price: variantObj.price,
-                           imageUrl: variantObj.imageUrl || addonObj.imageUrl
+                           imageUrl: variantObj.imageUrl || addonObj.imageUrl,
+                           ...(catalogAllowsQuantity(addonObj) ? { quantity: 1 } : {}),
                        });
                    }
                }

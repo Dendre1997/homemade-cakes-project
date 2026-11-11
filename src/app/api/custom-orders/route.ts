@@ -3,6 +3,8 @@ import clientPromise from "@/lib/db";
 import { customOrderRequestSchema } from "@/lib/validation/customOrderSchema";
 import { normalizeCustomOrders } from "@/lib/normalizeCustomOrder";
 import { normalizePhoneDigits } from "@/lib/crm/normalize";
+import { normalizeCartItemAddons } from "@/lib/addons/selectedAddon";
+import { calculateCustomOrderTotal } from "@/lib/pricing/customOrderPricing";
 
 export async function GET(req: Request) {
   try {
@@ -59,6 +61,25 @@ export async function POST(req: Request) {
     const db = client.db(process.env.MONGODB_DB_NAME);
     const collection = db.collection("custom_orders");
 
+    const catalogItems = await normalizeCartItemAddons(db, data.items);
+    const items = catalogItems.map((item) => {
+      if (!item.priceBreakdown) return item;
+      const priceBreakdown = calculateCustomOrderTotal({
+        cakeSizePrice: item.priceBreakdown.baseCakePrice,
+        flavorPrice: item.priceBreakdown.flavorUpcharge,
+        addons: item.addons ?? [],
+      });
+      return {
+        ...item,
+        priceBreakdown,
+        approximatePrice: priceBreakdown.grandTotal,
+      };
+    });
+    const approximatePriceTotal = items.reduce(
+      (sum, item) => sum + (Number(item.approximatePrice) || 0),
+      0
+    );
+
     // 2. Idempotency — rely purely on the strict client-generated key. (The old
     //    fuzzy match keyed on flat details.flavor/size no longer applies to the
     //    multi-item structure.)
@@ -75,6 +96,8 @@ export async function POST(req: Request) {
     // 3. Database Insertion — persist the multi-item payload as-is.
     const orderData = {
         ...data,
+        items,
+        approximatePriceTotal,
         contact: {
           ...data.contact,
           phoneDigits: normalizePhoneDigits(data.contact.phone),
