@@ -73,7 +73,7 @@ export function AddonAdminSelector({
   };
 
   if (isLoading) {
-    return <p className="text-sm text-gray-500 animate-pulse">Loading Addons...</p>;
+    return <p className="text-sm text-gray-500 animate-pulse">Loading Addons…</p>;
   }
 
   if (availableAddons.length === 0) {
@@ -94,7 +94,7 @@ export function AddonAdminSelector({
               key={deco._id}
               type="button"
               onClick={() => setActiveaddonId(isActive ? null : deco._id)}
-              className={`relative w-24 h-24 shrink-0 snap-center rounded-xl overflow-hidden shadow-sm transition-all duration-300 ${
+              className={`relative h-24 w-24 shrink-0 snap-center overflow-hidden rounded-xl shadow-sm transition-[transform,filter,box-shadow] duration-300 ${
                 isActive
                   ? "ring-2 ring-accent scale-95"
                   : "border border-border hover:brightness-110"
@@ -157,7 +157,7 @@ export function AddonAdminSelector({
                         key={idx}
                         type="button"
                         onClick={() => handleToggleVariant(activeDeco, variant)}
-                        className={`flex items-center gap-2 p-2 rounded-lg border text-left transition-all ${
+                        className={`flex min-h-11 items-center gap-2 rounded-xl border p-2 text-left transition-[border-color,background-color,box-shadow] ${
                           isSelected
                             ? "bg-accent/5 border-accent ring-1 ring-accent"
                             : "bg-white border-border hover:border-primary/30"

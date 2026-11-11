@@ -386,7 +386,7 @@ export const ComboProductForm = ({
                       setSelectedSingleDiameterId("");
                       setSelectedSingleFlavorId("");
                   }}>
-                      <SelectTrigger className="bg-white border-gray-300">
+                      <SelectTrigger className="h-11 rounded-xl border-gray-300 bg-white sm:h-10">
                           <SelectValue placeholder="Select Cake Category" />
                       </SelectTrigger>
                       <SelectContent>
@@ -402,7 +402,7 @@ export const ComboProductForm = ({
                       <div className="min-w-0">
                           <label className="block text-sm font-medium mb-1">Cake Size</label>
                           <Select value={selectedSingleDiameterId} onValueChange={setSelectedSingleDiameterId}>
-                              <SelectTrigger className="bg-white">
+                              <SelectTrigger className="h-11 rounded-xl bg-white sm:h-10">
                                   <SelectValue placeholder={singleDiameters.length ? "Select Size" : "No sizes"} />
                               </SelectTrigger>
                               <SelectContent>
@@ -416,7 +416,7 @@ export const ComboProductForm = ({
                       <div className="min-w-0">
                           <label className="block text-sm font-medium mb-1">Cake Flavor</label>
                           <Select value={selectedSingleFlavorId} onValueChange={setSelectedSingleFlavorId}>
-                              <SelectTrigger className="bg-white">
+                              <SelectTrigger className="h-11 rounded-xl bg-white sm:h-10">
                                   <SelectValue placeholder={singleFlavors.length ? "Select Flavor" : "No flavors"} />
                               </SelectTrigger>
                               <SelectContent>
@@ -440,7 +440,7 @@ export const ComboProductForm = ({
                                 <div 
                                    key={img._id.toString()}
                                    onClick={() => handlePickFromGallery(img.imageUrl)}
-                                   className="relative shrink-0 w-24 h-24 overflow-hidden rounded-md border border-border cursor-pointer hover:border-accent hover:border-2 hover:scale-105 transition-all"
+                                   className="relative h-24 w-24 shrink-0 cursor-pointer overflow-hidden rounded-xl border border-border transition-[border-color,transform] hover:scale-105 hover:border-2 hover:border-accent"
                                    title="Click to add as reference"
                                 >
                                    <Image src={img.imageUrl} alt={img.title} fill quality={90} className="object-cover" sizes="96px" />
@@ -472,7 +472,7 @@ export const ComboProductForm = ({
                           accept="image/*"
                           onChange={handleFileChange}
                       />
-                      {isUploading && <p className="text-xs text-primary mt-1 animate-pulse">Uploading...</p>}
+                      {isUploading && <p className="text-xs text-primary mt-1 animate-pulse">Uploading…</p>}
                   </div>
                   </div>
               )}
@@ -482,8 +482,8 @@ export const ComboProductForm = ({
                   <input 
                       value={inscription}
                       onChange={e => setInscription(e.target.value)}
-                      placeholder="Happy Birthday..."
-                      className="w-full p-2 border rounded-md bg-white"
+                      placeholder="Happy Birthday…"
+                      className="h-11 w-full rounded-xl border bg-white sm:h-10"
                   />
               </div>
 
@@ -494,11 +494,11 @@ export const ComboProductForm = ({
               />
 
               <div className="flex gap-2 pt-4 min-w-0 w-full">
-                  <Button variant="outline" onClick={onCancel} className="flex-1">
+                  <Button variant="outline" onClick={onCancel} className="h-11 flex-1 rounded-xl sm:h-10">
                       Cancel
                   </Button>
-                  <Button variant="primary" onClick={handleNextStep} disabled={!isStep1Complete} className="flex-1">
-                      Next Step <ArrowRight className="w-4 h-4 ml-2" />
+                  <Button variant="primary" onClick={handleNextStep} disabled={!isStep1Complete} className="h-11 flex-1 rounded-xl sm:h-10">
+                      Next Step <ArrowRight className="ml-2 h-4 w-4 shrink-0" />
                   </Button>
               </div>
           </div>
@@ -511,7 +511,7 @@ export const ComboProductForm = ({
                           {allDiameters.find(d => d._id === selectedSingleDiameterId)?.name} • {allFlavors.find(f => f._id === selectedSingleFlavorId)?.name}
                       </span>
                   </div>
-                  <Button variant="outline" size="sm" onClick={() => setStep(1)} className="self-start sm:self-auto">
+                  <Button variant="outline" onClick={() => setStep(1)} className="h-11 self-start rounded-xl sm:h-10 sm:self-auto">
                       <ArrowLeft className="w-3 h-3 mr-1" /> Edit
                   </Button>
               </div>
@@ -524,7 +524,7 @@ export const ComboProductForm = ({
                       setSelectedSetCategoryId(val);
                       setFlavorCounts({});
                   }}>
-                      <SelectTrigger className="bg-white border-gray-300">
+                      <SelectTrigger className="h-11 rounded-xl border-gray-300 bg-white sm:h-10">
                           <SelectValue placeholder="Select Box Category" />
                       </SelectTrigger>
                       <SelectContent>
@@ -546,7 +546,7 @@ export const ComboProductForm = ({
                                 <div 
                                    key={img._id.toString()}
                                    onClick={() => handlePickFromGallery(img.imageUrl)}
-                                   className="relative shrink-0 w-24 h-24 overflow-hidden rounded-md border border-border cursor-pointer hover:border-accent hover:border-2 hover:scale-105 transition-all"
+                                   className="relative h-24 w-24 shrink-0 cursor-pointer overflow-hidden rounded-xl border border-border transition-[border-color,transform] hover:scale-105 hover:border-2 hover:border-accent"
                                    title="Click to add as reference"
                                 >
                                    <Image src={img.imageUrl} alt={img.title} fill quality={90} className="object-cover" sizes="96px" />
@@ -579,17 +579,17 @@ export const ComboProductForm = ({
                           accept="image/*"
                           onChange={handleFileChange}
                       />
-                      {isUploading && <p className="text-xs text-primary mt-1 animate-pulse">Uploading...</p>}
+                      {isUploading && <p className="text-xs text-primary mt-1 animate-pulse">Uploading…</p>}
                   </div>
 
                   <div className="mb-6">
                     <Label className="block text-sm font-medium mb-1">Design Description</Label>
                     <Textarea
-                      placeholder="Any special design instructions for the combo..."
+                      placeholder="Any special design instructions for the combo…"
                       value={designDescription}
                       onChange={(e) => setDesignDescription(e.target.value)}
                       rows={3}
-                      className="bg-white"
+                      className="min-h-[96px] rounded-xl bg-white"
                     />
                   </div>
 
@@ -607,7 +607,7 @@ export const ComboProductForm = ({
                             setSelectedSetId("");
                             setFlavorCounts({});
                           }}
-                          className="w-full sm:w-56 bg-white"
+                          className="h-11 w-full rounded-xl bg-white sm:h-10 sm:w-56"
                         />
                         <span className="text-muted-foreground text-sm hidden sm:inline">or pick:</span>
                         <Select value={selectedCategorySet ? selectedSetId : selectedBoxSize} onValueChange={(val) => {
@@ -622,7 +622,7 @@ export const ComboProductForm = ({
                             setCustomBoxSize("");
                             setFlavorCounts({});
                         }}>
-                            <SelectTrigger className="bg-white w-full sm:min-w-[150px]">
+                            <SelectTrigger className="h-11 w-full rounded-xl bg-white sm:h-10 sm:min-w-[150px]">
                                 <SelectValue placeholder="Select box size" />
                             </SelectTrigger>
                             <SelectContent>
@@ -666,19 +666,19 @@ export const ComboProductForm = ({
                                                <button 
                                                   type="button"
                                                   onClick={() => handleDecrementFlavor(f._id)}
-                                                  className="h-6 w-6 flex items-center justify-center rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+                                                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gray-200 hover:bg-gray-300 disabled:opacity-50 sm:h-10 sm:w-10"
                                                   disabled={count === 0}
                                                >
-                                                  <Minus className="w-3 h-3" />
+                                                  <Minus className="h-4 w-4 shrink-0" />
                                                </button>
                                                <span className="w-4 text-center text-sm font-bold">{count}</span>
                                                <button 
                                                   type="button"
                                                   onClick={() => handleIncrementFlavor(f._id)}
-                                                  className="h-6 w-6 flex items-center justify-center rounded bg-primary text-white hover:bg-primary/90 disabled:opacity-50"
+                                                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary text-white hover:bg-primary/90 disabled:opacity-50 sm:h-10 sm:w-10"
                                                   disabled={remainingItems <= 0 || (!selectedCategorySet && count === 0 && currentFlavorCount >= 5)}
                                                >
-                                                  <Plus className="w-3 h-3" />
+                                                  <Plus className="h-4 w-4 shrink-0" />
                                                </button>
                                            </div>
                                        </div>
@@ -694,7 +694,7 @@ export const ComboProductForm = ({
                           value={flavorNote}
                           onChange={e => setFlavorNote(e.target.value)}
                           placeholder="e.g. less sweet, specific inquiry"
-                          className="w-full p-2 border rounded-md"
+                          className="h-11 w-full rounded-xl border sm:h-10"
                        />
                   </div>
 
@@ -712,7 +712,7 @@ export const ComboProductForm = ({
                               min="1"
                               value={qty}
                               onChange={e => setQty(parseInt(e.target.value) || 1)}
-                              className="w-full p-2 border rounded-md"
+                              className="h-11 w-full rounded-xl border sm:h-10"
                            />
                       </div>
                       <div>
@@ -721,8 +721,8 @@ export const ComboProductForm = ({
                               type="number"
                               value={priceOverride}
                               onChange={e => setPriceOverride(e.target.value)}
-                              placeholder="Enter price..."
-                              className="w-full p-2 border rounded-md"
+                              placeholder="Enter price…"
+                              className="h-11 w-full rounded-xl border sm:h-10"
                            />
                       </div>
                   </div>
@@ -730,11 +730,11 @@ export const ComboProductForm = ({
               )}
 
               <div className="flex gap-2 pt-6 min-w-0 w-full">
-                  <Button variant="outline" onClick={onCancel} className="flex-1">
+                  <Button variant="outline" onClick={onCancel} className="h-11 flex-1 rounded-xl sm:h-10">
                       Cancel
                   </Button>
-                  <Button variant="primary" onClick={handleAddCombo} className="flex-1">
-                      <Plus className="w-4 h-4 mr-2" />
+                  <Button variant="primary" onClick={handleAddCombo} className="h-11 flex-1 rounded-xl sm:h-10">
+                      <Plus className="mr-2 h-4 w-4 shrink-0" />
                       Add to Order
                   </Button>
               </div>

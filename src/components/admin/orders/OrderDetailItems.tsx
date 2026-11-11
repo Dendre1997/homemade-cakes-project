@@ -448,19 +448,18 @@ const OrderDetailItems = ({
 
       {/* EDIT MODAL */}
       <Dialog open={!!editingItem} onOpenChange={(open) => !open && setEditingItem(null)}>
-        <DialogContent className="w-[calc(100vw-2rem)] max-w-2xl max-h-[90vh] min-w-0 overflow-x-hidden overflow-y-auto">
-            <DialogHeader className="flex flex-row items-center justify-between">
-                <DialogTitle>Edit Item: {editingItem?.name}</DialogTitle>
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-2xl max-h-[90vh] min-w-0 overflow-x-hidden overflow-y-auto overscroll-contain [&>button]:!h-11 [&>button]:!w-11 [&>button]:!rounded-xl [&>button]:sm:!h-10 [&>button]:sm:!w-10">
+            <DialogHeader className="flex flex-col items-stretch gap-3 pr-14 sm:flex-row sm:items-center sm:justify-between">
+                <DialogTitle className="min-w-0 break-words text-left">Edit Item: {editingItem?.name}</DialogTitle>
                 {editingItem && (
-                    <div className="flex items-center gap-2 py-6">
+                    <div className="flex min-w-0 flex-wrap items-center gap-2">
                         <Label className="text-xs font-bold text-gray-500 uppercase">
                             {isCustomMode ? "Custom Mode" : "Standard Mode"}
                         </Label>
                         <Button 
-                            size="sm" 
                             variant={isCustomMode ? "default" : "outline"}
                             onClick={() => setIsCustomMode(!isCustomMode)}
-                            className={isCustomMode ? "bg-accent border-accent" : ""}
+                            className={isCustomMode ? "h-11 rounded-xl bg-accent px-4 sm:h-10 border-accent" : "h-11 rounded-xl px-4 sm:h-10"}
                         >
                             Switch to {isCustomMode ? "Standard" : "Custom"}
                         </Button>
@@ -629,7 +628,7 @@ const OrderDetailItems = ({
                                     type="number"
                                     min={1}
                                     placeholder="Custom piece count"
-                                    className="bg-white sm:w-40"
+                                    className="h-11 rounded-xl bg-white sm:h-10 sm:w-40"
                                     onChange={(e) => {
                                       const count = e.target.value;
                                       if (!count) return;
@@ -665,7 +664,7 @@ const OrderDetailItems = ({
                                       });
                                     }}
                                 >
-                                    <SelectTrigger className="bg-white">
+                                    <SelectTrigger className="h-11 rounded-xl bg-white sm:h-10">
                                         <SelectValue placeholder={assignedEditSets.length > 0 ? "Select a set" : "Select Size"} />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -707,11 +706,11 @@ const OrderDetailItems = ({
                                         const count = draftSelectedConfig?.items?.find((i: any) => i.flavorId === f._id)?.count || 0;
                                         return (
                                             <div key={f._id} className="flex justify-between items-center p-2 border-b">
-                                                <span className="text-sm">{f.name}</span>
+                                                <span className="min-w-0 truncate text-sm">{f.name}</span>
                                                 <div className="flex items-center gap-2">
-                                                    <Button size="sm" variant="outline" onClick={() => handleConfigFlavorChange(f._id, -1)}>-</Button>
+                                                    <Button className="h-11 w-11 shrink-0 rounded-xl p-0 sm:h-10 sm:w-10" variant="outline" aria-label="Remove one flavor" onClick={() => handleConfigFlavorChange(f._id, -1)}>-</Button>
                                                     <span className="w-6 text-center font-bold">{count}</span>
-                                                    <Button size="sm" variant="outline" onClick={() => handleConfigFlavorChange(f._id, 1)}>+</Button>
+                                                    <Button className="h-11 w-11 shrink-0 rounded-xl p-0 sm:h-10 sm:w-10" variant="outline" aria-label="Add one flavor" onClick={() => handleConfigFlavorChange(f._id, 1)}>+</Button>
                                                 </div>
                                             </div>
                                         )
@@ -730,7 +729,7 @@ const OrderDetailItems = ({
                                                 value={draftSelectedConfig?.cake?.flavorId} 
                                                 onValueChange={(val) => handleBentoChange('flavorId', val)}
                                             >
-                                                <SelectTrigger>
+                                                <SelectTrigger className="h-11 rounded-xl sm:h-10">
                                                     <SelectValue placeholder="Select Flavor" />
                                                 </SelectTrigger>
                                                 <SelectContent>
@@ -743,6 +742,7 @@ const OrderDetailItems = ({
                                         <div>
                                             <Label>Inscription</Label>
                                             <Input 
+                                                className="h-11 rounded-xl sm:h-10"
                                                 value={draftSelectedConfig?.cake?.inscription || ""}
                                                 onChange={(e) => handleBentoChange('inscription', e.target.value)}
                                             />
@@ -769,7 +769,7 @@ const OrderDetailItems = ({
                                    />
                                  ) : (
                                  <Select value={draftFlavorId} onValueChange={setDraftFlavorId} disabled={!draftProduct || availableFlavors.length === 0}>
-                                    <SelectTrigger>
+                                    <SelectTrigger className="h-11 rounded-xl sm:h-10">
                                         <SelectValue placeholder="Select Flavor" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -794,7 +794,7 @@ const OrderDetailItems = ({
                                    }}
                                    disabled={!draftProduct || availableDiameters.length === 0}
                                  >
-                                    <SelectTrigger>
+                                    <SelectTrigger className="h-11 rounded-xl sm:h-10">
                                         <SelectValue placeholder="Select Size" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -809,7 +809,7 @@ const OrderDetailItems = ({
                              <div className="space-y-2">
                                  <Label>Shape</Label>
                                  <Select value={draftShapeId} onValueChange={setDraftShapeId}>
-                                    <SelectTrigger>
+                                    <SelectTrigger className="h-11 rounded-xl sm:h-10">
                                         <SelectValue placeholder="Select Shape" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -830,6 +830,7 @@ const OrderDetailItems = ({
                          <div className="space-y-2">
                              <Label>Quantity</Label>
                              <Input 
+                                className="h-11 rounded-xl sm:h-10"
                                 type="number" 
                                 min="1" 
                                 value={draftQuantity} 
@@ -840,6 +841,7 @@ const OrderDetailItems = ({
                          <div className="space-y-2">
                              <Label>Unit Price Override ($)</Label>
                              <Input 
+                                className="h-11 rounded-xl sm:h-10"
                                 type="number" 
                                 placeholder={`Calc: $${currentTotalUnitCost.toFixed(2)}`}
                                 value={draftPriceOverride} 
@@ -852,9 +854,10 @@ const OrderDetailItems = ({
                     <div className="space-y-2">
                         <Label>Global Inscription / Notes</Label>
                         <Input 
+                            className="h-11 rounded-xl sm:h-10"
                             value={draftInscription} 
                             onChange={e => setDraftInscription(e.target.value)}
-                            placeholder="Optional notes or inscription..."
+                            placeholder="Optional notes or inscription…"
                         />
                     </div>
 
@@ -870,12 +873,12 @@ const OrderDetailItems = ({
 
             {!isCustomMode && (
             <DialogFooter>
-                <div className="flex justify-between w-full items-center">
-                    <p className="font-bold text-lg">New Total: ${(draftQuantity * (draftPriceOverride ? parseFloat(draftPriceOverride) : currentTotalUnitCost)).toFixed(2)}</p>
-                    <div className="flex gap-2">
-                        <Button variant="outline" onClick={() => setEditingItem(null)}>Cancel</Button>
-                        <Button onClick={handleSaveChanges} disabled={isSaving}>
-                            {isSaving ? "Saving..." : "Save Changes"}
+                <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="min-w-0 break-words font-bold text-lg">New Total: ${(draftQuantity * (draftPriceOverride ? parseFloat(draftPriceOverride) : currentTotalUnitCost)).toFixed(2)}</p>
+                    <div className="flex shrink-0 gap-2">
+                        <Button variant="outline" className="h-11 rounded-xl sm:h-10" onClick={() => setEditingItem(null)}>Cancel</Button>
+                        <Button className="h-11 rounded-xl sm:h-10" onClick={handleSaveChanges} disabled={isSaving}>
+                            {isSaving ? "Saving…" : "Save Changes"}
                         </Button>
                     </div>
                 </div>

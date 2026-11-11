@@ -29,12 +29,11 @@ export default function ImageSelector({
       <div className="flex w-full items-center justify-between">
          <Button 
            variant="secondary"
-           size="sm"
            onClick={onUpload}
            type="button"
-           className="text-sm flex items-center gap-1"
+           className="flex h-11 items-center gap-1 rounded-xl text-sm sm:h-10"
          >
-           <Plus className="w-3 h-3" /> Add Image
+           <Plus className="h-4 w-4 shrink-0" /> Add Image
          </Button>
       </div>
 
@@ -45,7 +44,7 @@ export default function ImageSelector({
             <div
               key={idx}
               className={`
-                group relative aspect-square rounded-lg overflow-hidden border-2 cursor-pointer transition-all
+                group relative aspect-square cursor-pointer overflow-hidden rounded-xl border-2 transition-[border-color,box-shadow]
                 ${isSelected ? "border-primary ring-2 ring-primary" : "border-gray-200 hover:border-gray-400"}
               `}
               onClick={() => onSelect(url)}
@@ -71,17 +70,18 @@ export default function ImageSelector({
                  </div>
                  
                  {/* Trash (Only visible on hover) */}
-                 <div className="self-start opacity-0 group-hover:opacity-100 transition-opacity">
+                 <div className="self-start">
                     <button
                         type="button"
                         onClick={(e) => {
                             e.stopPropagation();
                             onRemove(url);
                         }}
-                        className="bg-white/90 p-1.5 rounded-full text-red-500 hover:bg-red-50 hover:text-red-700 transition-colors shadow-sm"
+                        aria-label="Remove image"
+                        className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/90 text-red-500 shadow-sm transition-colors hover:bg-red-50 hover:text-red-700 sm:h-10 sm:w-10"
                         title="Remove Image"
                     >
-                        <Trash2 className="w-4 h-4 fill-accent text-accent" />
+                        <Trash2 className="h-4 w-4 shrink-0 fill-accent text-accent" />
                     </button>
                  </div>
               </div>

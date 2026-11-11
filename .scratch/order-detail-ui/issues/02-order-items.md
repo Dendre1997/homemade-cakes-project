@@ -4,14 +4,17 @@
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] View cards keep edit and delete controls at the shared tap height
-- [ ] Set, flavor, addon, and diameter controls in the dialog meet the shared height
-- [ ] Reference photo actions meet the shared tap size
-- [ ] Placeholders end with a single ellipsis character
-- [ ] Blanket transitions are replaced with listed properties
-- [ ] Add, edit, remove, and price results are unchanged
+- [x] View cards keep edit and delete controls at the shared tap height
+- [x] Set, flavor, addon, and diameter controls in the dialog meet the shared height
+- [x] Reference photo actions meet the shared tap size
+- [x] Placeholders end with a single ellipsis character
+- [x] Blanket transitions are replaced with listed properties
+- [x] Add, edit, remove, and price results are unchanged
 
 **Notes:**
 - Includes the custom, combo, set, and standard item forms that the dialog already opens.
+- Class-only polish on `AdminOrderItem`, `OrderDetailItems`, `CustomOrderItemForm`, `ComboProductForm`, `SetProductForm`, `AddonAdminSelector`, `AdminTierFlavorEditor`, `ProductPicker`, and `ImageSelector` (the photo picker those forms already open). Handlers, pricing, and flavor counts are unchanged.
+- `npx tsc --noEmit` passed with 0 errors.
+- The production order page was not clicked in the browser: admin sign-in is Google and was not available in this session.

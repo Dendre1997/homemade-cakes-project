@@ -66,7 +66,7 @@ export function AdminTierFlavorEditor({
                 onValueChange={(val) => onTierFlavorChange(index, val)}
                 disabled={disabled || flavors.length === 0}
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="h-11 w-full rounded-xl sm:h-10">
                   <SelectValue placeholder="Select flavor" />
                 </SelectTrigger>
                 <SelectContent position="popper" className="w-full min-w-[var(--radix-select-trigger-width)]">

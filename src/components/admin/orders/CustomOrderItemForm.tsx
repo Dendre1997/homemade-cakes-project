@@ -464,14 +464,14 @@ export default function CustomOrderItemForm({
        <div className="mb-8">
            <Label className="mb-3 block text-md">1. Select Core Category</Label>
            {categories.length === 0 ? (
-             <p className="text-sm text-gray-400">Loading categories...</p>
+             <p className="text-sm text-gray-400">Loading categories…</p>
            ) : (
              <div className="flex flex-wrap gap-3">
                  {categories.map((cat) => (
                      <Button
                        key={cat._id.toString()}
                        variant={selectedCategoryId === cat._id ? "primary" : "outline"}
-                       className="min-w-[120px]"
+                       className="h-11 min-w-[120px] rounded-xl sm:h-10"
                        onClick={() => setSelectedCategoryId(cat._id.toString())}
                      >
                        {cat.name}
@@ -506,7 +506,7 @@ export default function CustomOrderItemForm({
                                <div 
                                   key={img._id.toString()}
                                   onClick={() => handlePickFromGallery(img.imageUrl)}
-                                  className="w-20 h-20 shrink-0 relative rounded-md overflow-hidden cursor-pointer hover:border-accent hover:border-2 hover:scale-105 transition-all"
+                                  className="relative h-20 w-20 shrink-0 cursor-pointer overflow-hidden rounded-xl transition-[border-color,transform] hover:scale-105 hover:border-2 hover:border-accent"
                                   title="Click to add as reference"
                                >
                                   <Image src={img.imageUrl} alt={img.title} fill quality={90} className="object-cover" />
@@ -539,7 +539,7 @@ export default function CustomOrderItemForm({
                          accept="image/*"
                          onChange={handleFileChange}
                      />
-                     {isUploading && <p className="text-xs text-primary mt-1 animate-pulse">Uploading...</p>}
+                     {isUploading && <p className="text-xs text-primary mt-1 animate-pulse">Uploading…</p>}
                  </div>
 
                  <div className="space-y-4">
@@ -549,17 +549,17 @@ export default function CustomOrderItemForm({
                              placeholder="e.g., Happy Birthday John"
                              value={inscription}
                              onChange={(e) => setInscription(e.target.value)}
-                             className="bg-white"
+                             className="h-11 rounded-xl bg-white sm:h-10"
                          />
                      </div>
                      <div>
                          <Label className="mb-2 block">Design Instructions</Label>
                          <Textarea 
-                             placeholder="Internal notes on how to build/decorate the item..."
+                             placeholder="Internal notes on how to build/decorate the item…"
                              rows={4}
                              value={designInstructions}
                              onChange={(e) => setDesignInstructions(e.target.value)}
-                             className="bg-yellow-50 border-yellow-200 focus:border-yellow-400"
+                             className="min-h-[120px] rounded-xl border-yellow-200 bg-yellow-50 focus:border-yellow-400"
                          />
                      </div>
                  </div>
@@ -585,7 +585,7 @@ export default function CustomOrderItemForm({
                                          setSizeValue(box.value);
                                          setCustomBoxSize("");
                                        }}
-                                       className={`flex w-32 shrink-0 flex-col items-center gap-2 rounded-xl border p-3 text-center transition-all duration-200 ${
+                                       className={`flex w-32 shrink-0 flex-col items-center gap-2 rounded-xl border p-3 text-center transition-[border-color,background-color,box-shadow] duration-200 ${
                                          sizeValue === box.value
                                            ? "border-accent bg-accent/5 shadow-sm shadow-accent/10"
                                            : "border-primary/10 bg-white hover:border-accent/50 hover:bg-subtleBackground"
@@ -610,7 +610,7 @@ export default function CustomOrderItemForm({
                                      key={d._id}
                                      type="button"
                                      onClick={() => setSizeValue(d._id)}
-                                     className={`flex w-32 shrink-0 flex-col items-center gap-2 rounded-xl border p-3 text-center transition-all duration-200 ${
+                                     className={`flex w-32 shrink-0 flex-col items-center gap-2 rounded-xl border p-3 text-center transition-[border-color,background-color,box-shadow] duration-200 ${
                                        sizeValue === d._id
                                          ? "border-accent bg-accent/5 shadow-sm shadow-accent/10"
                                          : "border-primary/10 bg-white hover:border-accent/50 hover:bg-subtleBackground"
@@ -633,7 +633,7 @@ export default function CustomOrderItemForm({
                             placeholder="Type custom size (e.g., 3-Tier Tall, 12x12 Slab)" 
                             value={sizeValue}
                             onChange={(e) => setSizeValue(e.target.value)}
-                            className="bg-white border-dashed"
+                            className="h-11 rounded-xl border-dashed bg-white sm:h-10"
                           />
                         </div>
                      
@@ -644,7 +644,7 @@ export default function CustomOrderItemForm({
                      <div className="space-y-2">
                          <Label className="block text-md border-b pb-2">Shape</Label>
                          <Select value={selectedShapeId} onValueChange={setSelectedShapeId}>
-                             <SelectTrigger className="bg-white">
+                             <SelectTrigger className="h-11 rounded-xl bg-white sm:h-10">
                                  <SelectValue placeholder="Select Shape" />
                              </SelectTrigger>
                              <SelectContent>
@@ -741,7 +741,7 @@ export default function CustomOrderItemForm({
                          placeholder="e.g. less sweet, specific inquiry" 
                          value={flavorNote}
                          onChange={(e) => setFlavorNote(e.target.value)}
-                         className="bg-white border-dashed"
+                         className="h-11 rounded-xl border-dashed bg-white sm:h-10"
                      />
                  </div>
                  
@@ -763,7 +763,7 @@ export default function CustomOrderItemForm({
                              <Input 
                                  type="number"
                                  min="1"
-                                 className="text-2xl font-bold w-full"
+                                 className="h-11 w-full rounded-xl text-2xl font-bold sm:h-10"
                                  value={quantity}
                                  onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
                              />
@@ -774,7 +774,7 @@ export default function CustomOrderItemForm({
                                  type="number" 
                                  min="0"
                                  step="0.01"
-                                 className="text-2xl font-bold w-full"
+                                 className="h-11 w-full rounded-xl text-2xl font-bold sm:h-10"
                                  placeholder="0.00"
                                  value={price || ""}
                                  onChange={(e) => setPrice(parseFloat(e.target.value))}
@@ -800,11 +800,11 @@ export default function CustomOrderItemForm({
                  </div>
                  <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-2/3 justify-end">
                      {onCancel && (
-                         <Button onClick={onCancel} className="w-full sm:w-auto bg-red-50 hover:bg-red-100 text-red-500 border border-red-200 py-6 text-lg" variant="outline">
+                         <Button onClick={onCancel} className="h-11 w-full rounded-xl border border-red-200 bg-red-50 text-red-500 hover:bg-red-100 sm:h-10 sm:w-auto" variant="outline">
                              Cancel
                          </Button>
                      )}
-                     <Button onClick={handleSubmit} disabled={isUploading} className="w-full sm:w-auto shadow-md py-6 text-lg">
+                     <Button onClick={handleSubmit} disabled={isUploading} className="h-11 w-full rounded-xl sm:h-10 sm:w-auto">
                          <Plus className="w-5 h-5 mr-2" />
                          {submitLabel}
                      </Button>

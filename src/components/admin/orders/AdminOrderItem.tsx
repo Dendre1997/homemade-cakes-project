@@ -130,10 +130,10 @@ export const AdminOrderItem = ({
 
             <div className="flex-grow flex flex-col gap-2">
                 {/* Header */}
-                <div className="flex justify-between items-start">
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <h4 className="text-lg font-bold text-primary leading-tight">
+                <div className="flex min-w-0 items-start justify-between gap-2">
+                    <div className="min-w-0">
+                        <div className="flex min-w-0 flex-wrap items-center gap-2">
+                            <h4 className="min-w-0 break-words text-lg font-bold leading-tight text-primary">
                                 {item.name}
                             </h4>
                         </div>
@@ -191,7 +191,7 @@ export const AdminOrderItem = ({
                              )}
                         </div>
                         
-                         <span className="text-sm text-gray-500 font-mono mt-1  flex items-center gap-2">
+                         <span className="mt-1 flex min-w-0 flex-wrap items-center gap-2 font-mono text-sm text-gray-500">
                             ${((discountedLineTotal ?? (item.rowTotal || (item.price * item.quantity))) / item.quantity).toFixed(2)} x {item.quantity} = <span className="font-bold text-primary">${(discountedLineTotal ?? (item.rowTotal || (item.price * item.quantity))).toFixed(2)}</span>
                             {item.isManualPrice && (
                                 <span title="Manual Price Set" className="cursor-help text-primary">
@@ -204,9 +204,8 @@ export const AdminOrderItem = ({
                     {onEdit && (
                         <Button
                         variant="secondary"
-                        size="sm"
                         onClick={() => onEdit(item)}
-                        className="transition-opacity  text-accent"
+                        className="h-11 shrink-0 rounded-xl px-4 text-accent sm:h-10"
                         >
                         Edit
                         </Button>
@@ -264,12 +263,12 @@ export const AdminOrderItem = ({
                         <div className="text-xs font-bold text-purple-800 uppercase mb-1">Addons</div>
                         <div className="flex flex-col gap-1">
                            {item.addons.map((dec, idx) => (
-                               <div key={idx} className="flex justify-between items-center text-sm">
-                                   <div className="flex items-center gap-2">
+                               <div key={idx} className="flex min-w-0 items-start justify-between gap-2 text-sm">
+                                   <div className="flex min-w-0 items-center gap-2">
                                        {dec.imageUrl && <Image src={dec.imageUrl} width={20} height={20} className="rounded object-cover" alt="" />}
-                                       <span className="text-gray-800 font-medium">{dec.name} <span className="text-gray-500 font-normal">({dec.variantName}{addonQuantityMark(dec.quantity)})</span></span>
+                                       <span className="min-w-0 break-words font-medium text-gray-800">{dec.name} <span className="font-normal text-gray-500">({dec.variantName}{addonQuantityMark(dec.quantity)})</span></span>
                                    </div>
-                                   <span className="font-mono text-xs text-gray-600">+${addonUnitCost(dec).toFixed(2)}</span>
+                                   <span className="shrink-0 font-mono text-xs text-gray-600">+${addonUnitCost(dec).toFixed(2)}</span>
                                </div>
                            ))}
                         </div>
@@ -300,9 +299,9 @@ export const AdminOrderItem = ({
 
         
         {/* 5. Information Hierarchy (Name & Size) */}
-        <div className="flex justify-between items-start">
-          <div>
-            <h4 className="text-lg font-bold text-primary leading-tight">
+        <div className="flex min-w-0 items-start justify-between gap-2">
+          <div className="min-w-0">
+            <h4 className="min-w-0 break-words text-lg font-bold leading-tight text-primary">
               {item.name}
             </h4>
             {/* Condition 3: Standard Size Display */}
@@ -320,7 +319,7 @@ export const AdminOrderItem = ({
                 {catalogSetLabel(item.selectedConfig) ?? item.selectedConfig?.quantityConfigId}
               </span>
             )}
-             <span className="text-sm text-primary font-mono">
+             <span className="min-w-0 break-words font-mono text-sm text-primary">
                  ${((discountedLineTotal ?? (item.rowTotal || (item.price * item.quantity))) / item.quantity).toFixed(2)} x {item.quantity} = ${(discountedLineTotal ?? (item.rowTotal || (item.price * item.quantity))).toFixed(2)}
              </span>
           </div>
@@ -328,11 +327,11 @@ export const AdminOrderItem = ({
           {onEdit && (
             <Button
               variant="ghost"
-              size="sm"
               onClick={() => onEdit(item)}
-              className="transition-opacity hover:bg-gray-200 text-primary"
+              aria-label="Edit item"
+              className="h-11 w-11 shrink-0 rounded-xl p-0 text-primary sm:h-10 sm:w-10"
             >
-              <Edit2 className="w-4 h-4" />
+              <Edit2 className="h-4 w-4 shrink-0" />
             </Button>
           )}
         </div>
@@ -375,7 +374,7 @@ export const AdminOrderItem = ({
                {/* 3. Detailed Flavor Breakdown */}
                <div className="flex flex-wrap gap-2">
                   {item.selectedConfig.items?.map((flavorItem, idx) => (
-                    <span key={idx} className="inline-flex items-center gap-2 bg-gray-100 px-2 py-1 rounded text-sm border border-gray-200">
+                    <span key={idx} className="inline-flex max-w-full min-w-0 items-center gap-2 break-words rounded border border-gray-200 bg-gray-100 px-2 py-1 text-sm">
                         <span className="font-bold text-gray-900 text-md">[{flavorItem.count}]</span>
                         <span className="text-gray-700">{getFlavorName(flavorItem.flavorId)}</span>
                     </span>
@@ -392,7 +391,7 @@ export const AdminOrderItem = ({
                <div className="text-xs font-bold text-gray-500 uppercase mb-1">Assorted Flavors</div>
                <div className="flex flex-wrap gap-2">
                   {item.selectedConfig?.items?.map((flavorItem, idx) => (
-                    <span key={idx} className="inline-flex items-center gap-2 bg-gray-100 px-2 py-1 rounded text-sm border border-gray-200">
+                    <span key={idx} className="inline-flex max-w-full min-w-0 items-center gap-2 break-words rounded border border-gray-200 bg-gray-100 px-2 py-1 text-sm">
                         <span className="font-bold text-gray-900 text-md">[{flavorItem.count}]</span>
                         <span className="text-gray-700">{getFlavorName(flavorItem.flavorId)}</span>
                     </span>
@@ -421,8 +420,8 @@ export const AdminOrderItem = ({
                         resolveFlavorName={(id) => getFlavorName(id)}
                       />
                     ) : (
-                    <div className="flex items-center gap-2">
-                        <span className="bg-gray-100 px-2 py-0.5 rounded text-gray-800 border">
+                    <div className="flex min-w-0 flex-wrap items-center gap-2">
+                        <span className="max-w-full break-words rounded border bg-gray-100 px-2 py-0.5 text-gray-800">
                             {item.flavor || "Standard Flavor"}
                         </span>
                     </div>
@@ -456,12 +455,12 @@ export const AdminOrderItem = ({
                 <div className="text-xs font-bold text-purple-800 uppercase mb-1">Addons</div>
                 <div className="flex flex-col gap-1">
                    {item.addons.map((dec, idx) => (
-                       <div key={idx} className="flex justify-between items-center text-sm">
-                           <div className="flex items-center gap-2">
-                               {dec.imageUrl && <Image src={dec.imageUrl} width={20} height={20} className="rounded object-cover" alt="" />}
-                               <span className="text-gray-800 font-medium">{dec.name} <span className="text-gray-500 font-normal">({dec.variantName}{addonQuantityMark(dec.quantity)})</span></span>
+                       <div key={idx} className="flex min-w-0 items-start justify-between gap-2 text-sm">
+                           <div className="flex min-w-0 items-center gap-2">
+                               {dec.imageUrl && <Image src={dec.imageUrl} width={20} height={20} className="shrink-0 rounded object-cover" alt="" />}
+                               <span className="min-w-0 break-words font-medium text-gray-800">{dec.name} <span className="font-normal text-gray-500">({dec.variantName}{addonQuantityMark(dec.quantity)})</span></span>
                            </div>
-                           <span className="font-mono text-xs text-gray-600">+${addonUnitCost(dec).toFixed(2)}</span>
+                           <span className="shrink-0 font-mono text-xs text-gray-600">+${addonUnitCost(dec).toFixed(2)}</span>
                        </div>
                    ))}
                 </div>

@@ -43,12 +43,12 @@ export const ProductPicker = ({
   return (
     <div className="space-y-md">
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/50" />
+        <Search className="absolute left-3 top-1/2 h-4 w-4 shrink-0 -translate-y-1/2 text-primary/50" />
         <Input
-          placeholder="Search cakes to add..."
+          placeholder="Search cakes to add…"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-9"
+          className="h-11 rounded-xl pl-9 sm:h-10"
         />
       </div>
 
@@ -89,7 +89,7 @@ function ProductPickerCard({ product, isSelected, themeColor, onToggle }: Produc
         <div
             onClick={onToggle}
             className={cn(
-            "group relative cursor-pointer rounded-medium overflow-hidden border-2 transition-all duration-200",
+            "group relative min-h-11 cursor-pointer overflow-hidden rounded-xl border-2 transition-[border-color,transform,box-shadow] duration-200",
             isSelected
                 ? "border-current shadow-md scale-[1.02]"
                 : "border-transparent hover:border-border bg-neutral-50"
@@ -107,7 +107,7 @@ function ProductPickerCard({ product, isSelected, themeColor, onToggle }: Produc
                     fill
                     quality={90}
                     className={cn(
-                        "object-cover transition-all duration-300",
+                        "object-cover transition-[opacity,transform] duration-300",
                         !isImageLoaded ? "opacity-0 scale-95" : "opacity-100 scale-100",
                         !isSelected && "opacity-70 group-hover:opacity-100"
                     )}

@@ -193,7 +193,7 @@ export const SetProductForm = ({
                   setSelectedQtyConfigId(e.target.value);
                   setFlavorCounts({});
                 }}
-                className="w-full sm:w-44 bg-white"
+                className="h-11 w-full rounded-xl bg-white sm:h-10 sm:w-44"
               />
               <span className="text-muted-foreground text-sm hidden sm:inline">or pick:</span>
               <Select value={selectedQtyConfigId} onValueChange={(val) => {
@@ -201,7 +201,7 @@ export const SetProductForm = ({
                   setCustomBoxSize("");
                   setFlavorCounts({}); // Reset counts on size change
               }}>
-                  <SelectTrigger className="bg-white border-gray-300 w-full">
+                  <SelectTrigger className="h-11 w-full rounded-xl border-gray-300 bg-white sm:h-10">
                       <SelectValue placeholder={usesCatalogSets ? "Select a set" : "Select Box Size"} />
                   </SelectTrigger>
                   <SelectContent>
@@ -243,24 +243,24 @@ export const SetProductForm = ({
                          const isNewFlavor = count === 0;
                          return (
                              <div key={f._id} className="flex items-center justify-between p-2 bg-gray-50 rounded border">
-                                 <span className="text-sm truncate mr-2" title={f.name}>{f.name}</span>
+                                 <span className="min-w-0 flex-1 break-words text-sm" title={f.name}>{f.name}</span>
                                  <div className="flex items-center gap-2">
                                      <button 
                                         type="button"
                                         onClick={() => handleDecrementFlavor(f._id)}
-                                        className="h-6 w-6 flex items-center justify-center rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+                                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gray-200 hover:bg-gray-300 disabled:opacity-50 sm:h-10 sm:w-10"
                                         disabled={count === 0}
                                      >
-                                        <Minus className="w-3 h-3" />
+                                        <Minus className="h-4 w-4 shrink-0" />
                                      </button>
                                      <span className="w-4 text-center text-sm font-bold">{count}</span>
                                      <button 
                                         type="button"
                                         onClick={() => handleIncrementFlavor(f._id)}
-                                        className="h-6 w-6 flex items-center justify-center rounded bg-primary text-white hover:bg-primary/90 disabled:opacity-50"
+                                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary text-white hover:bg-primary/90 disabled:opacity-50 sm:h-10 sm:w-10"
                                         disabled={remainingItems <= 0 || (!selectedCatalog && isNewFlavor && differentFlavorsCount >= 5)}
                                      >
-                                        <Plus className="w-3 h-3" />
+                                        <Plus className="h-4 w-4 shrink-0" />
                                      </button>
                                  </div>
                              </div>
@@ -280,7 +280,7 @@ export const SetProductForm = ({
                     <div>
                         <label className="block text-sm font-medium mb-1">Cake Flavor</label>
                         <Select value={comboFlavorId} onValueChange={setComboFlavorId}>
-                            <SelectTrigger>
+                            <SelectTrigger className="h-11 rounded-xl sm:h-10">
                                 <SelectValue placeholder="Select Cake Flavor" />
                             </SelectTrigger>
                             <SelectContent>
@@ -295,8 +295,8 @@ export const SetProductForm = ({
                         <input 
                             value={comboInscription}
                             onChange={e => setComboInscription(e.target.value)}
-                            className="w-full p-2 border rounded-md"
-                            placeholder="Optional..."
+                            className="h-11 w-full rounded-xl border sm:h-10"
+                            placeholder="Optional…"
                         />
                     </div>
                 </div>
@@ -310,7 +310,7 @@ export const SetProductForm = ({
                 value={flavorNote}
                 onChange={e => setFlavorNote(e.target.value)}
                 placeholder="e.g. less sweet, specific inquiry"
-                className="w-full p-2 border rounded-md"
+                className="h-11 w-full rounded-xl border sm:h-10"
              />
         </div>
 
@@ -332,7 +332,7 @@ export const SetProductForm = ({
                     min="1"
                     value={qty}
                     onChange={e => setQty(parseInt(e.target.value) || 1)}
-                    className="w-full p-2 border rounded-md"
+                    className="h-11 w-full rounded-xl border sm:h-10"
                  />
             </div>
             <div>
@@ -342,18 +342,18 @@ export const SetProductForm = ({
                     value={priceOverride}
                     onChange={e => setPriceOverride(e.target.value)}
                     placeholder={`Default: $${(selectedConfig?.price || 0).toFixed(2)}`}
-                    className="w-full p-2 border rounded-md"
+                    className="h-11 w-full rounded-xl border sm:h-10"
                  />
             </div>
         </div>
 
         {/* Actions */}
         <div className="flex gap-2 pt-2">
-            <Button variant="outline" onClick={onCancel} className="flex-1">
+            <Button variant="outline" onClick={onCancel} className="h-11 flex-1 rounded-xl sm:h-10">
                 Cancel
             </Button>
-            <Button variant="primary" onClick={handleAddSet} className="flex-1">
-                <Plus className="w-4 h-4 mr-2" />
+            <Button variant="primary" onClick={handleAddSet} className="h-11 flex-1 rounded-xl sm:h-10">
+                <Plus className="mr-2 h-4 w-4 shrink-0" />
                 Add Bundle
             </Button>
         </div>
