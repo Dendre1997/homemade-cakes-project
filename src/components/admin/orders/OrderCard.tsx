@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { OrderItemTiersDisplay } from "@/components/shared/OrderItemTiersDisplay";
 import { addonQuantityMark } from "@/lib/addons/selectedAddonMath";
+import { catalogSetLabel } from "@/lib/sets/setLineLabel";
 import Image from "next/image";
 import {
   Select,
@@ -99,6 +100,8 @@ export const OrderCard = ({
   };
 
   const resolveSizeDisplay = (item: CartItem) => {
+    const setLabel = catalogSetLabel(item.selectedConfig);
+    if (setLabel) return setLabel;
     if (item.customSize?.trim()) return item.customSize.trim();
 
     const diameterId =
@@ -110,7 +113,7 @@ export const OrderCard = ({
     }
 
     if (item.selectedConfig?.quantityConfigId) {
-      return item.selectedConfig.quantityConfigId;
+      return catalogSetLabel(item.selectedConfig) ?? item.selectedConfig.quantityConfigId;
     }
 
     return undefined;

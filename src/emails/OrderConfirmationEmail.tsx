@@ -18,6 +18,7 @@ import { format } from "date-fns";
 import { SENDER_EMAIL } from "@/lib/email";
 import { EmailOrderItemFlavor } from "@/emails/EmailOrderItemFlavor";
 import { hasTierSelections } from "@/lib/orderItemDisplay";
+import { catalogSetLabel } from "@/lib/sets/setLineLabel";
 import { addonQuantityMark, addonUnitCost } from "@/lib/addons/selectedAddonMath";
 
 export interface OrderConfirmationEmailProps {
@@ -264,6 +265,24 @@ export const OrderConfirmationEmail = ({
                           <Text style={styles.itemMeta}>
                             Flavor Note: {item.flavorNote}
                           </Text>
+                        )}
+
+                        {catalogSetLabel(item.selectedConfig) && (
+                          <>
+                            <Text style={styles.itemMeta}>
+                              Set: {catalogSetLabel(item.selectedConfig)}
+                            </Text>
+                            {item.selectedConfig?.cake?.flavorId && (
+                              <Text style={styles.itemMeta}>
+                                Cake: {getFlavorName(item.selectedConfig.cake.flavorId)}
+                              </Text>
+                            )}
+                            {item.selectedConfig?.items?.map((treat, treatIndex) => (
+                              <Text key={treatIndex} style={styles.itemMeta}>
+                                {treat.count}× {getFlavorName(treat.flavorId)}
+                              </Text>
+                            ))}
+                          </>
                         )}
 
                         {item.quantity > 1 && (

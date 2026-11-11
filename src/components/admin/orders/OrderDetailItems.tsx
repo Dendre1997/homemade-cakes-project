@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Order, Diameter, CartItem, ProductWithCategory, Flavor, IShape } from "@/types";
+import { Order, Diameter, CartItem, ProductWithCategory, Flavor, IShape, CatalogSet } from "@/types";
 import { addonsUnitCost } from "@/lib/addons/selectedAddonMath";
 import { setLineIdentifier, setLinePrice } from "@/lib/sets/setLinePrice";
 import { Button } from "@/components/ui/Button";
@@ -77,7 +77,8 @@ const OrderDetailItems = ({
   const [draftQuantity, setDraftQuantity] = useState(1);
   const [draftInscription, setDraftInscription] = useState("");
   const [draftPriceOverride, setDraftPriceOverride] = useState(""); 
-  const [draftSelectedConfig, setDraftSelectedConfig] = useState<any>(null); 
+  const [draftSelectedConfig, setDraftSelectedConfig] = useState<any>(null);
+  const [editSets, setEditSets] = useState<CatalogSet[]>([]); 
   const [draftAddons, setDraftAddons] = useState<SelectedAddon[]>([]);
   
   // Edit Context Data
@@ -165,6 +166,38 @@ const OrderDetailItems = ({
           console.error(e);
       }
   };
+
+  useEffect(() => {
+    const categoryId = draftProduct?.categoryId ? String(draftProduct.categoryId) : "";
+    if (draftProduct?.productType !== "set" || !categoryId) {
+      setEditSets([]);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/admin/sets?categoryId=${categoryId}`)
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => {
+        if (!cancelled) setEditSets(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {
+        if (!cancelled) setEditSets([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [draftProduct?._id, draftProduct?.categoryId, draftProduct?.productType]);
+
+  const assignedEditSets = editSets.filter((set) =>
+    (draftProduct?.availableSetConfigs ?? []).some((config) => String(config.setId) === String(set._id))
+  );
+  const selectedEditSet = assignedEditSets.find(
+    (set) => String(set._id) === String(draftSelectedConfig?.setId)
+  );
+  const chosenFlavorCount = new Set(
+    (draftSelectedConfig?.items ?? [])
+      .filter((entry: { count?: number }) => (entry.count ?? 0) > 0)
+      .map((entry: { flavorId?: string }) => String(entry.flavorId))
+  ).size;
 
   const draftDiameter = diameters.find((d) => d._id === draftDiameterId);
   const draftTiersCount = draftDiameter?.tiersCount ?? (editingItem?.tiers?.length ?? 1);
@@ -546,20 +579,80 @@ const OrderDetailItems = ({
                             
                             {/* Box Size */}
                             <div>
-                                <Label>Box Size (Quantity Config)</Label>
-                                <Select 
-                                    value={draftSelectedConfig?.quantityConfigId} 
-                                    onValueChange={(val) => setDraftSelectedConfig({...draftSelectedConfig, quantityConfigId: val})}
+                                <Label>{assignedEditSets.length > 0 ? "Set" : "Box Size (Quantity Config)"}</Label>
+                                <div className="flex flex-col sm:flex-row gap-2">
+                                  <Input
+                                    type="number"
+                                    min={1}
+                                    placeholder="Custom piece count"
+                                    className="bg-white sm:w-40"
+                                    onChange={(e) => {
+                                      const count = e.target.value;
+                                      if (!count) return;
+                                      setDraftSelectedConfig({
+                                        ...draftSelectedConfig,
+                                        setId: undefined,
+                                        setName: undefined,
+                                        pieceCount: count ? Number(count) : undefined,
+                                        quantityConfigId: count,
+                                      });
+                                    }}
+                                  />
+                                  <Select 
+                                    value={draftSelectedConfig?.setId || draftSelectedConfig?.quantityConfigId} 
+                                    onValueChange={(val) => {
+                                      const set = assignedEditSets.find((candidate) => String(candidate._id) === val);
+                                      if (set) {
+                                        setDraftSelectedConfig({
+                                          ...draftSelectedConfig,
+                                          setId: String(set._id),
+                                          setName: set.name,
+                                          pieceCount: set.pieceCount,
+                                          quantityConfigId: set.name,
+                                        });
+                                        return;
+                                      }
+                                      setDraftSelectedConfig({
+                                        ...draftSelectedConfig,
+                                        setId: undefined,
+                                        setName: undefined,
+                                        pieceCount: undefined,
+                                        quantityConfigId: val,
+                                      });
+                                    }}
                                 >
                                     <SelectTrigger className="bg-white">
-                                        <SelectValue placeholder="Select Size" />
+                                        <SelectValue placeholder={assignedEditSets.length > 0 ? "Select a set" : "Select Size"} />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {draftProduct.availableQuantityConfigs?.map(c => (
-                                            <SelectItem key={c.label} value={c.label}>{c.label}</SelectItem>
-                                        ))}
+                                        {assignedEditSets.length > 0
+                                          ? assignedEditSets.map((set) => (
+                                              <SelectItem key={String(set._id)} value={String(set._id)}>
+                                                {set.name} ({set.pieceCount} pieces)
+                                              </SelectItem>
+                                            ))
+                                          : draftProduct.availableQuantityConfigs?.map(c => (
+                                              <SelectItem key={c.label} value={c.label}>{c.label}</SelectItem>
+                                            ))}
+                                        {draftSelectedConfig?.quantityConfigId &&
+                                          !assignedEditSets.some((set) => set.name === draftSelectedConfig.quantityConfigId || String(set._id) === draftSelectedConfig.setId) &&
+                                          !draftProduct.availableQuantityConfigs?.some((config) => config.label === draftSelectedConfig.quantityConfigId) && (
+                                            <SelectItem value={draftSelectedConfig.quantityConfigId}>
+                                              {draftSelectedConfig.quantityConfigId}
+                                            </SelectItem>
+                                          )}
                                     </SelectContent>
                                 </Select>
+                                </div>
+                                {selectedEditSet && (
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    This set allows up to {selectedEditSet.maxFlavors}{" "}
+                                    {selectedEditSet.maxFlavors === 1 ? "flavor" : "flavors"}.
+                                    {chosenFlavorCount > selectedEditSet.maxFlavors
+                                      ? ` ${chosenFlavorCount} are chosen.`
+                                      : " You can choose more."}
+                                  </p>
+                                )}
                             </div>
 
                             {/* Flavor Editor */}

@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { format } from "date-fns";
 import { Order, Diameter, Flavor, IShape } from "@/types";
 import { addonQuantityMark } from "@/lib/addons/selectedAddonMath";
+import { catalogSetLabel } from "@/lib/sets/setLineLabel";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -630,6 +631,7 @@ export default function PrintOrderPage() {
 
             const sizeLabel =
               item.customSize ||
+              catalogSetLabel(item.selectedConfig) ||
               item.selectedConfig?.quantityConfigId ||
               getDiameterLabel(item.diameterId?.toString(), diameters);
 

@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AddonAdminSelector } from "@/components/admin/addons/AddonAdminSelector";
 import { SelectedAddon } from "@/types";
 import { addonsUnitCost } from "@/lib/addons/selectedAddonMath";
+import { setLinePrice } from "@/lib/sets/setLinePrice";
 
 interface SetProductFormProps {
   product: ProductWithCategory;
@@ -49,7 +50,20 @@ export const SetProductForm = ({
 
   // Helpers
   const selectedConfig = product.availableQuantityConfigs?.find(c => c.label === selectedQtyConfigId || c._id === selectedQtyConfigId);
-  const maxItemsPerBox = selectedConfig?.quantity || parseInt(selectedQtyConfigId) || 0;
+  const catalogOptions = (product.availableSetConfigs ?? []).flatMap((config) => {
+    const set = product.availableSets?.find((candidate) => String(candidate._id) === String(config.setId));
+    if (!set) return [];
+    return [{
+      id: String(config.setId),
+      name: set.name,
+      pieceCount: set.pieceCount,
+      maxFlavors: set.maxFlavors,
+      price: config.price,
+    }];
+  });
+  const selectedCatalog = catalogOptions.find((option) => option.id === selectedQtyConfigId);
+  const usesCatalogSets = catalogOptions.length > 0;
+  const maxItemsPerBox = selectedCatalog?.pieceCount || selectedConfig?.quantity || parseInt(selectedQtyConfigId) || 0;
   
   const currentTotalItems = Object.values(flavorCounts).reduce((a, b) => a + b, 0);
   const remainingItems = maxItemsPerBox - currentTotalItems;
@@ -80,8 +94,12 @@ export const SetProductForm = ({
   };
 
   const handleAddSet = () => {
-       if (!selectedQtyConfigId || !selectedConfig) {
-           showAlert("Please select a box size.", "warning");
+       if (!selectedQtyConfigId || (!selectedCatalog && !selectedConfig && !customBoxSize)) {
+           showAlert(usesCatalogSets ? "Please select a set." : "Please select a box size.", "warning");
+           return;
+       }
+       if (!maxItemsPerBox) {
+           showAlert("Please choose a set or enter a piece count.", "warning");
            return;
        }
        if (remainingItems !== 0) {
@@ -93,7 +111,17 @@ export const SetProductForm = ({
            return;
        }
 
-      let calculatedPrice = selectedConfig.price;
+      const catalogPrice = selectedCatalog
+        ? setLinePrice(product, selectedCatalog.id, {
+            match: "label",
+            missingBox: "none",
+            rounding: "none",
+            cakeFlavorPrice: comboFlavorId
+              ? availableFlavors.find((flavor) => flavor._id === comboFlavorId)?.price
+              : undefined,
+          })?.price
+        : undefined;
+      let calculatedPrice = catalogPrice ?? selectedConfig?.price ?? catalogOptions[0]?.price ?? 0;
       
        const AddonsTotal = addonsUnitCost(selectedAddons);
        const finalPrice = priceOverride ? parseFloat(priceOverride) : calculatedPrice + AddonsTotal;
@@ -111,8 +139,8 @@ export const SetProductForm = ({
            categoryId: product.categoryId,
            name: product.name,
            flavor: isCombo 
-             ? `Combo: ${selectedQtyConfigId} + Bento` 
-             : `Set: ${selectedQtyConfigId}`,
+             ? `Combo: ${selectedCatalog?.name || selectedQtyConfigId} + Bento` 
+             : `Set: ${selectedCatalog?.name || selectedQtyConfigId}`,
            price: finalPrice,
            quantity: qty,
            imageUrl: product.imageUrls?.[0] || "",
@@ -122,7 +150,14 @@ export const SetProductForm = ({
            
            // POLYMORPHIC DATA
            selectedConfig: {
-               quantityConfigId: selectedConfig.label, // Label is ID
+               ...(selectedCatalog
+                 ? {
+                     setId: selectedCatalog.id,
+                     setName: selectedCatalog.name,
+                     pieceCount: selectedCatalog.pieceCount,
+                     quantityConfigId: selectedCatalog.name,
+                   }
+                 : { quantityConfigId: selectedConfig?.label || selectedQtyConfigId }),
                items: selectedItemsArray,
                cake: isCombo ? {
                    flavorId: comboFlavorId,
@@ -144,12 +179,14 @@ export const SetProductForm = ({
 
         {/* 1. Box Size */}
         <div>
-            <label className="block text-sm font-bold text-gray-700 mb-1">Box Size / Quantity</label>
+            <label className="block text-sm font-bold text-gray-700 mb-1">
+              {usesCatalogSets ? "Set" : "Box Size / Quantity"}
+            </label>
             <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
               <Input
                 type="number"
                 min={1}
-                placeholder="Enter custom quantity"
+                placeholder={usesCatalogSets ? "Custom piece count" : "Enter custom quantity"}
                 value={customBoxSize}
                 onChange={(e) => {
                   setCustomBoxSize(e.target.value);
@@ -165,14 +202,20 @@ export const SetProductForm = ({
                   setFlavorCounts({}); // Reset counts on size change
               }}>
                   <SelectTrigger className="bg-white border-gray-300 w-full">
-                      <SelectValue placeholder="Select Box Size" />
+                      <SelectValue placeholder={usesCatalogSets ? "Select a set" : "Select Box Size"} />
                   </SelectTrigger>
                   <SelectContent>
-                      {product.availableQuantityConfigs?.map(c => (
-                          <SelectItem key={c.label} value={c.label}>
-                              {c.label} ({c.quantity} items) - ${c.price}
-                          </SelectItem>
-                      ))}
+                      {usesCatalogSets
+                        ? catalogOptions.map((option) => (
+                            <SelectItem key={option.id} value={option.id}>
+                                {option.name} ({option.pieceCount} pieces) - ${option.price}
+                            </SelectItem>
+                          ))
+                        : product.availableQuantityConfigs?.map(c => (
+                            <SelectItem key={c.label} value={c.label}>
+                                {c.label} ({c.quantity} items) - ${c.price}
+                            </SelectItem>
+                          ))}
                   </SelectContent>
               </Select>
             </div>
@@ -183,6 +226,12 @@ export const SetProductForm = ({
             <div className="bg-white p-4 rounded-md border border-gray-200">
                 <div className="flex justify-between items-center mb-2">
                     <label className="text-sm font-bold text-gray-700">Distribute Flavors</label>
+                    {selectedCatalog && (
+                      <p className="text-xs text-muted-foreground">
+                        This set allows up to {selectedCatalog.maxFlavors}{" "}
+                        {selectedCatalog.maxFlavors === 1 ? "flavor" : "flavors"}. You can choose more.
+                      </p>
+                    )}
                     <span className={`text-xs font-bold px-2 py-1 rounded ${remainingItems === 0 ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
                         {remainingItems === 0 ? "Box Full" : `${remainingItems} remaining`}
                     </span>
@@ -209,7 +258,7 @@ export const SetProductForm = ({
                                         type="button"
                                         onClick={() => handleIncrementFlavor(f._id)}
                                         className="h-6 w-6 flex items-center justify-center rounded bg-primary text-white hover:bg-primary/90 disabled:opacity-50"
-                                        disabled={remainingItems <= 0 || (isNewFlavor && differentFlavorsCount >= 5)}
+                                        disabled={remainingItems <= 0 || (!selectedCatalog && isNewFlavor && differentFlavorsCount >= 5)}
                                      >
                                         <Plus className="w-3 h-3" />
                                      </button>

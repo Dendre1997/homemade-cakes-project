@@ -9,6 +9,7 @@ import HeaderLogo from "@/components/ui/HeaderLogo";
 import { SocialHandleAnchor } from "@/components/ui/SocialHandleAnchor";
 import { OrderItemTiersDisplay } from "@/components/shared/OrderItemTiersDisplay";
 import { addonLineCost, addonQuantityMark, addonUnitCost, addonsUnitCost } from "@/lib/addons/selectedAddonMath";
+import { catalogSetLabel } from "@/lib/sets/setLineLabel";
 
 interface ClientReceiptCardProps {
   order: Order;
@@ -276,7 +277,8 @@ export const ClientReceiptCard = ({
         <p className="text-primary/60 text-xs uppercase font-bold tracking-wider">Items</p>
         {order.items.map((item: CartItem, idx: number) => {
           const isCustom = item.productType === 'custom' || item.isCustom;
-          const displaySize = isCustom ? item.customSize || getDiameterName(item.diameterId || item.selectedConfig?.cake?.diameterId) : getDiameterName(item.diameterId);
+          const setLabel = catalogSetLabel(item.selectedConfig);
+          const displaySize = isCustom ? item.customSize || getDiameterName(item.diameterId || item.selectedConfig?.cake?.diameterId) : setLabel || getDiameterName(item.diameterId);
           const displayShape = isCustom ? item.customShape || getShapeName((item.shapeId || item.selectedConfig?.cake?.shapeId)?.toString()) : getShapeName(item.shapeId?.toString());
           const displayFlavor = isCustom ? item.customFlavor || getFlavorName(item.selectedConfig?.cake?.flavorId || item.flavor) : getFlavorName(item.flavor || item.selectedConfig?.cake?.flavorId);
           const hasTierBreakdown = (item.tiers?.length ?? 0) > 0;
@@ -326,10 +328,24 @@ export const ClientReceiptCard = ({
                     )}
                     {item.isCombo && item.selectedConfig?.items && item.selectedConfig.items.length > 0 && (
                       <div className="text-sm text-muted-foreground">
-                        <span className="font-medium">Box ({item.selectedConfig.quantityConfigId}):</span>{' '}
+                        <span className="font-medium">Box ({catalogSetLabel(item.selectedConfig) ?? item.selectedConfig.quantityConfigId}):</span>{' '}
                         {item.selectedConfig.items
                           .map((si: any) => `${si.count}x ${flavorMap?.[si.flavorId] || si.flavorId}`)
                           .join(', ')}
+                      </div>
+                    )}
+                    {setLabel && !item.isCombo && item.selectedConfig?.cake?.flavorId && (
+                      <p className="text-sm text-muted-foreground">
+                        <span className="font-medium">Cake:</span>{" "}
+                        {getFlavorName(item.selectedConfig.cake.flavorId)}
+                      </p>
+                    )}
+                    {setLabel && !item.isCombo && item.selectedConfig?.items && item.selectedConfig.items.length > 0 && (
+                      <div className="text-sm text-muted-foreground">
+                        <span className="font-medium">Flavors:</span>{' '}
+                        {item.selectedConfig.items
+                          .map((si) => `${si.count}× ${getFlavorName(si.flavorId)}`)
+                          .join(", ")}
                       </div>
                     )}
                     {item.flavorNote && item.flavorNote !== "No" && <p>Flavor Note: {item.flavorNote}</p>}

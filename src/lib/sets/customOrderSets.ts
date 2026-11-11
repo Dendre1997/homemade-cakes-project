@@ -60,6 +60,12 @@ export function customOrderFlavorNames(flavorText: string, categoryType: "set" |
   return [...new Set(names)];
 }
 
+/** The cake flavor named on a combo custom-order line. */
+export function customOrderCakeFlavorName(flavorText: string): string | undefined {
+  const cake = flavorText.match(/Treats:\s*\[[^\]]*\]\.\s*Cake:\s*(.*)$/)?.[1]?.trim();
+  return cake && cake !== "None" ? cake : undefined;
+}
+
 export type ResolvedCustomOrderSet =
   | { status: "legacy" }
   | { status: "error"; error: string }

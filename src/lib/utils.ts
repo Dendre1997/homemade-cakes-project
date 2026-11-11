@@ -1,6 +1,7 @@
 
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { catalogSetLabel } from "@/lib/sets/setLineLabel"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -66,6 +67,11 @@ export function formatOrderItemDescription(item: any): string {
       }
 
       
+      if (item.selectedConfig?.setId || item.selectedConfig?.setName) {
+          const setLabel = catalogSetLabel(item.selectedConfig);
+          if (setLabel) details.push(setLabel);
+      }
+
       if (item.flavor && item.flavor !== "N/A") {
           details.push(item.flavor);
       }

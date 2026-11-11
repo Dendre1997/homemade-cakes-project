@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useRef, useEffect } from "react";
-import { ProductCategory, Flavor, Diameter, SelectedAddon, IGalleryImage } from "@/types";
+import { ProductCategory, Flavor, Diameter, SelectedAddon, IGalleryImage, CatalogSet } from "@/types";
 import { Button } from "@/components/ui/Button";
 import { Plus, Minus, ArrowLeft, ArrowRight } from "lucide-react";
 import { useAlert } from "@/contexts/AlertContext";
@@ -71,6 +71,8 @@ export const ComboProductForm = ({
   const [selectedSetCategoryId, setSelectedSetCategoryId] = useState("");
   const [selectedBoxSize, setSelectedBoxSize] = useState("");
   const [customBoxSize, setCustomBoxSize] = useState("");
+  const [selectedSetId, setSelectedSetId] = useState("");
+  const [categorySets, setCategorySets] = useState<CatalogSet[]>([]);
   const [designDescription, setDesignDescription] = useState("");
   const [flavorCounts, setFlavorCounts] = useState<Record<string, number>>({});
   const [flavorNote, setFlavorNote] = useState("");
@@ -113,10 +115,30 @@ export const ComboProductForm = ({
     return galleryImages.filter(img => img.categories?.includes(selectedSetCategoryId));
   }, [galleryImages, selectedSetCategoryId]);
 
-  const maxItemsPerBox = selectedBoxSize ? parseInt(selectedBoxSize) : 0;
+  const selectedCategorySet = categorySets.find((set) => String(set._id) === selectedSetId);
+  const maxItemsPerBox = selectedCategorySet?.pieceCount || (selectedBoxSize ? parseInt(selectedBoxSize) : 0);
   const currentTotalItems = Object.values(flavorCounts).reduce((a, b) => a + b, 0);
   const remainingItems = maxItemsPerBox - currentTotalItems;
   const currentFlavorCount = Object.keys(flavorCounts).length;
+
+  useEffect(() => {
+    if (!selectedSetCategoryId) {
+      setCategorySets([]);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/admin/sets?categoryId=${selectedSetCategoryId}`)
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => {
+        if (!cancelled) setCategorySets(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {
+        if (!cancelled) setCategorySets([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedSetCategoryId]);
 
   useEffect(() => {
     if (initialValues) {
@@ -147,6 +169,7 @@ export const ComboProductForm = ({
         }
         setSelectedBoxSize(config.quantityConfigId || "");
         setCustomBoxSize(config.quantityConfigId || "");
+        if (config.setId) setSelectedSetId(String(config.setId));
       }
       setDesignDescription(initialValues.designInstructions || "");
       setPriceOverride(initialValues.price?.toString() || "");
@@ -258,7 +281,7 @@ export const ComboProductForm = ({
       if (remainingItems <= 0) return;
       
       const count = flavorCounts[flavorId] || 0;
-      if (count === 0 && currentFlavorCount >= 5) {
+      if (count === 0 && !selectedCategorySet && currentFlavorCount >= 5) {
           showAlert("Maximum of 5 different flavors allowed.", "warning");
           return;
       }
@@ -325,7 +348,14 @@ export const ComboProductForm = ({
            addons: [...singleAddons, ...setAddons],
            selectedConfig: {
                setCategoryId: selectedSetCategoryId,
-               quantityConfigId: selectedBoxSize,
+               ...(selectedCategorySet
+                 ? {
+                     setId: String(selectedCategorySet._id),
+                     setName: selectedCategorySet.name,
+                     pieceCount: selectedCategorySet.pieceCount,
+                     quantityConfigId: selectedCategorySet.name,
+                   }
+                 : { quantityConfigId: selectedBoxSize }),
                items: selectedItemsArray,
                cake: {
                    flavorId: selectedSingleFlavorId,
@@ -574,13 +604,21 @@ export const ComboProductForm = ({
                           onChange={(e) => {
                             setCustomBoxSize(e.target.value);
                             setSelectedBoxSize(e.target.value);
+                            setSelectedSetId("");
                             setFlavorCounts({});
                           }}
                           className="w-full sm:w-56 bg-white"
                         />
                         <span className="text-muted-foreground text-sm hidden sm:inline">or pick:</span>
-                        <Select value={selectedBoxSize} onValueChange={(val) => {
-                            setSelectedBoxSize(val);
+                        <Select value={selectedCategorySet ? selectedSetId : selectedBoxSize} onValueChange={(val) => {
+                            const set = categorySets.find((candidate) => String(candidate._id) === val);
+                            if (set) {
+                              setSelectedSetId(String(set._id));
+                              setSelectedBoxSize(String(set.pieceCount));
+                            } else {
+                              setSelectedSetId("");
+                              setSelectedBoxSize(val);
+                            }
                             setCustomBoxSize("");
                             setFlavorCounts({});
                         }}>
@@ -588,9 +626,19 @@ export const ComboProductForm = ({
                                 <SelectValue placeholder="Select box size" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="6">Box of 6</SelectItem>
-                                <SelectItem value="12">Box of 12</SelectItem>
-                                <SelectItem value="24">Box of 24</SelectItem>
+                                {categorySets.length > 0
+                                  ? categorySets.map((set) => (
+                                      <SelectItem key={String(set._id)} value={String(set._id)}>
+                                        {set.name} ({set.pieceCount} pieces)
+                                      </SelectItem>
+                                    ))
+                                  : (
+                                    <>
+                                      <SelectItem value="6">Box of 6</SelectItem>
+                                      <SelectItem value="12">Box of 12</SelectItem>
+                                      <SelectItem value="24">Box of 24</SelectItem>
+                                    </>
+                                  )}
                             </SelectContent>
                         </Select>
                       </div>
@@ -599,7 +647,11 @@ export const ComboProductForm = ({
                   {selectedBoxSize && (
                       <div className="bg-white p-4 rounded-md border border-gray-200 mt-4">
                           <div className="flex justify-between items-center mb-2">
-                              <label className="text-sm font-bold text-gray-700">Distribute Flavors (Max 5)</label>
+                              <label className="text-sm font-bold text-gray-700">
+                                {selectedCategorySet
+                                  ? `Distribute flavors. This set allows up to ${selectedCategorySet.maxFlavors} ${selectedCategorySet.maxFlavors === 1 ? "flavor" : "flavors"}; you can choose more.`
+                                  : "Distribute Flavors (Max 5)"}
+                              </label>
                               <span className={`text-xs font-bold px-2 py-1 rounded ${remainingItems === 0 ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
                                   {remainingItems === 0 ? "Box Full" : `Remaining slots: ${remainingItems}`}
                               </span>
@@ -624,7 +676,7 @@ export const ComboProductForm = ({
                                                   type="button"
                                                   onClick={() => handleIncrementFlavor(f._id)}
                                                   className="h-6 w-6 flex items-center justify-center rounded bg-primary text-white hover:bg-primary/90 disabled:opacity-50"
-                                                  disabled={remainingItems <= 0 || (count === 0 && currentFlavorCount >= 5)}
+                                                  disabled={remainingItems <= 0 || (!selectedCategorySet && count === 0 && currentFlavorCount >= 5)}
                                                >
                                                   <Plus className="w-3 h-3" />
                                                </button>

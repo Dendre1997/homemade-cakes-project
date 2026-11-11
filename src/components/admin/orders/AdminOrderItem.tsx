@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import ImagePreviewGallery from "@/components/ui/ImagePreviewGallery";
 import { OrderItemTiersDisplay } from "@/components/shared/OrderItemTiersDisplay";
 import { addonQuantityMark, addonUnitCost } from "@/lib/addons/selectedAddonMath";
+import { catalogSetLabel } from "@/lib/sets/setLineLabel";
 
 interface AdminOrderItemProps {
   item: CartItem;
@@ -208,7 +209,7 @@ export const AdminOrderItem = ({
                 {item.isCombo && item.selectedConfig?.items && item.selectedConfig.items.length > 0 && (
                   <div className="mt-3 space-y-2">
                     <p className="text-xs font-bold uppercase text-muted-foreground border-b pb-1">
-                      Box: {item.selectedConfig.quantityConfigId} items
+                      Box: {catalogSetLabel(item.selectedConfig) ?? `${item.selectedConfig.quantityConfigId} items`}
                     </p>
                     {item.selectedConfig.items.map((si: any, idx: number) => (
                       <p key={idx} className="text-sm">
@@ -285,9 +286,9 @@ export const AdminOrderItem = ({
               </span>
             )}
             {/* Set Size Display */}
-            {(isComboSet || isSimpleSet) && item.selectedConfig?.quantityConfigId && (
+            {(isComboSet || isSimpleSet) && (catalogSetLabel(item.selectedConfig) || item.selectedConfig?.quantityConfigId) && (
               <span className="text-md font-medium text-primary block">
-                {item.selectedConfig.quantityConfigId}
+                {catalogSetLabel(item.selectedConfig) ?? item.selectedConfig?.quantityConfigId}
               </span>
             )}
              <span className="text-sm text-primary font-mono">

@@ -262,7 +262,7 @@ export const OrderSummaryDisplay = ({
                   <p>Flavor: {item.displayFlavor}</p>
                 )
               )}
-              {item.isCombo && item.comboCenter && (
+              {item.comboCenter && (
                 <div className="text-sm text-muted-foreground">
                   <span className="font-medium">Center Cake:</span>{" "}
                   {item.comboCenter.flavorName}
@@ -270,8 +270,7 @@ export const OrderSummaryDisplay = ({
                     ` — "${item.comboCenter.inscription}"`}
                 </div>
               )}
-              {item.isCombo &&
-                item.comboBox &&
+              {item.comboBox &&
                 item.comboBox.items.length > 0 && (
                   <div className="text-sm text-muted-foreground">
                     <span className="font-medium">

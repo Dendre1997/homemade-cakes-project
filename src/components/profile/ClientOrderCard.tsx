@@ -6,6 +6,7 @@ import { OrderItemTiersDisplay } from "@/components/shared/OrderItemTiersDisplay
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { addonQuantityMark } from "@/lib/addons/selectedAddonMath";
+import { catalogSetLabel } from "@/lib/sets/setLineLabel";
 import { 
   Package, 
   ChefHat, 
@@ -208,6 +209,10 @@ export default function ClientOrderCard({ order, diameters = [], shapes = [] }: 
                               SizeIcon = SIZE_ICONS[diameter.illustration];
                           }
                       }
+                  }
+                  if (!sizeName) {
+                      const setLabel = catalogSetLabel(item.selectedConfig);
+                      if (setLabel) sizeName = setLabel;
                   }
 
                   // Resolve Shape (custom free-text takes priority, else map id -> name)

@@ -11,6 +11,7 @@ import {
 import PaymentHubClient from "@/components/payment/PaymentHubClient";
 import type { PublicOrderSummary, PublicOrderAddon } from "@/types";
 import { addonsUnitCost } from "@/lib/addons/selectedAddonMath";
+import { catalogSetLabel } from "@/lib/sets/setLineLabel";
 
 export const metadata: Metadata = {
   title: "Complete Your Payment | D&K Creations",
@@ -142,10 +143,12 @@ function mapToPublicOrder(order: any, ctx: ScrubContext): PublicOrderSummary {
   const items = rawItems.map((item) => {
     const isCustom = item.productType === "custom" || item.isCustom;
 
+    const setLabel = catalogSetLabel(item.selectedConfig);
+    const catalogSet = !!(item.selectedConfig?.setId || item.selectedConfig?.setName);
     const displaySize = isCustom
       ? item.customSize ||
         resolveDiameter(item.diameterId || item.selectedConfig?.cake?.diameterId)
-      : resolveDiameter(item.diameterId);
+      : setLabel || resolveDiameter(item.diameterId);
     const displayShape = isCustom
       ? item.customShape ||
         resolveShape(item.shapeId || item.selectedConfig?.cake?.shapeId)
@@ -200,16 +203,16 @@ function mapToPublicOrder(order: any, ctx: ScrubContext): PublicOrderSummary {
       imageUrls,
       isCombo: !!item.isCombo,
       comboCenter:
-        item.isCombo && item.selectedConfig?.cake
+        (item.isCombo || catalogSet) && item.selectedConfig?.cake
           ? {
               flavorName: resolveFlavor(item.selectedConfig.cake.flavorId),
               inscription: item.selectedConfig.cake.inscription || undefined,
             }
           : undefined,
       comboBox:
-        item.isCombo && item.selectedConfig?.items?.length
+        (item.isCombo || catalogSet) && item.selectedConfig?.items?.length
           ? {
-              label: item.selectedConfig.quantityConfigId,
+              label: setLabel || item.selectedConfig.quantityConfigId,
               items: item.selectedConfig.items.map((si: any) => ({
                 count: Number(si.count) || 0,
                 flavorName: resolveFlavor(si.flavorId),

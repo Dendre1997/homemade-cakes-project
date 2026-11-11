@@ -13,6 +13,7 @@ import { normalizeCustomOrder } from "@/lib/normalizeCustomOrder";
 import type { CustomOrderItem, SelectedAddon } from "@/types";
 import { normalizePhoneDigits } from "@/lib/crm/normalize";
 import { addonCount } from "@/lib/addons/selectedAddonMath";
+import { customOrderCakeFlavorName, customOrderFlavorNames } from "@/lib/sets/customOrderSets";
 
 /** Copy the saved addon snapshot, including quantity, onto the production order. */
 function copySelectedAddons(addons: SelectedAddon[] | undefined): SelectedAddon[] {
@@ -30,6 +31,58 @@ function copySelectedAddons(addons: SelectedAddon[] | undefined): SelectedAddon[
     }
     return copy;
   });
+}
+
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+async function flavorIdForName(db: any, name: string): Promise<string> {
+  const flavorDoc = await db.collection("flavors").findOne({
+    name: { $regex: new RegExp(`^${escapeRegex(name)}$`, "i") },
+  });
+  return flavorDoc ? String(flavorDoc._id) : name;
+}
+
+/** Carries a custom-request catalog set onto the production line. Lines without a set are unchanged. */
+async function convertedSetConfig(db: any, item: CustomOrderItem, categoryDoc: any) {
+  const setId = item.details?.setId;
+  if (!setId || !ObjectId.isValid(String(setId)) || !categoryDoc) return undefined;
+  if (categoryDoc.categoryType !== "set" && categoryDoc.categoryType !== "combo") return undefined;
+
+  const setDoc = await db.collection("sets").findOne(
+    { _id: new ObjectId(String(setId)) },
+    { projection: { name: 1, pieceCount: 1, categoryIds: 1 } }
+  );
+  const linked = (setDoc?.categoryIds ?? []).map(String).includes(String(categoryDoc._id));
+  if (!setDoc || !linked) return undefined;
+
+  const flavorText = String(item.details?.flavor ?? "");
+  const categoryType = categoryDoc.categoryType as "set" | "combo";
+  const treats = await Promise.all(
+    customOrderFlavorNames(flavorText, categoryType).map(async (name) => ({
+      flavorId: await flavorIdForName(db, name),
+      count: 1,
+    }))
+  );
+  const cakeName = categoryType === "combo" ? customOrderCakeFlavorName(flavorText) : undefined;
+
+  return {
+    setId: String(setDoc._id),
+    setName: String(setDoc.name ?? ""),
+    pieceCount: setDoc.pieceCount,
+    quantityConfigId: String(setDoc.name ?? ""),
+    items: treats,
+    ...(cakeName
+      ? {
+          cake: {
+            flavorId: await flavorIdForName(db, cakeName),
+            diameterId: "",
+            inscription: item.details?.textOnCake,
+          },
+        }
+      : {}),
+  };
 }
 
 /**
@@ -112,6 +165,8 @@ async function buildOrderItemFromCustomItem(
     if (shapeDoc) resolvedShapeId = new ObjectId(shapeDoc._id);
   }
 
+  const selectedConfig = await convertedSetConfig(db, item, categoryDoc);
+
   return {
     id: `${newOrderId.toString()}-custom-${index + 1}`,
     name: `Custom ${categoryDoc?.name ?? item.category}`,
@@ -136,6 +191,7 @@ async function buildOrderItemFromCustomItem(
     designInstructions: item.details?.designNotes,
     flavorNote: item.details?.flavorNote,
     categoryId: resolvedCategoryId,
+    ...(selectedConfig ? { selectedConfig } : {}),
     addons: copySelectedAddons(item.addons),
     designQuote:
       designQuote != null && !Number.isNaN(designQuote) && designQuote > 0
