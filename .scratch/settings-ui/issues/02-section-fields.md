@@ -4,13 +4,14 @@
 
 **Blocked by:** 01: Settings accordion shell
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Inputs and text areas use the shared field height and `rounded-xl`
-- [ ] Each switch row is one target about 44px tall
-- [ ] Placeholders end with …
-- [ ] An invalid e-transfer email opens Payment, focuses the field, and shows the message that already blocks save
-- [ ] Create, update, and the request body behave as they do today
+- [x] Inputs and text areas use the shared field height and `rounded-xl`
+- [x] Each switch row is one target about 44px tall
+- [x] Placeholders end with …
+- [x] An invalid e-transfer email opens Payment, focuses the field, and shows the message that already blocks save
+- [x] Create, update, and the request body behave as they do today
 
 **Notes:**
-- Depends on the accordion so the error can open the Payment section.
+- The email error is `eTransferEmail` on the form, the same Zod check that already blocked save.
+- `npx tsc --noEmit` passed. The admin page needs Google sign-in, so the form was not opened in the browser.

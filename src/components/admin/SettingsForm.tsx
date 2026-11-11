@@ -10,7 +10,8 @@ import { useAlert } from "@/contexts/AlertContext";
 import { cn } from "@/lib/utils";
 import { ChevronDown, CreditCard, Loader2, MessageCircle, Store, Truck } from "lucide-react";
 import { useState, type ReactNode } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, type FieldErrors } from "react-hook-form";
+import { catalogFieldClass } from "@/components/admin/catalog/CatalogFormChrome";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 
@@ -88,6 +89,34 @@ function SummaryPill({ children }: { children: ReactNode }) {
     <span className="inline-flex max-w-full items-center rounded-full border border-primary/15 bg-background/70 px-2.5 py-0.5 text-xs font-medium text-primary">
       <span className="max-w-[14rem] truncate">{children}</span>
     </span>
+  );
+}
+
+const settingsTextareaClass =
+  "min-h-[120px] rounded-xl border-primary/15 bg-background/40";
+
+function SwitchRow({
+  id,
+  title,
+  description,
+  children,
+}: {
+  id: string;
+  title: string;
+  description: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="relative">
+      <Label
+        htmlFor={id}
+        className="flex min-h-11 w-full cursor-pointer flex-col justify-center rounded-xl border border-primary/10 bg-background/40 px-3 py-2 pr-16"
+      >
+        <span className="text-base font-semibold text-primary">{title}</span>
+        <span className="text-sm font-normal text-primary/60">{description}</span>
+      </Label>
+      <div className="absolute right-3 top-1/2 -translate-y-1/2">{children}</div>
+    </div>
   );
 }
 
@@ -175,7 +204,7 @@ export default function SettingsForm({ initialSettings }: SettingsFormProps) {
     },
   });
 
-  const { control, watch, handleSubmit, formState: { isSubmitting, isDirty } } = form;
+  const { control, watch, handleSubmit, setFocus, formState: { isSubmitting, isDirty, errors } } = form;
 
   const isAcceptingOrders = watch("store.isAcceptingOrders");
   const isDeliveryEnabled = watch("checkout.isDeliveryEnabled");
@@ -195,6 +224,15 @@ export default function SettingsForm({ initialSettings }: SettingsFormProps) {
   };
 
   const emailSummary = (eTransferEmail ?? "").trim();
+
+  const onInvalid = (formErrors: FieldErrors<SettingsFormValues>) => {
+    if (!formErrors.eTransferEmail) return;
+    setOpenSections((current) => ({ ...current, payment: true }));
+    // The email field is inside a closed panel; focus it after that panel is shown.
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => setFocus("eTransferEmail"));
+    });
+  };
 
   const onSubmit = async (data: SettingsFormValues) => {
     try {
@@ -217,7 +255,7 @@ export default function SettingsForm({ initialSettings }: SettingsFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-4">
       <SettingsSection
         id="bakery-status"
         title="Bakery Status"
@@ -232,15 +270,11 @@ export default function SettingsForm({ initialSettings }: SettingsFormProps) {
         }
       >
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label htmlFor="accept-orders-toggle" className="text-base font-semibold">
-                Accept New Orders
-              </Label>
-              <p className="text-sm text-muted-foreground">
-                Turn off to temporarily stop accepting orders.
-              </p>
-            </div>
+          <SwitchRow
+            id="accept-orders-toggle"
+            title="Accept New Orders"
+            description="Turn off to temporarily stop accepting orders."
+          >
             <Controller
               control={control}
               name="store.isAcceptingOrders"
@@ -252,7 +286,7 @@ export default function SettingsForm({ initialSettings }: SettingsFormProps) {
                 />
               )}
             />
-          </div>
+          </SwitchRow>
 
           {!isAcceptingOrders && (
             <div className="space-y-2">
@@ -267,8 +301,8 @@ export default function SettingsForm({ initialSettings }: SettingsFormProps) {
                   <Textarea
                     id="vacation-message"
                     {...field}
-                    placeholder="e.g. We are currently closed for the holidays..."
-                    className="min-h-[100px]"
+                    placeholder="e.g. We are currently closed for the holidays…"
+                    className={settingsTextareaClass}
                   />
                 )}
               />
@@ -300,11 +334,11 @@ export default function SettingsForm({ initialSettings }: SettingsFormProps) {
         <div className="space-y-8">
           {/* Delivery Configuration */}
           <div className="space-y-6">
-            <div className="flex items-center justify-between border-b pb-4">
-              <div className="space-y-0.5">
-                <Label htmlFor="delivery-toggle" className="text-base font-semibold">Enable Delivery</Label>
-                <p className="text-sm text-muted-foreground">Allow customers to choose local delivery.</p>
-              </div>
+            <SwitchRow
+              id="delivery-toggle"
+              title="Enable Delivery"
+              description="Allow customers to choose local delivery."
+            >
               <Controller
                 control={control}
                 name="checkout.isDeliveryEnabled"
@@ -313,10 +347,10 @@ export default function SettingsForm({ initialSettings }: SettingsFormProps) {
                     id="delivery-toggle"
                     checked={field.value}
                     onCheckedChange={field.onChange}
-                  />
-                )}
-              />
-            </div>
+                />
+              )}
+            />
+            </SwitchRow>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
@@ -338,6 +372,7 @@ export default function SettingsForm({ initialSettings }: SettingsFormProps) {
                         )
                       }
                       value={rest.value ?? ""}
+                      className={catalogFieldClass}
                     />
                   )}
                 />
@@ -361,6 +396,7 @@ export default function SettingsForm({ initialSettings }: SettingsFormProps) {
                         )
                       }
                       value={rest.value ?? ""}
+                      className={catalogFieldClass}
                     />
                   )}
                 />
@@ -371,7 +407,7 @@ export default function SettingsForm({ initialSettings }: SettingsFormProps) {
                   control={control}
                   name="checkout.disabledMessage"
                   render={({ field }) => (
-                    <Input id="disabled-message" {...field} value={field.value ?? ""} placeholder="e.g. Delivery is currently disabled" />
+                    <Input id="disabled-message" {...field} value={field.value ?? ""} placeholder="e.g. Delivery is currently disabled" className={catalogFieldClass} />
                   )}
                 />
               </div>
@@ -385,8 +421,8 @@ export default function SettingsForm({ initialSettings }: SettingsFormProps) {
                       id="delivery-instructions" 
                       {...field} 
                       value={field.value ?? ""} 
-                      placeholder="e.g. Please leave deliveries at the front desk..." 
-                      className="min-h-[100px]"
+                      placeholder="e.g. Please leave deliveries at the front desk…" 
+                      className={settingsTextareaClass}
                     />
                   )}
                 />
@@ -396,11 +432,11 @@ export default function SettingsForm({ initialSettings }: SettingsFormProps) {
 
           {/* Pickup Configuration */}
           <div className="space-y-6 pt-2">
-            <div className="flex items-center justify-between border-b pb-4">
-              <div className="space-y-0.5">
-                <Label htmlFor="pickup-toggle" className="text-base font-semibold">Enable Pickup</Label>
-                <p className="text-sm text-muted-foreground">Allow customers to collect their orders from your location.</p>
-              </div>
+            <SwitchRow
+              id="pickup-toggle"
+              title="Enable Pickup"
+              description="Allow customers to collect their orders from your location."
+            >
               <Controller
                 control={control}
                 name="checkout.isPickupEnabled"
@@ -409,10 +445,10 @@ export default function SettingsForm({ initialSettings }: SettingsFormProps) {
                     id="pickup-toggle"
                     checked={field.value}
                     onCheckedChange={field.onChange}
-                  />
-                )}
-              />
-            </div>
+                />
+              )}
+            />
+            </SwitchRow>
 
             <div className="space-y-4">
               <div className="space-y-2">
@@ -421,7 +457,7 @@ export default function SettingsForm({ initialSettings }: SettingsFormProps) {
                   control={control}
                   name="checkout.pickupAddress"
                   render={({ field }) => (
-                    <Input id="pickup-address" {...field} value={field.value ?? ""} placeholder="Enter full pickup address" />
+                    <Input id="pickup-address" {...field} value={field.value ?? ""} placeholder="Enter full pickup address" className={catalogFieldClass} />
                   )}
                 />
               </div>
@@ -436,7 +472,7 @@ export default function SettingsForm({ initialSettings }: SettingsFormProps) {
                       {...field} 
                       value={field.value ?? ""}
                       placeholder="e.g. Ring the doorbell and have your order number ready."
-                      className="min-h-[100px]"
+                      className={settingsTextareaClass}
                     />
                   )}
                 />
@@ -458,11 +494,11 @@ export default function SettingsForm({ initialSettings }: SettingsFormProps) {
         }
       >
         <div className="space-y-6">
-          <div className="flex items-center justify-between border-b pb-4">
-            <div className="space-y-0.5">
-              <Label htmlFor="live-chat-toggle" className="text-base font-semibold">Enable Live Chat</Label>
-              <p className="text-sm text-muted-foreground">Toggle the visual assistant chat widget on the frontend.</p>
-            </div>
+          <SwitchRow
+            id="live-chat-toggle"
+            title="Enable Live Chat"
+            description="Toggle the visual assistant chat widget on the frontend."
+          >
             <Controller
               control={control}
               name="support.isLiveChatEnabled"
@@ -474,7 +510,7 @@ export default function SettingsForm({ initialSettings }: SettingsFormProps) {
                 />
               )}
             />
-          </div>
+          </SwitchRow>
 
           <div className="space-y-2">
             <Label htmlFor="bot-greeting">Bot Greeting Message</Label>
@@ -486,8 +522,8 @@ export default function SettingsForm({ initialSettings }: SettingsFormProps) {
                   id="bot-greeting" 
                   {...field} 
                   value={field.value ?? ""}
-                  placeholder="e.g. Priwiet! Ya virtualnyi pomichnik..."
-                  className="min-h-[100px]"
+                  placeholder="e.g. Priwiet! Ya virtualnyi pomichnik…"
+                  className={settingsTextareaClass}
                 />
               )}
             />
@@ -521,12 +557,25 @@ export default function SettingsForm({ initialSettings }: SettingsFormProps) {
                 <Input
                   id="e-transfer-email"
                   type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  spellCheck={false}
                   {...field}
                   value={field.value ?? ""}
                   placeholder="payments@yourdomain.com"
+                  className={catalogFieldClass}
+                  aria-invalid={errors.eTransferEmail ? true : undefined}
+                  aria-describedby={
+                    errors.eTransferEmail ? "e-transfer-email-error" : undefined
+                  }
                 />
               )}
             />
+            {errors.eTransferEmail?.message ? (
+              <p id="e-transfer-email-error" role="alert" className="text-sm text-error">
+                {errors.eTransferEmail.message}
+              </p>
+            ) : null}
           </div>
         </div>
       </SettingsSection>
