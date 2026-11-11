@@ -126,8 +126,8 @@ export function OrderToolsDrawer({
                   />
                 </div>
 
-                <header className="shrink-0 border-b border-primary/10 px-4 pb-3 pt-1 md:pt-4">
-                  <Dialog.Title className="font-heading text-lg font-semibold text-primary">
+                <header className="shrink-0 border-b border-primary/10 px-4 pb-3 pr-16 pt-1 md:pt-4">
+                  <Dialog.Title className="min-w-0 break-words font-heading text-lg font-semibold text-primary">
                     Tools
                   </Dialog.Title>
                   <Dialog.Description className="mt-1 text-sm text-primary/65">
@@ -143,20 +143,20 @@ export function OrderToolsDrawer({
                       rel="noopener noreferrer"
                       className={cn(
                         buttonVariants({ variant: "outline" }),
-                        "w-full justify-start border-primary/15 bg-background/30"
+                        "h-11 w-full justify-start rounded-xl border-primary/15 bg-background/30 sm:h-10"
                       )}
                       onClick={() => onOpenChange(false)}
                     >
-                      <Printer className="mr-2 h-4 w-4" aria-hidden />
+                      <Printer className="mr-2 h-4 w-4 shrink-0" aria-hidden />
                       Print production sheet
                     </Link>
                     <Button
                       type="button"
                       variant="outline"
-                      className="w-full justify-start border-primary/15 bg-background/30"
+                      className="h-11 w-full justify-start rounded-xl border-primary/15 bg-background/30 sm:h-10"
                       onClick={handleReceipt}
                     >
-                      <Receipt className="mr-2 h-4 w-4" aria-hidden />
+                      <Receipt className="mr-2 h-4 w-4 shrink-0" aria-hidden />
                       Preview receipt
                     </Button>
                     {!isPaid && (
@@ -164,22 +164,22 @@ export function OrderToolsDrawer({
                         <Button
                           type="button"
                           variant="outline"
-                          className="w-full justify-start border-primary/15 bg-background/30"
+                          className="h-11 w-full justify-start rounded-xl border-primary/15 bg-background/30 sm:h-10"
                           disabled={isGeneratingToken}
                           onClick={onCopyPaymentLink}
                         >
-                          <Copy className="mr-2 h-4 w-4" aria-hidden />
+                          <Copy className="mr-2 h-4 w-4 shrink-0" aria-hidden />
                           {isGeneratingToken
                             ? "Generating link…"
                             : "Copy payment link"}
                         </Button>
                         <Button
                           type="button"
-                          className="w-full justify-start bg-green-600 text-white hover:bg-green-700"
+                          className="h-11 w-full justify-start rounded-xl bg-green-600 text-white hover:bg-green-700 sm:h-10"
                           disabled={isMarkingPaid}
                           onClick={onMarkAsPaid}
                         >
-                          <CheckCircle2 className="mr-2 h-4 w-4" aria-hidden />
+                          <CheckCircle2 className="mr-2 h-4 w-4 shrink-0" aria-hidden />
                           {isMarkingPaid ? "Updating…" : "Mark as paid"}
                         </Button>
                       </>
@@ -190,10 +190,10 @@ export function OrderToolsDrawer({
                 <Dialog.Close asChild>
                   <button
                     type="button"
-                    className="absolute right-3 top-3 rounded-full p-1.5 text-primary/60 transition-colors hover:bg-background/60 md:top-4"
+                    className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-xl text-primary/60 transition-colors hover:bg-background/60 sm:h-10 sm:w-10 md:top-4"
                   >
                     <span className="sr-only">Close</span>
-                    <X className="h-5 w-5" />
+                    <X className="h-4 w-4 shrink-0" />
                   </button>
                 </Dialog.Close>
               </motion.div>

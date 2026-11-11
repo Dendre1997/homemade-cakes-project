@@ -5,11 +5,14 @@ import {
   socialPlatformLabel,
 } from "@/lib/socialLinks";
 import { Button, buttonVariants } from "@/components/ui/Button";
+import { cn } from "@/lib/utils";
 
 interface SocialHandleAnchorProps {
   platform?: string;
   nickname?: string;
   className?: string;
+  /** Taller tap target for the production order customer card. */
+  comfortable?: boolean;
   /** If true, prefix with platform name (e.g. "Instagram · ") */
   showPlatform?: boolean;
 }
@@ -25,6 +28,7 @@ export function SocialHandleAnchor({
   platform,
   nickname,
   className = "text-primary font-medium hover:underline",
+  comfortable = false,
   showPlatform = false,
 }: SocialHandleAnchorProps) {
   const clean = getSocialLinkDisplayHandle(platform, nickname);
@@ -42,7 +46,10 @@ export function SocialHandleAnchor({
         href={url}
         target="_blank"
         rel="noopener noreferrer"
-        className={buttonVariants({ variant: "primary", size: "sm", className })}
+        className={cn(
+          buttonVariants({ variant: "primary", size: "sm" }),
+          comfortable && "h-11 min-w-0 max-w-full rounded-xl sm:h-10"
+        )}
       >
         {prefix}
       </a>
@@ -55,7 +62,10 @@ export function SocialHandleAnchor({
       <Button
         variant="primary"
         size="sm"
-        className="pointer-events-none"
+        className={cn(
+          "pointer-events-none",
+          comfortable && "h-11 min-w-0 max-w-full rounded-xl sm:h-10"
+        )}
         tabIndex={-1}
       >
         {prefix.trimEnd()}

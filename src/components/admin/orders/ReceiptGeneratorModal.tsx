@@ -235,7 +235,7 @@ export function ReceiptGeneratorModal({ isOpen, onClose, order, diameters, shape
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-[95vw] md:max-w-5xl w-full h-[95vh] md:h-[85vh] p-0 overflow-hidden flex flex-col md:flex-row bg-card-background border-none rounded-xl shadow-2xl [&>button]:hidden">
+      <DialogContent className="flex h-[95vh] w-full max-w-[95vw] flex-col overflow-hidden overscroll-contain rounded-xl border-none bg-card-background p-0 shadow-2xl md:h-[85vh] md:max-w-5xl md:flex-row [&>button]:hidden">
          
          {/* LEFT COLUMN: PREVIEW */}
          <div 
@@ -246,7 +246,7 @@ export function ReceiptGeneratorModal({ isOpen, onClose, order, diameters, shape
             <Button 
                 onClick={onClose} 
                 variant="ghost" 
-                className="md:hidden absolute top-4 right-4 z-20 text-primary bg-white/50 backdrop-blur-sm shadow-sm hover:bg-white/80"
+                className="absolute right-4 top-4 z-20 h-11 rounded-xl bg-white/50 text-primary shadow-sm backdrop-blur-sm hover:bg-white/80 sm:h-10 md:hidden"
             >
                 Close
             </Button>
@@ -288,10 +288,10 @@ export function ReceiptGeneratorModal({ isOpen, onClose, order, diameters, shape
                         <span className="font-mono text-xs font-semibold ml-1">#{order._id.toString().slice(-6).toUpperCase()}</span>.
                     </p>
                 </div>
-                <Button onClick={onClose} variant="ghost" className="hidden md:flex -mr-2 text-primary hover:bg-subtleBackground">Close</Button>
+                <Button onClick={onClose} variant="ghost" className="hidden h-11 shrink-0 rounded-xl text-primary hover:bg-subtleBackground sm:h-10 md:flex">Close</Button>
              </div>
              
-             <div className="flex-1 p-6 overflow-y-auto">
+             <div className="flex-1 overflow-y-auto overscroll-contain p-6">
                  <div className="text-sm text-primary/60">
                      <p className="mt-4 italic">
                         Sensitive admin data and raw database IDs are securely scrubbed from the final image.
@@ -305,9 +305,9 @@ export function ReceiptGeneratorModal({ isOpen, onClose, order, diameters, shape
                     onClick={handleDownload} 
                     disabled={isGenerating} 
                     variant="primary"
-                    className="w-full h-12 text-base shadow-lg transition-all font-semibold"
+                    className="h-11 w-full rounded-xl text-base font-semibold shadow-lg transition-colors sm:h-10"
                  >
-                    {isGenerating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+                    {isGenerating ? <Loader2 className="mr-2 h-4 w-4 shrink-0 animate-spin" /> : <Download className="mr-2 h-4 w-4 shrink-0" />}
                     Download Receipt PNG
                 </Button>
              </div>

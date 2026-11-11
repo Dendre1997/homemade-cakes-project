@@ -114,12 +114,12 @@ export function OrderAssignmentMonthCalendar({
           <PopoverPrimitive.Portal>
             <PopoverPrimitive.Content
               sideOffset={5}
-              className="z-50 w-64 rounded-xl border border-primary/15 bg-card p-3 shadow-md outline-none"
+              className="z-50 w-[min(16rem,calc(100vw-2rem))] overscroll-contain rounded-xl border border-primary/15 bg-card p-3 shadow-md outline-none"
               align="center"
               onOpenAutoFocus={(e) => e.preventDefault()}
             >
               <div className="mb-2 flex items-center justify-between">
-                <p className="flex-grow text-center text-sm font-semibold text-primary">
+                <p className="min-w-0 flex-grow break-words text-center text-sm font-semibold text-primary">
                   Assign to{" "}
                   {formatBakeryDate(dateKey, {
                     month: "short",
@@ -130,14 +130,14 @@ export function OrderAssignmentMonthCalendar({
                   <button
                     type="button"
                     aria-label="Close"
-                    className="rounded-full p-1 hover:bg-muted"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl hover:bg-muted sm:h-10 sm:w-10"
                     onClick={() => setPopupDate?.(null)}
                   >
-                    <X className="h-4 w-4 text-primary/80" />
+                    <X className="h-4 w-4 shrink-0 text-primary/80" />
                   </button>
                 </PopoverPrimitive.Close>
               </div>
-              <div className="max-h-60 space-y-2 overflow-y-auto pr-1">
+              <div className="max-h-60 space-y-2 overflow-y-auto overscroll-contain pr-1">
                 {unallocatedItems.length > 0 ? (
                   unallocatedItems.map((item) => (
                     <div
@@ -145,7 +145,7 @@ export function OrderAssignmentMonthCalendar({
                       className="flex items-center justify-between rounded-lg bg-background p-2"
                     >
                       <div className="min-w-0 pr-2">
-                        <p className="text-sm font-bold text-primary">
+                        <p className="break-words text-sm font-bold text-primary">
                           {item.name}
                         </p>
                         <OrderItemTiersDisplay
@@ -157,7 +157,7 @@ export function OrderAssignmentMonthCalendar({
                       </div>
                       <Button
                         type="button"
-                        size="sm"
+                        className="h-11 shrink-0 rounded-xl sm:h-10"
                         variant="secondary"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -217,6 +217,8 @@ export function OrderAssignmentMonthCalendar({
         monthKey={monthKey}
         onMonthChange={setMonthKey}
         paddingCellClassName="min-h-14"
+        navButtonClassName="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl p-0 text-primary transition-colors hover:bg-background/40 sm:h-10 sm:w-10"
+        navIconClassName="h-4 w-4 shrink-0"
         renderDay={(dateKey) => renderDayButton(dateKey)}
       />
     </div>

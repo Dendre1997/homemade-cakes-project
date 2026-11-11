@@ -122,7 +122,7 @@ export const OrderDetailActions = ({
           )}
           <Button
             onClick={handleConfirmDates}
-            className="w-full"
+            className="h-11 w-full rounded-xl sm:h-10"
             variant="primary"
             disabled={!adminSelectedSingleDate || isConfirmingDate || isLoading}
           >
@@ -130,7 +130,7 @@ export const OrderDetailActions = ({
           </Button>
           <Button
             onClick={() => setNewStatus(OrderStatus.CANCELLED)}
-            className="w-full"
+            className="h-11 w-full rounded-xl sm:h-10"
             variant="text"
             disabled={isConfirmingDate || isLoading}
           >
@@ -139,7 +139,7 @@ export const OrderDetailActions = ({
           {newStatus === OrderStatus.CANCELLED && (
             <Button
               onClick={handleStatusUpdate}
-              className="w-full"
+              className="h-11 w-full rounded-xl sm:h-10"
               variant="danger"
               disabled={isLoading}
             >
@@ -161,7 +161,7 @@ export const OrderDetailActions = ({
               value={order.source ?? ""}
               onValueChange={(value) => onSourceUpdate(value)}
             >
-              <SelectTrigger className="w-full bg-white">
+              <SelectTrigger className="h-11 w-full rounded-xl bg-white sm:h-10">
                 <SelectValue placeholder="Select Source" />
               </SelectTrigger>
               <SelectContent>
@@ -183,14 +183,14 @@ export const OrderDetailActions = ({
                   <div className="flex flex-col gap-md">
                     <Button
                       onClick={handleSetEditModeSingle}
-                      className="flex-1"
+                      className="h-11 flex-1 rounded-xl sm:h-10"
                       variant="secondary"
                     >
                       Assign All to One Date
                     </Button>
                     <Button
                       onClick={handleSetEditModeSplit}
-                      className="flex-1"
+                      className="h-11 flex-1 rounded-xl sm:h-10"
                       variant="secondary"
                     >
                       Split Across Dates
@@ -198,7 +198,7 @@ export const OrderDetailActions = ({
                   </div>
                   <Button
                     onClick={handleToggleEditDates}
-                    className="w-full"
+                    className="h-11 w-full rounded-xl sm:h-10"
                     variant="text"
                   >
                     Cancel Edit
@@ -215,7 +215,7 @@ export const OrderDetailActions = ({
                     <Button
                       onClick={handleBackToModeSelection}
                       variant="text"
-                      size="sm"
+                      className="h-11 shrink-0 rounded-xl sm:h-10"
                     >
                       &larr; Back
                     </Button>
@@ -229,7 +229,7 @@ export const OrderDetailActions = ({
                       onSelect={handleAdminDateSelect}
                     />
                   ) : (
-                    <div className="flex justify-center p-lg">saving...</div>
+                    <div className="flex justify-center p-lg">saving…</div>
                   )}
                   {adminSelectedSingleDate && (
                     <p className="text-center font-body text-primary text-sm">
@@ -242,7 +242,7 @@ export const OrderDetailActions = ({
                   <div className="flex-col">
                     <Button
                       onClick={handleSaveSingleDate}
-                      className="w-full mb-1"
+                      className="mb-1 h-11 w-full rounded-xl sm:h-10"
                       variant="primary"
                       disabled={
                         !adminSelectedSingleDate ||
@@ -250,12 +250,12 @@ export const OrderDetailActions = ({
                         isLoading
                       }
                     >
-                      {isConfirmingDate ? "Saving..." : "Save New Date"}
+                      {isConfirmingDate ? "Saving…" : "Save New Date"}
                     </Button>
                     <Button
                       onClick={handleToggleEditDates}
                         variant="secondary"
-                        className="w-full"
+                        className="h-11 w-full rounded-xl sm:h-10"
                       disabled={isConfirmingDate || isLoading}
                     >
                       Cancel Edit
@@ -273,7 +273,7 @@ export const OrderDetailActions = ({
                     <Button
                       onClick={handleBackToModeSelection}
                       variant="text"
-                      size="sm"
+                      className="h-11 shrink-0 rounded-xl sm:h-10"
                     >
                       &larr; Back
                     </Button>
@@ -292,7 +292,7 @@ export const OrderDetailActions = ({
                       onAllocateItem={handleAdminAllocateItem}
                     />
                   ) : (
-                    <div className="flex justify-center p-lg">Saving...</div>
+                    <div className="flex justify-center p-lg">Saving…</div>
                   )}
 
                   <div className="my-lg">
@@ -300,7 +300,7 @@ export const OrderDetailActions = ({
                       Currently Allocated (Editing)
                     </h4>
                     {editedDeliveryDates.length > 0 ? (
-                      <div className="space-y-md max-h-60 overflow-y-auto pr-sm border border-border p-sm rounded-medium">
+                      <div className="space-y-md max-h-60 overflow-y-auto overscroll-contain pr-sm border border-border p-sm rounded-medium">
                         {editedDeliveryDates
                           .sort((a, b) => a.date.getTime() - b.date.getTime())
                           .map((entry) => (
@@ -314,26 +314,26 @@ export const OrderDetailActions = ({
                                   return (
                                     <div
                                       key={unitId}
-                                      className="flex items-center justify-between p-xs bg-background rounded-small"
+                                      className="flex min-w-0 items-center justify-between gap-2 rounded-small bg-background p-xs"
                                     >
                                       {itemDetails ? (
-                                        <div>
-                                          <p className="font-body text-small font-bold">
+                                        <div className="min-w-0">
+                                          <p className="break-words font-body text-small font-bold">
                                             {itemDetails.name}
                                           </p>
-                                          <p className="font-body text-xs text-primary/80">
+                                          <p className="break-words font-body text-xs text-primary/80">
                                             {itemDetails.flavor}
                                           </p>
                                         </div>
                                       ) : (
-                                        <p className="font-body text-small text-muted-foreground">
+                                        <p className="min-w-0 break-words font-body text-small text-muted-foreground">
                                           Item details not found
                                         </p>
                                       )}
                                       <Button
                                         type="button"
-                                        size="sm"
                                         variant="danger"
+                                        className="h-11 shrink-0 rounded-xl sm:h-10"
                                         onClick={() =>
                                           handleAdminUnallocateItem(
                                             unitId,
@@ -362,10 +362,10 @@ export const OrderDetailActions = ({
                       </p>
                     )}
                   </div>
-                  <div className="flex gap-md">
+                  <div className="flex flex-col gap-2 sm:flex-row">
                     <Button
                       onClick={handleSaveSplitDates}
-                      className="flex-1"
+                      className="h-11 flex-1 rounded-xl sm:h-10"
                       variant="primary"
                       disabled={
                         adminUnallocatedItems.length > 0 ||
@@ -373,11 +373,11 @@ export const OrderDetailActions = ({
                         isLoading
                       }
                     >
-                      {isConfirmingDate ? "Saving..." : "Save Changes"}
+                      {isConfirmingDate ? "Saving…" : "Save Changes"}
                     </Button>
                     <Button
                       onClick={handleToggleEditDates}
-                      className="flex-1"
+                      className="h-11 flex-1 rounded-xl sm:h-10"
                       variant="secondary"
                       disabled={isConfirmingDate || isLoading}
                     >
@@ -409,7 +409,7 @@ export const OrderDetailActions = ({
                       setNewStatus(value as OrderStatus)
                     }
                   >
-                    <SelectTrigger id="status-select">
+                    <SelectTrigger id="status-select" className="h-11 rounded-xl sm:h-10">
                       <SelectValue placeholder="Select new status…" />
                     </SelectTrigger>
                     <SelectContent>
@@ -430,7 +430,7 @@ export const OrderDetailActions = ({
                 </div>
                 <Button
                   onClick={handleStatusUpdate}
-                  className="w-full"
+                  className="h-11 w-full rounded-xl sm:h-10"
                   disabled={
                     isLoading || newStatus === order.status || !newStatus
                   }
@@ -445,7 +445,7 @@ export const OrderDetailActions = ({
                 order.deliveryInfo.deliveryDates.length > 0 && (
                   <Button
                     onClick={handleToggleEditDates}
-                    className="w-full"
+                    className="h-11 w-full rounded-xl sm:h-10"
                     variant="secondary"
                     disabled={isLoading || isConfirmingDate}
                   >

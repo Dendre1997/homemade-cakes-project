@@ -105,19 +105,18 @@ const OrderDetailAssignedDates = ({ order }: OrderDetailAssignedDatesProps) => {
             )
             .map((entry) => (
               <div key={new Date(entry.date).toISOString() + entry.timeSlot}>
-                <div className="flex justify-between items-center mb-2 flex-col md:flex-row">
-                  <p className="font-body font-bold text-primary">
+                <div className="flex min-w-0 flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                  <p className="min-w-0 break-words font-body font-bold text-primary">
                     {formatOrderDeliveryDateLabel(entry.date)}
                   </p>
 
                   <Button
                     type="button"
                     variant="text"
-                    size="sm"
-                    className="text-accent"
+                    className="h-11 shrink-0 rounded-xl text-accent sm:h-10"
                     onClick={() => handleOpenModal(entry)}
                   >
-                    <Clock className="h-4 w-4 mr-sm" />
+                    <Clock className="mr-sm h-4 w-4 shrink-0" />
                     {entry.timeSlot} (Change)
                   </Button>
                 </div>
@@ -144,8 +143,8 @@ const OrderDetailAssignedDates = ({ order }: OrderDetailAssignedDatesProps) => {
 
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
-        <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-card-background p-lg rounded-large shadow-lg w-full max-w-sm z-50">
-          <Dialog.Title className="font-heading text-h3 text-primary">
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 max-h-[90vh] w-[calc(100vw-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 overflow-y-auto overscroll-contain rounded-xl bg-card-background p-lg shadow-lg">
+          <Dialog.Title className="min-w-0 break-words pr-12 font-heading text-h3 text-primary">
             {`change ${order.deliveryInfo.method} time`}
           </Dialog.Title>
           <p className="font-body text-primary/80 text-small mb-md">
@@ -153,6 +152,7 @@ const OrderDetailAssignedDates = ({ order }: OrderDetailAssignedDatesProps) => {
             {editingEntry ? format(new Date(editingEntry.date), "MMM d") : ""}.
           </p>
           <TimeSlotManager
+            comfortable
             value={newTimeSlots}
             onChange={(newSlots: string[]) => {
               if (newSlots.length > newTimeSlots.length) {
@@ -171,11 +171,12 @@ const OrderDetailAssignedDates = ({ order }: OrderDetailAssignedDatesProps) => {
             }}
           />
 
-          <div className="mt-lg flex justify-end gap-md">
+          <div className="mt-lg flex flex-col gap-2 sm:flex-row sm:justify-end">
             <Button
               variant="secondary"
               onClick={() => setIsModalOpen(false)}
               disabled={isSaving}
+              className="h-11 rounded-xl sm:h-10"
             >
               Cancel
             </Button>
@@ -183,15 +184,16 @@ const OrderDetailAssignedDates = ({ order }: OrderDetailAssignedDatesProps) => {
               variant="primary"
               onClick={handleSaveTimeSlot}
               disabled={isSaving}
+              className="h-11 rounded-xl sm:h-10"
             >
-              {isSaving ? "Saving..." : "Save Slot"}
+              {isSaving ? "Saving…" : "Save Slot"}
             </Button>
           </div>
 
           <Dialog.Close asChild>
-            <button className="absolute top-md right-md p-1 rounded-full transition-colors text-primary/60 hover:bg-subtleBackground">
+            <button className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-xl text-primary/60 transition-colors hover:bg-subtleBackground sm:h-10 sm:w-10">
               <span className="sr-only">Close</span>
-              <X className="h-5 w-5" />
+              <X className="h-4 w-4 shrink-0" />
             </button>
           </Dialog.Close>
         </Dialog.Content>

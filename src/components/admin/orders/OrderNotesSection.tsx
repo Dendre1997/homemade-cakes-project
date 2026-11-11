@@ -123,23 +123,23 @@ export const OrderNotesSection = ({
           </label>
           <div className="relative">
             <Textarea
-              placeholder="Write an note about this order (e.g., 'Customer confirmed pickup time change via phone')..."
+              placeholder="Write an note about this order (e.g., 'Customer confirmed pickup time change via phone')…"
               value={noteContent}
               onChange={(e) => setNoteContent(e.target.value)}
               rows={3}
-              className="resize-none pr-12 focus-visible:ring-primary"
+              className="resize-none rounded-xl pb-16 focus-visible:ring-primary"
               disabled={isPending}
             />
             <Button
               onClick={handleAddNote}
               disabled={!noteContent.trim() || isPending}
-              size="icon"
-              className="absolute bottom-2 right-2 h-8 w-8 rounded-full"
+              className="absolute bottom-2 right-2 h-11 w-11 rounded-xl p-0 sm:h-10 sm:w-10"
+              aria-label="Add note"
             >
               {isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
               ) : (
-                <Send className="h-4 w-4" />
+                <Send className="h-4 w-4 shrink-0" />
               )}
             </Button>
           </div>
@@ -156,7 +156,7 @@ export const OrderNotesSection = ({
               No notes added yet.
             </div>
           ) : (
-            <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+            <div className="space-y-3 max-h-[400px] overflow-y-auto overscroll-contain pr-2 custom-scrollbar">
               {sortedNotes.map((note) => (
                 <div
                   key={note.id}
@@ -168,27 +168,27 @@ export const OrderNotesSection = ({
                       <Textarea
                         value={editedContent}
                         onChange={(e) => setEditedContent(e.target.value)}
-                        className="min-h-[80px] text-sm resize-y"
+                        className="min-h-[80px] resize-y rounded-xl text-sm"
                       />
-                      <div className="flex justify-end gap-2">
+                      <div className="flex flex-wrap justify-end gap-2">
                         <Button
-                          size="sm"
                           variant="ghost"
                           onClick={handleCancelEdit}
                           disabled={isPending}
+                          className="h-11 rounded-xl sm:h-10"
                         >
-                          <X className="w-4 h-4 mr-1" /> Cancel
+                          <X className="mr-1 h-4 w-4 shrink-0" /> Cancel
                         </Button>
                         <Button
-                          size="sm"
                           variant="default"
                           onClick={() => handleSaveEdit(note.id)}
                           disabled={isPending}
+                          className="h-11 rounded-xl sm:h-10"
                         >
                           {isPending ? (
-                            <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                            <Loader2 className="mr-1 h-4 w-4 shrink-0 animate-spin" />
                           ) : (
-                            <Check className="w-3 h-3 mr-1" />
+                            <Check className="mr-1 h-4 w-4 shrink-0" />
                           )}
                           Save
                         </Button>
@@ -197,26 +197,26 @@ export const OrderNotesSection = ({
                   ) : (
                     <>
                       {/* View Mode */}
-                      <div className="absolute top-2 right-2 flex gap-1">
+                      <div className="mb-2 flex justify-end gap-1">
                         <Button
-                          size="icon"
                           variant="ghost"
-                          className="h-6 w-6 text-muted-foreground hover:text-primary"
+                          className="h-11 w-11 rounded-xl p-0 text-muted-foreground hover:text-primary sm:h-10 sm:w-10"
                           onClick={() => handleStartEdit(note.id, note.content)}
+                          aria-label="Edit note"
                         >
-                          <Pencil className="w-3 h-3" />
+                          <Pencil className="h-4 w-4 shrink-0" />
                         </Button>
                         <Button
-                          size="icon"
                           variant="ghost"
-                          className="h-6 w-6 text-muted-foreground hover:text-red-500"
+                          className="h-11 w-11 rounded-xl p-0 text-muted-foreground hover:text-red-500 sm:h-10 sm:w-10"
                           onClick={() => handleDeleteNote(note.id)}
+                          aria-label="Delete note"
                         >
-                          <Trash2 className="w-3 h-3" />
+                          <Trash2 className="h-4 w-4 shrink-0" />
                         </Button>
                       </div>
 
-                      <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed pr-6">
+                      <p className="min-w-0 break-words text-sm leading-relaxed text-foreground whitespace-pre-wrap">
                         {note.content}
                       </p>
                       <div className="mt-3 flex items-center justify-between border-t pt-2">

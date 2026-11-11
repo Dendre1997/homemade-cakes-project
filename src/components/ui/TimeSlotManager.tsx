@@ -54,12 +54,15 @@ interface TimeSlotManagerProps {
   onChange: (newSlots: string[]) => void;
   /** Glass styling for schedule day editor / booking rules */
   variant?: "default" | "schedule";
+  /** Taller controls for the production order time dialog. */
+  comfortable?: boolean;
 }
 
 export const TimeSlotManager = ({
   value,
   onChange,
   variant = "default",
+  comfortable = false,
 }: TimeSlotManagerProps) => {
   const isSchedule = variant === "schedule";
   const [startHour, setStartHour] = useState("09");
@@ -137,7 +140,8 @@ export const TimeSlotManager = ({
     <div
       className={cn(
         isSchedule ? "space-y-3" : "mt-md space-y-sm",
-        isSchedule ? "max-h-56 overflow-y-auto pr-1" : "max-h-80 overflow-y-auto pr-sm custom-scrollbar"
+        isSchedule ? "max-h-56 overflow-y-auto pr-1" : "max-h-80 overflow-y-auto pr-sm custom-scrollbar",
+        comfortable && "overscroll-contain"
       )}
     >
       {/* Quick Add Presets */}
@@ -155,7 +159,9 @@ export const TimeSlotManager = ({
                   if (!alreadyAdded) onChange([...value, preset]);
                 }}
                 className={cn(
-                  "text-xs px-2 py-1 rounded-full border transition-all",
+                  comfortable
+                    ? "min-h-11 rounded-xl border px-3 text-xs transition-colors sm:min-h-10"
+                    : "rounded-full border px-2 py-1 text-xs transition-all",
                   alreadyAdded
                     ? "border-accent/30 bg-accent/10 text-accent/50 cursor-not-allowed"
                     : "border-border hover:border-accent hover:bg-accent/5 text-primary"
@@ -185,7 +191,7 @@ export const TimeSlotManager = ({
         <div className="flex items-center gap-2">
           
           <Select value={startHour} onValueChange={setStartHour}>
-            <SelectTrigger className="flex-grow">
+            <SelectTrigger className={comfortable ? "h-11 min-w-0 flex-grow rounded-xl sm:h-10" : "flex-grow"}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -198,7 +204,7 @@ export const TimeSlotManager = ({
           </Select>
           <span className="text-primary">:</span>
           <Select value={startMinute} onValueChange={setStartMinute}>
-            <SelectTrigger className="flex-grow">
+            <SelectTrigger className={comfortable ? "h-11 min-w-0 flex-grow rounded-xl sm:h-10" : "flex-grow"}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -209,11 +215,12 @@ export const TimeSlotManager = ({
               ))}
             </SelectContent>
           </Select>
-          <div className="flex-shrink-0 flex rounded-medium border border-border overflow-hidden">
+          <div className={cn("flex flex-shrink-0 overflow-hidden rounded-medium border border-border", comfortable && "rounded-xl")}>
             <button
               type="button"
               className={cn(
-                "px-sm py-xs text-small font-body",
+                "px-sm py-xs font-body text-small",
+                comfortable && "min-h-11 px-3 sm:min-h-10",
                 startPeriod === "AM"
                   ? "bg-accent text-white"
                   : "bg-input-background text-primary/70 hover:bg-subtleBackground"
@@ -225,7 +232,8 @@ export const TimeSlotManager = ({
             <button
               type="button"
               className={cn(
-                "px-sm py-xs text-small font-body",
+                "px-sm py-xs font-body text-small",
+                comfortable && "min-h-11 px-3 sm:min-h-10",
                 startPeriod === "PM"
                   ? "bg-accent text-white"
                   : "bg-input-background text-primary/70 hover:bg-subtleBackground"
@@ -240,7 +248,7 @@ export const TimeSlotManager = ({
         {/* End Time Picker */}
         <div className="flex items-center gap-2">
           <Select value={endHour} onValueChange={setEndHour}>
-            <SelectTrigger className="flex-grow">
+            <SelectTrigger className={comfortable ? "h-11 min-w-0 flex-grow rounded-xl sm:h-10" : "flex-grow"}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -253,7 +261,7 @@ export const TimeSlotManager = ({
           </Select>
           <span className="text-primary">:</span>
           <Select value={endMinute} onValueChange={setEndMinute}>
-            <SelectTrigger className="flex-grow">
+            <SelectTrigger className={comfortable ? "h-11 min-w-0 flex-grow rounded-xl sm:h-10" : "flex-grow"}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -264,11 +272,12 @@ export const TimeSlotManager = ({
               ))}
             </SelectContent>
           </Select>
-          <div className="flex-shrink-0 flex rounded-medium border border-border overflow-hidden">
+          <div className={cn("flex flex-shrink-0 overflow-hidden rounded-medium border border-border", comfortable && "rounded-xl")}>
             <button
               type="button"
               className={cn(
-                "px-sm py-xs text-small font-body",
+                "px-sm py-xs font-body text-small",
+                comfortable && "min-h-11 px-3 sm:min-h-10",
                 endPeriod === "AM"
                   ? "bg-accent text-white"
                   : "bg-input-background text-primary/70 hover:bg-subtleBackground"
@@ -276,11 +285,12 @@ export const TimeSlotManager = ({
               onClick={() => setEndPeriod("AM")}
             >
               AM
-            </button>{" "}
+            </button>
             <button
               type="button"
               className={cn(
-                "px-sm py-xs text-small font-body",
+                "px-sm py-xs font-body text-small",
+                comfortable && "min-h-11 px-3 sm:min-h-10",
                 endPeriod === "PM"
                   ? "bg-accent text-white"
                   : "bg-input-background text-primary/70 hover:bg-subtleBackground"
@@ -295,9 +305,9 @@ export const TimeSlotManager = ({
         <Button
           onClick={handleAddSlot}
           variant="primary"
-          className="mt-sm w-full"
+          className={cn("mt-sm w-full", comfortable && "h-11 rounded-xl sm:h-10")}
         >
-          <PlusCircle className="h-4 w-4 mr-2" /> Add Time Slot
+          <PlusCircle className={cn("mr-2 h-4 w-4", comfortable && "shrink-0")} /> Add Time Slot
         </Button>
         {validationError && (
           <p className="text-xs text-red-500 mt-1">{validationError}</p>
@@ -323,10 +333,17 @@ export const TimeSlotManager = ({
               <button
                 type="button"
                 onClick={() => handleRemoveSlot(slot)}
-                className="p-xs text-accent/80 hover:text-accent transition-colors"
+                className={cn(
+                  "text-accent/80 transition-colors hover:text-accent",
+                  isSchedule
+                    ? "p-xs"
+                    : comfortable
+                      ? "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl sm:h-10 sm:w-10"
+                      : "p-xs"
+                )}
                 aria-label={`Remove ${slot}`}
               >
-                <X className="h-4 w-4" />
+                <X className={cn("h-4 w-4", comfortable && "shrink-0")} />
               </button>
             </div>
           ))

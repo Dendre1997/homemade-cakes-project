@@ -17,6 +17,8 @@ type BakeryMonthGridProps = {
   footer?: React.ReactNode;
   className?: string;
   paddingCellClassName?: string;
+  navButtonClassName?: string;
+  navIconClassName?: string;
   /** When false, only month navigation header is shown (e.g. desktop orders strip). */
   showGrid?: boolean;
 };
@@ -28,6 +30,8 @@ export function BakeryMonthGrid({
   footer,
   className,
   paddingCellClassName = "min-h-16",
+  navButtonClassName,
+  navIconClassName,
   showGrid = true,
 }: BakeryMonthGridProps) {
   const cells = bakeryMonthGrid(monthKey);
@@ -45,18 +49,24 @@ export function BakeryMonthGrid({
           <button
             type="button"
             onClick={() => onMonthChange(shiftBakeryMonth(monthKey, -1))}
-            className="rounded-full p-2 text-primary transition-colors hover:bg-background/40"
+            className={
+              navButtonClassName ??
+              "rounded-full p-2 text-primary transition-colors hover:bg-background/40"
+            }
             aria-label="Go to previous month"
           >
-            <ChevronLeft className="h-5 w-5" />
+            <ChevronLeft className={navIconClassName ?? "h-5 w-5"} />
           </button>
           <button
             type="button"
             onClick={() => onMonthChange(shiftBakeryMonth(monthKey, 1))}
-            className="rounded-full p-2 text-primary transition-colors hover:bg-background/40"
+            className={
+              navButtonClassName ??
+              "rounded-full p-2 text-primary transition-colors hover:bg-background/40"
+            }
             aria-label="Go to next month"
           >
-            <ChevronRight className="h-5 w-5" />
+            <ChevronRight className={navIconClassName ?? "h-5 w-5"} />
           </button>
         </div>
       </div>
