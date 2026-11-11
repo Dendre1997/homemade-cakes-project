@@ -3,7 +3,6 @@ import { useState, useEffect, useCallback } from "react";
 import AddonsForm from "@/components/admin/AddonsForm";
 import { Addon, ProductCategory } from "@/types";
 import LoadingSpinner from "@/components/ui/Spinner";
-import { Button } from "@/components/ui/Button";
 import { useAlert } from "@/contexts/AlertContext";
 import { useConfirmation } from "@/contexts/ConfirmationContext";
 import { AdminListItem } from "@/components/admin/AdminListItem";
@@ -133,7 +132,7 @@ const ManageAddonsPage = () => {
 
 
   return (
-    <section className="relative">
+    <section className="relative pb-28 md:pb-0">
       {isSubmitting && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
           <LoadingSpinner />
@@ -155,16 +154,8 @@ const ManageAddonsPage = () => {
             categories={categories}
             existingAddon={editingAddon}
             isSubmitting={isSubmitting}
+            onCancel={editingAddon ? () => setEditingAddon(null) : undefined}
           />
-          {editingAddon && (
-            <Button
-              variant="text"
-              onClick={() => setEditingAddon(null)}
-              className="mt-md"
-            >
-              Cancel Edit
-            </Button>
-          )}
         </div>
 
         <div className={catalogListColumnClass}>

@@ -4,13 +4,15 @@
 
 **Blocked by:** 01: Catalog hub and list shell
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The addon form uses the glass surface, `rounded-xl` fields, and `h-11` / `h-10` heights
-- [ ] Upload and remove-variant controls are about 44px
-- [ ] On a phone, Save and Cancel sit in a bottom bar that clears the sidebar and the safe area
-- [ ] On a wide screen, Save stays at the end of the form
-- [ ] Adding a variant, editing a price, uploading, and saving send the same data as today
+- [x] The addon form uses the glass surface, `rounded-xl` fields, and `h-11` / `h-10` heights
+- [x] Upload and remove-variant controls are about 44px
+- [x] On a phone, Save and Cancel sit in a bottom bar that clears the sidebar and the safe area
+- [x] On a wide screen, Save stays at the end of the form
+- [x] Adding a variant, editing a price, uploading, and saving send the same data as today
 
 **Notes:**
-- Blocked by the list shell so the page header is already settled. Not blocked by the other column forms.
+- Uses the same `CatalogFormActions` bar as the other column forms. Cancel appears only while editing.
+- Submit stays disabled during the main image upload, as it did before.
+- `npx tsc --noEmit` passed. The admin catalog needs Google sign-in, so this form was not opened in the browser.

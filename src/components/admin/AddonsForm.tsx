@@ -7,8 +7,18 @@ import { ChipCheckbox } from "../ui/ChipCheckbox";
 import { ImageUploadPreview } from "@/components/admin/ImageUploadPreview";
 import LoadingSpinner from "@/components/ui/Spinner";
 import { useAlert } from "@/contexts/AlertContext";
-import { X, Trash2, Plus } from "lucide-react";
+import { Trash2, Plus } from "lucide-react";
 import { Switch } from "@/components/ui/Switch";
+import {
+  CatalogFormActions,
+  catalogChipClass,
+  catalogFieldClass,
+  catalogFormCardClass,
+  catalogFormTitleClass,
+  catalogImageActionClass,
+  catalogLabelClass,
+  catalogUploadButtonClass,
+} from "@/components/admin/catalog/CatalogFormChrome";
 import {
   appendCloudinaryUploadPreset,
   cloudinaryUploadUrl,
@@ -23,7 +33,7 @@ const FormLabel = ({
 }) => (
   <label
     htmlFor={htmlFor}
-    className="block font-body text-small text-primary/80 mb-sm"
+    className={catalogLabelClass}
   >
     {children}
   </label>
@@ -37,6 +47,7 @@ interface AddonsFormProps {
   onSubmit: (formData: AddonFormData) => void;
   isSubmitting: boolean;
   categories: ProductCategory[];
+  onCancel?: () => void;
 }
 
 const AddonsForm = ({
@@ -44,6 +55,7 @@ const AddonsForm = ({
   onSubmit,
   isSubmitting,
   categories,
+  onCancel,
 }: AddonsFormProps) => {
   const { showAlert } = useAlert();
 
@@ -256,11 +268,9 @@ const AddonsForm = ({
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="p-lg bg-card-background rounded-large shadow-md max-w-lg space-y-md"
-    >
-      <h2 className="font-heading text-h3 text-primary">
+    <form onSubmit={handleSubmit} className="max-w-lg">
+      <div className={catalogFormCardClass}>
+      <h2 className={catalogFormTitleClass}>
         {existingAddon ? "Update Addon" : "Add New Addon"}
       </h2>
 
@@ -273,11 +283,12 @@ const AddonsForm = ({
             value={formData.name}
             onChange={handleChange}
             required
+            className={catalogFieldClass}
           />
         </div>
         <div>
           <FormLabel htmlFor="isActive">Active Status</FormLabel>
-          <div className="flex items-center space-x-2 mt-2">
+          <div className="mt-2 flex min-h-11 items-center gap-3">
             <Switch
               id="isActive"
               checked={formData.isActive}
@@ -290,8 +301,8 @@ const AddonsForm = ({
         </div>
       </div>
 
-      <div className="space-y-sm rounded-medium border border-border p-sm">
-        <div className="flex items-center space-x-2">
+      <div className="space-y-3 rounded-xl border border-primary/10 bg-background/40 p-3">
+        <div className="flex min-h-11 items-center gap-3">
           <Switch
             id="allowQuantity"
             checked={formData.allowQuantity === true}
@@ -324,6 +335,7 @@ const AddonsForm = ({
                 }));
               }}
               required
+              className={catalogFieldClass}
             />
           </div>
         )}
@@ -336,6 +348,7 @@ const AddonsForm = ({
           id="description"
           value={formData.description || ""}
           onChange={handleChange}
+          className={catalogFieldClass}
         />
       </div>
 
@@ -343,7 +356,7 @@ const AddonsForm = ({
         <h3 className="font-body text-body font-bold text-primary">Variants</h3>
         <div className="space-y-sm">
           {formData.variants.map((variant, index) => (
-            <div key={index} className="flex flex-col gap-sm w-full p-sm border border-border rounded-medium bg-background/50">
+            <div key={index} className="flex w-full min-w-0 flex-col gap-3 rounded-xl border border-primary/10 bg-background/40 p-3">
               <div className="flex flex-col w-full gap-2">
                 <FormLabel htmlFor={`variant-image-upload-${index}`}>Variant Image</FormLabel>
                 <div className="">
@@ -352,6 +365,7 @@ const AddonsForm = ({
                     isUploading={uploadingVariantIndex === index}
                     onRemove={() => handleVariantImageRemove(index)}
                     containerClassName="h-48 w-full"
+                    actionClassName={catalogImageActionClass}
                   />
                   <div className="flex flex-col gap-sm">
                     <Input
@@ -366,7 +380,7 @@ const AddonsForm = ({
                       type="button"
                       variant="secondary"
                       onClick={() => document.getElementById(`variant-image-upload-${index}`)?.click()}
-                      className="h-8 px-3 text-small"
+                      className={catalogUploadButtonClass}
                       disabled={uploadingVariantIndex === index}
                     >
                       {variant.imageUrl ? "Change Image" : "Upload Image"}
@@ -383,6 +397,7 @@ const AddonsForm = ({
                   onChange={(e) => handleVariantChange(index, "name", e.target.value)}
                   placeholder="e.g. Standard, 3 pcs"
                   required
+                  className={catalogFieldClass}
                 />
               </div>
               <div className="w-full">
@@ -393,17 +408,18 @@ const AddonsForm = ({
                   value={variant.price === 0 ? "" : variant.price}
                   onChange={(e) => handleVariantChange(index, "price", parseFloat(e.target.value) || 0)}
                   placeholder="0.00"
+                  className={catalogFieldClass}
                 />
               </div>
-              <div className="w-full flex justify-end border-t border-border pt-sm mt-sm">
+              <div className="mt-1 flex w-full justify-end border-t border-primary/10 pt-3">
                 <Button
                   type="button"
                   variant="ghost"
                   onClick={() => removeVariant(index)}
                   disabled={formData.variants.length <= 1}
-                  className="px-3 text-error hover:text-error hover:bg-error/10 flex gap-2 items-center"
+                  className="flex h-11 items-center gap-2 rounded-xl px-3 text-error transition-colors hover:bg-error/10 hover:text-error sm:h-10"
                 >
-                  <Trash2 className="w-4 h-4" /> Remove Variant
+                  <Trash2 className="h-4 w-4" aria-hidden /> Remove Variant
                 </Button>
               </div>
             </div>
@@ -412,9 +428,9 @@ const AddonsForm = ({
             type="button"
             variant="secondary"
             onClick={addVariant}
-            className="w-full mt-sm gap-2"
+            className="mt-1 h-11 w-full gap-2 rounded-xl sm:h-10"
           >
-            <Plus className="w-4 h-4" /> Add another option
+            <Plus className="h-4 w-4" aria-hidden /> Add another option
           </Button>
         </div>
       </div>
@@ -426,6 +442,7 @@ const AddonsForm = ({
           isUploading={isUploading}
           onRemove={handleImageRemove}
           containerClassName="h-48 w-full"
+          actionClassName={catalogImageActionClass}
           // allowPositioning={true}
           // imageFit="object-cover"
           // imagePosition={imagePos}
@@ -444,11 +461,11 @@ const AddonsForm = ({
           type="button"
           variant="secondary"
           onClick={() => fileInputRef.current?.click()}
-          className="mt-sm"
+          className={catalogUploadButtonClass}
           disabled={isUploading}
         >
           {isUploading ? (
-            <h1>Uploading Image...</h1>
+            <span>Uploading Image…</span>
           ) : formData.imageUrl ? (
             "Change Image"
           ) : (
@@ -474,6 +491,7 @@ const AddonsForm = ({
               key={cat._id}
               checked={(formData.categoryIds || []).includes(cat._id)}
               onCheckedChange={() => handleCategoryChange(cat._id)}
+              className={catalogChipClass}
             >
               {cat.name}
             </ChipCheckbox>
@@ -481,18 +499,18 @@ const AddonsForm = ({
         </div>
       </div>
 
-      <div>
-        <Button
-          type="submit"
-          disabled={isSubmitting || isUploading}
-          className="w-full"
-        >
-          {isSubmitting
-            ? "Saving..."
+      <CatalogFormActions
+        isSubmitting={isSubmitting}
+        disabled={isUploading}
+        onCancel={onCancel}
+        submitLabel={
+          isSubmitting
+            ? "Saving…"
             : existingAddon
               ? "Update Addon"
-              : "Add Addon"}
-        </Button>
+              : "Add Addon"
+        }
+      />
       </div>
     </form>
   );
