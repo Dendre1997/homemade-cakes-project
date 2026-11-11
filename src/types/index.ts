@@ -79,6 +79,22 @@ export interface Diameter {
   tierSizes?: string[];
 }
 
+/** A catalog box with a fixed piece count (glossary: Set). Stored in `sets`. */
+export interface CatalogSet {
+  _id: string;
+  name: string;
+  /** How many pieces the set holds; whole number >= 1. */
+  pieceCount: number;
+  /** Set flavor limit: most flavors a customer may choose; whole number >= 1. */
+  maxFlavors: number;
+  imageUrl?: string;
+  categoryIds?: string[];
+  /** Custom-order estimate; when absent the estimate falls back to the category price per piece. */
+  basePrice?: number;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
+}
+
 export interface AvailableDiameterConfig {
   diameterId: string;
   price?: number;

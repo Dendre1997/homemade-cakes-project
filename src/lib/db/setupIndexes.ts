@@ -62,6 +62,7 @@ const INDEX_PLAN: Record<string, IndexDefinition[]> = {
     { name: "flavorId_1", key: { flavorId: 1 } },
     { name: "isActive_1", key: { isActive: 1 } },
   ],
+  sets: [{ name: "categoryIds_1", key: { categoryIds: 1 } }],
 };
 
 /** IndexOptionsConflict / IndexKeySpecsConflict — same name, different definition. */
