@@ -95,6 +95,12 @@ export interface CatalogSet {
   updatedAt?: Date | string;
 }
 
+/** A catalog set assigned to a set product or combo, with that product's price for it. */
+export interface AvailableSetConfig {
+  setId: string;
+  price: number;
+}
+
 export interface AvailableDiameterConfig {
   diameterId: string;
   price?: number;
@@ -162,6 +168,8 @@ export interface Product {
     quantity: number;
     price: number;
   }[];
+  /** Catalog sets, in piece-count order; set flavor limits come from the sets themselves. */
+  availableSetConfigs?: AvailableSetConfig[];
   comboConfig?: {
     hasCake: boolean;
     cakeFlavorIds: string[];
@@ -198,6 +206,7 @@ export interface ProductFormData {
     quantity: number;
     price: number;
   }[];
+  availableSetConfigs?: AvailableSetConfig[];
   comboConfig?: {
     hasCake: boolean;
     cakeFlavorIds: string[];
@@ -223,6 +232,8 @@ export interface ProductWithCategory extends Product {
   category: ProductCategory;
   availableFlavors: Flavor[];
   availableDiameters: Diameter[];
+  /** Assigned catalog sets (name, piece count, set flavor limit, icon); absent on older reads. */
+  availableSets?: Pick<CatalogSet, "_id" | "name" | "pieceCount" | "maxFlavors" | "imageUrl">[];
 }
 
 export interface Collection {

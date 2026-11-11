@@ -7,6 +7,8 @@ import { ObjectId } from 'mongodb';
 import cloudinary from "@/lib/cloudinary";
 import { getPublicIdFromUrl } from "@/lib/cloudinaryUtils";
 import { generateSlug, isValidObjectId } from '../../../../../lib/utils';
+import { normalizeProductSetConfigs } from '@/lib/validation/productSetConfigs';
+import { AVAILABLE_SETS_LOOKUP } from '@/lib/db/productSetLookup';
 interface Context {
     params: Promise<{ id: string }>
 }
@@ -51,6 +53,7 @@ export async function GET(_request: Request, { params }: Context) {
             as: 'availableDiameters'
           }
         },
+        AVAILABLE_SETS_LOOKUP,
         {
           $lookup: {
             from: 'collections',
@@ -149,6 +152,24 @@ export async function PUT(
                  body.structureBasePrice = firstBoxPrice;
              }
          }
+    }
+
+    if (body.availableSetConfigs !== undefined || body.productType !== undefined || body.categoryId) {
+      const keepsStoredSets = body.availableSetConfigs === undefined;
+      const rawSetConfigs =
+        effectiveProductType === 'set'
+          ? keepsStoredSets ? existingProduct.availableSetConfigs : body.availableSetConfigs
+          : [];
+      const setConfigs = await normalizeProductSetConfigs(
+        db,
+        rawSetConfigs,
+        body.categoryId || existingProduct.categoryId,
+        { dropOutsideCategory: keepsStoredSets }
+      );
+      if (!setConfigs.ok) {
+        return NextResponse.json({ error: setConfigs.error }, { status: 400 });
+      }
+      body.availableSetConfigs = setConfigs.data;
     }
 
     if (body.categoryId) body.categoryId = new ObjectId(String(body.categoryId));

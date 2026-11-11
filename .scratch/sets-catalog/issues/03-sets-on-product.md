@@ -4,10 +4,16 @@
 
 **Blocked by:** 01 (Sets catalog).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The product form for a set product or combo lists the sets of the selected category as available
-- [ ] The baker can add and remove sets on the product and set a price for each one
-- [ ] Assigned sets are saved in piece-count order and come back when the product is edited
-- [ ] Reading a product returns its assigned sets with name, piece count, set flavor limit, and icon
-- [ ] A product saved before this change still opens, saves, and shows its built-in boxes
+- [x] The product form for a set product or combo lists the sets of the selected category as available
+- [x] The baker can add and remove sets on the product and set a price for each one
+- [x] Assigned sets are saved in piece-count order and come back when the product is edited
+- [x] Reading a product returns its assigned sets with name, piece count, set flavor limit, and icon
+- [x] A product saved before this change still opens, saves, and shows its built-in boxes
+
+**Notes:**
+- Stored as `availableSetConfigs: [{ setId: ObjectId, price }]`; the delete guard on `DELETE /api/admin/sets/[id]` matches this field.
+- Each assigned set needs a price above 0. A set that leaves the product's category is dropped on save.
+- The set base price rule still reads the first built-in box. A set product with only catalog sets gets a simple-set base of 0; ticket 04 should price from the assigned sets.
+- The admin product form was not browser-verified (admin pages need Google sign-in); validation was checked against a fake database and the storefront was checked live.

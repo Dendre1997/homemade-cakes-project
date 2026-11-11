@@ -8,9 +8,13 @@ import {
   Product,
   ProductCategory,
   AvailableDiameterConfig,
+  AvailableSetConfig,
+  CatalogSet,
   ProductFormData,
   Collection
 } from "@/types";
+import Image from "next/image";
+import { SetBoxIcon } from "@/components/ui/SetBoxIcon";
 import {
   DndContext,
   closestCenter,
@@ -59,6 +63,8 @@ interface ProductFormProps {
   onFormSubmit: (productData: ProductFormData) => Promise<void> | void;
   flavors: Flavor[];
   diameters: Diameter[];
+  /** Catalog sets linked to the selected category. */
+  sets?: CatalogSet[];
   allergens: Allergen[];
   categories: ProductCategory[];
   collections: Collection[];
@@ -85,10 +91,27 @@ import { SelectedAddon } from "@/types";
 import { AiProductGenerator } from "@/components/admin/AiProductGenerator";
 import type { ProductSuggestion } from "@/lib/ai/schemas/productSuggestion";
 
+const setSummary = (set: CatalogSet) =>
+  `${set.pieceCount} pieces · up to ${set.maxFlavors} ${set.maxFlavors === 1 ? "flavor" : "flavors"}`;
+
+const SetIconThumb = ({ set, className }: { set: CatalogSet; className: string }) =>
+  set.imageUrl ? (
+    <Image
+      src={set.imageUrl}
+      alt=""
+      width={32}
+      height={32}
+      className={cn(className, "rounded object-cover")}
+    />
+  ) : (
+    <SetBoxIcon pieceCount={set.pieceCount} className={className} />
+  );
+
 const ProductForm = ({
   existingProduct,
   flavors,
   diameters,
+  sets = [],
   allergens,
   collections,
   categoryId,
@@ -113,6 +136,7 @@ const ProductForm = ({
   
   const [productType, setProductType] = useState<'cake' | 'set' | 'combo' | 'custom'>('cake');
   const [availableQuantityConfigs, setAvailableQuantityConfigs] = useState<QuantityConfig[]>([]);
+  const [availableSetConfigs, setAvailableSetConfigs] = useState<AvailableSetConfig[]>([]);
   
   const [isCombo, setIsCombo] = useState(false);
   const [comboCakeFlavorIds, setComboCakeFlavorIds] = useState<string[]>([]);
@@ -152,6 +176,31 @@ const ProductForm = ({
       return { ...details, ...config };
     })
     .sort((a, b) => (a.sizeValue || 0) - (b.sizeValue || 0));
+
+  const sortedSets = [...sets].sort((a, b) => a.pieceCount - b.pieceCount);
+  const assignedSetIds = availableSetConfigs.map((c) => c.setId);
+  const unassignedSets = sortedSets.filter((s) => !assignedSetIds.includes(s._id));
+  const assignedSets = availableSetConfigs
+    .map((config) => ({
+      config,
+      set: sortedSets.find((s) => s._id === config.setId),
+    }))
+    .sort((a, b) => (a.set?.pieceCount ?? Infinity) - (b.set?.pieceCount ?? Infinity));
+
+  const addSet = (setId: string) => {
+    setAvailableSetConfigs((prev) => [...prev, { setId, price: 0 }]);
+  };
+  const removeSet = (setId: string) => {
+    setAvailableSetConfigs((prev) => prev.filter((c) => c.setId !== setId));
+  };
+  const handleSetPriceChange = (setId: string, value: string) => {
+    const price = parseFloat(value);
+    setAvailableSetConfigs((prev) =>
+      prev.map((c) =>
+        c.setId === setId ? { ...c, price: isNaN(price) ? 0 : price } : c
+      )
+    );
+  };
 
   const addDiameter = (diameterId: string) => {
     setAvailableDiameterConfigs((prev) => [
@@ -244,6 +293,12 @@ const ProductForm = ({
       if (existingProduct.availableQuantityConfigs) {
         setAvailableQuantityConfigs(existingProduct.availableQuantityConfigs);
       }
+      setAvailableSetConfigs(
+        existingProduct.availableSetConfigs?.map((config) => ({
+          setId: config.setId.toString(),
+          price: Number(config.price) || 0,
+        })) || []
+      );
       if (existingProduct.comboConfig) {
         setIsCombo(existingProduct.comboConfig.hasCake);
         setComboCakeFlavorIds(existingProduct.comboConfig.cakeFlavorIds || []);
@@ -324,6 +379,10 @@ const ProductForm = ({
       showAlert("Please select a category before submitting.", "error");
       return;
     }
+    if (productType === 'set' && assignedSets.some(({ set, config }) => set && !(config.price > 0))) {
+      showAlert("Every assigned set needs a price above 0.", "error");
+      return;
+    }
     setIsSaveConfirmationOpen(true);
   };
 
@@ -367,6 +426,11 @@ const ProductForm = ({
       
       // New Fields
       productType,
+      // A set that left the category cannot stay on the product.
+      availableSetConfigs:
+        productType === 'set'
+          ? availableSetConfigs.filter((c) => sets.some((s) => s._id === c.setId))
+          : [],
       ...(productType === 'set' && {
         availableQuantityConfigs,
         comboConfig: {
@@ -383,7 +447,12 @@ const ProductForm = ({
         showAlert(isEditMode ? "Product updated successfully!" : "Product created successfully!", "success");
     } catch (err) {
         console.error("Submission error:", err);
-        showAlert("Failed to save product. Please try again.", "error");
+        showAlert(
+          err instanceof Error && err.message
+            ? err.message
+            : "Failed to save product. Please try again.",
+          "error"
+        );
     }
   };
 
@@ -661,6 +730,119 @@ const ProductForm = ({
                     configs={availableQuantityConfigs}
                     onChange={setAvailableQuantityConfigs}
                  />
+
+                 <div className="border-t pt-4 mt-4 space-y-4">
+                    <div className="space-y-0.5">
+                        <Label className="text-base">Catalog Sets</Label>
+                        <p className="text-sm text-muted-foreground">
+                            Sets from this category&apos;s catalog, with this product&apos;s price for each. The flavor limit comes from the set.
+                        </p>
+                    </div>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div className="space-y-4">
+                            <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                                Available Sets
+                            </h4>
+                            <div className="space-y-2">
+                                {unassignedSets.length === 0 ? (
+                                    <p className="text-sm text-muted-foreground italic text-center py-4 border border-dashed rounded-md">
+                                        {sets.length === 0
+                                            ? "No sets are linked to this category yet."
+                                            : "No more sets available."}
+                                    </p>
+                                ) : (
+                                    unassignedSets.map((set) => (
+                                        <div
+                                            key={set._id}
+                                            className="flex items-center justify-between p-3 border rounded-md bg-subtleBackground/50 hover:bg-subtleBackground transition-colors"
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <SetIconThumb set={set} className={iconSizeClass} />
+                                                <div className="flex flex-col">
+                                                    <span className="font-medium text-sm">{set.name}</span>
+                                                    <span className="text-[10px] text-muted-foreground">
+                                                        {setSummary(set)}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                variant="secondary"
+                                                onClick={() => addSet(set._id)}
+                                                className="h-8 px-3"
+                                            >
+                                                Add
+                                            </Button>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                                Assigned Sets
+                            </h4>
+                            <div className="space-y-2">
+                                {assignedSets.length === 0 ? (
+                                    <p className="text-sm text-muted-foreground italic text-center py-4 border border-dashed rounded-md">
+                                        No sets added yet. The boxes above are used.
+                                    </p>
+                                ) : (
+                                    assignedSets.map(({ config, set }) => (
+                                        <div
+                                            key={config.setId}
+                                            className={cn(
+                                                "flex items-center gap-2 p-3 border rounded-md",
+                                                set
+                                                    ? "border-primary/20 bg-primary/5"
+                                                    : "border-error/40 bg-error/5"
+                                            )}
+                                        >
+                                            <div className="flex items-center gap-2 flex-1">
+                                                {set && <SetIconThumb set={set} className="h-6 w-6 text-primary" />}
+                                                <div className="flex flex-col">
+                                                    <span className="font-bold text-sm text-primary">
+                                                        {set?.name ?? "Unavailable set"}
+                                                    </span>
+                                                    <span className="text-[10px] text-primary/70">
+                                                        {set
+                                                            ? setSummary(set)
+                                                            : "Not linked to this category; removed on save."}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            {set && (
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-xs text-muted-foreground">$</span>
+                                                    <Input
+                                                        type="number"
+                                                        placeholder="0.00"
+                                                        step="0.01"
+                                                        min={0}
+                                                        aria-label={`Price for ${set.name}`}
+                                                        className="w-24 h-8 text-right bg-white"
+                                                        value={config.price === 0 ? "" : config.price}
+                                                        onChange={(e) => handleSetPriceChange(config.setId, e.target.value)}
+                                                    />
+                                                </div>
+                                            )}
+                                            <button
+                                                type="button"
+                                                onClick={() => removeSet(config.setId)}
+                                                className="text-red-400 hover:text-red-600 ml-1"
+                                                aria-label={`Remove ${set?.name ?? "set"}`}
+                                            >
+                                                <X className="h-4 w-4" />
+                                            </button>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                 </div>
 
                  <div className="border-t pt-4 mt-4">
                     <div className="flex items-center justify-between mb-4">

@@ -6,6 +6,7 @@ import clientPromise from '@/lib/db';
 import { Product } from '@/types'; 
 import { ObjectId } from 'mongodb';
 import { generateSlug } from '../../../../lib/utils';
+import { normalizeProductSetConfigs } from '@/lib/validation/productSetConfigs';
 
 // GET
 export async function GET(request: NextRequest) {
@@ -114,6 +115,15 @@ export async function POST(request: NextRequest) {
 
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
+
+    const setConfigs = await normalizeProductSetConfigs(
+      db,
+      productType === 'set' ? body.availableSetConfigs : [],
+      categoryId
+    );
+    if (!setConfigs.ok) {
+      return NextResponse.json({ error: setConfigs.error }, { status: 400 });
+    }
     
     // Process Combo Config IDs if present
     const processedComboConfig = comboConfig ? {
@@ -147,6 +157,7 @@ export async function POST(request: NextRequest) {
       // New Fields Logic
       productType: productType || 'cake',
       availableQuantityConfigs: availableQuantityConfigs || [],
+      availableSetConfigs: setConfigs.data,
       comboConfig: processedComboConfig,
       defaultAddons: defaultAddons?.map((da) => ({
           addonId: new ObjectId(String(da.addonId)),

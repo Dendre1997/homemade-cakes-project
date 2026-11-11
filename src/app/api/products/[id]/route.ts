@@ -4,6 +4,7 @@ import { ObjectId } from 'mongodb';
 import cloudinary from "@/lib/cloudinary";
 import { getPublicIdFromUrl } from "@/lib/cloudinaryUtils";
 import { isValidObjectId } from '../../../../lib/utils';
+import { AVAILABLE_SETS_LOOKUP } from '@/lib/db/productSetLookup';
 interface Context {
     params: Promise<{ id: string }>
 }
@@ -45,6 +46,7 @@ export async function GET(_request: Request, { params }: Context) {
             as: 'availableDiameters'
           }
         },
+        AVAILABLE_SETS_LOOKUP,
         { $unwind: { path: "$category", preserveNullAndEmptyArrays: true } },
       ])
       .toArray();

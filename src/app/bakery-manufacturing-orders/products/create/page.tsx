@@ -8,7 +8,8 @@ import {
   Allergen,
   ProductCategory,
   ProductFormData,
-  Collection
+  Collection,
+  CatalogSet,
 } from "@/types";
 import LoadingSpinner from "@/components/ui/Spinner";
 import {
@@ -37,6 +38,7 @@ const CreateProductPage = () => {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
   const [filteredFlavors, setFilteredFlavors] = useState<Flavor[]>([]);
   const [filteredDiameters, setFilteredDiameters] = useState<Diameter[]>([]);
+  const [filteredSets, setFilteredSets] = useState<CatalogSet[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isDependentsLoading, setIsDependentsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -77,19 +79,22 @@ const CreateProductPage = () => {
     if (!selectedCategoryId) {
       setFilteredFlavors([]);
       setFilteredDiameters([]);
+      setFilteredSets([]);
       return;
     }
     const fetchDependentData = async () => {
       setIsDependentsLoading(true);
       try {
-        const [flavorsRes, diametersRes] = await Promise.all([
+        const [flavorsRes, diametersRes, setsRes] = await Promise.all([
           fetch(`/api/admin/flavors?categoryId=${selectedCategoryId}`),
           fetch(`/api/admin/diameters?categoryId=${selectedCategoryId}`),
+          fetch(`/api/admin/sets?categoryId=${selectedCategoryId}`),
         ]);
-        if (!flavorsRes.ok || !diametersRes.ok)
+        if (!flavorsRes.ok || !diametersRes.ok || !setsRes.ok)
           throw new Error("Failed to fetch dependent data");
         setFilteredFlavors(await flavorsRes.json());
         setFilteredDiameters(await diametersRes.json());
+        setFilteredSets(await setsRes.json());
       } catch (error) {
         console.error(error);
       } finally {
@@ -109,7 +114,8 @@ const CreateProductPage = () => {
         });
 
         if (!response.ok) {
-          throw new Error("Failed to create product");
+          const errorData = await response.json().catch(() => null);
+          throw new Error(errorData?.error || "Failed to create product");
         }
         
         // Alert handled by ProductForm
@@ -169,6 +175,7 @@ const CreateProductPage = () => {
             onCategoryChange={setSelectedCategoryId}
             flavors={filteredFlavors}
             diameters={filteredDiameters}
+            sets={filteredSets}
             allergens={allAllergens}
             collections={collections}
           />

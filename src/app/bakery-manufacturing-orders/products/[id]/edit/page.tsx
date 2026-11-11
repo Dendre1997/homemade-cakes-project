@@ -10,6 +10,7 @@ import {
   Allergen,
   ProductFormData,
   Collection,
+  CatalogSet,
 } from "@/types";
 import ProductForm from "@/components/admin/ProductForm";
 import LoadingSpinner from "@/components/ui/Spinner";
@@ -33,6 +34,7 @@ const EditProductPage = () => {
 
   const [flavors, setFlavors] = useState<Flavor[]>([]);
   const [diameters, setDiameters] = useState<Diameter[]>([]);
+  const [sets, setSets] = useState<CatalogSet[]>([]);
   const [collections, setCollections] = useState<Collection[]>([]);
 
   // This id acts as the trigger for the dependent data fetch(Step 2)
@@ -84,19 +86,21 @@ const EditProductPage = () => {
       setIsDependentLoading(true);
       setError(null);
       try {
-        const [flavorsRes, diametersRes] = await Promise.all([
+        const [flavorsRes, diametersRes, setsRes] = await Promise.all([
           fetch(`/api/admin/flavors?categoryId=${productCategoryId}`),
           fetch(`/api/admin/diameters?categoryId=${productCategoryId}`),
+          fetch(`/api/admin/sets?categoryId=${productCategoryId}`),
         ]);
 
-        if (!flavorsRes.ok || !diametersRes.ok) {
+        if (!flavorsRes.ok || !diametersRes.ok || !setsRes.ok) {
           throw new Error(
-            "Failed to fetch flavors or diameters for the selected category."
+            "Failed to fetch flavors, diameters, or sets for the selected category."
           );
         }
 
         setFlavors(await flavorsRes.json());
         setDiameters(await diametersRes.json());
+        setSets(await setsRes.json());
       } catch (err: unknown) {
         if (err instanceof Error) setError(err.message);
       } finally {
@@ -127,7 +131,8 @@ const EditProductPage = () => {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to update product");
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.error || "Failed to update product");
       }
 
       // Alert handled by ProductForm
@@ -164,6 +169,7 @@ const EditProductPage = () => {
           categories={categories}
           flavors={flavors}
           diameters={diameters}
+          sets={sets}
           allergens={allergens}
           categoryId={productCategoryId}
           onCategoryChange={setProductCategoryId}
