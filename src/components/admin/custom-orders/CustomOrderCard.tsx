@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
 import { useAlert } from "@/contexts/AlertContext";
 import { OrderItemTiersDisplay } from "@/components/shared/OrderItemTiersDisplay";
+import { formatCustomOrderFlavorSummary } from "@/lib/sets/customOrderSets";
 import { addonQuantityMark, addonUnitCost } from "@/lib/addons/selectedAddonMath";
 import { SocialHandleAnchor } from "@/components/ui/SocialHandleAnchor";
 import { customOrderLineImages } from "@/lib/sets/customOrderSets";
@@ -227,7 +228,7 @@ export const CustomOrderCard = ({ order }: CustomOrderCardProps) => {
                           />
                           {!item.details?.tiers?.length && (
                             <span className="text-xs leading-tight">
-                              {item.details?.flavor || "Flavor TBD"}
+                              {formatCustomOrderFlavorSummary(item.details?.flavor) || "Flavor TBD"}
                             </span>
                           )}
                         </div>

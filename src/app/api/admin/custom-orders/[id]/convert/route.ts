@@ -13,7 +13,7 @@ import { normalizeCustomOrder } from "@/lib/normalizeCustomOrder";
 import type { CustomOrderItem, SelectedAddon } from "@/types";
 import { normalizePhoneDigits } from "@/lib/crm/normalize";
 import { addonCount } from "@/lib/addons/selectedAddonMath";
-import { customOrderCakeFlavorName, customOrderFlavorNames } from "@/lib/sets/customOrderSets";
+import { customOrderCakeFlavorName, customOrderFlavorNames, findFlavorBySavedName, formatCustomOrderFlavorSummary } from "@/lib/sets/customOrderSets";
 
 /** Copy the saved addon snapshot, including quantity, onto the production order. */
 function copySelectedAddons(addons: SelectedAddon[] | undefined): SelectedAddon[] {
@@ -37,15 +37,21 @@ function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-async function flavorIdForName(db: any, name: string): Promise<string> {
-  const flavorDoc = await db.collection("flavors").findOne({
-    name: { $regex: new RegExp(`^${escapeRegex(name)}$`, "i") },
-  });
-  return flavorDoc ? String(flavorDoc._id) : name;
+async function flavorIdForName(
+  flavors: { _id: unknown; name?: string }[],
+  name: string
+): Promise<string> {
+  const match = findFlavorBySavedName(flavors, name);
+  return match?._id != null ? String(match._id) : name.trim();
 }
 
 /** Carries a custom-request catalog set onto the production line. Lines without a set are unchanged. */
-async function convertedSetConfig(db: any, item: CustomOrderItem, categoryDoc: any) {
+async function convertedSetConfig(
+  db: any,
+  item: CustomOrderItem,
+  categoryDoc: any,
+  flavorCatalog: { _id: unknown; name?: string }[]
+) {
   const setId = item.details?.setId;
   if (!setId || !ObjectId.isValid(String(setId)) || !categoryDoc) return undefined;
   if (categoryDoc.categoryType !== "set" && categoryDoc.categoryType !== "combo") return undefined;
@@ -61,7 +67,7 @@ async function convertedSetConfig(db: any, item: CustomOrderItem, categoryDoc: a
   const categoryType = categoryDoc.categoryType as "set" | "combo";
   const treats = await Promise.all(
     customOrderFlavorNames(flavorText, categoryType).map(async (name) => ({
-      flavorId: await flavorIdForName(db, name),
+      flavorId: await flavorIdForName(flavorCatalog, name),
       count: 1,
     }))
   );
@@ -76,7 +82,7 @@ async function convertedSetConfig(db: any, item: CustomOrderItem, categoryDoc: a
     ...(cakeName
       ? {
           cake: {
-            flavorId: await flavorIdForName(db, cakeName),
+            flavorId: await flavorIdForName(flavorCatalog, cakeName),
             diameterId: "",
             inscription: item.details?.textOnCake,
           },
@@ -107,7 +113,13 @@ async function buildOrderItemFromCustomItem(
   const referenceImages = Array.isArray(item.referenceImages)
     ? item.referenceImages
     : [];
-  const primaryImage = referenceImages.length > 0 ? referenceImages[0] : "";
+  const setImage = item.details?.setImageUrl?.trim() || "";
+  const primaryImage = referenceImages.length > 0 ? referenceImages[0] : setImage;
+  const imageUrls = referenceImages.length > 0 ? referenceImages : setImage ? [setImage] : [];
+  const flavorCatalog: { _id: unknown; name?: string }[] = await db
+    .collection("flavors")
+    .find({}, { projection: { name: 1 } })
+    .toArray();
 
   // Resolve category name -> ObjectId. Prefer stored categoryId; fall back to legacy name matching.
   const categoryName = item.category || "";
@@ -133,12 +145,16 @@ async function buildOrderItemFromCustomItem(
 
   // Resolve flavor name -> ObjectId
   const flavorName = item.details?.flavor || "";
+  const categoryType = categoryDoc?.categoryType as string | undefined;
+  const cleanedFlavor = formatCustomOrderFlavorSummary(flavorName, categoryType);
+  const singleFlavorName =
+    flavorName.includes(",") || flavorName.includes("Treats:") ? "" : flavorName.trim();
   let resolvedFlavorId: ObjectId | null = null;
-  if (flavorName) {
-    const flavorDoc = await db.collection("flavors").findOne({
-      name: { $regex: new RegExp(`^${flavorName}$`, "i") },
-    });
-    if (flavorDoc) resolvedFlavorId = new ObjectId(flavorDoc._id);
+  if (singleFlavorName) {
+    const match = findFlavorBySavedName(flavorCatalog, singleFlavorName);
+    if (match?._id && ObjectId.isValid(String(match._id))) {
+      resolvedFlavorId = new ObjectId(String(match._id));
+    }
   }
 
   // Resolve size name -> ObjectId (scoped to the resolved category)
@@ -146,7 +162,7 @@ async function buildOrderItemFromCustomItem(
   let resolvedDiameterId: ObjectId | null = null;
   if (sizeName && resolvedCategoryId) {
     const diameterDoc = await db.collection("diameters").findOne({
-      name: { $regex: new RegExp(`^${sizeName}$`, "i") },
+      name: { $regex: new RegExp(`^${escapeRegex(sizeName)}$`, "i") },
       $or: [
         { categoryIds: resolvedCategoryId },
         { categoryIds: resolvedCategoryId.toString() },
@@ -160,12 +176,12 @@ async function buildOrderItemFromCustomItem(
   let resolvedShapeId: ObjectId | null = null;
   if (shapeName) {
     const shapeDoc = await db.collection("shapes").findOne({
-      name: { $regex: new RegExp(`^${shapeName}$`, "i") },
+      name: { $regex: new RegExp(`^${escapeRegex(shapeName)}$`, "i") },
     });
     if (shapeDoc) resolvedShapeId = new ObjectId(shapeDoc._id);
   }
 
-  const selectedConfig = await convertedSetConfig(db, item, categoryDoc);
+  const selectedConfig = await convertedSetConfig(db, item, categoryDoc, flavorCatalog);
 
   return {
     id: `${newOrderId.toString()}-custom-${index + 1}`,
@@ -175,12 +191,12 @@ async function buildOrderItemFromCustomItem(
     originalPrice: price,
     quantity: 1,
     imageUrl: primaryImage,
-    imageUrls: referenceImages,
+    imageUrls,
     customSize: sizeName, // Keep as string for receipts
     diameterId: resolvedDiameterId, // Assign ID for backend & analytics
     customShape: !resolvedShapeId ? (shapeName || undefined) : undefined,
     shapeId: resolvedShapeId,
-    customFlavor: flavorName, // Keep as string for receipts
+    customFlavor: cleanedFlavor || flavorName,
     flavorId: resolvedFlavorId,
     tiers: item.details?.tiers,
     isManualPrice: true,

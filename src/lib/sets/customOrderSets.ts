@@ -108,6 +108,35 @@ export function customOrderCakeFlavorName(flavorText: string): string | undefine
   return cake && cake !== "None" ? cake : undefined;
 }
 
+export function compileSetFlavorLabel(names: string[]): string {
+  return names.map((name) => name.trim()).filter(Boolean).join(", ");
+}
+
+export function compileComboFlavorLabel(treats: string[], cake: string): string {
+  const treatText = treats.map((name) => name.trim()).filter(Boolean).join(", ");
+  return `Treats: [${treatText || "None"}]. Cake: ${cake.trim() || "None"}`;
+}
+
+/** One readable line for a saved set or combo flavor string. */
+export function formatCustomOrderFlavorSummary(
+  flavorText: string | undefined,
+  categoryType?: string
+): string {
+  const text = flavorText ?? "";
+  if (!text.trim()) return "";
+  if (text.includes("Treats:") || categoryType === "combo") {
+    const treats = customOrderFlavorNames(text, "combo");
+    const cake = customOrderCakeFlavorName(text);
+    return [cake ? `Cake: ${cake}` : "", treats.length ? `Treats: ${treats.join(", ")}` : ""]
+      .filter(Boolean)
+      .join(" · ");
+  }
+  if (text.includes(",") || categoryType === "set") {
+    return customOrderFlavorNames(text, "set").join(", ");
+  }
+  return text.trim();
+}
+
 export type ResolvedCustomOrderSet =
   | { status: "legacy" }
   | { status: "error"; error: string }

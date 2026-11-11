@@ -19,7 +19,7 @@ export function resolveFlavorId(
   const byId = flavors.find((f) => String(f._id) === trimmed);
   if (byId) return String(byId._id);
   const byName = flavors.find(
-    (f) => f.name.toLowerCase() === trimmed.toLowerCase()
+    (f) => (f.name ?? "").trim().toLowerCase() === trimmed.toLowerCase()
   );
   return byName ? String(byName._id) : "";
 }

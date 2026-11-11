@@ -16,7 +16,17 @@ import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
 import ImagePreviewGallery from "@/components/ui/ImagePreviewGallery";
 import { AdminTierFlavorEditor } from "@/components/admin/shared/AdminTierFlavorEditor";
 import HybridSelector from "@/components/admin/custom-orders/HybridSelector";
-import { Flavor, IShape, CustomOrderItem, ProductCategory, Diameter } from "@/types";
+import { Flavor, IShape, CustomOrderItem, ProductCategory, Diameter, CatalogSet } from "@/types";
+import {
+  compileComboFlavorLabel,
+  compileSetFlavorLabel,
+  customOrderCakeFlavorName,
+  customOrderFlavorNames,
+  findFlavorBySavedName,
+  flavorIdsFromSavedNames,
+  formatCustomOrderFlavorSummary,
+} from "@/lib/sets/customOrderSets";
+import { BakerFlavorChips, FlavorPills } from "@/components/admin/custom-orders/BakerFlavorChips";
 import {
   resolveCustomOrderItemCategoryId,
   resolveCustomOrderItemCategoryName,
@@ -74,6 +84,7 @@ interface ItemSpecEditorProps {
   flavors: Flavor[];
   categories: ProductCategory[];
   diameters: Diameter[];
+  sets: CatalogSet[];
   onItemChange: (index: number, field: string, value: any) => void;
   onItemImageUpload: (index: number, files: FileList) => Promise<void>;
   isUploading: boolean;
@@ -87,6 +98,7 @@ function ItemSpecEditor({
   flavors,
   categories,
   diameters,
+  sets,
   onItemChange,
   onItemImageUpload,
   isUploading,
@@ -165,6 +177,59 @@ function ItemSpecEditor({
     () => resolveFlavorId(details.flavor, activeFlavors),
     [details.flavor, activeFlavors]
   );
+
+  const activeCategory = useMemo(
+    () => categories.find((category) => String(category._id) === resolvedCategoryId),
+    [categories, resolvedCategoryId]
+  );
+  const categoryType = activeCategory?.categoryType;
+  const isSetLine = categoryType === "set";
+  const isComboLine = categoryType === "combo";
+  const flavorText = String(details.flavor ?? "");
+  const bentoCategoryId = categories.find((category) =>
+    category.name.toLowerCase().includes("bento")
+  )?._id;
+  const treatCategoryId = categories.find((category) =>
+    category.name.toLowerCase().includes(
+      categoryDisplayName.toLowerCase().includes("macaron") ? "macaron" : "cupcake"
+    )
+  )?._id;
+  const flavorsFor = (categoryId?: string) => {
+    if (!categoryId) return activeFlavors;
+    const matched = flavors.filter((flavor) =>
+      categoryIdsInclude(flavor.categoryIds, String(categoryId))
+    );
+    return matched.length > 0 ? matched : activeFlavors;
+  };
+  const treatPool = isComboLine ? flavorsFor(treatCategoryId ? String(treatCategoryId) : undefined) : activeFlavors;
+  const cakePool = isComboLine ? flavorsFor(bentoCategoryId ? String(bentoCategoryId) : undefined) : activeFlavors;
+  const treatSource = isComboLine
+    ? flavorText.match(/Treats:\s*\[([^\]]*)\]/)?.[1] ?? ""
+    : flavorText;
+  const selectedTreatIds = isSetLine || isComboLine
+    ? flavorIdsFromSavedNames(treatPool, treatSource)
+    : [];
+  const selectedCake = isComboLine
+    ? findFlavorBySavedName(cakePool, customOrderCakeFlavorName(flavorText) ?? "")
+    : undefined;
+  const chosenSet = sets.find((set) => String(set._id) === String(details.setId));
+  const flavorSummary = formatCustomOrderFlavorSummary(flavorText, categoryType);
+
+  const writeTreatIds = (nextIds: string[]) => {
+    const names = nextIds
+      .map((id) => treatPool.find((flavor) => String(flavor._id) === id)?.name ?? "")
+      .filter(Boolean);
+    if (isComboLine) {
+      updateDetails({
+        flavor: compileComboFlavorLabel(
+          names,
+          selectedCake?.name || customOrderCakeFlavorName(flavorText) || ""
+        ),
+      });
+      return;
+    }
+    updateDetails({ flavor: compileSetFlavorLabel(names), tiers: undefined });
+  };
 
   const sizeHybridValue = useMemo(() => {
     const resolveFromPool = (pool: Diameter[]) =>
@@ -279,7 +344,13 @@ function ItemSpecEditor({
   return (
     <div className="space-y-4 rounded-2xl border border-primary/10 bg-background/30 p-4">
       <div className="flex min-w-0 items-start justify-between gap-3">
-        <div className="min-w-0">
+        <div className="flex min-w-0 items-start gap-3">
+          {details.setImageUrl ? (
+            <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-primary/15">
+              <Image src={details.setImageUrl} alt="" fill sizes="64px" className="object-cover" />
+            </div>
+          ) : null}
+          <div className="min-w-0">
           <p className="text-[10px] font-bold uppercase tracking-wide text-primary/45">
             {itemCount > 1 ? `Item ${index + 1}` : "Item"}
           </p>
@@ -287,8 +358,20 @@ function ItemSpecEditor({
             {categoryDisplayName || item.category || "Product"}
           </p>
           <p className="truncate text-xs text-primary/65">
-            {[scanSize, details.flavor].filter(Boolean).join(" · ") || "Size and flavor not set"}
+            {[scanSize, flavorSummary].filter(Boolean).join(" · ") || "Size and flavor not set"}
           </p>
+          {(isSetLine || isComboLine) && selectedTreatIds.length > 0 && (
+            <div className="mt-2">
+              <FlavorPills
+                labels={
+                  isComboLine
+                    ? customOrderFlavorNames(flavorText, "combo")
+                    : customOrderFlavorNames(flavorText, "set")
+                }
+              />
+            </div>
+          )}
+          </div>
         </div>
         <p className="shrink-0 text-base font-bold tabular-nums text-accent">
           ${scanPrice.toFixed(2)}
@@ -347,7 +430,7 @@ function ItemSpecEditor({
             onChange={handleSizeChange}
           />
         </div>
-        {!isMultiTier && (
+        {!isMultiTier && !isSetLine && !isComboLine && (
           <div className="space-y-sm">
             <Label className="text-xs font-medium text-primary/55">Flavor Profile</Label>
             <Select
@@ -369,7 +452,7 @@ function ItemSpecEditor({
               <SelectContent position="popper" className="w-full min-w-[var(--radix-select-trigger-width)]">
                 {activeFlavors.map((f) => (
                   <SelectItem key={String(f._id)} value={String(f._id)}>
-                    {f.name}
+                    {(f.name ?? "").trim()}
                     {f.price > 0 ? ` (+$${f.price})` : ""}
                   </SelectItem>
                 ))}
@@ -378,6 +461,53 @@ function ItemSpecEditor({
           </div>
         )}
       </div>
+
+      {(isSetLine || isComboLine) && (
+        <div className="space-y-3">
+          {isComboLine && (
+            <div className="space-y-sm">
+              <Label className="text-xs font-medium text-primary/55">Cake flavor</Label>
+              <Select
+                value={selectedCake?._id ? String(selectedCake._id) : undefined}
+                onValueChange={(flavorId) => {
+                  const flavor = cakePool.find((item) => String(item._id) === flavorId);
+                  const treats = customOrderFlavorNames(flavorText, "combo");
+                  updateDetails({
+                    flavor: compileComboFlavorLabel(treats, flavor?.name ?? ""),
+                  });
+                }}
+              >
+                <SelectTrigger className="h-11 rounded-xl sm:h-10">
+                  <SelectValue placeholder="Select cake flavor" />
+                </SelectTrigger>
+                <SelectContent>
+                  {cakePool.map((flavor) => (
+                    <SelectItem key={String(flavor._id)} value={String(flavor._id)}>
+                      {(flavor.name ?? "").trim()}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          <div className="space-y-sm">
+            <Label className="text-xs font-medium text-primary/55">
+              {isComboLine ? "Treat flavors" : "Set flavors"}
+            </Label>
+            <BakerFlavorChips
+              flavors={treatPool}
+              selectedIds={selectedTreatIds}
+              maxFlavors={chosenSet?.maxFlavors}
+              onToggle={(flavorId) => {
+                const next = selectedTreatIds.includes(flavorId)
+                  ? selectedTreatIds.filter((id) => id !== flavorId)
+                  : [...selectedTreatIds, flavorId];
+                writeTreatIds(next);
+              }}
+            />
+          </div>
+        </div>
+      )}
 
       {isMultiTier && (
         <div className="flex w-full min-w-0 flex-col gap-3">
@@ -627,14 +757,16 @@ export const CustomOrderSpecsForm = ({
   const [flavors, setFlavors] = useState<Flavor[]>([]);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [diameters, setDiameters] = useState<Diameter[]>([]);
+  const [sets, setSets] = useState<CatalogSet[]>([]);
 
   useEffect(() => {
     Promise.all([
       fetch("/api/admin/flavors").then((r) => (r.ok ? r.json() : [])),
       fetch("/api/categories").then((r) => (r.ok ? r.json() : [])),
       fetch("/api/diameters").then((r) => (r.ok ? r.json() : [])),
+      fetch("/api/sets").then((r) => (r.ok ? r.json() : [])),
     ])
-      .then(([flavData, catData, diamData]) => {
+      .then(([flavData, catData, diamData, setData]) => {
         setFlavors(
           Array.isArray(flavData)
             ? flavData.map((f) => ({
@@ -658,8 +790,13 @@ export const CustomOrderSpecsForm = ({
                 _id: String(d._id),
                 categoryIds: Array.isArray(d.categoryIds)
                   ? d.categoryIds.map(String)
-                  : d.categoryIds,
+                  : d.                categoryIds,
               }))
+            : []
+        );
+        setSets(
+          Array.isArray(setData)
+            ? setData.map((set) => ({ ...set, _id: String(set._id) }))
             : []
         );
       })
@@ -689,6 +826,7 @@ export const CustomOrderSpecsForm = ({
           flavors={flavors}
           categories={categories}
           diameters={diameters}
+          sets={sets}
           onItemChange={onItemChange}
           onItemImageUpload={onItemImageUpload}
           isUploading={isUploading}

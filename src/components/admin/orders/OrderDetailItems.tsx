@@ -4,6 +4,11 @@ import { useState, useEffect, useMemo } from "react";
 import { Order, Diameter, CartItem, ProductWithCategory, Flavor, IShape, CatalogSet } from "@/types";
 import { addonsUnitCost } from "@/lib/addons/selectedAddonMath";
 import { setLineIdentifier, setLinePrice } from "@/lib/sets/setLinePrice";
+import {
+  customOrderCakeFlavorName,
+  findFlavorBySavedName,
+  flavorIdsFromSavedNames,
+} from "@/lib/sets/customOrderSets";
 import { Button } from "@/components/ui/Button";
 import {
   Dialog,
@@ -530,11 +535,50 @@ const OrderDetailItems = ({
                             categoryId: editingItem.categoryId || "",
                         }}
                         onSubmit={(newItem) => {
+                             const flavorText = String(newItem.customFlavor || newItem.flavor || "");
+                             const category = allCategories.find(
+                               (entry) => String(entry._id) === String(newItem.categoryId || editingItem.categoryId)
+                             );
+                             const categoryType =
+                               category?.categoryType === "combo" || flavorText.includes("Treats:")
+                                 ? "combo"
+                                 : category?.categoryType === "set" || flavorText.includes(",")
+                                   ? "set"
+                                   : "single";
                              const updatedItem = {
                                  ...editingItem,
                                  ...newItem,
-                                 id: editingItem.id
+                                 id: editingItem.id,
                              };
+                             if (
+                               editingItem.selectedConfig &&
+                               (categoryType === "set" || categoryType === "combo")
+                             ) {
+                               const treatSource =
+                                 categoryType === "combo"
+                                   ? flavorText.match(/Treats:\s*\[([^\]]*)\]/)?.[1] ?? ""
+                                   : flavorText;
+                               const treatIds = flavorIdsFromSavedNames(allFlavors, treatSource);
+                               const nextConfig = {
+                                 ...editingItem.selectedConfig,
+                                 items: treatIds.map((flavorId) => ({ flavorId, count: 1 })),
+                               };
+                               if (categoryType === "combo") {
+                                 const cake = findFlavorBySavedName(
+                                   allFlavors,
+                                   customOrderCakeFlavorName(flavorText) ?? ""
+                                 );
+                                 nextConfig.cake = {
+                                   ...(editingItem.selectedConfig.cake ?? { diameterId: "" }),
+                                   flavorId: cake?._id != null
+                                     ? String(cake._id)
+                                     : editingItem.selectedConfig.cake?.flavorId || "",
+                                   diameterId: editingItem.selectedConfig.cake?.diameterId || "",
+                                 };
+                               }
+                               updatedItem.selectedConfig = nextConfig;
+                               updatedItem.customFlavor = flavorText;
+                             }
                              const newItems = items.map(i => i.id === editingItem.id ? updatedItem : i);
                              const newTotalAmount = newItems.reduce((sum, i) => sum + (i.price * i.quantity), 0);
                              

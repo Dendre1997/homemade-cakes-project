@@ -7,6 +7,12 @@ import ImagePreviewGallery from "@/components/ui/ImagePreviewGallery";
 import { OrderItemTiersDisplay } from "@/components/shared/OrderItemTiersDisplay";
 import { addonQuantityMark, addonUnitCost } from "@/lib/addons/selectedAddonMath";
 import { catalogSetLabel } from "@/lib/sets/setLineLabel";
+import { FlavorPills } from "@/components/admin/custom-orders/BakerFlavorChips";
+import {
+  customOrderCakeFlavorName,
+  customOrderFlavorNames,
+  formatCustomOrderFlavorSummary,
+} from "@/lib/sets/customOrderSets";
 
 interface AdminOrderItemProps {
   item: CartItem;
@@ -151,9 +157,32 @@ export const AdminOrderItem = ({
                                   resolveFlavorName={(id) => getFlavorName(id)}
                                 />
                              ) : displayFlavor ? (
-                                <span className="flex items-center gap-1">
-                                    <span className="font-semibold text-primary">Flavor:</span> {displayFlavor}
-                                </span>
+                                <div className="flex min-w-0 flex-col gap-1">
+                                    <span className="font-semibold text-primary">
+                                      {displayFlavor.includes("Treats:") || item.selectedConfig?.cake ? "Flavors" : "Flavor"}:
+                                    </span>
+                                    {item.selectedConfig?.cake?.flavorId && (
+                                      <FlavorPills labels={[`Cake: ${getFlavorName(item.selectedConfig.cake.flavorId).trim()}`]} />
+                                    )}
+                                    {(item.selectedConfig?.items?.length ?? 0) > 0 ? (
+                                      <FlavorPills
+                                        labels={(item.selectedConfig?.items ?? []).map(
+                                          (entry: { flavorId?: string }) => getFlavorName(entry.flavorId).trim()
+                                        )}
+                                      />
+                                    ) : displayFlavor.includes("Treats:") ? (
+                                      <div className="space-y-1">
+                                        {customOrderCakeFlavorName(displayFlavor) && (
+                                          <FlavorPills labels={[`Cake: ${customOrderCakeFlavorName(displayFlavor)}`]} />
+                                        )}
+                                        <FlavorPills labels={customOrderFlavorNames(displayFlavor, "combo")} />
+                                      </div>
+                                    ) : displayFlavor.includes(",") ? (
+                                      <FlavorPills labels={customOrderFlavorNames(displayFlavor, "set")} />
+                                    ) : (
+                                      <span>{formatCustomOrderFlavorSummary(displayFlavor)}</span>
+                                    )}
+                                </div>
                              ) : null}
                              {item.flavorNote && item.flavorNote !== "No" && (
                                 <span className="flex items-center gap-1">

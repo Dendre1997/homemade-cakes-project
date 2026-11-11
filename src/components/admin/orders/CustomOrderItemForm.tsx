@@ -16,7 +16,7 @@ import {
   appendCloudinaryUploadPreset,
   cloudinaryUploadUrl,
 } from "@/lib/cloudinaryClient";
-import { Plus, Minus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useAlert } from "@/contexts/AlertContext";
 import { AddonAdminSelector } from "@/components/admin/addons/AddonAdminSelector";
 import { SelectedAddon } from "@/types";
@@ -29,6 +29,14 @@ import {
   getTierSizeLabels,
   tierFlavorsFromSelections,
 } from "@/lib/tierSelections";
+import {
+  compileComboFlavorLabel,
+  compileSetFlavorLabel,
+  customOrderCakeFlavorName,
+  findFlavorBySavedName,
+  flavorIdsFromSavedNames,
+} from "@/lib/sets/customOrderSets";
+import { BakerFlavorChips } from "@/components/admin/custom-orders/BakerFlavorChips";
 
 // Icons Imports
 import { FourInchBentoIcon } from "@/components/icons/cake-sizes/FourInchBentoIcon";
@@ -115,7 +123,9 @@ export default function CustomOrderItemForm({
   // -- State --
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>(initialValues?.categoryId || "");
   const [customBoxSize, setCustomBoxSize] = useState("");
-  const [flavorCounts, setFlavorCounts] = useState<Record<string, number>>({});
+  const [selectedTreatIds, setSelectedTreatIds] = useState<string[]>([]);
+  const [cakeFlavorId, setCakeFlavorId] = useState("");
+  const flavorHydrated = useRef(false);
   const [images, setImages] = useState<string[]>(initialValues?.images || []);
   const [selectedImage, setSelectedImage] = useState<string>(initialValues?.selectedImage || "");
   const [sizeValue, setSizeValue] = useState<string>(initialValues?.sizeValue || "");
@@ -230,14 +240,21 @@ export default function CustomOrderItemForm({
   }, [selectedDiameterId, isMultiTier]);
 
   useEffect(() => {
-    if (activeCategoryObj?.categoryType === 'set') {
-      const selected = Object.entries(flavorCounts)
-        .filter(([_, count]) => count > 0)
-        .map(([fId, count]) => `${count}x ${flavors.find(f => f._id === fId)?.name || fId}`)
-        .join(', ');
-      setFlavorValue(selected);
+    if (flavorHydrated.current || !activeCategoryObj) return;
+    if (activeCategoryObj.categoryType !== "set" && activeCategoryObj.categoryType !== "combo") return;
+    const pool = activeFlavors.length > 0 ? activeFlavors : flavors;
+    if (!pool.length) return;
+    const source =
+      activeCategoryObj.categoryType === "combo"
+        ? flavorValue.match(/Treats:\s*\[([^\]]*)\]/)?.[1] ?? ""
+        : flavorValue;
+    setSelectedTreatIds(flavorIdsFromSavedNames(pool, source));
+    if (activeCategoryObj.categoryType === "combo") {
+      const cake = findFlavorBySavedName(pool, customOrderCakeFlavorName(flavorValue) ?? "");
+      if (cake?._id != null) setCakeFlavorId(String(cake._id));
     }
-  }, [flavorCounts, activeCategoryObj, flavors]);
+    flavorHydrated.current = true;
+  }, [activeCategoryObj, activeFlavors, flavors, flavorValue]);
 
   // -- Handlers --
 
@@ -375,6 +392,8 @@ export default function CustomOrderItemForm({
         compiledFlavor = compileCustomOrderFlavorLabel(itemTiers);
       }
 
+      const isSetOrCombo =
+        activeCategoryObj?.categoryType === "set" || activeCategoryObj?.categoryType === "combo";
       const newItem: any = {
           id: initialValues?.id || `new-custom-${Date.now()}`,
           name: `Custom ${activeCategoryObj?.name || 'Cake'} - ${sizeName}`,
@@ -400,19 +419,18 @@ export default function CustomOrderItemForm({
           shapeId: !isCustomSize && !isMultiTier && selectedShapeId ? selectedShapeId : undefined,
           tiers: itemTiers,
           
-          customFlavor: isCustomFlavor ? flavorValue : undefined,
-          flavor: isMultiTier ? compiledFlavor : (isCustomFlavor ? flavorValue : compiledFlavor),
-          selectedConfig: (!isMultiTier && (!isCustomFlavor || !isCustomSize)) ? {
-              cake: {
-                  flavorId: !isCustomFlavor ? flavorValue : "",
-                  diameterId: !isCustomSize ? sizeValue : "",
-                  shapeId: !isCustomSize && selectedShapeId ? selectedShapeId : ""
-              }
-          } : undefined
+          customFlavor: isCustomFlavor || isSetOrCombo ? flavorValue : undefined,
+          flavor: isMultiTier ? compiledFlavor : flavorValue,
       };
-      
-      if (!isMultiTier) {
-        newItem.flavor = flavorValue;
+
+      if (!isSetOrCombo && !isMultiTier && (!isCustomFlavor || !isCustomSize)) {
+        newItem.selectedConfig = {
+          cake: {
+            flavorId: !isCustomFlavor ? flavorValue : "",
+            diameterId: !isCustomSize ? sizeValue : "",
+            shapeId: !isCustomSize && selectedShapeId ? selectedShapeId : "",
+          },
+        };
       }
       
       onSubmit(newItem);
@@ -566,7 +584,6 @@ export default function CustomOrderItemForm({
                                        onClick={() => {
                                          setSizeValue(box.value);
                                          setCustomBoxSize("");
-                                         setFlavorCounts({});
                                        }}
                                        className={`flex w-32 shrink-0 flex-col items-center gap-2 rounded-xl border p-3 text-center transition-all duration-200 ${
                                          sizeValue === box.value
@@ -643,67 +660,53 @@ export default function CustomOrderItemForm({
 
                  {/* FLAVOR SELECTION UI */}
                  <div className="pt-2">
-                     {activeCategoryObj?.categoryType === "set" ? (
-                         <div className="bg-white p-4 rounded-md border border-gray-200 mt-2">
-                             <div className="flex justify-between items-center mb-2">
-                                 <label className="text-sm font-bold text-gray-700">Distribute Flavors (Max 5)</label>
-                                 <span className={`text-xs font-bold px-2 py-1 rounded ${
-                                     (parseInt(sizeValue) || 0) - Object.values(flavorCounts).reduce((a, b) => a + b, 0) === 0 
-                                     ? 'bg-green-100 text-green-700' 
-                                     : 'bg-yellow-100 text-yellow-700'
-                                 }`}>
-                                     {(parseInt(sizeValue) || 0) - Object.values(flavorCounts).reduce((a, b) => a + b, 0) === 0 
-                                     ? "Box Full" 
-                                     : `Remaining slots: ${(parseInt(sizeValue) || 0) - Object.values(flavorCounts).reduce((a, b) => a + b, 0)}`}
-                                 </span>
-                             </div>
-                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-60 overflow-y-auto p-1">
-                                 {activeFlavors.map(f => {
-                                      const count = flavorCounts[f._id] || 0;
-                                      const remainingItems = (parseInt(sizeValue) || 0) - Object.values(flavorCounts).reduce((a, b) => a + b, 0);
-                                      const differentFlavorsCount = Object.values(flavorCounts).filter(c => c > 0).length;
-                                      const isNewFlavor = count === 0;
-                                      return (
-                                          <div key={f._id} className="flex items-center justify-between p-2 bg-gray-50 rounded border gap-2">
-                                              <span className="text-sm truncate flex-1 min-w-0 mr-2" title={f.name}>{f.name}</span>
-                                              <div className="flex items-center gap-2 flex-shrink-0">
-                                                  <button 
-                                                     type="button"
-                                                     onClick={() => {
-                                                         setFlavorCounts(prev => {
-                                                             const newCount = (prev[f._id] || 0) - 1;
-                                                             if (newCount <= 0) {
-                                                                 const copy = { ...prev };
-                                                                 delete copy[f._id];
-                                                                 return copy;
-                                                             }
-                                                             return { ...prev, [f._id]: newCount };
-                                                         });
-                                                     }}
-                                                     className="h-6 w-6 flex items-center justify-center rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
-                                                     disabled={count === 0}
-                                                  >
-                                                     <Minus className="w-3 h-3" />
-                                                  </button>
-                                                  <span className="w-4 text-center text-sm font-bold">{count}</span>
-                                                  <button 
-                                                     type="button"
-                                                     onClick={() => {
-                                                         if (remainingItems <= 0) return;
-                                                         setFlavorCounts(prev => ({
-                                                             ...prev,
-                                                             [f._id]: (prev[f._id] || 0) + 1
-                                                         }));
-                                                     }}
-                                                     className="h-6 w-6 flex items-center justify-center rounded bg-primary text-white hover:bg-primary/90 disabled:opacity-50"
-                                                     disabled={remainingItems <= 0 || (isNewFlavor && differentFlavorsCount >= 5) || !(parseInt(sizeValue) > 0)}
-                                                  >
-                                                     <Plus className="w-3 h-3" />
-                                                  </button>
-                                              </div>
-                                          </div>
-                                      );
-                                 })}
+                     {activeCategoryObj?.categoryType === "set" || activeCategoryObj?.categoryType === "combo" ? (
+                         <div className="mt-2 space-y-3 rounded-xl border border-primary/15 bg-background/40 p-4">
+                             {activeCategoryObj.categoryType === "combo" && (
+                               <div className="space-y-2">
+                                 <Label>Cake flavor</Label>
+                                 <Select value={cakeFlavorId || undefined} onValueChange={(value) => {
+                                   setCakeFlavorId(value);
+                                   const cake = activeFlavors.find((flavor) => String(flavor._id) === value);
+                                   const names = selectedTreatIds
+                                     .map((id) => activeFlavors.find((flavor) => String(flavor._id) === id)?.name ?? "")
+                                     .filter(Boolean);
+                                   setFlavorValue(compileComboFlavorLabel(names, cake?.name ?? ""));
+                                 }}>
+                                   <SelectTrigger className="h-11 rounded-xl bg-white sm:h-10">
+                                     <SelectValue placeholder="Select cake flavor" />
+                                   </SelectTrigger>
+                                   <SelectContent>
+                                     {activeFlavors.map((flavor) => (
+                                       <SelectItem key={String(flavor._id)} value={String(flavor._id)}>
+                                         {(flavor.name ?? "").trim()}
+                                       </SelectItem>
+                                     ))}
+                                   </SelectContent>
+                                 </Select>
+                               </div>
+                             )}
+                             <div className="space-y-2">
+                               <Label>{activeCategoryObj.categoryType === "combo" ? "Treat flavors" : "Set flavors"}</Label>
+                               <BakerFlavorChips
+                                 flavors={activeFlavors}
+                                 selectedIds={selectedTreatIds}
+                                 onToggle={(flavorId) => {
+                                   const next = selectedTreatIds.includes(flavorId)
+                                     ? selectedTreatIds.filter((id) => id !== flavorId)
+                                     : [...selectedTreatIds, flavorId];
+                                   setSelectedTreatIds(next);
+                                   const names = next
+                                     .map((id) => activeFlavors.find((flavor) => String(flavor._id) === id)?.name ?? "")
+                                     .filter(Boolean);
+                                   if (activeCategoryObj.categoryType === "combo") {
+                                     const cake = activeFlavors.find((flavor) => String(flavor._id) === cakeFlavorId);
+                                     setFlavorValue(compileComboFlavorLabel(names, cake?.name ?? customOrderCakeFlavorName(flavorValue) ?? ""));
+                                   } else {
+                                     setFlavorValue(compileSetFlavorLabel(names));
+                                   }
+                                 }}
+                               />
                              </div>
                          </div>
                      ) : isMultiTier ? (
