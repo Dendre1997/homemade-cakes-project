@@ -3,7 +3,6 @@ import React, { useState, useEffect, useCallback } from "react";
 import AllergenForm from "@/components/admin/AllergenForm";
 import { Allergen, ProductCategory } from "@/types"; // Імпортуємо ProductCategory
 import LoadingSpinner from "@/components/ui/Spinner";
-import { Button } from "@/components/ui/Button";
 import { useAlert } from "@/contexts/AlertContext";
 import { useConfirmation } from "@/contexts/ConfirmationContext";
 import { AdminListItem } from "@/components/admin/AdminListItem"; 
@@ -129,7 +128,7 @@ const ManageAllergensPage = () => {
   );
 
   return (
-    <section className="relative">
+    <section className="relative pb-28 md:pb-0">
       {isSubmitting && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
           <LoadingSpinner />
@@ -149,16 +148,10 @@ const ManageAllergensPage = () => {
             onSubmit={handleSubmit}
             existingAllergen={editingAllergen}
             isSubmitting={isSubmitting}
+            onCancel={
+              editingAllergen ? () => setEditingAllergen(null) : undefined
+            }
           />
-          {editingAllergen && (
-            <Button
-              variant="text"
-              onClick={() => setEditingAllergen(null)}
-              className="mt-md"
-            >
-              Cancel Edit
-            </Button>
-          )}
         </div>
 
         <div className={catalogListColumnClass}>

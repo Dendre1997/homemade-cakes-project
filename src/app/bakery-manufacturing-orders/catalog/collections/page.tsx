@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Collection } from "@/types";
 import CollectionForm from "@/components/admin/CollectionForm";
-import { Button } from "@/components/ui/Button";
 import { useConfirmation } from "@/contexts/ConfirmationContext";
 import { useAlert } from "@/contexts/AlertContext";
 import LoadingSpinner from "@/components/ui/Spinner";
@@ -131,7 +130,7 @@ const ManageCollectionsPage = () => {
 
 
   return (
-    <section className="relative">
+    <section className="relative pb-28 md:pb-0">
       {isSubmitting && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
           <LoadingSpinner />
@@ -151,16 +150,10 @@ const ManageCollectionsPage = () => {
             existingCollection={editingCollection}
             onSubmit={handleSubmit}
             isSubmitting={isSubmitting}
+            onCancel={
+              editingCollection ? () => setEditingCollection(null) : undefined
+            }
           />
-          {editingCollection && (
-            <Button
-              variant="text"
-              onClick={() => setEditingCollection(null)}
-              className="mt-md"
-            >
-              Cancel Edit
-            </Button>
-          )}
         </div>
 
         {/* List Column */}

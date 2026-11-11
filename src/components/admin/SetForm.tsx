@@ -4,6 +4,16 @@ import { CatalogSet, ProductCategory } from "@/types";
 import type { SetFields } from "@/lib/validation/setFields";
 import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
+import {
+  CatalogFormActions,
+  catalogChipClass,
+  catalogFieldClass,
+  catalogFormCardClass,
+  catalogFormTitleClass,
+  catalogImageActionClass,
+  catalogLabelClass,
+  catalogUploadButtonClass,
+} from "@/components/admin/catalog/CatalogFormChrome";
 import { ChipCheckbox } from "../ui/ChipCheckbox";
 import { ImageUploadPreview } from "@/components/ui/ImageUploadPreview";
 import { SetBoxIcon } from "@/components/ui/SetBoxIcon";
@@ -21,7 +31,7 @@ const FormLabel = ({
 }) => (
   <label
     htmlFor={htmlFor}
-    className="block font-body text-small text-primary/80 mb-sm"
+    className={catalogLabelClass}
   >
     {children}
   </label>
@@ -35,6 +45,7 @@ interface SetFormProps {
   onSubmit: (formData: SetFormData) => Promise<boolean>;
   isSubmitting: boolean;
   categories: ProductCategory[];
+  onCancel?: () => void;
 }
 
 const emptyForm = (): SetFormData => ({
@@ -56,6 +67,7 @@ const SetForm = ({
   onSubmit,
   isSubmitting,
   categories,
+  onCancel,
 }: SetFormProps) => {
   const [formData, setFormData] = useState<SetFormData>(emptyForm);
   const [isUploading, setIsUploading] = useState(false);
@@ -166,16 +178,14 @@ const SetForm = ({
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="p-lg bg-card-background rounded-large shadow-md max-w-lg space-y-md"
-    >
-      <h2 className="font-heading text-h3 text-primary">
+    <form onSubmit={handleSubmit} className="max-w-lg">
+      <div className={catalogFormCardClass}>
+      <h2 className={catalogFormTitleClass}>
         {existingSet ? "Update Set" : "Add New Set"}
       </h2>
 
       <div>
-        <FormLabel htmlFor="name">Name (e.g., Box of 12)</FormLabel>
+        <FormLabel htmlFor="name">Name (e.g., Set of 12)</FormLabel>
         <Input
           type="text"
           id="name"
@@ -184,6 +194,7 @@ const SetForm = ({
             setFormData((prev) => ({ ...prev, name: e.target.value }))
           }
           required
+          className={catalogFieldClass}
         />
       </div>
 
@@ -204,6 +215,7 @@ const SetForm = ({
             min={1}
             step={1}
             required
+            className={catalogFieldClass}
           />
           {formData.pieceCount > 0 && !formData.imageUrl && (
             <div className="h-10 w-10 p-1 border border-border rounded-medium shrink-0">
@@ -233,6 +245,7 @@ const SetForm = ({
           max={formData.pieceCount > 0 ? formData.pieceCount : undefined}
           step={1}
           required
+          className={catalogFieldClass}
         />
         <p className="text-xs text-primary/60 mt-1">
           The most flavors a customer may choose for this set. You split the
@@ -258,6 +271,7 @@ const SetForm = ({
           placeholder="e.g. 48"
           min={0}
           step="0.01"
+          className={catalogFieldClass}
         />
         <p className="text-xs text-primary/60 mt-1">
           If empty, the custom order estimate is the category price per piece
@@ -274,6 +288,7 @@ const SetForm = ({
           containerClassName="h-48 w-full"
           allowPositioning={true}
           onCropSave={handleCropSave}
+          actionClassName={catalogImageActionClass}
         />
         <Input
           id="image"
@@ -288,11 +303,11 @@ const SetForm = ({
           type="button"
           variant="secondary"
           onClick={() => fileInputRef.current?.click()}
-          className="mt-sm"
+          className={catalogUploadButtonClass}
           disabled={isUploading}
         >
           {isUploading ? (
-            <p>Uploading...</p>
+            <span>Uploading…</span>
           ) : formData.imageUrl ? (
             "Change Icon"
           ) : (
@@ -303,7 +318,7 @@ const SetForm = ({
           <p className="text-error text-small mt-sm">{uploadError}</p>
         )}
         <p className="text-xs text-primary/60 mt-1">
-          Without an icon, the built-in box icon for the piece count is shown.
+          Without an icon, the built-in set icon for the piece count is shown.
         </p>
       </div>
 
@@ -321,6 +336,7 @@ const SetForm = ({
               key={cat._id}
               checked={(formData.categoryIds || []).includes(cat._id)}
               onCheckedChange={() => handleCategoryChange(cat._id)}
+              className={catalogChipClass}
             >
               {cat.name}
             </ChipCheckbox>
@@ -328,10 +344,11 @@ const SetForm = ({
         </div>
       </div>
 
-      <div>
-        <Button type="submit" disabled={isSubmitting} className="w-full">
-          {isSubmitting ? "Saving..." : existingSet ? "Update Set" : "Add Set"}
-        </Button>
+      <CatalogFormActions
+        isSubmitting={isSubmitting}
+        onCancel={onCancel}
+        submitLabel={isSubmitting ? "Saving…" : existingSet ? "Update Set" : "Add Set"}
+      />
       </div>
     </form>
   );

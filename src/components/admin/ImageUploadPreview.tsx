@@ -21,6 +21,7 @@ interface ImageUploadPreviewProps {
   allowPositioning?: boolean;
 
   onCropSave?: (newUrl: string) => void;
+  actionClassName?: string;
 }
 
 export const ImageUploadPreview = ({
@@ -30,6 +31,7 @@ export const ImageUploadPreview = ({
   containerClassName = "h-48 w-full",
   allowPositioning = false,
   onCropSave,
+  actionClassName = "!p-2 h-8 w-8 rounded-full shadow-sm",
 }: ImageUploadPreviewProps) => {
   const [isRepositioning, setIsRepositioning] = useState(false);
 
@@ -121,7 +123,7 @@ export const ImageUploadPreview = ({
                 type="button"
                 variant={isRepositioning ? "primary" : "secondary"}
                 size="sm"
-                className="!p-2 h-8 w-8 rounded-full shadow-sm"
+                className={actionClassName}
                 onClick={(e) => {
                   if (isRepositioning) {
                     handleSave(e);
@@ -130,6 +132,7 @@ export const ImageUploadPreview = ({
                     setIsRepositioning(true);
                   }
                 }}
+                aria-label={isRepositioning ? "Save crop" : "Crop image"}
                 title={isRepositioning ? "Save Crop" : "Crop Image"}
               >
                 {isRepositioning ? (
@@ -145,13 +148,14 @@ export const ImageUploadPreview = ({
                 type="button"
                 variant="danger"
                 size="sm"
-                className="!p-2 h-8 w-8 rounded-full shadow-sm"
+                className={actionClassName}
+                aria-label="Remove image"
                 onClick={(e) => {
                   e.stopPropagation();
                   onRemove();
                 }}
               >
-                <X className="h-4 w-4" />
+                <X className="h-4 w-4" aria-hidden />
               </Button>
             )}
           </div>

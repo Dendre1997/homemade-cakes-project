@@ -2,7 +2,17 @@
 import React, { useState, useEffect} from "react";
 import { Diameter, ProductCategory, IShape } from "@/types";
 import { Button } from "../ui/Button";
-import { Input } from "../ui/Input";;
+import { Input } from "../ui/Input";
+import {
+  CatalogFormActions,
+  catalogChipClass,
+  catalogFieldClass,
+  catalogFormCardClass,
+  catalogFormTitleClass,
+  catalogImageActionClass,
+  catalogLabelClass,
+  catalogUploadButtonClass,
+} from "@/components/admin/catalog/CatalogFormChrome";
 import { ChipCheckbox } from "../ui/ChipCheckbox";
 import { ImageUploadPreview } from "@/components/ui/ImageUploadPreview";
 import {
@@ -59,7 +69,7 @@ const FormLabel = ({
 }) => (
   <label
     htmlFor={htmlFor}
-    className="block font-body text-small text-primary/80 mb-sm"
+    className={catalogLabelClass}
   >
     {children}
   </label>
@@ -71,6 +81,7 @@ interface DiameterFormProps {
   onSubmit: (formData: DiameterFormData) => void;
   isSubmitting: boolean;
   categories: ProductCategory[];
+  onCancel?: () => void;
 }
 
 const DiameterForm = ({
@@ -78,6 +89,7 @@ const DiameterForm = ({
   onSubmit,
   isSubmitting,
   categories,
+  onCancel,
 }: DiameterFormProps) => {
   const [formData, setFormData] = useState<DiameterFormData>({
     name: "",
@@ -325,11 +337,9 @@ const DiameterForm = ({
   )?.component;
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="p-lg bg-card-background rounded-large shadow-md max-w-lg space-y-md"
-    >
-      <h2 className="font-heading text-h3 text-primary">
+    <form onSubmit={handleSubmit} className="max-w-lg">
+      <div className={catalogFormCardClass}>
+      <h2 className={catalogFormTitleClass}>
         {existingDiameter ? "Update Diameter" : "Add New Diameter"}
       </h2>
 
@@ -341,6 +351,7 @@ const DiameterForm = ({
           value={formData.name}
           onChange={handleChange}
           required
+          className={catalogFieldClass}
         />
       </div>
 
@@ -358,7 +369,7 @@ const DiameterForm = ({
             required
             step="0.5"
             readOnly={tiersCount > 1}
-            className={cn(tiersCount > 1 && "bg-muted/50 cursor-not-allowed")}
+            className={cn(catalogFieldClass, tiersCount > 1 && "cursor-not-allowed bg-muted/50")}
           />
           {SelectedIcon && (
             <div className="h-10 w-10 p-2 border border-border rounded-medium shrink-0">
@@ -383,6 +394,7 @@ const DiameterForm = ({
           value={formData.servings}
           onChange={handleChange}
           required
+          className={catalogFieldClass}
         />
       </div>
 
@@ -403,6 +415,7 @@ const DiameterForm = ({
           }}
           placeholder="e.g. 50"
           step="0.01"
+          className={catalogFieldClass}
         />
         <p className="text-xs text-primary/60 mt-1">
           If set, this price will be used directly in the custom order form instead of calculating from category base price.
@@ -422,7 +435,7 @@ const DiameterForm = ({
               type="button"
               onClick={() => handleTiersCountChange(count)}
               className={cn(
-                "min-w-[2.75rem] px-md py-sm rounded-medium border font-body text-small transition-colors",
+                "h-11 min-w-11 rounded-xl border px-3 font-body text-sm transition-colors sm:h-10",
                 tiersCount === count
                   ? "bg-primary text-white border-primary"
                   : "bg-card-background text-primary border-border hover:border-primary/40"
@@ -453,8 +466,9 @@ const DiameterForm = ({
                 id={`tierSize-${index}`}
                 value={formData.tierSizes?.[index] ?? ""}
                 onChange={(e) => handleTierSizeChange(index, e.target.value)}
-                placeholder='e.g. 6 inch'
+                placeholder="e.g. 6 inch"
                 required
+                className={catalogFieldClass}
               />
             </div>
           ))}
@@ -470,6 +484,7 @@ const DiameterForm = ({
           containerClassName="h-48 w-full"
           allowPositioning={true}
           onCropSave={handleCropSave}
+          actionClassName={catalogImageActionClass}
         />
         <Input
           id="image"
@@ -484,11 +499,11 @@ const DiameterForm = ({
           type="button"
           variant="secondary"
           onClick={() => fileInputRef.current?.click()}
-          className="mt-sm"
+          className={catalogUploadButtonClass}
           disabled={isUploading}
         >
           {isUploading ? (
-            <p>Uploading...</p>
+            <span>Uploading…</span>
           ) : formData.imageUrl ? (
             "Change Image"
           ) : (
@@ -514,6 +529,7 @@ const DiameterForm = ({
               key={cat._id}
               checked={(formData.categoryIds || []).includes(cat._id)}
               onCheckedChange={() => handleCategoryChange(cat._id)}
+              className={catalogChipClass}
             >
               {cat.name}
             </ChipCheckbox>
@@ -525,7 +541,7 @@ const DiameterForm = ({
         <h3 className="font-body text-body font-bold text-primary">Shapes</h3>
         {isLoadingShapes ? (
           <p className="text-sm text-primary/60 p-md border border-border rounded-medium">
-            Loading shapes...
+            Loading shapes…
           </p>
         ) : shapes.length === 0 ? (
           <p className="text-sm text-primary/60 p-md border border-border rounded-medium">
@@ -542,6 +558,7 @@ const DiameterForm = ({
                 key={shape._id}
                 checked={(formData.shapeIds || []).includes(shape._id)}
                 onCheckedChange={() => handleShapeChange(shape._id)}
+                className={catalogChipClass}
               >
                 {shape.name}
                 {shape.priceSurcharge > 0
@@ -553,14 +570,17 @@ const DiameterForm = ({
         )}
       </div>
 
-      <div>
-        <Button type="submit" disabled={isSubmitting} className="w-full">
-          {isSubmitting
-            ? "Saving..."
+      <CatalogFormActions
+        isSubmitting={isSubmitting}
+        onCancel={onCancel}
+        submitLabel={
+          isSubmitting
+            ? "Saving…"
             : existingDiameter
               ? "Update Diameter"
-              : "Add Diameter"}
-        </Button>
+              : "Add Diameter"
+        }
+      />
       </div>
     </form>
   );

@@ -4,6 +4,14 @@ import { Collection } from '@/types';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
+import {
+  CatalogFormActions,
+  catalogFieldClass,
+  catalogFormCardClass,
+  catalogImageActionClass,
+  catalogLabelClass,
+  catalogUploadButtonClass,
+} from "@/components/admin/catalog/CatalogFormChrome";
 import { ImageUploadPreview } from './ImageUploadPreview';
 import { slugify } from "@/lib/utils";
 import {
@@ -12,7 +20,7 @@ import {
 } from "@/lib/cloudinaryClient";
 
 const FormLabel = ({ htmlFor, children }: { htmlFor: string; children: React.ReactNode; }) => (
-  <label htmlFor={htmlFor} className="block font-body text-small text-primary/80 mb-sm">
+  <label htmlFor={htmlFor} className={catalogLabelClass}>
     {children}
   </label>
 );
@@ -21,12 +29,14 @@ interface CollectionFormProps {
   existingCollection?: Collection | null;
   onSubmit: (formData: Omit<Collection, '_id'>) => void;
   isSubmitting: boolean;
+  onCancel?: () => void;
 }
 
 const CollectionForm = ({
   existingCollection,
   onSubmit,
   isSubmitting,
+  onCancel,
 }: CollectionFormProps) => {
   const [formData, setFormData] = useState({
     name: "",
@@ -149,10 +159,8 @@ const fileInputRef = useRef<HTMLInputElement>(null);
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="p-lg bg-card-background rounded-large shadow-md max-w-lg space-y-md"
-    >
+    <form onSubmit={handleSubmit} className="max-w-lg">
+      <div className={catalogFormCardClass}>
       <div>
         <FormLabel htmlFor="name">Collection Name</FormLabel>
         <Input
@@ -163,6 +171,7 @@ const fileInputRef = useRef<HTMLInputElement>(null);
             setFormData((prev) => ({ ...prev, name: e.target.value }))
           }
           required
+          className={catalogFieldClass}
         />
       </div>
 
@@ -175,6 +184,7 @@ const fileInputRef = useRef<HTMLInputElement>(null);
             setFormData((prev) => ({ ...prev, description: e.target.value }))
           }
           rows={3}
+          className="rounded-xl border-primary/15 bg-background/40"
         />
       </div>
 
@@ -189,6 +199,7 @@ const fileInputRef = useRef<HTMLInputElement>(null);
           allowPositioning={true}
           // imageFit="object-cover"
           onCropSave={handleCropSave}
+          actionClassName={catalogImageActionClass}
         />
 
         <Input
@@ -204,7 +215,7 @@ const fileInputRef = useRef<HTMLInputElement>(null);
           type="button"
           variant="secondary"
           onClick={() => fileInputRef.current?.click()}
-          className="mt-sm"
+          className={catalogUploadButtonClass}
           disabled={isUploading}
         >
           {formData.imageUrl ? "Change Image" : "Upload Image"}
@@ -214,19 +225,21 @@ const fileInputRef = useRef<HTMLInputElement>(null);
         )}
       </div>
 
-      <Button
-        type="submit"
-        className="w-full"
-        disabled={isSubmitting || isUploading}
-      >
-        {isSubmitting
-          ? existingCollection
-            ? "Updating..."
-            : "Creating..."
-          : existingCollection
-            ? "Update Collection"
-            : "Create Collection"}
-      </Button>
+      <CatalogFormActions
+        isSubmitting={isSubmitting}
+        disabled={isUploading}
+        onCancel={onCancel}
+        submitLabel={
+          isSubmitting
+            ? existingCollection
+              ? "Updating…"
+              : "Creating…"
+            : existingCollection
+              ? "Update Collection"
+              : "Create Collection"
+        }
+      />
+      </div>
     </form>
   );
 };

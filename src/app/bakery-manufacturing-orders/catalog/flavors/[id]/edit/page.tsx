@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Flavor, ProductCategory } from "@/types";
 import FlavorForm from "@/components/admin/FlavorForm";
+import { CatalogPageHeader } from "@/components/admin/catalog/CatalogListChrome";
 import LoadingSpinner from "@/components/ui/Spinner";
 
 const EditFlavorPage = () => {
@@ -68,15 +69,18 @@ const EditFlavorPage = () => {
   if (error) return <p className="text-red-500">Error: {error}</p>;
 
   return (
-    <section>
-      <h1 className="text-3xl font-heading mb-6">
-        Edit Flavor: {flavor?.name}
-      </h1>
+    <section className="relative pb-28 md:pb-0">
+      <CatalogPageHeader
+        title={flavor?.name ? `Edit Flavor: ${flavor.name}` : "Edit Flavor"}
+        backLabel="Back to Flavors"
+        onBack={() => router.push("/bakery-manufacturing-orders/catalog/flavors")}
+      />
       <FlavorForm
         existingFlavor={flavor}
         onSubmit={handleUpdate}
         isSubmitting={isSubmitting}
         categories={categories}
+        onCancel={() => router.push("/bakery-manufacturing-orders/catalog/flavors")}
       />
     </section>
   );

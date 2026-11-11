@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from "react";
 import SetForm, { SetFormData } from "@/components/admin/SetForm";
 import { CatalogSet, ProductCategory } from "@/types";
 import LoadingSpinner from "@/components/ui/Spinner";
-import { Button } from "@/components/ui/Button";
 import { useConfirmation } from "@/contexts/ConfirmationContext";
 import { useAlert } from "@/contexts/AlertContext";
 import { AdminListItem } from "@/components/admin/AdminListItem";
@@ -134,7 +133,7 @@ const ManageSetsPage = () => {
   );
 
   return (
-    <section className="relative">
+    <section className="relative pb-28 md:pb-0">
       {isSubmitting && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
           <LoadingSpinner />
@@ -155,16 +154,8 @@ const ManageSetsPage = () => {
             categories={categories}
             existingSet={editingSet}
             isSubmitting={isSubmitting}
+            onCancel={editingSet ? () => setEditingSet(null) : undefined}
           />
-          {editingSet && (
-            <Button
-              variant="text"
-              onClick={() => setEditingSet(null)}
-              className="mt-md"
-            >
-              Cancel Edit
-            </Button>
-          )}
         </div>
 
         <div className={catalogListColumnClass}>

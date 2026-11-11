@@ -13,9 +13,14 @@ export const catalogListHeadingClass =
 type CatalogPageHeaderProps = {
   title: string;
   onBack: () => void;
+  backLabel?: string;
 };
 
-export function CatalogPageHeader({ title, onBack }: CatalogPageHeaderProps) {
+export function CatalogPageHeader({
+  title,
+  onBack,
+  backLabel = "Back to Catalog",
+}: CatalogPageHeaderProps) {
   return (
     <>
       <Button
@@ -25,7 +30,7 @@ export function CatalogPageHeader({ title, onBack }: CatalogPageHeaderProps) {
         className="mb-3 h-11 gap-2 px-2 text-sm text-primary/65 transition-colors hover:text-primary sm:h-10"
       >
         <ArrowLeft className="h-4 w-4" aria-hidden />
-        Back to Catalog
+        {backLabel}
       </Button>
       <h1 className="mb-6 font-heading text-2xl font-bold tracking-tight text-primary text-balance sm:text-3xl">
         {title}

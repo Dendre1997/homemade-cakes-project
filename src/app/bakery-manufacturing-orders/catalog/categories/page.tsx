@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { ProductCategory } from "@/types";
 import CategoryForm from "@/components/admin/CategoryForm";
 import LoadingSpinner from "@/components/ui/Spinner";
-import { Button } from "@/components/ui/Button";
 import { useAlert } from "@/contexts/AlertContext";
 import { useConfirmation } from "@/contexts/ConfirmationContext";
 import { AdminListItem } from "@/components/admin/AdminListItem";
@@ -129,7 +128,7 @@ const ManageCategoriesPage = () => {
   );
 
   return (
-    <section className="relative">
+    <section className="relative pb-28 md:pb-0">
       {isSubmitting && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
           <LoadingSpinner />
@@ -148,16 +147,10 @@ const ManageCategoriesPage = () => {
             onSubmit={handleSubmit}
             existingCategory={editingCategory}
             isSubmitting={isSubmitting}
+            onCancel={
+              editingCategory ? () => setEditingCategory(null) : undefined
+            }
           />
-          {editingCategory && (
-            <Button
-              variant="text"
-              onClick={() => setEditingCategory(null)}
-              className="mt-md"
-            >
-              Cancel Edit
-            </Button>
-          )}
         </div>
 
         {/* List Column */}

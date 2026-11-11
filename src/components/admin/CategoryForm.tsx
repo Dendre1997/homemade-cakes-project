@@ -5,6 +5,14 @@ import { Flavor, ProductCategory } from "@/types";
 import { slugify } from "@/lib/utils";
 import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
+import {
+  CatalogFormActions,
+  catalogFieldClass,
+  catalogFormCardClass,
+  catalogLabelClass,
+  catalogUploadButtonClass,
+  catalogImageActionClass,
+} from "@/components/admin/catalog/CatalogFormChrome";
 import { ImageUploadPreview } from "@/components/admin/ImageUploadPreview";
 import LoadingSpinner from "@/components/ui/Spinner";
 import {
@@ -21,7 +29,7 @@ const FormLabel = ({
 }) => (
   <label
     htmlFor={htmlFor}
-    className="block font-body text-small text-text-primary/80 mb-sm"
+    className={catalogLabelClass}
   >
     {children}
   </label>
@@ -37,12 +45,14 @@ interface CategoryFormProps {
     }
   ) => void;
   isSubmitting: boolean;
+  onCancel?: () => void;
 }
 
 const CategoryForm = ({
   existingCategory,
   onSubmit,
-  isSubmitting
+  isSubmitting,
+  onCancel,
 }: CategoryFormProps) => {
   const [formData, setFormData] = useState({
     name: "",
@@ -220,10 +230,8 @@ const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
 };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="p-lg bg-card-background rounded-large shadow-md max-w-lg space-y-md"
-    >
+    <form onSubmit={handleSubmit} className="max-w-lg">
+      <div className={catalogFormCardClass}>
       <div>
         <FormLabel htmlFor="name">Name</FormLabel>
         <Input
@@ -232,6 +240,7 @@ const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
           value={formData.name}
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
           required
+          className={catalogFieldClass}
         />
       </div>
       <div>
@@ -242,6 +251,7 @@ const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
           onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
           placeholder="e.g., bento-cakes"
           required
+          className={catalogFieldClass}
         />
       </div>
       <div>
@@ -263,6 +273,7 @@ const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
             })
           }
           placeholder="e.g., 90"
+          className={catalogFieldClass}
         />
         <p className="mt-1 text-xs text-gray-500">
           Time required to prepare one item from this category.
@@ -283,6 +294,7 @@ const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
             })
           }
           placeholder="e.g., 25.00"
+          className={catalogFieldClass}
         />
         <p className="mt-1 text-xs text-gray-500">
           Starting price for items in this category.
@@ -299,6 +311,7 @@ const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
           allowPositioning={true}
           // imageFit="object-cover"
           onCropSave={handleCropSave}
+          actionClassName={catalogImageActionClass}
         />
         <Input
           id="image"
@@ -313,11 +326,11 @@ const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
           type="button"
           variant="secondary"
           onClick={() => fileInputRef.current?.click()}
-          className="mt-sm"
+          className={catalogUploadButtonClass}
           disabled={isUploading}
         >
           {isUploading ? (
-            <p>Uploading...</p>
+            <span>Uploading…</span>
           ) : formData.imageUrl ? (
             "Change Image"
           ) : (
@@ -337,7 +350,7 @@ const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
             type="button"
             variant={formData.categoryType === "single" ? "primary" : "secondary"}
             onClick={() => setFormData({ ...formData, categoryType: "single" })}
-            className="flex-1"
+            className="h-11 flex-1 rounded-xl sm:h-10"
           >
             Single
           </Button>
@@ -345,7 +358,7 @@ const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
             type="button"
             variant={formData.categoryType === "set" ? "primary" : "secondary"}
             onClick={() => setFormData({ ...formData, categoryType: "set" })}
-            className="flex-1"
+            className="h-11 flex-1 rounded-xl sm:h-10"
           >
             Set
           </Button>
@@ -353,7 +366,7 @@ const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
             type="button"
             variant={formData.categoryType === "combo" ? "primary" : "secondary"}
             onClick={() => setFormData({ ...formData, categoryType: "combo" })}
-            className="flex-1"
+            className="h-11 flex-1 rounded-xl sm:h-10"
           >
             Combo
           </Button>
@@ -376,7 +389,7 @@ const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
               {orderedFlavors.map((flavor, index) => (
                 <li
                   key={String(flavor._id)}
-                  className="flex items-center justify-between gap-sm rounded-medium border border-border px-sm py-xs"
+                  className="flex min-h-11 items-center justify-between gap-3 rounded-xl border border-primary/10 bg-background/40 px-3"
                 >
                   <span className="font-body text-small text-primary">
                     {flavor.name}
@@ -387,7 +400,7 @@ const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
                       aria-label={`Move ${flavor.name} up`}
                       disabled={index === 0}
                       onClick={() => moveFlavor(index, -1)}
-                      className="rounded-medium p-1 text-primary hover:bg-subtleBackground disabled:opacity-30"
+                      className="flex h-11 w-11 items-center justify-center rounded-xl text-primary transition-colors hover:bg-subtleBackground disabled:opacity-30"
                     >
                       <ChevronUp className="h-4 w-4" aria-hidden />
                     </button>
@@ -396,7 +409,7 @@ const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
                       aria-label={`Move ${flavor.name} down`}
                       disabled={index === orderedFlavors.length - 1}
                       onClick={() => moveFlavor(index, 1)}
-                      className="rounded-medium p-1 text-primary hover:bg-subtleBackground disabled:opacity-30"
+                      className="flex h-11 w-11 items-center justify-center rounded-xl text-primary transition-colors hover:bg-subtleBackground disabled:opacity-30"
                     >
                       <ChevronDown className="h-4 w-4" aria-hidden />
                     </button>
@@ -408,18 +421,12 @@ const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
         </div>
       )}
 
-      <div>
-        <Button
-          type="submit"
-          disabled={isSubmitting}
-          className="w-full"
-          variant="primary"
-        >
-          {isSubmitting ? "Saving..." : existingCategory ? "Update" : "Create"}
-        </Button>
+        <CatalogFormActions
+          isSubmitting={isSubmitting}
+          onCancel={onCancel}
+          submitLabel={isSubmitting ? "Saving…" : existingCategory ? "Update" : "Create"}
+        />
       </div>
-
-      
     </form>
   );
 };

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Allergen } from "@/types";
 import AllergenForm from "@/components/admin/AllergenForm";
+import { CatalogPageHeader } from "@/components/admin/catalog/CatalogListChrome";
 import Spinner from "@/components/ui/Spinner";
 
 const EditAllergenPage = () => {
@@ -45,11 +46,17 @@ const EditAllergenPage = () => {
   if (!allergen) return <Spinner />;
 
   return (
-    <section>
+    <section className="relative pb-28 md:pb-0">
+      <CatalogPageHeader
+        title="Edit Allergen"
+        backLabel="Back to Allergens"
+        onBack={() => router.push("/bakery-manufacturing-orders/catalog/allergens")}
+      />
       <AllergenForm
         existingAllergen={allergen}
         onSubmit={handleUpdate}
         isSubmitting={isSubmitting}
+        onCancel={() => router.push("/bakery-manufacturing-orders/catalog/allergens")}
       />
     </section>
   );

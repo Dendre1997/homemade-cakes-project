@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from "react";
 import DiameterForm from "@/components/admin/DiameterForm";
 import { Diameter, ProductCategory } from "@/types";
 import LoadingSpinner from "@/components/ui/Spinner";
-import { Button } from "@/components/ui/Button";
 import { useConfirmation } from "@/contexts/ConfirmationContext";
 import { useAlert } from "@/contexts/AlertContext";
 import { AdminListItem } from "@/components/admin/AdminListItem";
@@ -154,7 +153,7 @@ const ManageDiametersPage = () => {
   );
 
   return (
-    <section className="relative">
+    <section className="relative pb-28 md:pb-0">
       {isSubmitting && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
           <LoadingSpinner />
@@ -175,16 +174,10 @@ const ManageDiametersPage = () => {
             categories={categories}
             existingDiameter={editingDiameter}
             isSubmitting={isSubmitting}
+            onCancel={
+              editingDiameter ? () => setEditingDiameter(null) : undefined
+            }
           />
-          {editingDiameter && (
-            <Button
-              variant="text"
-              onClick={() => setEditingDiameter(null)}
-              className="mt-md"
-            >
-              Cancel Edit
-            </Button>
-          )}
         </div>
 
         {/* List Items*/}

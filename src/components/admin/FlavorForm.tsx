@@ -4,6 +4,16 @@ import { Flavor, ProductCategory } from "@/types";
 import { Button } from "../ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "../ui/Textarea";
+import {
+  CatalogFormActions,
+  catalogChipClass,
+  catalogFieldClass,
+  catalogFormCardClass,
+  catalogFormTitleClass,
+  catalogImageActionClass,
+  catalogLabelClass,
+  catalogUploadButtonClass,
+} from "@/components/admin/catalog/CatalogFormChrome";
 import { ChipCheckbox } from "../ui/ChipCheckbox";
 import { ImageUploadPreview } from "./ImageUploadPreview";
 import {
@@ -20,7 +30,7 @@ const FormLabel = ({
 }) => (
   <label
     htmlFor={htmlFor}
-    className="block font-body text-small text-primary/80 mb-sm"
+    className={catalogLabelClass}
   >
     {children}
   </label>
@@ -33,6 +43,7 @@ interface FlavorFormProps {
   onSubmit: (formData: FlavorFormData) => void;
   isSubmitting: boolean; 
   categories: ProductCategory[];
+  onCancel?: () => void;
 }
 
 const FlavorForm = ({
@@ -40,6 +51,7 @@ const FlavorForm = ({
   onSubmit,
   isSubmitting, 
   categories,
+  onCancel,
 }: FlavorFormProps) => {
   const [formData, setFormData] = useState<FlavorFormData>({
     name: "",
@@ -174,14 +186,12 @@ const FlavorForm = ({
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="space-y-lg p-lg bg-card-background rounded-large shadow-md max-w-lg" // Updated styles
-    >
-      <h2 className="font-heading text-h3 text-primary">
+    <form onSubmit={handleSubmit} className="max-w-lg">
+      <div className={catalogFormCardClass}>
+      <h2 className={catalogFormTitleClass}>
         {existingFlavor ? "Update Flavor" : "Add New Flavor"}
       </h2>
-      <div className="space-y-md">
+      <div className="space-y-4 sm:space-y-5">
         <div>
           <FormLabel htmlFor="name">Name</FormLabel>
           <Input
@@ -190,6 +200,7 @@ const FlavorForm = ({
             value={formData.name}
             onChange={handleChange}
             required
+            className={catalogFieldClass}
           />
         </div>
         <div>
@@ -202,6 +213,7 @@ const FlavorForm = ({
             required
             step="0.01"
             placeholder="0.00"
+            className={catalogFieldClass}
           />
         </div>
         <div>
@@ -214,6 +226,7 @@ const FlavorForm = ({
               allowPositioning={true}
               // imageFit="object-cover"
               onCropSave={handleCropSave}
+              actionClassName={catalogImageActionClass}
             />
           )}
           <Input
@@ -229,11 +242,11 @@ const FlavorForm = ({
             type="button"
             variant="secondary"
             onClick={() => fileInputRef.current?.click()}
-            className="mt-sm"
+            className={catalogUploadButtonClass}
             disabled={isUploading}
           >
             {isUploading ? (
-              <h1>Uploading Image...</h1>
+              <span>Uploading…</span>
             ) : formData.imageUrl ? (
               "Change Image"
             ) : (
@@ -252,6 +265,7 @@ const FlavorForm = ({
             value={formData.description}
             onChange={handleChange}
             rows={3}
+            className="rounded-xl border-primary/15 bg-background/40"
           />
         </div>
 
@@ -269,6 +283,7 @@ const FlavorForm = ({
                 key={cat._id}
                 checked={(formData.categoryIds || []).includes(cat._id)}
                 onCheckedChange={() => handleCategoryChange(cat._id)}
+                className={catalogChipClass}
               >
                 {cat.name}
               </ChipCheckbox>
@@ -276,18 +291,18 @@ const FlavorForm = ({
           </div>
         </div>
       </div>
-      <div>
-        <Button
-          type="submit"
-          disabled={isSubmitting || isUploading}
-          className="w-full"
-        >
-          {isSubmitting
-            ? "Saving..."
+      <CatalogFormActions
+        isSubmitting={isSubmitting}
+        disabled={isUploading}
+        onCancel={onCancel}
+        submitLabel={
+          isSubmitting
+            ? "Saving…"
             : existingFlavor
               ? "Update Flavor"
-              : "Add Flavor"}
-        </Button>
+              : "Add Flavor"
+        }
+      />
       </div>
     </form>
   );

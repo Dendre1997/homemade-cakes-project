@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ProductCategory } from "@/types";
 import CategoryForm from "@/components/admin/CategoryForm";
+import { CatalogPageHeader } from "@/components/admin/catalog/CatalogListChrome";
 import Spinner from "@/components/ui/Spinner";
 
 const EditCategoryPage = () => {
@@ -43,11 +44,17 @@ const EditCategoryPage = () => {
   if (!category) return <Spinner />;
 
   return (
-    <section>
+    <section className="relative pb-28 md:pb-0">
+      <CatalogPageHeader
+        title="Edit Category"
+        backLabel="Back to Categories"
+        onBack={() => router.push("/bakery-manufacturing-orders/catalog/categories")}
+      />
       <CategoryForm
         existingCategory={category}
         onSubmit={handleUpdate}
         isSubmitting={isSubmitting}
+        onCancel={() => router.push("/bakery-manufacturing-orders/catalog/categories")}
       />
     </section>
   );

@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from "react";
 import ShapeForm, { ShapeFormData } from "@/components/admin/ShapeForm";
 import { IShape } from "@/types";
 import LoadingSpinner from "@/components/ui/Spinner";
-import { Button } from "@/components/ui/Button";
 import { useConfirmation } from "@/contexts/ConfirmationContext";
 import { useAlert } from "@/contexts/AlertContext";
 import { AdminListItem } from "@/components/admin/AdminListItem";
@@ -153,7 +152,7 @@ const ManageShapesPage = () => {
   };
 
   return (
-    <section className="relative">
+    <section className="relative pb-28 md:pb-0">
       {isSubmitting && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
           <LoadingSpinner />
@@ -173,16 +172,8 @@ const ManageShapesPage = () => {
             onSubmit={handleSubmit}
             existingShape={editingShape}
             isSubmitting={isSubmitting}
+            onCancel={editingShape ? () => setEditingShape(null) : undefined}
           />
-          {editingShape && (
-            <Button
-              variant="text"
-              onClick={() => setEditingShape(null)}
-              className="mt-md"
-            >
-              Cancel Edit
-            </Button>
-          )}
         </div>
 
         <div className={catalogListColumnClass}>

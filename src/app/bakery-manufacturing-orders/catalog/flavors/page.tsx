@@ -3,7 +3,6 @@ import { useState, useEffect, useCallback, useMemo, type ReactNode } from "react
 import FlavorForm from "@/components/admin/FlavorForm";
 import { Flavor, ProductCategory } from "@/types";
 import LoadingSpinner from "@/components/ui/Spinner";
-import { Button } from "@/components/ui/Button";
 import { useConfirmation } from "@/contexts/ConfirmationContext";
 import { useAlert } from "@/contexts/AlertContext";
 import { AdminListItem } from "@/components/admin/AdminListItem";
@@ -351,7 +350,7 @@ const ManageFlavorsPage = () => {
 
 
   return (
-    <section className={cn("relative", isOrderDirty && "pb-28")}>
+    <section className={cn("relative pb-44 md:pb-0", isOrderDirty && "md:pb-28")}>
       {isSubmitting && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
           <LoadingSpinner />
@@ -373,16 +372,8 @@ const ManageFlavorsPage = () => {
             categories={categories}
             existingFlavor={editingFlavor}
             isSubmitting={isSubmitting}
+            onCancel={editingFlavor ? () => setEditingFlavor(null) : undefined}
           />
-          {editingFlavor && (
-            <Button
-              variant="text"
-              onClick={() => setEditingFlavor(null)}
-              className="mt-md"
-            >
-              Cancel Edit
-            </Button>
-          )}
         </div>
 
         <div className={catalogListColumnClass}>
@@ -479,7 +470,7 @@ const ManageFlavorsPage = () => {
         isSaving={isSavingOrder}
         onDiscard={handleDiscardOrder}
         onSave={handleSaveOrder}
-        className="bottom-[max(1.5rem,env(safe-area-inset-bottom))] xl:left-64"
+        className="bottom-[calc(5.5rem+env(safe-area-inset-bottom))] md:bottom-[max(1.5rem,env(safe-area-inset-bottom))] xl:left-64"
       />
     </section>
   );

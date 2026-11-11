@@ -4,6 +4,15 @@ import React, { useState, useEffect } from "react";
 import { IShape } from "@/types";
 import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
+import {
+  CatalogFormActions,
+  catalogFieldClass,
+  catalogFormCardClass,
+  catalogFormTitleClass,
+  catalogImageActionClass,
+  catalogLabelClass,
+  catalogUploadButtonClass,
+} from "@/components/admin/catalog/CatalogFormChrome";
 import { Switch } from "../ui/Switch";
 import { ImageUploadPreview } from "@/components/ui/ImageUploadPreview";
 import {
@@ -20,7 +29,7 @@ const FormLabel = ({
 }) => (
   <label
     htmlFor={htmlFor}
-    className="block font-body text-small text-primary/80 mb-sm"
+    className={catalogLabelClass}
   >
     {children}
   </label>
@@ -32,12 +41,14 @@ interface ShapeFormProps {
   existingShape?: IShape | null;
   onSubmit: (formData: ShapeFormData) => void;
   isSubmitting: boolean;
+  onCancel?: () => void;
 }
 
 const ShapeForm = ({
   existingShape,
   onSubmit,
   isSubmitting,
+  onCancel,
 }: ShapeFormProps) => {
   const [formData, setFormData] = useState<ShapeFormData>({
     name: "",
@@ -141,11 +152,9 @@ const ShapeForm = ({
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="p-lg bg-card-background rounded-large shadow-md max-w-lg space-y-md"
-    >
-      <h2 className="font-heading text-h3 text-primary">
+    <form onSubmit={handleSubmit} className="max-w-lg">
+      <div className={catalogFormCardClass}>
+      <h2 className={catalogFormTitleClass}>
         {existingShape ? "Update Shape" : "Add New Shape"}
       </h2>
 
@@ -157,6 +166,7 @@ const ShapeForm = ({
           value={formData.name}
           onChange={handleChange}
           required
+          className={catalogFieldClass}
         />
       </div>
 
@@ -170,6 +180,7 @@ const ShapeForm = ({
           placeholder="0"
           min="0"
           step="0.01"
+          className={catalogFieldClass}
         />
         <p className="text-xs text-primary/60 mt-1">
           Extra cost added when a customer selects this shape. Use 0 for no
@@ -177,7 +188,7 @@ const ShapeForm = ({
         </p>
       </div>
 
-      <div className="flex items-center justify-between gap-md p-md border border-border rounded-medium">
+      <label className="flex min-h-11 cursor-pointer items-center justify-between gap-3 rounded-xl border border-primary/10 bg-background/40 px-3">
         <div>
           <p className="font-body text-body font-bold text-primary">
             Default Shape
@@ -193,9 +204,9 @@ const ShapeForm = ({
             setFormData((prev) => ({ ...prev, isDefault: checked }))
           }
         />
-      </div>
+      </label>
 
-      <div className="flex items-center justify-between gap-md p-md border border-border rounded-medium">
+      <label className="flex min-h-11 cursor-pointer items-center justify-between gap-3 rounded-xl border border-primary/10 bg-background/40 px-3">
         <div>
           <p className="font-body text-body font-bold text-primary">Active</p>
           <p className="text-xs text-primary/60">
@@ -209,7 +220,7 @@ const ShapeForm = ({
             setFormData((prev) => ({ ...prev, isActive: checked }))
           }
         />
-      </div>
+      </label>
 
       <div>
         <FormLabel htmlFor="image">Shape Image (Optional)</FormLabel>
@@ -220,6 +231,7 @@ const ShapeForm = ({
           containerClassName="h-48 w-full"
           allowPositioning={true}
           onCropSave={handleCropSave}
+          actionClassName={catalogImageActionClass}
         />
         <Input
           id="image"
@@ -234,11 +246,11 @@ const ShapeForm = ({
           type="button"
           variant="secondary"
           onClick={() => fileInputRef.current?.click()}
-          className="mt-sm"
+          className={catalogUploadButtonClass}
           disabled={isUploading}
         >
           {isUploading ? (
-            <p>Uploading...</p>
+            <span>Uploading…</span>
           ) : formData.imageUrl ? (
             "Change Image"
           ) : (
@@ -250,14 +262,13 @@ const ShapeForm = ({
         )}
       </div>
 
-      <div>
-        <Button type="submit" disabled={isSubmitting} className="w-full">
-          {isSubmitting
-            ? "Saving..."
-            : existingShape
-              ? "Update Shape"
-              : "Add Shape"}
-        </Button>
+      <CatalogFormActions
+        isSubmitting={isSubmitting}
+        onCancel={onCancel}
+        submitLabel={
+          isSubmitting ? "Saving…" : existingShape ? "Update Shape" : "Add Shape"
+        }
+      />
       </div>
     </form>
   );
