@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { adminAuth } from "@/lib/firebase/adminApp";
 import clientPromise from "@/lib/db";
 import { Order, OrderStatus, CartItem, OrderItem, Discount } from "@/types";
-import { ObjectId } from "mongodb";
+import { Db, Document, ObjectId, WithId } from "mongodb";
 import { randomBytes } from "crypto";
 import { resend, DEFAULT_FROM } from "@/lib/email";
 import { NewOrderEmail } from "@/emails/NewOrderEmail";
@@ -14,6 +14,7 @@ import PendingOrderAdminEmail  from "@/emails/PendingOrderAdminEmail";
 import { calculateOrderPricing } from "@/lib/pricing";
 import { normalizeCartItemAddons } from "@/lib/addons/selectedAddon";
 import { addonsUnitCost } from "@/lib/addons/selectedAddonMath";
+import { setLinePrice, type SetPriceProduct } from "@/lib/sets/setLinePrice";
 import { getAppSettings } from "@/lib/api/settings";
 import { normalizePhoneDigits } from "@/lib/crm/normalize";
 
@@ -22,6 +23,36 @@ const safePrice = (val: any) => {
   const num = Number(val);
   return isNaN(num) ? 0 : Number(num.toFixed(2));
 };
+
+/** Unit price of a set or combo line at order creation, addons included. */
+async function orderSetUnitPrice(
+  db: Db,
+  product: WithId<Document>,
+  item: CartItem
+): Promise<number> {
+  const cakeFlavorId = item.selectedConfig?.cake?.flavorId;
+  let cakeFlavorPrice: number | undefined;
+  if (product.comboConfig?.hasCake && cakeFlavorId) {
+    const flavor = await db
+      .collection("flavors")
+      .findOne({ _id: new ObjectId(cakeFlavorId) });
+    cakeFlavorPrice = flavor?.price;
+  }
+
+  const { price, box } = setLinePrice(product as SetPriceProduct, item.selectedConfig?.quantityConfigId, {
+    match: "label",
+    missingBox: "basePrice",
+    rounding: "cents",
+    cakeFlavorPrice,
+  });
+  if (!box) {
+    console.warn(
+      `[WARNING] Set box '${item.selectedConfig?.quantityConfigId ?? ""}' not found on product ${product._id}. Using base price.`
+    );
+  }
+
+  return price + addonsUnitCost(item.addons);
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -102,61 +133,7 @@ export async function POST(request: NextRequest) {
 
            // --- SCENARIO A: SETS & COMBOS ---
            if (product.productType === 'set') {
-               console.log(`[DEBUG] Processing SET: ${product.name}`);
-               
-               //  Safe Base & Default
-               const base = safePrice(product.structureBasePrice);
-               const defaultBox = safePrice(product.availableQuantityConfigs?.[0]?.price);
-               
-               let finalCalculatedPrice = 0;
-               
-               //  FIND BOX CONFIG (Hard Stop Logic)
-               // The frontend passes the 'label' as the identifier now (e.g., "Box of 12")
-               const incomingIdentifier = (item.selectedConfig as any)?.quantityConfigId; 
-               
-               if (!incomingIdentifier) {
-                    console.warn(`[WARNING] Order Item '${product.name}' is missing quantityConfigId (Label). Using Base Price.`);
-                    finalCalculatedPrice = base;
-               } else {
-                    // Normalize and Log
-                    console.log(`[DEBUG] Looking for config Label: ${incomingIdentifier}`);
-               
-                    const selectedBoxObj = product.availableQuantityConfigs?.find((c: any) => {
-                         // MATCH BY LABEL
-                         return c.label && c.label.toString() === incomingIdentifier.toString();
-                    });
-            
-                    if (selectedBoxObj) {
-                        console.log(`[DEBUG] Found Config! Price: ${selectedBoxObj.price}`);
-                        const selectedBoxPrice = safePrice(selectedBoxObj.price);
-                
-                        //   Calculate
-                        if (product.comboConfig?.hasCake) {
-                             // Combo Formula
-                             finalCalculatedPrice = (base - defaultBox) + selectedBoxPrice;
-                        } else {
-                             // Simple Set Formula
-                             finalCalculatedPrice = selectedBoxPrice;
-                        }
-                    } else {
-                        console.warn(`[WARNING] Config Label '${incomingIdentifier}' NOT FOUND in product ${product._id}. Reverting to Base Price.`);
-                        finalCalculatedPrice = base; 
-                    }
-               }
-           
-               // 4. Flavor Surcharge
-               if (product.comboConfig?.hasCake && item.selectedConfig?.cake?.flavorId) {
-                    const flavor = await db.collection('flavors').findOne({ 
-                        _id: new ObjectId(item.selectedConfig.cake.flavorId) 
-                    });
-                    const flavorPrice = safePrice(flavor?.price);
-                    if (flavorPrice > 0) {
-                        console.log(`[DEBUG] Adding Flavor Surcharge: ${flavorPrice}`);
-                        finalCalculatedPrice += flavorPrice;
-                    }
-               }
-
-               finalCalculatedPrice += addonsUnitCost(item.addons);
+               const finalCalculatedPrice = await orderSetUnitPrice(db, product, item);
 
                return {
                   ...item,
@@ -369,60 +346,7 @@ export async function POST(request: NextRequest) {
 
            // --- SCENARIO A: SETS & COMBOS ---
            if (product.productType === 'set') {
-               console.log(`[DEBUG] Processing SET: ${product.name}`);
-
-               // 1. Safe Base & Default
-               const base = safePrice(product.structureBasePrice);
-               const defaultBox = safePrice(product.availableQuantityConfigs?.[0]?.price);
-               
-               let finalCalculatedPrice = 0;
-               
-               // FIND BOX CONFIG (Hard Stop Logic)
-               const incomingIdentifier = (item.selectedConfig as any)?.quantityConfigId;
-               
-               if (!incomingIdentifier) {
-                    console.warn(`[WARNING] Order Item '${product.name}' is missing quantityConfigId (Label). Using Base Price.`);
-                    finalCalculatedPrice = base;
-               } else {
-                    // Normalize and Log
-                    console.log(`[DEBUG] Looking for config Label: ${incomingIdentifier}`);
-               
-                    const selectedBoxObj = product.availableQuantityConfigs?.find((c: any) => {
-                         // MATCH BY LABEL
-                         return c.label && c.label.toString() === incomingIdentifier.toString();
-                    });
-            
-                    if (selectedBoxObj) {
-                        console.log(`[DEBUG] Found Config! Price: ${selectedBoxObj.price}`);
-                        const selectedBoxPrice = safePrice(selectedBoxObj.price);
-                
-                        //  Calculate
-                        if (product.comboConfig?.hasCake) {
-                             // Combo Formula
-                             finalCalculatedPrice = (base - defaultBox) + selectedBoxPrice;
-                        } else {
-                             // Simple Set Formula
-                             finalCalculatedPrice = selectedBoxPrice;
-                        }
-                    } else {
-                        console.warn(`[WARNING] Config Label '${incomingIdentifier}' NOT FOUND in product ${product._id}. Reverting to Base Price.`);
-                        finalCalculatedPrice = base; 
-                    }
-               }
-           
-               // 4. Flavor Surcharge
-               if (product.comboConfig?.hasCake && item.selectedConfig?.cake?.flavorId) {
-                    const flavor = await db.collection('flavors').findOne({ 
-                        _id: new ObjectId(item.selectedConfig.cake.flavorId) 
-                    });
-                    const flavorPrice = safePrice(flavor?.price);
-                    if (flavorPrice > 0) {
-                        console.log(`[DEBUG] Adding Flavor Surcharge: ${flavorPrice}`);
-                        finalCalculatedPrice += flavorPrice;
-                    }
-               }
-
-               finalCalculatedPrice += addonsUnitCost(item.addons);
+               const finalCalculatedPrice = await orderSetUnitPrice(db, product, item);
 
                return {
                   ...item,

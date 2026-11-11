@@ -1,4 +1,5 @@
 import { ProductWithCategory, Flavor, Diameter, CartItem, Product } from "@/types";
+import { setLinePrice } from "@/lib/sets/setLinePrice";
 
 interface PriceCalculationParams {
   product: ProductWithCategory;
@@ -73,33 +74,16 @@ export const resolveItemPrice = (item: CartItem, products: Product[], flavors: F
     if (!product) return item.price; // Fallback to store price
 
     if (product.productType === 'set') {
-        const base = product.structureBasePrice || 0;
-        const defaultBox = product.availableQuantityConfigs?.[0]?.price || 0;
-        
-        const configIdentifier = item.selectedConfig?.quantityConfigId; // Stores Label
-        const selectedBoxObj = product.availableQuantityConfigs?.find(c => 
-             c.label && c.label.toString() === configIdentifier?.toString()
-        );
-        const selectedBoxPrice = selectedBoxObj ? selectedBoxObj.price : defaultBox;
-        
-        let calculated = 0;
-
-        if (product.comboConfig?.hasCake) {
-            // Combo: (Base - DefaultBox) + SelectedBox + CakeFlavor
-            calculated = (base - defaultBox) + selectedBoxPrice;
-            
-            // Add cake flavor if exists
-            const flavorId = item.selectedConfig?.cake?.flavorId;
-            if (flavorId) {
-                const flav = flavors.find(f => f._id === flavorId);
-                if (flav) calculated += flav.price;
-            }
-
-        } else {
-             // Simple Set: Just the Box Price
-             calculated = selectedBoxPrice;
-        }
-        return Number(calculated.toFixed(2));
+        const cakeFlavorId = item.selectedConfig?.cake?.flavorId;
+        const { price } = setLinePrice(product, item.selectedConfig?.quantityConfigId, {
+            match: "label",
+            missingBox: "defaultBox",
+            rounding: "none",
+            cakeFlavorPrice: cakeFlavorId
+                ? flavors.find(f => f._id === cakeFlavorId)?.price
+                : undefined,
+        });
+        return Number(price.toFixed(2));
     } else {
         return item.price;
     }

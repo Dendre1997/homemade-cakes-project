@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Order, Diameter, CartItem, ProductWithCategory, Flavor, IShape } from "@/types";
 import { addonsUnitCost } from "@/lib/addons/selectedAddonMath";
+import { setLinePrice } from "@/lib/sets/setLinePrice";
 import { Button } from "@/components/ui/Button";
 import {
   Dialog,
@@ -182,32 +183,14 @@ const OrderDetailItems = ({
 
   const currentUnitCost = draftProduct
     ? (draftProduct.productType === 'set' && draftSelectedConfig)
-        ? (() => {
-            const quantityConfigId = draftSelectedConfig.quantityConfigId;
-            const config = quantityConfigId ? draftProduct.availableQuantityConfigs?.find(c => c.label === quantityConfigId) : undefined;
-            const selectedBoxPrice = config?.price || 0;
-            
-            // Default pricing (Simple Set)
-            let finalPrice = selectedBoxPrice;
-
-            // Combo Logic
-            if (draftProduct.comboConfig?.hasCake) {
-                const base = draftProduct.structureBasePrice || 0;
-                const defaultBox = draftProduct.availableQuantityConfigs?.[0]?.price || 0;
-                // Formula: (Base - DefaultBox) + SelectedBox
-                finalPrice = (base - defaultBox) + selectedBoxPrice;
-
-                // Flavor Surcharge
-                const flavorId = draftSelectedConfig.cake?.flavorId;
-                if (flavorId) {
-                    const flavor = availableFlavors.find(f => f._id === flavorId);
-                    if (flavor?.price) {
-                        finalPrice += flavor.price;
-                    }
-                }
-            }
-            return finalPrice;
-        })()
+        ? setLinePrice(draftProduct, draftSelectedConfig.quantityConfigId, {
+            match: "label",
+            missingBox: "zeroBox",
+            rounding: "none",
+            cakeFlavorPrice: draftSelectedConfig.cake?.flavorId
+              ? availableFlavors.find(f => f._id === draftSelectedConfig.cake?.flavorId)?.price || undefined
+              : undefined,
+          }).price
         : calculateUnitPrice({
             product: draftProduct,
             flavorId: isDraftMultiTier ? undefined : draftFlavorId,

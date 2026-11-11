@@ -4,9 +4,14 @@
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Simple set and combo line prices come from one shared rule on both client and server
-- [ ] A simple set line, a combo line, and a line whose box is no longer on the product price the same as before the change
-- [ ] Discounts, addons, and the combo cake flavor price apply the same as before
-- [ ] Order creation in both the pending-confirmation and the standard path uses the shared rule
+- [x] Simple set and combo line prices come from one shared rule on both client and server
+- [x] A simple set line, a combo line, and a line whose box is no longer on the product price the same as before the change
+- [x] Discounts, addons, and the combo cake flavor price apply the same as before
+- [x] Order creation in both the pending-confirmation and the standard path uses the shared rule
+
+Notes:
+- The admin order-edit price preview also computed set prices and now uses the same rule.
+- Each caller's box matching, missing-box fallback, and rounding are kept as named options, so they can be unified deliberately in ticket 04.
+- Verified by running the old code of every caller against the shared rule on 141,120 input combinations: no difference with valid data. With corrupt data (missing base price or a box without a price) client previews now show 0 where they showed NaN; the product form and admin product routes never save such data.

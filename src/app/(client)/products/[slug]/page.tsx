@@ -33,6 +33,7 @@ import { Switch } from "@/components/ui/Switch";
 import { Label } from "@/components/ui/Label";
 import Image from "next/image";
 import { addonsUnitCost } from "@/lib/addons/selectedAddonMath";
+import { setLinePrice } from "@/lib/sets/setLinePrice";
 
 // Translator Page Pattern
 const SingleProductPage = () => {
@@ -433,38 +434,28 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
 
 
   // Selected Quantity Config for Sets
-  const selectedQtyConfig = isSet 
-    ? product?.availableQuantityConfigs?.find(c => (c._id || c.label) === selectedQtyConfigId)
+  const setPrice = isSet && product
+    ? setLinePrice(product, selectedQtyConfigId, {
+        match: "idOrLabel",
+        missingBox: "none",
+        rounding: "none",
+        inscriptionPrice:
+          product.inscriptionSettings?.isAvailable && inscription.trim() !== ""
+            ? product.inscriptionSettings.price
+            : undefined,
+        cakeFlavorPrice: comboSelection.flavorId
+          ? product.availableFlavors.find(f => f._id === comboSelection.flavorId)?.price
+          : undefined,
+      })
     : null;
+  const selectedQtyConfig = setPrice?.box ?? null;
     
   // --- Calculate Prices ---
   let calculatedPrice = 0;
   
   if (product) {
-     if (isSet && selectedQtyConfig) {
-        // Set Price Logic
-        if (isCombo) {
-             const firstBoxPrice = product.availableQuantityConfigs?.[0]?.price || 0;
-             const cakeOnlyPrice = product.structureBasePrice - firstBoxPrice;
-             // Final = Cake Only + Selected Box Price
-             calculatedPrice = cakeOnlyPrice + selectedQtyConfig.price;
-        } else {
-             // Simple Set: Price is just the selected box
-             calculatedPrice = selectedQtyConfig.price;
-        }
-        
-        if (product.inscriptionSettings?.isAvailable && inscription.trim() !== "") {
-           calculatedPrice += product.inscriptionSettings.price;
-        }
-
-        if (isCombo) {
-           // Cake Flavor Price
-           if (comboSelection.flavorId) {
-              const cFlavor = product.availableFlavors.find(f => f._id === comboSelection.flavorId);
-              if (cFlavor) calculatedPrice += cFlavor.price;
-           }
-        }
-        
+     if (setPrice) {
+        calculatedPrice = setPrice.price;
      } else {
         const inscriptionFee = (product.inscriptionSettings?.isAvailable && inscription.trim() !== "") ? product.inscriptionSettings.price : 0;
 

@@ -2,6 +2,7 @@ import { Db, ObjectId } from "mongodb";
 import { CartItem, Discount, Product, Flavor, Addon, IShape } from "@/types";
 import { parseCartItemId, OBJECT_ID_RE } from "@/lib/cartItemId";
 import { addonsUnitCost, normalizeSelectedAddons } from "@/lib/addons/selectedAddonMath";
+import { setLinePrice } from "@/lib/sets/setLinePrice";
 
 interface PriceResult {
   subtotal: number;
@@ -149,54 +150,15 @@ export async function calculateOrderPricing(
 
     // --- SCENARIO A: SETS & COMBOS ---
     if (dbProduct.productType === 'set') {
-        const base = safePrice(dbProduct.structureBasePrice);
-        const defaultBox = safePrice(dbProduct.availableQuantityConfigs?.[0]?.price);
-        let finalCalculatedPrice = 0;
-
-        //  FIND BOX CONFIG (Label-Based Matching)
-        const incomingIdentifier = (item.selectedConfig as any)?.quantityConfigId;
-
-        const selectedBoxObj = dbProduct.availableQuantityConfigs?.find((c: any) => {
-                return c.label && c.label.toString() === incomingIdentifier?.toString();
+        const cakeFlavorId = item.selectedConfig?.cake?.flavorId;
+        const { price } = setLinePrice(dbProduct, item.selectedConfig?.quantityConfigId, {
+          match: "labelThenId",
+          missingBox: "defaultBoxElseBase",
+          rounding: "cents",
+          cakeFlavorPrice: cakeFlavorId ? flavorMap.get(cakeFlavorId)?.price : undefined,
         });
-        
-        let selectedBoxPrice = 0;
-        if (selectedBoxObj) {
-            selectedBoxPrice = safePrice(selectedBoxObj.price);
-        } else {
-             // Fallback Logic: try to match by old-school ID if legacy, or default
-             const fallbackConfig = dbProduct.availableQuantityConfigs?.find((c: any) => 
-                c._id && c._id.toString() === incomingIdentifier?.toString()
-             );
-             
-             if (fallbackConfig) {
-                 selectedBoxPrice = safePrice(fallbackConfig.price);
-             } else {
-                 selectedBoxPrice = defaultBox > 0 ? defaultBox : base;
-             }
-        }
-        
-        // 2. Calculate Base
-        if (dbProduct.comboConfig?.hasCake) {
-             // Combo Formula: (Base - DefaultBox) + SelectedBox
-             finalCalculatedPrice = (base - defaultBox) + selectedBoxPrice;
-        } else {
-             // Simple Set Formula: SelectedBox Only
-             finalCalculatedPrice = selectedBoxPrice;
-        }
-        
-        // 3. Flavor Surcharge (Combo Only)
-        // Check item.selectedConfig.cake.flavorId
-        if (dbProduct.comboConfig?.hasCake && item.selectedConfig?.cake?.flavorId) {
-             const flavorId = item.selectedConfig?.cake?.flavorId;
-             const dbFlavor = flavorMap.get(flavorId);
-             const flavorPrice = safePrice(dbFlavor?.price);
-             if (flavorPrice > 0) {
-                 finalCalculatedPrice += flavorPrice;
-             }
-        }
-        
-        unitPrice = finalCalculatedPrice + addonCost;
+
+        unitPrice = price + addonCost;
 
     } else {
         // --- SCENARIO B: STANDARD CAKE ---
