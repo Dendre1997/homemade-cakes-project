@@ -132,7 +132,7 @@ const ManageAddonsPage = () => {
 
 
   return (
-    <section className="relative pb-28 md:pb-0">
+    <section className="relative">
       {isSubmitting && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
           <LoadingSpinner />

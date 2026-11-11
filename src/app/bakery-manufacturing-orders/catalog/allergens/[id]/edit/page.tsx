@@ -46,7 +46,7 @@ const EditAllergenPage = () => {
   if (!allergen) return <Spinner />;
 
   return (
-    <section className="relative pb-28 md:pb-0">
+    <section className="relative">
       <CatalogPageHeader
         title="Edit Allergen"
         backLabel="Back to Allergens"

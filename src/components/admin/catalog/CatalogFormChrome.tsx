@@ -36,18 +36,15 @@ export function CatalogFormActions({
   onCancel,
   disabled,
 }: CatalogFormActionsProps) {
-  const renderActions = (placement: "inline" | "sticky") => (
-    <>
+  return (
+    <div className="mt-6 flex items-center gap-2 border-t border-primary/15 pt-4">
       {onCancel ? (
         <Button
           type="button"
           variant="ghost"
           onClick={onCancel}
           disabled={isSubmitting}
-          className={cn(
-            "h-11 rounded-xl text-sm sm:h-10",
-            placement === "sticky" ? "shrink-0 px-3" : "px-4"
-          )}
+          className="h-11 shrink-0 rounded-xl px-4 text-sm sm:h-10"
         >
           Cancel
         </Button>
@@ -56,24 +53,10 @@ export function CatalogFormActions({
         type="submit"
         variant="primary"
         disabled={disabled || isSubmitting}
-        className={cn(
-          "h-11 rounded-xl sm:h-10",
-          placement === "sticky" ? "min-w-0 flex-1" : "w-full"
-        )}
+        className={cn("h-11 min-w-0 flex-1 rounded-xl sm:h-10")}
       >
         {submitLabel}
       </Button>
-    </>
-  );
-
-  return (
-    <>
-      <div className="hidden md:block">{renderActions("inline")}</div>
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-primary/15 bg-background/95 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-4px_20px_-4px_rgba(35,20,22,0.08)] backdrop-blur-md md:hidden">
-        <div className="mx-auto flex max-w-lg items-center gap-2.5">
-          {renderActions("sticky")}
-        </div>
-      </div>
-    </>
+    </div>
   );
 }

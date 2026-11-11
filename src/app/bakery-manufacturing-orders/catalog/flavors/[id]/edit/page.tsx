@@ -69,7 +69,7 @@ const EditFlavorPage = () => {
   if (error) return <p className="text-red-500">Error: {error}</p>;
 
   return (
-    <section className="relative pb-28 md:pb-0">
+    <section className="relative">
       <CatalogPageHeader
         title={flavor?.name ? `Edit Flavor: ${flavor.name}` : "Edit Flavor"}
         backLabel="Back to Flavors"

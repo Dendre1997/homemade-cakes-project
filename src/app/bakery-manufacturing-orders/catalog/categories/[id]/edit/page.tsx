@@ -44,7 +44,7 @@ const EditCategoryPage = () => {
   if (!category) return <Spinner />;
 
   return (
-    <section className="relative pb-28 md:pb-0">
+    <section className="relative">
       <CatalogPageHeader
         title="Edit Category"
         backLabel="Back to Categories"

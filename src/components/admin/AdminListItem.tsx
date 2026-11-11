@@ -16,8 +16,10 @@ interface AdminListItemProps {
   icon?: ReactNode;
 }
 
+const iconClass = "h-4 w-4 shrink-0 text-current";
+
 const rowActionClass =
-  "h-11 w-11 shrink-0 rounded-xl p-0 sm:h-10 sm:w-auto sm:px-3";
+  "h-11 w-11 shrink-0 rounded-xl p-0 shadow-none hover:shadow-none sm:h-10 sm:w-auto sm:px-3 [&_svg]:h-4 [&_svg]:w-4 [&_svg]:shrink-0";
 
 export const AdminListItem = ({
   imageUrl,
@@ -40,7 +42,11 @@ export const AdminListItem = ({
 
   return (
     <Dialog.Root open={isModalOpen} onOpenChange={setIsModalOpen}>
-      <div className="flex items-center justify-between gap-3 rounded-xl border border-primary/10 bg-background/40 p-3">
+      <div
+        className={`flex items-center justify-between gap-3 rounded-xl border border-primary/10 bg-background/40 p-3 shadow-none hover:border-primary/10 hover:bg-background/40 hover:shadow-none ${
+          isModalOpen ? "pointer-events-none" : ""
+        }`}
+      >
         <div className="flex min-w-0 items-center gap-3">
           {imageUrl ? (
             <Image
@@ -72,9 +78,9 @@ export const AdminListItem = ({
               type="button"
               variant="primary"
               aria-label="Show details"
-              className="h-11 w-11 shrink-0 rounded-xl p-0 sm:h-10 sm:w-10"
+              className="h-11 w-11 shrink-0 rounded-xl p-0 text-white shadow-none hover:shadow-none sm:h-10 sm:w-10 [&_svg]:h-4 [&_svg]:w-4 [&_svg]:shrink-0 [&_svg]:text-white"
             >
-              <HelpCircle className="h-4 w-4" aria-hidden />
+              <HelpCircle className={iconClass} aria-hidden />
             </Button>
           </Dialog.Trigger>
 
@@ -83,9 +89,9 @@ export const AdminListItem = ({
             variant="secondary"
             onClick={onEdit}
             aria-label="Edit"
-            className={rowActionClass}
+            className={`${rowActionClass} text-primary [&_svg]:text-primary`}
           >
-            <Edit2 className="h-4 w-4 sm:mr-2" aria-hidden />
+            <Edit2 className={`${iconClass} sm:mr-2`} aria-hidden />
             <span className="hidden sm:inline">Edit</span>
           </Button>
           <Button
@@ -93,17 +99,17 @@ export const AdminListItem = ({
             variant="danger"
             onClick={onDelete}
             aria-label="Delete"
-            className={rowActionClass}
+            className={`${rowActionClass} text-white [&_svg]:text-white`}
           >
-            <Trash2 className="h-4 w-4 sm:mr-2" aria-hidden />
+            <Trash2 className={`${iconClass} sm:mr-2`} aria-hidden />
             <span className="hidden sm:inline">Delete</span>
           </Button>
         </div>
       </div>
 
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/50" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 max-h-[80vh] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 overflow-y-auto overscroll-contain rounded-2xl border border-primary/15 bg-background/95 p-5 shadow-lg backdrop-blur-xl custom-scrollbar">
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/50 shadow-none hover:shadow-none" />
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 max-h-[80vh] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 overflow-y-auto overscroll-contain rounded-2xl border border-primary/15 bg-background p-5 shadow-none backdrop-blur-none hover:border-primary/15 hover:bg-background hover:shadow-none custom-scrollbar">
           <Dialog.Title className="mb-4 pr-12 font-heading text-xl font-semibold tracking-tight text-primary text-balance">
             Details for &quot;{title}&quot;
           </Dialog.Title>
@@ -138,7 +144,7 @@ export const AdminListItem = ({
 
           <div className="mt-6 flex justify-end">
             <Dialog.Close asChild>
-              <Button type="button" variant="primary" className="h-11 rounded-xl sm:h-10">
+              <Button type="button" variant="primary" className="h-11 rounded-xl text-white shadow-none hover:shadow-none sm:h-10">
                 Close
               </Button>
             </Dialog.Close>
