@@ -2,12 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
-import { MessageCircle } from "lucide-react";
+import { MessageCircle, Copy, Check } from "lucide-react";
 import { CustomOrder, CustomOrderItem } from "@/types";
 import { Label } from "@/components/ui/Label";
 import { Textarea } from "@/components/ui/Textarea";
 import { Button, buttonVariants } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
+import { DashboardGlassCard } from "@/components/admin/dashboard/DashboardGlassCard";
 import { addonQuantityMark, addonUnitCost } from "@/lib/addons/selectedAddonMath";
 
 interface QuickMessageCardProps {
@@ -253,6 +254,8 @@ function buildQuickMessage(
 
 export function QuickMessageCard({ order, convertedInfo }: QuickMessageCardProps) {
   const [messageText, setMessageText] = useState("");
+  const [showFullMessage, setShowFullMessage] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const paymentLink =
@@ -279,61 +282,86 @@ export function QuickMessageCard({ order, convertedInfo }: QuickMessageCardProps
     ? `sms:+${formattedPhone}?&body=${encodedMessage}`
     : undefined;
 
+  const actionClass = cn(buttonVariants({ variant: "secondary" }), "h-11 min-w-0 flex-1 gap-2 px-3 sm:h-10");
+
   return (
-    <div className="bg-card-background p-lg rounded-large shadow-md border border-border/40 space-y-4">
-      <h2 className="font-heading text-h4 text-primary border-b border-border/40 pb-4 flex items-center gap-2">
-        <MessageCircle className="w-5 h-5" />
-        Quick Message
+    <DashboardGlassCard className="space-y-4">
+      <h2 className="flex items-center gap-2 font-heading text-lg font-semibold text-primary">
+        <MessageCircle className="h-4 w-4 text-primary/70" aria-hidden />
+        Message
       </h2>
 
-      <div className="space-y-2">
-        <Label htmlFor="quick-message-body" className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-          Message Preview
-        </Label>
-        <Textarea
-          id="quick-message-body"
-          value={messageText}
-          onChange={(e) => setMessageText(e.target.value)}
-          rows={16}
-          className="resize-y min-h-[280px] font-body text-sm"
-        />
-      </div>
-
-      {!formattedPhone && (
-        <p className="text-xs text-muted-foreground">
-          Add a valid customer phone number to enable WhatsApp and SMS links.
-        </p>
-      )}
-
-      <div className="flex flex-col sm:flex-row gap-3 pt-1">
+      <div className="flex gap-2.5">
         {whatsappHref ? (
           <a
             href={whatsappHref}
             target="_blank"
             rel="noopener noreferrer"
-            className={cn(buttonVariants({ variant: "primary" }), "flex-1 text-center")}
+            className={cn(buttonVariants({ variant: "primary" }), "h-11 min-w-0 flex-1 text-center sm:h-10")}
           >
             WhatsApp
           </a>
         ) : (
-          <Button variant="primary" className="flex-1" disabled>
+          <Button variant="primary" className="h-11 min-w-0 flex-1 sm:h-10" disabled>
             WhatsApp
           </Button>
         )}
         {smsHref ? (
-          <a
-            href={smsHref}
-            className={cn(buttonVariants({ variant: "secondary" }), "flex-1 text-center")}
-          >
+          <a href={smsHref} className={actionClass}>
             SMS
           </a>
         ) : (
-          <Button variant="secondary" className="flex-1" disabled>
+          <Button variant="secondary" className="h-11 min-w-0 flex-1 sm:h-10" disabled>
             SMS
           </Button>
         )}
+        <Button
+          type="button"
+          variant="secondary"
+          className="h-11 shrink-0 px-3 sm:h-10"
+          aria-label="Copy message"
+          onClick={() => {
+            void navigator.clipboard.writeText(messageText).then(() => {
+              setCopied(true);
+              window.setTimeout(() => setCopied(false), 1500);
+            });
+          }}
+        >
+          {copied ? <Check className="h-4 w-4" aria-hidden /> : <Copy className="h-4 w-4" aria-hidden />}
+        </Button>
       </div>
-    </div>
+
+      {!formattedPhone && (
+        <p className="text-xs text-primary/55">
+          Add a valid customer phone number to enable WhatsApp and SMS links.
+        </p>
+      )}
+
+      <div className="space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <Label htmlFor="quick-message-body" className="text-xs font-medium text-primary/55">
+            Preview
+          </Label>
+          <button
+            type="button"
+            className="text-xs font-semibold text-accent hover:underline"
+            onClick={() => setShowFullMessage((open) => !open)}
+          >
+            {showFullMessage ? "Show less" : "Show full message"}
+          </button>
+        </div>
+        <Textarea
+          id="quick-message-body"
+          value={messageText}
+          onChange={(e) => setMessageText(e.target.value)}
+          rows={showFullMessage ? 12 : 3}
+          className={cn(
+            "resize-y rounded-xl bg-background/40 font-body text-sm",
+            showFullMessage ? "min-h-[220px]" : "max-h-24 min-h-0 overflow-hidden"
+          )}
+        />
+      </div>
+    </DashboardGlassCard>
   );
 }
 

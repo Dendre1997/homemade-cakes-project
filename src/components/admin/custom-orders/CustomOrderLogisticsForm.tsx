@@ -5,93 +5,90 @@ import { Label } from "@/components/ui/Label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import CustomDatePicker from "@/components/ui/CustomDatePicker";
-import { Calendar, Clock, Truck, TrendingUp } from "lucide-react";
+import { DashboardGlassCard } from "@/components/admin/dashboard/DashboardGlassCard";
+import { CalendarClock } from "lucide-react";
 
 interface CustomOrderLogisticsFormProps {
   order: any;
   onChange: (field: string, value: any) => void;
 }
 
-export const CustomOrderLogisticsForm = ({ 
-  order, 
-  onChange 
+const fieldClass = "h-11 rounded-xl sm:h-10";
+const labelClass = "mb-1.5 block text-xs font-medium text-primary/55";
+
+export const CustomOrderLogisticsForm = ({
+  order,
+  onChange
 }: CustomOrderLogisticsFormProps) => {
   return (
-    <div className="bg-card-background p-lg rounded-large shadow-md space-y-md border border-border/40">
-       <h2 className="font-heading text-h4 text-primary border-b border-border/40 pb-4 flex items-center gap-2">
-          Status & Logistics
-       </h2>
-       
-       <div className="space-y-sm pt-2">
-          <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-             <TrendingUp className="w-3.5 h-3.5 text-primary" /> Request Status
-          </Label>
-          <Select 
-             value={order.status} 
-             onValueChange={(val) => onChange("status", val)}
-          >
-             <SelectTrigger className="h-11">
-                <SelectValue placeholder="Set Status" />
-             </SelectTrigger>
-             <SelectContent>
-                <SelectItem value="pending_review">Pending Review</SelectItem>
-                <SelectItem value="negotiating">Negotiating</SelectItem>
-                <SelectItem value="converted">Converted</SelectItem>
-                <SelectItem value="rejected">Rejected</SelectItem>
-             </SelectContent>
-          </Select>
-       </div>
+    <DashboardGlassCard className="space-y-4">
+      <h2 className="flex items-center gap-2 font-heading text-lg font-semibold text-primary">
+        <CalendarClock className="h-4 w-4 text-primary/70" aria-hidden />
+        Date & status
+      </h2>
 
-       <div className="space-y-sm">
-          <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-             <Calendar className="w-3.5 h-3.5 text-primary" /> Preferred Date
-          </Label>
-          <CustomDatePicker 
-             selected={order.date ? new Date(order.date) : undefined}
-             onSelect={(date?: Date) => onChange("date", date)}
-          />
-       </div>
+      <div>
+        <Label className={labelClass}>Request status</Label>
+        <Select
+          value={order.status}
+          onValueChange={(val) => onChange("status", val)}
+        >
+          <SelectTrigger className={fieldClass}>
+            <SelectValue placeholder="Set status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="pending_review">Pending Review</SelectItem>
+            <SelectItem value="negotiating">Negotiating</SelectItem>
+            <SelectItem value="converted">Converted</SelectItem>
+            <SelectItem value="rejected">Rejected</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
-       <div className="space-y-sm">
-          <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-             <Clock className="w-3.5 h-3.5 text-primary" /> Time Slot
-          </Label>
-          <Input 
-             value={order.timeSlot || ""} 
-             onChange={(e) => onChange("timeSlot", e.target.value)}
-             className="h-11"
-             placeholder="e.g. 10:00 AM - 12:00 PM"
-          />
-       </div>
+      <div>
+        <Label className={labelClass}>Preferred date</Label>
+        <CustomDatePicker
+          selected={order.date ? new Date(order.date) : undefined}
+          onSelect={(date?: Date) => onChange("date", date)}
+        />
+      </div>
 
-       <div className="space-y-sm">
-          <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-             <Truck className="w-3.5 h-3.5 text-primary" /> Delivery Method
-          </Label>
-          <Select 
-             value={order.deliveryMethod || "pickup"} 
-             onValueChange={(val) => onChange("deliveryMethod", val)}
-          >
-             <SelectTrigger className="h-11">
-                <SelectValue placeholder="Select Method" />
-             </SelectTrigger>
-             <SelectContent>
-                <SelectItem value="pickup">Pickup</SelectItem>
-                <SelectItem value="delivery">Delivery</SelectItem>
-             </SelectContent>
-          </Select>
-       </div>
+      <div>
+        <Label className={labelClass}>Time slot</Label>
+        <Input
+          value={order.timeSlot || ""}
+          onChange={(e) => onChange("timeSlot", e.target.value)}
+          className={fieldClass}
+          placeholder="10:00 AM – 12:00 PM"
+        />
+      </div>
 
-       <div className="space-y-sm pt-4">
-          <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Admin Internal Notes</Label>
-          <Textarea 
-             rows={4}
-             value={order.adminNotes || ""} 
-             onChange={(e) => onChange("adminNotes", e.target.value)}
-             placeholder="Internal notes for staff only..."
-             className="resize-none italic bg-muted/5 font-sans"
-          />
-       </div>
-    </div>
+      <div>
+        <Label className={labelClass}>Fulfillment</Label>
+        <Select
+          value={order.deliveryMethod || "pickup"}
+          onValueChange={(val) => onChange("deliveryMethod", val)}
+        >
+          <SelectTrigger className={fieldClass}>
+            <SelectValue placeholder="Select method" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="pickup">Pickup</SelectItem>
+            <SelectItem value="delivery">Delivery</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div>
+        <Label className={labelClass}>Staff notes</Label>
+        <Textarea
+          rows={4}
+          value={order.adminNotes || ""}
+          onChange={(e) => onChange("adminNotes", e.target.value)}
+          placeholder="Internal notes for staff only…"
+          className="resize-none rounded-xl bg-background/40"
+        />
+      </div>
+    </DashboardGlassCard>
   );
 };

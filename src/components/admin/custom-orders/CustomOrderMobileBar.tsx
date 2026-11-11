@@ -26,12 +26,35 @@ export function CustomOrderMobileBar({
   onCopyPaymentLink,
 }: CustomOrderMobileBarProps) {
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 border-t border-primary/15 bg-background/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-lg backdrop-blur-xl lg:hidden">
-      <div className="mx-auto flex max-w-lg flex-col gap-2">
+    <div className="fixed inset-x-0 bottom-0 z-50 border-t border-primary/15 bg-background/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_20px_-4px_rgba(35,20,22,0.08)] backdrop-blur-md lg:hidden">
+      <div className="mx-auto flex max-w-lg items-center gap-2.5">
+        {isDirty && (
+          <Button
+            type="button"
+            variant="ghost"
+            className="h-11 shrink-0 px-2.5 text-sm"
+            disabled={isSaving}
+            onClick={onDiscard}
+          >
+            Discard
+          </Button>
+        )}
+        {isDirty && (
+          <Button
+            type="button"
+            variant="primary"
+            className="h-11 min-w-0 flex-1 px-2 text-sm"
+            aria-label={isSaving ? "Saving" : "Save"}
+            disabled={isSaving}
+            onClick={onSave}
+          >
+            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : "Save"}
+          </Button>
+        )}
         {isConverted ? (
-          <Button type="button" onClick={onCopyPaymentLink} className="w-full gap-2 text-white">
-            <Copy className="h-4 w-4" aria-hidden />
-            Copy Payment Link
+          <Button type="button" onClick={onCopyPaymentLink} className="h-11 min-w-0 flex-1 gap-2 px-2 text-sm text-white">
+            <Copy className="h-4 w-4 shrink-0" aria-hidden />
+            <span className="truncate">Copy link</span>
           </Button>
         ) : (
           <Button
@@ -39,44 +62,15 @@ export function CustomOrderMobileBar({
             onClick={onConvert}
             disabled={isConverting || isSaving}
             variant="secondary"
-            className="h-12 w-full border-border bg-white font-bold shadow-sm hover:bg-subtleBackground"
+            className="h-11 min-w-0 flex-1 border-primary/15 bg-background/40 px-2 text-sm font-semibold shadow-sm hover:bg-background/70"
           >
             {isConverting ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
             ) : (
-              <Zap className="mr-2 h-4 w-4 text-accent" aria-hidden />
+              <Zap className="mr-2 h-4 w-4 shrink-0 text-accent" aria-hidden />
             )}
-            Convert to Order
+            <span className="truncate">Convert</span>
           </Button>
-        )}
-        {isDirty && (
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              className="flex-1"
-              disabled={isSaving}
-              onClick={onDiscard}
-            >
-              Discard
-            </Button>
-            <Button
-              type="button"
-              variant="primary"
-              className="flex-1"
-              disabled={isSaving}
-              onClick={onSave}
-            >
-              {isSaving ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
-                  Saving…
-                </>
-              ) : (
-                "Save Changes"
-              )}
-            </Button>
-          </div>
         )}
       </div>
     </div>

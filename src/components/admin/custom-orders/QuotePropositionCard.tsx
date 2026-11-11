@@ -110,10 +110,10 @@ export function QuotePropositionCard({
     Boolean(object?.risks?.length);
 
   return (
-    <div className="rounded-large border border-accent/30 bg-card-background p-lg shadow-md">
+    <div className="rounded-2xl border border-primary/15 bg-background/20 p-4 shadow-sm backdrop-blur-xl backdrop-saturate-150 sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-sm border-b border-border/40 pb-4">
         <div>
-          <h2 className="inline-flex items-center gap-sm font-heading text-h4 text-primary">
+          <h2 className="inline-flex items-center gap-2 font-heading text-lg font-semibold text-primary">
             <Sparkles className="h-5 w-5 text-accent" />
             AI Quote Assistant
           </h2>

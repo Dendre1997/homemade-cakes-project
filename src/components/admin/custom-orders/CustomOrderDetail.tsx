@@ -3,6 +3,8 @@
 import { useMemo, useRef, useState } from "react";
 import { FloatingActionBar } from "@/components/admin/FloatingActionBar";
 import { OrderDetailShell } from "@/components/admin/orders/OrderDetailShell";
+import { DashboardGlassCard } from "@/components/admin/dashboard/DashboardGlassCard";
+import { Wallet } from "lucide-react";
 import { CustomOrderMobileBar } from "./CustomOrderMobileBar";
 import type { DeepPartial } from "ai";
 import { useRouter } from "next/navigation";
@@ -323,6 +325,8 @@ export default function CustomOrderDetail({ initialOrder, shapes = [] }: CustomO
       <OrderDetailShell
         mobileAsideFirst
         asideStickyClassName="lg:top-44"
+        stackClassName="space-y-4 sm:space-y-6"
+        gapClassName="gap-4 sm:gap-6"
         header={
           <CustomOrderDetailHeader
             id={order._id}
@@ -368,8 +372,9 @@ export default function CustomOrderDetail({ initialOrder, shapes = [] }: CustomO
               onChange={handleFieldChange}
             />
             <QuickMessageCard order={order} convertedInfo={convertedInfo} />
-            <div className="rounded-large border border-border/40 bg-card-background p-lg shadow-md">
-              <h2 className="mb-4 border-b border-border/40 pb-4 font-heading text-h4 text-primary">
+            <DashboardGlassCard>
+              <h2 className="mb-4 flex items-center gap-2 font-heading text-lg font-semibold text-primary">
+                <Wallet className="h-4 w-4 text-primary/70" aria-hidden />
                 Payment Preference
               </h2>
               <p className="text-sm font-medium text-primary">
@@ -379,14 +384,14 @@ export default function CustomOrderDetail({ initialOrder, shapes = [] }: CustomO
                     ? "E-Transfer"
                     : "Not specified"}
               </p>
-              <p className="mt-1 text-xs text-muted-foreground">
+              <p className="mt-1 text-xs text-primary/60">
                 {order.paymentPreference === "cash"
                   ? "Customer will pay the full amount in cash at pickup."
                   : order.paymentPreference === "e-transfer"
                     ? "Customer will pay the full amount via e-transfer the day before pickup."
                     : "Customer did not select a payment method (legacy request)."}
               </p>
-            </div>
+            </DashboardGlassCard>
             <CustomOrderLogisticsForm
               order={order}
               onChange={handleFieldChange}

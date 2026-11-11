@@ -10,6 +10,7 @@ import { AlertTriangle, Image as ImageIcon, Trash2, Plus, Loader2 } from "lucide
 import Image from "next/image";
 import { useRef, useState, useEffect, useMemo } from "react";
 import { AddonAdminSelector } from "@/components/admin/addons/AddonAdminSelector";
+import { DashboardGlassCard } from "@/components/admin/dashboard/DashboardGlassCard";
 import { addonQuantityMark, addonUnitCost } from "@/lib/addons/selectedAddonMath";
 import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
 import ImagePreviewGallery from "@/components/ui/ImagePreviewGallery";
@@ -270,27 +271,38 @@ function ItemSpecEditor({
     }
   };
 
+  const scanPrice = typeof item.agreedPrice === "number" && !Number.isNaN(item.agreedPrice)
+    ? item.agreedPrice
+    : Number(item.approximatePrice) || 0;
+  const scanSize = details.size && !/^[a-f0-9]{24}$/i.test(String(details.size)) ? String(details.size) : "";
+
   return (
-    <div className="space-y-lg rounded-large border border-border/60 bg-subtleBackground/30 p-md">
-      <div className="flex items-center justify-between border-b border-border/40 pb-3">
-        <h3 className="font-heading text-h5 text-primary flex items-center gap-2">
-          {itemCount > 1 ? `Item ${index + 1}` : "Product Details"}
-          {itemCount > 1 && categoryDisplayName && (
-            <span className="text-sm font-normal text-muted-foreground">
-              · {categoryDisplayName}
-            </span>
-          )}
-        </h3>
+    <div className="space-y-4 rounded-2xl border border-primary/10 bg-background/30 p-4">
+      <div className="flex min-w-0 items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-primary/45">
+            {itemCount > 1 ? `Item ${index + 1}` : "Item"}
+          </p>
+          <p className="truncate text-sm font-semibold text-primary">
+            {categoryDisplayName || item.category || "Product"}
+          </p>
+          <p className="truncate text-xs text-primary/65">
+            {[scanSize, details.flavor].filter(Boolean).join(" · ") || "Size and flavor not set"}
+          </p>
+        </div>
+        <p className="shrink-0 text-base font-bold tabular-nums text-accent">
+          ${scanPrice.toFixed(2)}
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-md">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="space-y-sm">
-          <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Category</Label>
+          <Label className="text-xs font-medium text-primary/55">Category</Label>
           <Select
             value={resolvedCategoryId || undefined}
             onValueChange={handleCategoryChange}
           >
-            <SelectTrigger className="h-11">
+            <SelectTrigger className="h-11 rounded-xl sm:h-10">
               <SelectValue placeholder="Select Category" />
             </SelectTrigger>
             <SelectContent>
@@ -309,7 +321,7 @@ function ItemSpecEditor({
         </div>
 
         <div className="space-y-sm">
-          <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Price Estimate ($)</Label>
+          <Label className="text-xs font-medium text-primary/55">Price Estimate ($)</Label>
           <Input
             type="number"
             value={item.approximatePrice ?? ""}
@@ -320,13 +332,13 @@ function ItemSpecEditor({
                 e.target.value === "" ? null : Number(e.target.value)
               )
             }
-            className="h-11 font-mono font-bold"
+            className="h-11 rounded-xl font-mono font-bold tabular-nums sm:h-10"
             placeholder="0.00"
           />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-md">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="space-y-sm">
           <HybridSelector
             label="Size / Configuration"
@@ -337,7 +349,7 @@ function ItemSpecEditor({
         </div>
         {!isMultiTier && (
           <div className="space-y-sm">
-            <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Flavor Profile</Label>
+            <Label className="text-xs font-medium text-primary/55">Flavor Profile</Label>
             <Select
               value={selectedSingleFlavorId || undefined}
               onValueChange={(flavorId) => {
@@ -351,7 +363,7 @@ function ItemSpecEditor({
               }}
               disabled={activeFlavors.length === 0}
             >
-              <SelectTrigger className="h-11">
+              <SelectTrigger className="h-11 rounded-xl sm:h-10">
                 <SelectValue placeholder="Select flavor" />
               </SelectTrigger>
               <SelectContent position="popper" className="w-full min-w-[var(--radix-select-trigger-width)]">
@@ -369,7 +381,7 @@ function ItemSpecEditor({
 
       {isMultiTier && (
         <div className="flex w-full min-w-0 flex-col gap-3">
-          <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Flavor Profile — Tier Selection</Label>
+          <Label className="text-xs font-medium text-primary/55">Flavor Profile — Tier Selection</Label>
           <AdminTierFlavorEditor
             tiersCount={tiersCount}
             tierSizes={tierSizes}
@@ -387,14 +399,14 @@ function ItemSpecEditor({
       )}
 
       <div className="space-y-sm">
-        <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Shape</Label>
+        <Label className="text-xs font-medium text-primary/55">Shape</Label>
         <Select
           value={details.shape || "__none__"}
           onValueChange={(val) =>
             updateDetails({ shape: val === "__none__" ? "" : val })
           }
         >
-          <SelectTrigger className="h-11">
+          <SelectTrigger className="h-11 rounded-xl sm:h-10">
             <SelectValue placeholder="Select Shape" />
           </SelectTrigger>
           <SelectContent>
@@ -416,27 +428,27 @@ function ItemSpecEditor({
       </div>
 
       <div className="space-y-sm">
-        <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Flavor Note (Optional)</Label>
+        <Label className="text-xs font-medium text-primary/55">Flavor Note (Optional)</Label>
         <Input
           value={details.flavorNote || ""}
           onChange={(e) => updateDetails({ flavorNote: e.target.value })}
-          className="h-11"
+          className="h-11 rounded-xl sm:h-10"
           placeholder="e.g. less sweet, specific inquiry"
         />
       </div>
 
       <div className="space-y-sm">
-        <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Text on Cake</Label>
+        <Label className="text-xs font-medium text-primary/55">Text on Cake</Label>
         <Input
           value={details.textOnCake || ""}
           onChange={(e) => updateDetails({ textOnCake: e.target.value })}
-          className="h-11"
+          className="h-11 rounded-xl sm:h-10"
           placeholder="Optional inscription..."
         />
       </div>
 
       <div className="space-y-sm">
-        <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Addons</Label>
+        <Label className="text-xs font-medium text-primary/55">Addons</Label>
         <AddonAdminSelector
           selectedAddons={item.addons || []}
           onChange={(newAddons) => onItemChange(index, "addons", newAddons)}
@@ -458,7 +470,7 @@ function ItemSpecEditor({
       </div>
 
       <div className="space-y-sm">
-        <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Design Notes / Description</Label>
+        <Label className="text-xs font-medium text-primary/55">Design Notes / Description</Label>
         <Textarea
           rows={4}
           value={details.designNotes || ""}
@@ -469,7 +481,7 @@ function ItemSpecEditor({
       </div>
 
       <div className="space-y-sm pt-2">
-        <Label className="flex items-center justify-between text-xs font-bold uppercase tracking-widest text-muted-foreground">
+        <Label className="flex items-center justify-between text-xs font-medium text-primary/55">
           <span className="flex items-center gap-2"><ImageIcon className="w-4 h-4" /> Reference Images</span>
           <span className="text-[10px] lowercase font-normal italic">{referenceImages.length} uploaded</span>
         </Label>
@@ -482,7 +494,7 @@ function ItemSpecEditor({
               <button
                 type="button"
                 onClick={() => setGalleryIndex(idx)}
-                className="absolute inset-0 w-full h-full cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-inset"
+                className="absolute inset-0 h-full w-full cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-inset"
                 aria-label="View reference image full size"
               >
                 <Image src={url} alt="Reference" fill quality={90} className="object-cover" />
@@ -490,10 +502,10 @@ function ItemSpecEditor({
               <button
                 type="button"
                 onClick={() => setImageToDeleteIndex(idx)}
-                className="absolute top-1.5 right-1.5 z-10 bg-error text-white p-1.5 rounded-full shadow-md hover:scale-105 active:scale-95 transition-transform"
+                className="absolute top-1.5 right-1.5 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-error text-white shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                 aria-label="Delete reference image"
               >
-                <Trash2 className="w-3.5 h-3.5" />
+                <Trash2 className="h-4 w-4" aria-hidden />
               </button>
             </div>
           ))}
@@ -501,13 +513,13 @@ function ItemSpecEditor({
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploading}
-            className="aspect-square rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center gap-2 hover:border-primary hover:bg-primary/5 hover:text-primary transition-all text-muted-foreground bg-subtleBackground group"
+            className="flex aspect-square flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-primary/20 bg-background/40 text-primary/55 transition-colors hover:border-primary hover:bg-primary/5 hover:text-primary"
           >
             {isUploading ? (
               <Loader2 className="w-6 h-6 animate-spin text-primary" />
             ) : (
               <>
-                <Plus className="w-6 h-6 group-hover:scale-110 transition-transform" />
+                <Plus className="h-6 w-6" aria-hidden />
                 <span className="text-[10px] font-bold uppercase tracking-widest">Add Image</span>
               </>
             )}
@@ -524,9 +536,9 @@ function ItemSpecEditor({
       </div>
 
       <div className="border-t border-border/40 pt-4 space-y-3">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-md">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="space-y-sm">
-            <Label className="text-xs font-bold uppercase tracking-widest text-accent">
+            <Label className="mb-1.5 block text-xs font-medium text-accent">
               Agreed Price ($)
             </Label>
             <div className="relative">
@@ -539,14 +551,14 @@ function ItemSpecEditor({
                 step="0.01"
                 value={item.agreedPrice ?? ""}
                 onChange={(e) => handleAgreedPriceChange(e.target.value)}
-                className="h-11 pl-7 text-right font-bold text-accent border-accent/20 bg-accent/5 focus:ring-accent/20"
+                className="h-11 rounded-xl border-accent/20 bg-accent/5 pl-7 text-right font-bold tabular-nums text-accent focus:ring-accent/20 sm:h-10"
                 placeholder="0.00"
               />
             </div>
           </div>
 
           <div className="space-y-sm">
-            <Label className="text-xs font-bold uppercase tracking-widest text-accent">
+            <Label className="mb-1.5 block text-xs font-medium text-accent">
               Design Quote ($)
             </Label>
             <div className="relative">
@@ -559,7 +571,7 @@ function ItemSpecEditor({
                 step="0.01"
                 value={item.designQuote ?? ""}
                 onChange={(e) => handleDesignQuoteChange(e.target.value)}
-                className="h-11 pl-7 text-right font-bold text-accent border-accent/20 bg-accent/5 focus:ring-accent/20"
+                className="h-11 rounded-xl border-accent/20 bg-accent/5 pl-7 text-right font-bold tabular-nums text-accent focus:ring-accent/20 sm:h-10"
                 placeholder="0.00"
               />
             </div>
@@ -656,12 +668,12 @@ export const CustomOrderSpecsForm = ({
   const items: CustomOrderItem[] = order.items ?? [];
 
   return (
-    <div className="bg-card-background p-lg rounded-large shadow-md space-y-lg border border-border/40">
-      <h2 className="font-heading text-h4 text-primary border-b border-border/40 pb-4 flex items-center gap-2">
-        Product Details
+    <DashboardGlassCard className="space-y-4">
+      <h2 className="flex min-w-0 items-center gap-2 font-heading text-lg font-semibold text-primary">
+        Line items
         {items.length > 1 && (
-          <span className="text-sm font-normal text-muted-foreground">
-            ({items.length} items)
+          <span className="text-sm font-normal text-primary/55">
+            {items.length}
           </span>
         )}
       </h2>
@@ -684,26 +696,26 @@ export const CustomOrderSpecsForm = ({
 
       {/* Order-level allergies */}
       <div className="space-y-sm">
-        <Label className="flex items-center gap-2 text-error text-xs font-bold uppercase tracking-widest">
+        <Label className="mb-1.5 flex items-center gap-2 text-xs font-medium text-error">
           <AlertTriangle className="w-4 h-4" /> Allergies
         </Label>
         <Input
           value={order.allergies || ""}
           onChange={(e) => onOrderChange("allergies", e.target.value)}
-          className="h-11 border-error/20 focus:ring-error/20 bg-error/5"
+          className="h-11 rounded-xl border-error/20 bg-error/5 focus:ring-error/20 sm:h-10"
           placeholder="List any allergies..."
         />
       </div>
 
       {/* Agreed price total (sum of per-item agreed prices) */}
       <div className="flex items-center justify-between border-t border-border/40 pt-4">
-        <span className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
-          Agreed Price Total
+        <span className="text-xs font-medium uppercase tracking-wide text-primary/55">
+          Agreed total
         </span>
-        <span className="font-mono text-h4 font-bold text-accent">
+        <span className="font-mono text-2xl font-bold tabular-nums text-accent">
           ${agreedPriceTotal.toFixed(2)}
         </span>
       </div>
-    </div>
+    </DashboardGlassCard>
   );
 };

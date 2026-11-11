@@ -10,6 +10,10 @@ type OrderDetailShellProps = {
   mobileAsideFirst?: boolean;
   /** Sticky offset for the aside. Defaults to the production-order header. */
   asideStickyClassName?: string;
+  /** Vertical rhythm between cards. Defaults to the production-order spacing. */
+  stackClassName?: string;
+  /** Grid gap. Defaults to the production-order spacing. */
+  gapClassName?: string;
 };
 
 export function OrderDetailShell({
@@ -20,9 +24,11 @@ export function OrderDetailShell({
   mobileBar,
   mobileAsideFirst = false,
   asideStickyClassName = "lg:top-[5.5rem]",
+  stackClassName = "space-y-6",
+  gapClassName = "gap-6",
 }: OrderDetailShellProps) {
-  const asideClassName = `space-y-6 lg:sticky ${asideStickyClassName} lg:self-start`;
-  const mainClassName = "space-y-6 lg:col-span-2";
+  const asideClassName = `${stackClassName} lg:sticky ${asideStickyClassName} lg:self-start`;
+  const mainClassName = `${stackClassName} lg:col-span-2`;
 
   return (
     <section
@@ -30,7 +36,7 @@ export function OrderDetailShell({
     >
       {header}
 
-      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3 lg:items-start">
+      <div className={`mt-6 grid grid-cols-1 lg:grid-cols-3 lg:items-start ${gapClassName}`}>
         {mobileAsideFirst ? (
           <>
             <aside className={`order-1 lg:order-2 ${asideClassName}`}>{aside}</aside>

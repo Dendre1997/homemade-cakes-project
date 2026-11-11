@@ -4,11 +4,18 @@
 
 **Blocked by:** 01 (Phone chrome for a custom request).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The request cards use the shared glass surface from the production order
-- [ ] On a phone the message starts short, with WhatsApp and SMS visible under the title, and the full text can still be edited
-- [ ] Each line item shows category, size, flavor, and price at a glance
-- [ ] Removing a reference photo has a tap target large enough for a thumb
-- [ ] Phone and email fields use the right keyboard, and focus stays visible
-- [ ] Upload, delete confirmation, quote apply, and messaging links still do what they do today
+- [x] The request cards use the shared glass surface from the production order
+- [x] On a phone the message starts short, with WhatsApp and SMS visible under the title, and the full text can still be edited
+- [x] Each line item shows category, size, flavor, and price at a glance
+- [x] Removing a reference photo has a tap target large enough for a thumb
+- [x] Phone and email fields use the right keyboard, and focus stays visible
+- [x] Upload, delete confirmation, quote apply, and messaging links still do what they do today
+
+**Notes:**
+- Cards use the same glass surface as a production order. Section titles, field heights, and the gap between cards follow that page.
+- The sticky header and the phone bar use one control height. Convert, save, and discard sit in a single row and clear the home gesture.
+- The message starts at a few lines. WhatsApp, SMS, and copy sit under the title. The full text still edits in place.
+- Each line item leads with category, size, flavor, and price. A typed agreed price of 0 stays 0. The photo delete control is 44px.
+- The admin page needs Google sign-in, so this was not opened in the browser. `npx tsc --noEmit` passed.
