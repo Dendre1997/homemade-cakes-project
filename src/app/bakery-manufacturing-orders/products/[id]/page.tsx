@@ -9,6 +9,7 @@ import LoadingSpinner from "@/components/ui/Spinner";
 import { Button } from "@/components/ui/Button";
 import { useConfirmation } from "@/contexts/ConfirmationContext";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/Card";
+import { catalogFormCardClass } from "@/components/admin/catalog/CatalogFormChrome";
 import { cn } from "@/lib/utils";
 import { InstagramGeneratorModal } from "@/components/admin/InstagramGeneratorModal";
 import { ArrowLeft } from "lucide-react";
@@ -219,10 +220,10 @@ const SingleProductPage = () => {
       <div className="flex items-center justify-between">
           <Button 
             variant="ghost" 
-            className="gap-2 pl-0 text-muted-foreground hover:text-foreground" 
+            className="h-11 gap-2 rounded-xl px-2 text-sm text-primary/65 shadow-none hover:text-primary sm:h-10" 
             onClick={() => router.push('/bakery-manufacturing-orders/products')}
           >
-             <ArrowLeft className="w-4 h-4" /> Back to Products
+             <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden /> Back to Products
           </Button>
           
           <span className={cn(
@@ -238,21 +239,20 @@ const SingleProductPage = () => {
       {/* Header */}
       <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between border-b pb-6">
          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">{product.name}</h1>
+            <h1 className="min-w-0 truncate text-2xl font-bold tracking-tight text-primary text-balance sm:text-3xl">{product.name}</h1>
             <p className="text-muted-foreground text-sm mt-1">{product.category.name}</p>
          </div>
          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => window.open(`/products/${id}`, '_blank')}>
+            <Button variant="outline" onClick={() => window.open(`/products/${id}`, '_blank')} className="h-11 rounded-xl shadow-none sm:h-10">
                 View Live
             </Button>
-            <Button variant="default" size="sm" onClick={() => router.push(`/bakery-manufacturing-orders/products/${id}/edit`)}>
+            <Button variant="default" onClick={() => router.push(`/bakery-manufacturing-orders/products/${id}/edit`)} className="h-11 rounded-xl shadow-none sm:h-10">
                 Edit Product
             </Button>
             <Button 
                 variant={product.isActive ? "secondary" : "default"}
-                size="sm" 
                 onClick={handleToggleStatus}
-                className={product.isActive ? "text-red-600 hover:text-red-700 hover:bg-red-50" : "bg-green-600 hover:bg-green-700 text-white"}
+                className={cn("h-11 rounded-xl shadow-none sm:h-10", product.isActive ? "text-red-600 hover:bg-red-50 hover:text-red-700" : "bg-green-600 text-white hover:bg-green-700")}
             >
                 {product.isActive ? "Deactivate" : "Activate"}
             </Button>
@@ -264,7 +264,7 @@ const SingleProductPage = () => {
         <div className="space-y-6 lg:col-span-2">
             
             {/* 1. OVERVIEW */}
-            <Card className="overflow-hidden">
+            <Card className={cn(catalogFormCardClass, "overflow-hidden shadow-none hover:shadow-none")}>
                 <div className="flex flex-col md:flex-row">
                     <div className="w-full md:w-1/3 bg-gray-50 border-b md:border-b-0 md:border-r p-4">
                         {product.imageUrls.length > 1 ? (
@@ -314,7 +314,7 @@ const SingleProductPage = () => {
                     </div>
                 </div>
             </Card>
-            <Card>
+            <Card className={cn(catalogFormCardClass, "shadow-none hover:shadow-none")}>
                 <CardHeader className="pb-3">
                      <CardTitle className="text-sm font-medium">Tools</CardTitle>
                 </CardHeader>
@@ -322,7 +322,7 @@ const SingleProductPage = () => {
                      <Button 
                         variant="ghost" 
                         size="sm"
-                        className="w-full justify-start h-9 px-2"
+                        className="h-11 w-full justify-start rounded-xl px-3 shadow-none sm:h-10"
                         onClick={() => setIsGeneratorOpen(true)}
                      >
                  Generate Instagram Post
@@ -330,7 +330,7 @@ const SingleProductPage = () => {
                 </CardContent>
             </Card>
             {/* 2. CONFIGURATION */}
-            <Card>
+            <Card className={cn(catalogFormCardClass, "shadow-none hover:shadow-none")}>
                 <CardHeader className="pb-3">
                     <CardTitle className="text-base">Configuration</CardTitle>
                 </CardHeader>
@@ -384,7 +384,7 @@ const SingleProductPage = () => {
         <div className="space-y-6">
             
             {/* ASSOCIATIONS CARD */}
-            <Card>
+            <Card className={cn(catalogFormCardClass, "shadow-none hover:shadow-none")}>
                 <CardHeader className="pb-3 bg-muted/40 border-b">
                     <CardTitle className="text-sm font-medium">Associations</CardTitle>
                 </CardHeader>
@@ -397,14 +397,16 @@ const SingleProductPage = () => {
                         {product.collections && product.collections.length > 0 ? (
                             <div className="space-y-2">
                                 {product.collections.map((col: any) => (
-                                    <div key={col._id} className="flex items-center justify-between p-2 rounded border bg-card text-sm group">
-                                        <span>{col.name}</span>
+                                    <div key={col._id} className="flex min-h-11 items-center justify-between gap-2 rounded-xl border border-primary/10 bg-background/40 px-3 text-sm">
+                                        <span className="min-w-0 truncate">{col.name}</span>
                                         <button 
+                                            type="button"
                                             onClick={() => handleRemoveCollection(col._id)}
-                                            className="text-muted-foreground hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                                            title="Remove from collection"
+                                            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-primary transition-colors hover:bg-background/60"
+                                            aria-label={`Remove from ${col.name}`}
                                         >
-                                            ✕
+                                            <span className="sr-only">Remove</span>
+                                            <span aria-hidden className="text-base leading-none">×</span>
                                         </button>
                                     </div>
                                 ))}
@@ -422,14 +424,16 @@ const SingleProductPage = () => {
                          {product.seasonalEvents && product.seasonalEvents.length > 0 ? (
                             <div className="space-y-2">
                                 {product.seasonalEvents.map((event: any) => (
-                                    <div key={event._id} className="flex items-center justify-between p-2 rounded border bg-amber-50/50 border-amber-100 text-sm group">
-                                        <span>{event.name}</span>
+                                    <div key={event._id} className="flex min-h-11 items-center justify-between gap-2 rounded-xl border border-primary/10 bg-background/40 px-3 text-sm">
+                                        <span className="min-w-0 truncate">{event.name}</span>
                                         <button 
+                                            type="button"
                                             onClick={() => handleRemoveSeasonal(event._id)}
-                                            className="text-muted-foreground hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                                            title="Remove from event"
+                                            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-primary transition-colors hover:bg-background/60"
+                                            aria-label={`Remove from ${event.name}`}
                                         >
-                                            ✕
+                                            <span className="sr-only">Remove</span>
+                                            <span aria-hidden className="text-base leading-none">×</span>
                                         </button>
                                     </div>
                                 ))}

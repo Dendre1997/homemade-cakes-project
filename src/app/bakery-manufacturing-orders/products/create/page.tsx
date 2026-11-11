@@ -13,6 +13,10 @@ import {
 } from "@/types";
 import LoadingSpinner from "@/components/ui/Spinner";
 import {
+  catalogFieldClass,
+  catalogFormCardClass,
+} from "@/components/admin/catalog/CatalogFormChrome";
+import {
   Select,
   SelectGroup,
   SelectValue,
@@ -132,13 +136,13 @@ const CreateProductPage = () => {
   
   return (
     <section>
-      <h1 className="text-3xl font-heading mb-6">Create New Product</h1>
+      <h1 className="mb-6 font-heading text-2xl font-bold tracking-tight text-primary text-balance sm:text-3xl">Create New Product</h1>
 
       {/* chose category */}
-      <div className="mb-8 p-4 border rounded-md">
+      <div className={`mb-8 ${catalogFormCardClass}`}>
         <label
           htmlFor="category-select"
-          className="block text-lg font-medium mb-2"
+          className="mb-2 block text-sm font-medium text-primary"
         >
           Step 1: Choose a Product Category
         </label>
@@ -146,7 +150,7 @@ const CreateProductPage = () => {
           value={selectedCategoryId}
           onValueChange={setSelectedCategoryId}
         >
-          <SelectTrigger className="w-full h-12 rounded-lg border border-gray-300 px-4 text-base">
+          <SelectTrigger id="category-select" className={`${catalogFieldClass} w-full`}>
             <SelectValue placeholder="-- Select Category --" />
           </SelectTrigger>
           <SelectContent>

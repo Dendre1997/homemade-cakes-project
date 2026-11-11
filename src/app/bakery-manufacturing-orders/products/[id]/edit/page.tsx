@@ -150,15 +150,15 @@ const EditProductPage = () => {
 
   return (
     <section>
-      <div className="flex justify-between mb-1">
+      <div className="mb-6">
                 <Button 
                   variant="ghost" 
-                  className="gap-2 pl-0 text-muted-foreground hover:text-foreground" 
+                  className="mb-3 h-11 gap-2 rounded-xl px-2 text-sm text-primary/65 shadow-none hover:text-primary sm:h-10" 
                   onClick={() => router.push('/bakery-manufacturing-orders/products')}
                 >
-                   <ArrowLeft className="w-4 h-4" /> Back to Products
+                   <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden /> Back to Products
         </Button>
-      <h1 className="text-3xl font-heading mb-6">
+      <h1 className="min-w-0 truncate font-heading text-2xl font-bold tracking-tight text-primary text-balance sm:text-3xl">
         Edit Product: {product?.name}
       </h1>
         </div>

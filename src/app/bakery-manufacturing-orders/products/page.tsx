@@ -27,6 +27,7 @@ import {
   Search,
 } from "lucide-react";
 import { Input } from "@/components/ui/Input";
+import { catalogFieldClass } from "@/components/admin/catalog/CatalogFormChrome";
 
 type FilterState =
   | { type: "all" }
@@ -416,7 +417,7 @@ const ManageProductsPage = () => {
   return (
     <section className="relative min-h-screen">
       <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
-        <h1 className="font-heading text-h2 text-text-primary">
+        <h1 className="min-w-0 font-heading text-2xl font-bold tracking-tight text-primary text-balance sm:text-3xl">
           {activeFilter
             ? activeFilter.type === "all"
               ? "All Products"
@@ -433,9 +434,9 @@ const ManageProductsPage = () => {
             <Button
               variant="secondary"
               onClick={handleResetFilter}
-              className="w-full sm:w-auto justify-center" // Full width on mobile
+              className="h-11 w-full justify-center rounded-xl shadow-none sm:h-10 sm:w-auto"
             >
-              <ArrowLeft className="mr-2 h-4 w-4" /> Back to Dashboard
+              <ArrowLeft className="mr-2 h-4 w-4 shrink-0" aria-hidden /> Back to Dashboard
             </Button>
           )}
 
@@ -444,7 +445,7 @@ const ManageProductsPage = () => {
             <Button
               variant="secondary"
               onClick={() => setIsAddModalOpen(true)}
-              className="border-accent text-accent hover:bg-accent/10 w-full sm:w-auto justify-center" // Full width on mobile
+              className="h-11 w-full justify-center rounded-xl border-accent text-accent shadow-none hover:bg-accent/10 sm:h-10 sm:w-auto"
             >
               + Add to{" "}
               {activeFilter.type === "collection" ? "Collection" : "Seasonal"}
@@ -455,7 +456,7 @@ const ManageProductsPage = () => {
             href="/bakery-manufacturing-orders/products/create"
             className={cn(
               buttonVariants({ variant: "primary" }),
-              "w-full sm:w-auto justify-center",
+              "h-11 w-full justify-center rounded-xl shadow-none sm:h-10 sm:w-auto",
             )}
           >
             + Create Product
@@ -464,13 +465,17 @@ const ManageProductsPage = () => {
       </div>
 
       {/* Search Bar */}
-      <div className="relative mb-lg max-w-lg">
-        <div className="absolute left-3 top-1/2 -translate-y-1/2">
-          <Search className="h-4 w-4 text-muted-foreground" />
+      <div className="relative mb-6 max-w-lg">
+        <label htmlFor="product-search" className="sr-only">
+          Search products
+        </label>
+        <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2">
+          <Search className="h-4 w-4 shrink-0 text-primary/50" aria-hidden />
         </div>
         <Input
-          placeholder="Search products..."
-          className="pl-9"
+          id="product-search"
+          placeholder="Search products…"
+          className={cn(catalogFieldClass, "pl-9")}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
@@ -603,44 +608,40 @@ const ManageProductsPage = () => {
       {/* Filtered View - Only show if not searching and filter active */}
       {!searchQuery && activeFilter && (
         <div className="animate-in fade-in zoom-in-95 duration-300">
-          <div className="flex flex-wrap items-center gap-sm mb-lg p-sm bg-card-background rounded-medium border border-border">
+          <div className="mb-6 flex flex-wrap items-center gap-2 rounded-2xl border border-primary/15 bg-background/20 p-3 shadow-none backdrop-blur-md">
             <span className="text-small font-bold text-primary/70 mr-2">
               Status:
             </span>
 
             <Button
-              size="sm"
               variant={statusFilter === "all" ? "primary" : "secondary"}
               onClick={() => setStatusFilter("all")}
+              className="h-11 rounded-xl px-3 shadow-none sm:h-10"
             >
               All ({filteredProducts.length + (statusFilter !== "all" ? 0 : 0)}
               ){" "}
             </Button>
 
             <Button
-              size="sm"
               variant={statusFilter === "active" ? "primary" : "secondary"}
               onClick={() => setStatusFilter("active")}
-              className={
-                statusFilter === "active"
-                  ? "bg-success text-white hover:bg-success/90"
-                  : ""
-              }
+              className={cn(
+                "h-11 rounded-xl px-3 shadow-none sm:h-10",
+                statusFilter === "active" && "bg-success text-white hover:bg-success/90"
+              )}
             >
-              <Eye className="w-4 h-4 mr-2" /> Active
+              <Eye className="mr-2 h-4 w-4 shrink-0" aria-hidden /> Active
             </Button>
 
             <Button
-              size="sm"
               variant={statusFilter === "inactive" ? "primary" : "secondary"}
               onClick={() => setStatusFilter("inactive")}
-              className={
-                statusFilter === "inactive"
-                  ? "bg-neutral-500 text-white hover:bg-neutral-600"
-                  : ""
-              }
+              className={cn(
+                "h-11 rounded-xl px-3 shadow-none sm:h-10",
+                statusFilter === "inactive" && "bg-neutral-500 text-white hover:bg-neutral-600"
+              )}
             >
-              <EyeOff className="w-4 h-4 mr-2" /> Inactive
+              <EyeOff className="mr-2 h-4 w-4 shrink-0" aria-hidden /> Inactive
             </Button>
           </div>
 

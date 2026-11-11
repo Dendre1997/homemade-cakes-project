@@ -56,6 +56,11 @@ import {
 import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
 import { cn } from "@/lib/utils";
 import {
+  catalogChipClass,
+  catalogFieldClass,
+  catalogFormCardClass,
+} from "@/components/admin/catalog/CatalogFormChrome";
+import {
   appendCloudinaryUploadPreset,
   cloudinaryUploadUrl,
 } from "@/lib/cloudinaryClient";
@@ -487,7 +492,8 @@ const ProductForm = ({
     showAlert("AI copy applied to the form. Review before saving.", "success");
   };
 
-  const iconSizeClass = "h-8 w-8 text-primary shrink-0";
+  const iconSizeClass = "h-8 w-8 shrink-0 text-primary";
+  const sectionCard = cn(catalogFormCardClass, "shadow-none hover:shadow-none");
 
   return (
     <form onSubmit={handleSaveClick} className="mx-auto max-w-7xl">
@@ -495,18 +501,18 @@ const ProductForm = ({
         {/* --- LEFT COLUMN (2/3 width) --- */}
         <div className="space-y-8 lg:col-span-2">
           {/* PRODUCT TYPE */}
-          <Card>
+          <Card className={sectionCard}>
             <CardHeader>
               <CardTitle>Product Type</CardTitle>
             </CardHeader>
             <CardContent className="flex gap-4">
-               <div className={cn("cursor-pointer border-2 rounded-lg p-4 flex-1 text-center transition-all", productType === 'cake' ? "border-primary bg-primary/5" : "border-border hover:border-primary/50")} onClick={() => setProductType('cake')}>
+               <div className={cn("min-h-11 flex-1 cursor-pointer rounded-xl border-2 p-4 text-center transition-[border-color,background-color]", productType === 'cake' ? "border-primary bg-primary/5" : "border-border hover:border-primary/50")} onClick={() => setProductType('cake')}>
                   <div className="font-bold block text-lg">Cake</div>
                   <div className="text-sm text-muted-foreground">Standard configurable cake</div>
                </div>
-               <div className={cn("cursor-pointer border-2 rounded-lg p-4 flex-1 text-center transition-all", productType === 'set' ? "border-primary bg-primary/5" : "border-border hover:border-primary/50")} onClick={() => setProductType('set')}>
+               <div className={cn("min-h-11 flex-1 cursor-pointer rounded-xl border-2 p-4 text-center transition-[border-color,background-color]", productType === 'set' ? "border-primary bg-primary/5" : "border-border hover:border-primary/50")} onClick={() => setProductType('set')}>
                   <div className="font-bold block text-lg">Set / Combo</div>
-                  <div className="text-sm text-muted-foreground">Box of items or Bento Combo</div>
+                  <div className="text-sm text-muted-foreground">A set, or a set with one small cake</div>
                </div>
             </CardContent>
           </Card>
@@ -524,7 +530,7 @@ const ProductForm = ({
             />
           )}
 
-          <Card>
+          <Card className={sectionCard}>
             <CardHeader>
               <CardTitle>Basic Details</CardTitle>
               <CardDescription>Core product information.</CardDescription>
@@ -540,6 +546,7 @@ const ProductForm = ({
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
+                  className={catalogFieldClass}
                 />
               </div>
 
@@ -552,6 +559,7 @@ const ProductForm = ({
                   placeholder="One-line teaser for cards and previews…"
                   value={shortDescription}
                   onChange={(e) => setShortDescription(e.target.value)}
+                  className={catalogFieldClass}
                 />
               </div>
 
@@ -561,10 +569,11 @@ const ProductForm = ({
                 </label>
                 <Textarea
                   id="description"
-                  placeholder="Describe the taste, texture, and inspiration..."
+                  placeholder="Describe the taste, texture, and inspiration…"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={5}
+                  className="rounded-xl border-primary/15 bg-background/40"
                 />
               </div>
 
@@ -577,6 +586,7 @@ const ProductForm = ({
                   placeholder="strawberry-vanity-cake"
                   value={slug}
                   onChange={(e) => setSlug(e.target.value)}
+                  className={catalogFieldClass}
                 />
               </div>
 
@@ -592,6 +602,7 @@ const ProductForm = ({
                     onChange={(e) => setStructureBasePrice(e.target.value)}
                     required
                     placeholder=""
+                    className={catalogFieldClass}
                   />
                 </div>
               </div>
@@ -599,7 +610,7 @@ const ProductForm = ({
           </Card>
 
           {/* 2. MEDIA SECTION */}
-          <Card>
+          <Card className={sectionCard}>
             <CardHeader>
               <CardTitle>Product Images</CardTitle>
               <CardDescription>
@@ -633,7 +644,7 @@ const ProductForm = ({
                       <label className="flex aspect-square cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border hover:bg-subtleBackground hover:border-primary/50 transition-colors">
                         <div className="flex flex-col items-center gap-2 text-center text-sm text-muted-foreground">
                           {isUploading ? (
-                            <span className="animate-pulse">Uploading...</span>
+                            <span className="animate-pulse">Uploading…</span>
                           ) : (
                             <>
                               <span className="text-2xl">+</span>
@@ -659,7 +670,7 @@ const ProductForm = ({
           </Card>
 
           {/* 3. ATTRIBUTES (Flavors & Allergens) */}
-          <Card>
+          <Card className={sectionCard}>
             <CardHeader>
               <CardTitle>Attributes</CardTitle>
             </CardHeader>
@@ -689,6 +700,7 @@ const ProductForm = ({
                           setAllergenIds
                         )
                       }
+                      className={catalogChipClass}
                     >
                       {allergen.name}
                     </ChipCheckbox>
@@ -700,7 +712,7 @@ const ProductForm = ({
 
           {/* DEFAULT ADDONS */}
           {categoryId && (
-            <Card>
+            <Card className={sectionCard}>
               <CardHeader>
                 <CardTitle>Default Addons</CardTitle>
                 <CardDescription>Select default addons (e.g. decorations) pre-assigned to this product.</CardDescription>
@@ -717,10 +729,10 @@ const ProductForm = ({
 
           {/* SET CONFIGURATION */}
           {productType === 'set' && (
-            <Card>
+            <Card className={sectionCard}>
               <CardHeader>
                 <CardTitle>Set Configuration</CardTitle>
-                <CardDescription>Define box sizes and combo options.</CardDescription>
+                <CardDescription>Define sets and combo options.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                  {/* Quantity Configs */}
@@ -768,7 +780,7 @@ const ProductForm = ({
                                                 size="sm"
                                                 variant="secondary"
                                                 onClick={() => addSet(set._id)}
-                                                className="h-8 px-3"
+                                                className="h-11 rounded-xl px-3 sm:h-10"
                                             >
                                                 Add
                                             </Button>
@@ -785,7 +797,7 @@ const ProductForm = ({
                             <div className="space-y-2">
                                 {assignedSets.length === 0 ? (
                                     <p className="text-sm text-muted-foreground italic text-center py-4 border border-dashed rounded-md">
-                                        No sets added yet. The boxes above are used.
+                                        No sets added yet. The sets above are used.
                                     </p>
                                 ) : (
                                     assignedSets.map(({ config, set }) => (
@@ -820,7 +832,7 @@ const ProductForm = ({
                                                         step="0.01"
                                                         min={0}
                                                         aria-label={`Price for ${set.name}`}
-                                                        className="w-24 h-8 text-right bg-white"
+                                                        className={cn(catalogFieldClass, "w-28 text-right")}
                                                         value={config.price === 0 ? "" : config.price}
                                                         onChange={(e) => handleSetPriceChange(config.setId, e.target.value)}
                                                     />
@@ -829,10 +841,10 @@ const ProductForm = ({
                                             <button
                                                 type="button"
                                                 onClick={() => removeSet(config.setId)}
-                                                className="text-red-400 hover:text-red-600 ml-1"
+                                                className="ml-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-primary hover:bg-background/60"
                                                 aria-label={`Remove ${set?.name ?? "set"}`}
                                             >
-                                                <X className="h-4 w-4" />
+                                                <X className="h-4 w-4 shrink-0" aria-hidden />
                                             </button>
                                         </div>
                                     ))
@@ -899,7 +911,7 @@ const ProductForm = ({
 
           {/* 4. DIAMETERS CONFIG */}
           {productType === 'cake' && (
-          <Card>
+          <Card className={sectionCard}>
             <CardHeader>
               <CardTitle>Size Configuration</CardTitle>
               <CardDescription>
@@ -939,7 +951,7 @@ const ProductForm = ({
                               size="sm"
                               variant="secondary"
                               onClick={() => addDiameter(diameter._id)}
-                              className="h-8 px-3"
+                              className="h-11 rounded-xl px-3 sm:h-10"
                             >
                               Add
                             </Button>
@@ -991,7 +1003,7 @@ const ProductForm = ({
                                 type="number"
                                 placeholder="0.00"
                                 step="0.01"
-                                className="w-24 h-8 text-right bg-white"
+                                className={cn(catalogFieldClass, "w-28 text-right")}
                                 value={diameter.price ?? diameter.multiplier ?? ""}
                                 onChange={(e) =>
                                   handleDiameterConfigChange(
@@ -1005,9 +1017,10 @@ const ProductForm = ({
                                 onClick={() =>
                                   removeDiameter(diameter.diameterId)
                                 }
-                                className="text-red-400 hover:text-red-600 ml-1"
+                                className="ml-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-primary hover:bg-background/60"
+                                aria-label={`Remove ${diameter.name}`}
                               >
-                                <X className="h-4 w-4" />
+                                <X className="h-4 w-4 shrink-0" aria-hidden />
                               </button>
                             </div>
                           </div>
@@ -1020,7 +1033,7 @@ const ProductForm = ({
             </CardContent>
           </Card>
           )}
-          <Card>
+          <Card className={sectionCard}>
             <CardHeader>
               <CardTitle>Organization</CardTitle>
             </CardHeader>
@@ -1028,7 +1041,7 @@ const ProductForm = ({
               <div className="space-y-2">
                 <label className="text-sm font-medium">Category</label>
                 <Select value={categoryId} onValueChange={onCategoryChange}>
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger className={cn(catalogFieldClass, "w-full")}>
                     <SelectValue placeholder="Select Category" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1050,7 +1063,7 @@ const ProductForm = ({
                   {collections.map((collection) => (
                     <div
                       key={collection._id.toString()}
-                      className="flex items-center gap-2 p-2 rounded-md hover:bg-subtleBackground transition-colors"
+                      className="flex min-h-11 items-center gap-2 rounded-xl p-2 transition-colors hover:bg-subtleBackground"
                     >
                       <Checkbox
                         id={`collection-${collection._id.toString()}`}
@@ -1079,7 +1092,7 @@ const ProductForm = ({
 
           {/* CUSTOMIZATION SETTINGS */}
           {productType === 'cake' && (
-          <Card>
+          <Card className={sectionCard}>
             <CardHeader>
               <CardTitle>Customization</CardTitle>
             </CardHeader>
@@ -1114,7 +1127,7 @@ const ProductForm = ({
                       type="number"
                       value={inscriptionPrice}
                       onChange={(e) => setInscriptionPrice(e.target.value)}
-                      className="h-9"
+                      className={catalogFieldClass}
                     />
                   </div>
                   <div className="grid gap-1">
@@ -1129,7 +1142,7 @@ const ProductForm = ({
                       type="number"
                       value={inscriptionMaxLength}
                       onChange={(e) => setInscriptionMaxLength(e.target.value)}
-                      className="h-9"
+                      className={catalogFieldClass}
                     />
                   </div>
                 </div>
@@ -1141,7 +1154,7 @@ const ProductForm = ({
 
         <div className="space-y-8">
           {/* ACTION CARD */}
-          <Card className="sticky top-6 bg-subtleBackground">
+          <Card className={sectionCard}>
             <CardHeader className="pb-4">
               <CardTitle>
                 {isEditMode ? "Update Product" : "Publish Product"}
@@ -1162,15 +1175,14 @@ const ProductForm = ({
                 />
               </div>
             </CardContent>
-            <CardFooter>
+            <CardFooter className="mt-6 border-t border-primary/15 pt-4">
               <Button
                 type="submit"
-                size="lg"
-                className="w-full shadow-lg"
+                className="h-11 w-full rounded-xl shadow-none sm:h-10"
                 disabled={isSubmitting}
               >
                 {isSubmitting
-                  ? "Saving..."
+                  ? "Saving…"
                   : isEditMode
                     ? "Save Changes"
                     : "Create Product"}

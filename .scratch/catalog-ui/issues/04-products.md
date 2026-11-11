@@ -4,14 +4,15 @@
 
 **Blocked by:** 01: Catalog hub and list shell
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The product list, product card, product page, and product form use the glass surface and the shared control heights
-- [ ] Long product names truncate instead of overflowing
-- [ ] View, Edit, Delete, and remove-from-collection or seasonal actions are about 44px on a phone
-- [ ] Set price fields on the product form are `h-11` / `h-10` and `rounded-xl`
-- [ ] Search, filters, the add-to-collection or seasonal modal, image upload, and save behave as they do today
-- [ ] Recipes are not part of this slice
+- [x] The product list, product card, product page, and product form use the glass surface and the shared control heights
+- [x] Long product names truncate instead of overflowing
+- [x] View, Edit, Delete, and remove-from-collection or seasonal actions are about 44px on a phone
+- [x] Set price fields on the product form are `h-11` / `h-10` and `rounded-xl`
+- [x] Search, filters, the add-to-collection or seasonal modal, image upload, and save behave as they do today
+- [x] Recipes are not part of this slice
 
 **Notes:**
-- The hub card component is shared. Product-specific layout is this ticket.
+- Save stays in the form, in normal flow, with a top divider. It does not cover fields.
+- `npx tsc --noEmit` passed. The admin catalog needs Google sign-in, so these pages were not opened in the browser.

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/Input";
 import Image from "next/image";
 import { ProductWithCategory } from "@/types";
 import { cn } from "@/lib/utils";
+import { catalogFieldClass } from "@/components/admin/catalog/CatalogFormChrome";
 
 interface ProductSelectorModalProps {
   isOpen: boolean;
@@ -60,43 +61,47 @@ export const ProductSelectorModal = ({
   return (
     <Dialog.Root open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm grid place-items-center overflow-y-auto py-8 px-4 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0">
+        <Dialog.Overlay className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-black/50 px-4 py-8 shadow-none hover:shadow-none">
           <Dialog.Content
             className={cn(
-              "relative z-50 w-full max-w-lg",
-              "bg-card-background border border-border shadow-lg",
-              "rounded-large flex flex-col overflow-hidden",
-              "outline-none duration-200",
-              "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
+              "relative z-50 flex w-full max-w-lg flex-col overflow-hidden overscroll-contain",
+              "rounded-2xl border border-primary/15 bg-background/95 shadow-none backdrop-blur-md hover:border-primary/15 hover:bg-background/95 hover:shadow-none",
+              "outline-none"
             )}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex justify-between items-center p-md border-b border-border bg-subtleBackground/50">
-              <Dialog.Title className="font-heading text-h3 text-primary truncate pr-4">
+            <div className="flex items-center justify-between border-b border-primary/10 p-4">
+              <Dialog.Title className="min-w-0 truncate pr-4 font-heading text-lg font-semibold tracking-tight text-primary">
                 {title}
               </Dialog.Title>
               <Dialog.Close asChild>
                 <button
-                  className="p-2 rounded-full hover:bg-subtleBackground transition-colors focus:outline-none focus:ring-2 focus:ring-accent"
+                  type="button"
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-primary transition-colors hover:bg-background/60"
+                  aria-label="Close"
                   disabled={isSaving}
                 >
-                  <X className="h-5 w-5 text-primary/60" />
+                  <X className="h-4 w-4 shrink-0" aria-hidden />
                 </button>
               </Dialog.Close>
             </div>
             <div className="flex flex-col gap-md p-md">
               <div className="relative shrink-0">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/50" />
+                <label htmlFor="collection-product-search" className="sr-only">
+                  Search products
+                </label>
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 shrink-0 -translate-y-1/2 text-primary/50" aria-hidden />
                 <Input
-                  placeholder="Search products..."
+                  id="collection-product-search"
+                  placeholder="Search products…"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
+                  className={cn(catalogFieldClass, "pl-9")}
                   disabled={isSaving}
                 />
               </div>
 
-              <div className="flex-grow overflow-y-auto max-h-[50vh] min-h-[200px] border border-border rounded-medium custom-scrollbar bg-background">
+              <div className="custom-scrollbar max-h-[50vh] min-h-[200px] flex-grow overflow-y-auto overscroll-contain rounded-xl border border-primary/10 bg-background/40">
                 {filteredProducts.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-xl text-primary/60 min-h-[150px]">
                     <p>No products found.</p>
@@ -114,7 +119,7 @@ export const ProductSelectorModal = ({
                             !isSaving && toggleSelection(product._id.toString())
                           }
                           className={cn(
-                            "flex items-center gap-md p-sm rounded-medium cursor-pointer transition-all border select-none",
+                            "flex min-h-11 cursor-pointer select-none items-center gap-3 rounded-xl border p-3 transition-colors",
                             isSelected
                               ? "bg-accent/10 border-accent"
                               : "bg-card-background border-transparent hover:bg-subtleBackground",
@@ -129,7 +134,7 @@ export const ProductSelectorModal = ({
                                 : "border-primary/30 bg-white"
                             )}
                           >
-                            {isSelected && <Check className="h-3.5 w-3.5" />}
+                            {isSelected && <Check className="h-4 w-4 shrink-0" aria-hidden />}
                           </div>
 
                           <div className="relative w-10 h-10 md:w-12 md:h-12 rounded-small overflow-hidden border border-border shrink-0">
@@ -173,7 +178,7 @@ export const ProductSelectorModal = ({
                   variant="secondary"
                   onClick={handleClose}
                   disabled={isSaving}
-                  className="flex-1 sm:flex-none"
+                  className="h-11 flex-1 rounded-xl shadow-none sm:h-10 sm:flex-none"
                 >
                   Cancel
                 </Button>
@@ -181,9 +186,9 @@ export const ProductSelectorModal = ({
                   variant="primary"
                   onClick={handleConfirm}
                   disabled={isSaving || selectedIds.length === 0}
-                  className="flex-1 sm:flex-none min-w-[100px]"
+                  className="h-11 min-w-[100px] flex-1 rounded-xl shadow-none sm:h-10 sm:flex-none"
                 >
-                  {isSaving ? 'Adding...' : "Add Selected"}
+                  {isSaving ? "Adding…" : "Add Selected"}
                 </Button>
               </div>
             </div>
