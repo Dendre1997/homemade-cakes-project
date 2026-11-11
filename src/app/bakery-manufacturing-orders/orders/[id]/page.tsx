@@ -723,6 +723,7 @@ const OrderDetailsPage = () => {
       )}
 
       <OrderDetailShell
+        mobileAsideFirst
         header={
           <OrderDetailHeader
             order={order}

@@ -217,12 +217,12 @@ export function OrderToolsTriggerButton({
       type="button"
       variant="outline"
       className={cn(
-        "border-primary/15 bg-background/30 text-primary hover:bg-background/50",
+        "h-11 w-full rounded-xl border-primary/15 bg-background/30 text-primary hover:bg-background/50 sm:h-10 sm:w-auto",
         className
       )}
       onClick={onClick}
     >
-      <Wrench className="mr-2 h-4 w-4" aria-hidden />
+      <Wrench className="mr-2 h-4 w-4 shrink-0" aria-hidden />
       Tools
     </Button>
   );

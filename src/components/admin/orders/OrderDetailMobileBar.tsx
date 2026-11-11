@@ -40,16 +40,16 @@ export function OrderDetailMobileBar({
   const statusDirty = newStatus && newStatus !== order.status;
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 border-t border-primary/15 bg-background/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-lg backdrop-blur-xl lg:hidden">
+    <div className="fixed inset-x-0 bottom-0 z-30 border-t border-primary/15 bg-background/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_20px_-4px_rgba(35,20,22,0.08)] backdrop-blur-md lg:hidden">
       <div className="mx-auto flex max-w-lg flex-col gap-2">
         {!order.isPaid && (
           <Button
             type="button"
             onClick={onMarkAsPaid}
             disabled={isMarkingPaid}
-            className="w-full bg-green-600 text-white hover:bg-green-700"
+            className="h-11 w-full rounded-xl bg-green-600 text-white hover:bg-green-700 sm:h-10"
           >
-            <CheckCircle2 className="mr-2 h-4 w-4" aria-hidden />
+            <CheckCircle2 className="mr-2 h-4 w-4 shrink-0" aria-hidden />
             {isMarkingPaid ? "Updating…" : "Mark as paid"}
           </Button>
         )}
@@ -58,7 +58,7 @@ export function OrderDetailMobileBar({
             value={newStatus || order.status}
             onValueChange={(value) => setNewStatus(value as OrderStatus)}
           >
-            <SelectTrigger className="min-w-0 flex-1 bg-background/80">
+            <SelectTrigger className="h-11 min-w-0 flex-1 rounded-xl bg-background/80 sm:h-10 [&_svg]:h-4 [&_svg]:w-4 [&_svg]:shrink-0">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -74,7 +74,7 @@ export function OrderDetailMobileBar({
           <Button
             type="button"
             variant="primary"
-            className="shrink-0 px-4"
+            className="h-11 shrink-0 rounded-xl px-4 sm:h-10"
             disabled={isLoading || !statusDirty}
             onClick={onStatusUpdate}
           >

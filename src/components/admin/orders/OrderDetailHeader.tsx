@@ -42,9 +42,9 @@ export function OrderDetailHeader({ order, toolsTrigger }: OrderDetailHeaderProp
     <header className="sticky top-0 z-40 -mx-1 border-b border-primary/10 bg-background/80 px-1 pb-4 pt-1 backdrop-blur-xl backdrop-saturate-150 sm:-mx-0 sm:px-0">
       <Link
         href="/bakery-manufacturing-orders/orders"
-        className="mb-3 inline-flex items-center gap-2 text-sm text-primary/65 transition-colors hover:text-primary"
+        className="mb-3 inline-flex h-11 items-center gap-2 rounded-xl px-2 text-sm text-primary/65 transition-colors hover:bg-background/40 hover:text-primary sm:h-10"
       >
-        <ArrowLeft className="h-4 w-4" aria-hidden />
+        <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
         Back to orders
       </Link>
 
@@ -56,7 +56,7 @@ export function OrderDetailHeader({ order, toolsTrigger }: OrderDetailHeaderProp
             </h1>
             <span
               className={cn(
-                "rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide",
+                "inline-flex h-7 shrink-0 items-center rounded-full border px-2.5 text-[10px] font-bold uppercase tracking-wide",
                 orderStatusChipClass(order.status)
               )}
             >
@@ -75,7 +75,7 @@ export function OrderDetailHeader({ order, toolsTrigger }: OrderDetailHeaderProp
           )}
         </div>
 
-        <div className="flex shrink-0 flex-wrap items-start gap-2">{toolsTrigger}</div>
+        <div className="flex w-full shrink-0 sm:w-auto">{toolsTrigger}</div>
       </div>
 
       <div className="mt-4 flex gap-2 overflow-x-auto pb-0.5">
