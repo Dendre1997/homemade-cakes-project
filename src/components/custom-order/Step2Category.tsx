@@ -2,7 +2,7 @@ import { useFormContext } from "react-hook-form";
 import { CustomOrderRequestData } from "@/lib/validation/customOrderSchema";
 import { motion } from "framer-motion";
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle, ArrowLeft } from "lucide-react";
 import Spinner from "@/components/ui/Spinner";
 import {
@@ -146,6 +146,7 @@ export default function Step2Category({
   const [categories, setCategories] = useState<CategoryDoc[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [view, setView] = useState<"root" | "candy-bar">("root");
+  const openedSavedSet = useRef(false);
 
   useEffect(() => {
     async function fetchCategories() {
@@ -182,9 +183,17 @@ export default function Step2Category({
   const candyBarHighlighted =
     view === "candy-bar" || Boolean(selectedSetId);
 
+  useEffect(() => {
+    if (openedSavedSet.current || !selectedSetId) return;
+    openedSavedSet.current = true;
+    setView("candy-bar");
+  }, [selectedSetId]);
+
   const handleSelect = (cat: CategoryDoc) => {
+    const sameCategory = String(currentCategoryId ?? "") === String(cat._id);
     setValue(ip("categoryId"), String(cat._id), { shouldValidate: true });
     setValue(ip("category"), cat.name, { shouldValidate: true });
+    if (sameCategory) return;
     setValue(ip("details.size"), "");
     setValue(ip("details.flavor"), "");
     setValue(ip("details.setId"), undefined);

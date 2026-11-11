@@ -398,7 +398,7 @@ function CustomOrderContent() {
 
   const handleEditItem = (index: number) => {
     setActiveItemIndex(index);
-    setCurrentStep(1);
+    setCurrentStep(2);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
