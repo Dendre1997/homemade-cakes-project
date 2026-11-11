@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import clientPromise from "@/lib/db";
 import { Addon } from "@/types";
+import { normalizeAddonQuantitySettings } from "@/lib/addons/catalogQuantity";
 
 // POST
 export async function POST(request: NextRequest) {
@@ -13,12 +14,17 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { name, description, imageUrl, categoryIds, isActive, variants }: Partial<Addon> =
       body;
+    const quantitySettings = normalizeAddonQuantitySettings(body);
 
     if (!name || !variants || variants.length === 0) {
       return NextResponse.json(
         { error: "Name and at least one variant are required" },
         { status: 400 }
       );
+    }
+
+    if ("error" in quantitySettings) {
+      return NextResponse.json({ error: quantitySettings.error }, { status: 400 });
     }
 
     const client = await clientPromise;
@@ -30,6 +36,7 @@ export async function POST(request: NextRequest) {
       imageUrl: imageUrl || "",
       categoryIds: categoryIds || [],
       isActive: isActive !== undefined ? isActive : true,
+      ...quantitySettings,
       variants: variants.map(v => ({
         ...v,
         _id: v._id || new ObjectId().toString()

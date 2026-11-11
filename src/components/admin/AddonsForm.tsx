@@ -52,6 +52,7 @@ const AddonsForm = ({
     description: "",
     imageUrl: "",
     isActive: true,
+    allowQuantity: false,
     categoryIds: [],
     variants: [{ name: "", price: 0, imageUrl: "" }],
   });
@@ -70,6 +71,10 @@ const AddonsForm = ({
         description: existingAddon.description || "",
         imageUrl: existingAddon.imageUrl || "",
         isActive: existingAddon.isActive ?? true,
+        allowQuantity: existingAddon.allowQuantity === true,
+        maxQuantity: existingAddon.allowQuantity
+          ? existingAddon.maxQuantity
+          : undefined,
         categoryIds: existingAddon.categoryIds || [],
         variants: existingAddon.variants?.length ? existingAddon.variants : [{ name: "", price: 0, imageUrl: "" }],
       });
@@ -79,6 +84,8 @@ const AddonsForm = ({
         description: "",
         imageUrl: "",
         isActive: true,
+        allowQuantity: false,
+        maxQuantity: undefined,
         categoryIds: [],
         variants: [{ name: "", price: 0, imageUrl: "" }],
       });
@@ -232,8 +239,20 @@ const AddonsForm = ({
       showAlert("All variants must have a name and a valid price.", "error");
       return;
     }
+    if (formData.allowQuantity) {
+      const maxQuantity = formData.maxQuantity;
+      if (maxQuantity == null || !Number.isInteger(maxQuantity) || maxQuantity < 1) {
+        showAlert("Maximum quantity must be a whole number of at least 1.", "error");
+        return;
+      }
+    }
     setOrphanedImageUrl(null);
-    onSubmit(formData);
+    const { maxQuantity: _max, ...rest } = formData;
+    onSubmit(
+      formData.allowQuantity
+        ? formData
+        : { ...rest, allowQuantity: false }
+    );
   };
 
   return (
@@ -269,6 +288,45 @@ const AddonsForm = ({
             </span>
           </div>
         </div>
+      </div>
+
+      <div className="space-y-sm rounded-medium border border-border p-sm">
+        <div className="flex items-center space-x-2">
+          <Switch
+            id="allowQuantity"
+            checked={formData.allowQuantity === true}
+            onCheckedChange={(checked) =>
+              setFormData((prev) => ({
+                ...prev,
+                allowQuantity: checked,
+                maxQuantity: checked ? prev.maxQuantity : undefined,
+              }))
+            }
+          />
+          <FormLabel htmlFor="allowQuantity">
+            Allow client to choose quantity
+          </FormLabel>
+        </div>
+        {formData.allowQuantity && (
+          <div>
+            <FormLabel htmlFor="maxQuantity">Maximum quantity</FormLabel>
+            <Input
+              type="number"
+              id="maxQuantity"
+              min={1}
+              step={1}
+              value={formData.maxQuantity ?? ""}
+              onChange={(event) => {
+                const raw = event.target.value;
+                setFormData((prev) => ({
+                  ...prev,
+                  maxQuantity: raw === "" ? undefined : Number(raw),
+                }));
+              }}
+              required
+            />
+          </div>
+        )}
       </div>
 
       <div>

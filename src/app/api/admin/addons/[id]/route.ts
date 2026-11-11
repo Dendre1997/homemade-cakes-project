@@ -4,6 +4,7 @@ import clientPromise from "@/lib/db";
 import { ObjectId } from "mongodb";
 import cloudinary from "@/lib/cloudinary"; 
 import { getPublicIdFromUrl } from "@/lib/cloudinaryUtils";
+import { normalizeAddonQuantitySettings } from "@/lib/addons/catalogQuantity";
 
 export async function GET(
   _request: Request,
@@ -47,13 +48,19 @@ export async function PUT(
 
   try {
     const { id } = await params;
-    const { name, description, imageUrl, categoryIds, isActive, variants } = await request.json();
+    const body = await request.json();
+    const { name, description, imageUrl, categoryIds, isActive, variants } = body;
+    const quantitySettings = normalizeAddonQuantitySettings(body);
 
     if (!name || !variants || variants.length === 0) {
       return NextResponse.json(
         { error: "Name and at least one variant are required" },
         { status: 400 }
       );
+    }
+
+    if ("error" in quantitySettings) {
+      return NextResponse.json({ error: quantitySettings.error }, { status: 400 });
     }
 
     const client = await clientPromise;
@@ -96,11 +103,18 @@ export async function PUT(
           imageUrl: finalImageUrl,
           categoryIds: categoryIds || [],
           isActive: isActive !== undefined ? isActive : true,
+          allowQuantity: quantitySettings.allowQuantity,
+          ...(quantitySettings.allowQuantity
+            ? { maxQuantity: quantitySettings.maxQuantity }
+            : {}),
           variants: variants.map((v: any) => ({
             ...v,
             _id: v._id || new ObjectId().toString()
           })),
         },
+        ...(quantitySettings.allowQuantity
+          ? {}
+          : { $unset: { maxQuantity: "" } }),
       }
     );
 

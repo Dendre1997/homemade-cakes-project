@@ -13,7 +13,13 @@ export interface SelectedAddon {
   name: string;
   variantId?: string;
   variantName: string;
+  /** Unit price of the chosen variant. Line cost is this times quantity. */
   price: number;
+  /**
+   * How many of this addon belong to one cake or product.
+   * Missing means one, so orders saved before quantity stay valid.
+   */
+  quantity?: number;
   imageUrl?: string;
 }
 
@@ -24,6 +30,10 @@ export interface Addon {
   imageUrl?: string;
   categoryIds?: string[];
   isActive: boolean;
+  /** When true, the client picks how many of this addon go on one cake. */
+  allowQuantity?: boolean;
+  /** Required only while allowQuantity is true. Whole number, at least 1. */
+  maxQuantity?: number;
   variants: {
     _id?: string;
     name: string;
