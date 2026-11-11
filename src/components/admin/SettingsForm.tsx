@@ -2,16 +2,99 @@
 
 import { AppSettings } from "@/types";
 import { Switch } from "@/components/ui/Switch";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { Label } from "@/components/ui/Label";
 import { Button } from "@/components/ui/Button";
 import { useAlert } from "@/contexts/AlertContext";
-import { Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { ChevronDown, CreditCard, Loader2, MessageCircle, Store, Truck } from "lucide-react";
+import { useState, type ReactNode } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+
+type SettingsSectionProps = {
+  id: string;
+  title: string;
+  subtitle: string;
+  icon: ReactNode;
+  open: boolean;
+  onToggle: () => void;
+  pills: ReactNode;
+  children: ReactNode;
+};
+
+function SettingsSection({
+  id,
+  title,
+  subtitle,
+  icon,
+  open,
+  onToggle,
+  pills,
+  children,
+}: SettingsSectionProps) {
+  const panelId = `${id}-panel`;
+  const triggerId = `${id}-trigger`;
+
+  return (
+    <section className="rounded-2xl border border-primary/15 bg-background/20 shadow-sm backdrop-blur-md">
+      <h2>
+        <button
+          type="button"
+          id={triggerId}
+          aria-expanded={open}
+          aria-controls={panelId}
+          onClick={onToggle}
+          className="flex w-full min-h-11 items-start gap-3 rounded-2xl px-4 py-3 text-left transition-colors hover:bg-background/40 sm:items-center sm:px-5"
+        >
+          <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-background/60 text-primary sm:mt-0">
+            {icon}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-heading text-lg font-semibold tracking-tight text-primary text-balance">
+              {title}
+            </span>
+            <span className="mt-0.5 block text-sm text-primary/60 text-pretty">
+              {subtitle}
+            </span>
+            <span className="mt-2 flex flex-wrap gap-1.5">{pills}</span>
+          </span>
+          <ChevronDown
+            className={cn(
+              "mt-1 h-4 w-4 shrink-0 text-primary transition-transform motion-reduce:transition-none sm:mt-0",
+              open && "rotate-180"
+            )}
+            aria-hidden
+          />
+        </button>
+      </h2>
+      <div
+        id={panelId}
+        role="region"
+        aria-labelledby={triggerId}
+        hidden={!open}
+        className="px-4 pb-5 sm:px-5"
+      >
+        {children}
+      </div>
+    </section>
+  );
+}
+
+function SummaryPill({ children }: { children: ReactNode }) {
+  return (
+    <span className="inline-flex max-w-full items-center rounded-full border border-primary/15 bg-background/70 px-2.5 py-0.5 text-xs font-medium text-primary">
+      <span className="max-w-[14rem] truncate">{children}</span>
+    </span>
+  );
+}
+
+function feeLabel(value: number | null | undefined) {
+  const amount = typeof value === "number" && Number.isFinite(value) ? value : 0;
+  return `$${amount.toFixed(2)}`;
+}
 
 const settingsSchema = z.object({
   _id: z.string(),
@@ -95,6 +178,23 @@ export default function SettingsForm({ initialSettings }: SettingsFormProps) {
   const { control, watch, handleSubmit, formState: { isSubmitting, isDirty } } = form;
 
   const isAcceptingOrders = watch("store.isAcceptingOrders");
+  const isDeliveryEnabled = watch("checkout.isDeliveryEnabled");
+  const deliveryFee = watch("checkout.deliveryFee");
+  const isPickupEnabled = watch("checkout.isPickupEnabled");
+  const isLiveChatEnabled = watch("support.isLiveChatEnabled");
+  const eTransferEmail = watch("eTransferEmail");
+  const [openSections, setOpenSections] = useState({
+    bakery: true,
+    logistics: false,
+    support: false,
+    payment: false,
+  });
+
+  const toggleSection = (key: keyof typeof openSections) => {
+    setOpenSections((current) => ({ ...current, [key]: !current[key] }));
+  };
+
+  const emailSummary = (eTransferEmail ?? "").trim();
 
   const onSubmit = async (data: SettingsFormValues) => {
     try {
@@ -117,14 +217,21 @@ export default function SettingsForm({ initialSettings }: SettingsFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-8 pb-32">
-      {/* 1. Store Status */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Bakery Status</CardTitle>
-          <CardDescription>Your operating mode and messaging.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <SettingsSection
+        id="bakery-status"
+        title="Bakery Status"
+        subtitle="Your operating mode and messaging."
+        icon={<Store className="h-4 w-4 shrink-0" aria-hidden />}
+        open={openSections.bakery}
+        onToggle={() => toggleSection("bakery")}
+        pills={
+          <SummaryPill>
+            {isAcceptingOrders ? "Accepting orders" : "Paused"}
+          </SummaryPill>
+        }
+      >
+        <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <Label htmlFor="accept-orders-toggle" className="text-base font-semibold">
@@ -167,16 +274,30 @@ export default function SettingsForm({ initialSettings }: SettingsFormProps) {
               />
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </SettingsSection>
 
-      {/* 2. Logistics & Delivery */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Logistics & Delivery</CardTitle>
-          <CardDescription>Configure delivery fees, pickup addresses, and order limits.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-8">
+      <SettingsSection
+        id="logistics"
+        title="Logistics & Delivery"
+        subtitle="Configure delivery fees, pickup addresses, and order limits."
+        icon={<Truck className="h-4 w-4 shrink-0" aria-hidden />}
+        open={openSections.logistics}
+        onToggle={() => toggleSection("logistics")}
+        pills={
+          <>
+            <SummaryPill>
+              {isDeliveryEnabled
+                ? `Delivery on · ${feeLabel(deliveryFee)}`
+                : "Delivery off"}
+            </SummaryPill>
+            <SummaryPill>
+              {isPickupEnabled !== false ? "Pickup on" : "Pickup off"}
+            </SummaryPill>
+          </>
+        }
+      >
+        <div className="space-y-8">
           {/* Delivery Configuration */}
           <div className="space-y-6">
             <div className="flex items-center justify-between border-b pb-4">
@@ -322,16 +443,21 @@ export default function SettingsForm({ initialSettings }: SettingsFormProps) {
               </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </SettingsSection>
 
-      {/* 3. Support Chat */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Support Chat</CardTitle>
-          <CardDescription>Configure customer support touchpoints.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
+      <SettingsSection
+        id="support-chat"
+        title="Support Chat"
+        subtitle="Configure customer support touchpoints."
+        icon={<MessageCircle className="h-4 w-4 shrink-0" aria-hidden />}
+        open={openSections.support}
+        onToggle={() => toggleSection("support")}
+        pills={
+          <SummaryPill>{isLiveChatEnabled ? "Chat on" : "Chat off"}</SummaryPill>
+        }
+      >
+        <div className="space-y-6">
           <div className="flex items-center justify-between border-b pb-4">
             <div className="space-y-0.5">
               <Label htmlFor="live-chat-toggle" className="text-base font-semibold">Enable Live Chat</Label>
@@ -366,18 +492,23 @@ export default function SettingsForm({ initialSettings }: SettingsFormProps) {
               )}
             />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </SettingsSection>
 
-      {/* 4. Payment Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Payment Settings</CardTitle>
-          <CardDescription>
-            Configure payment instructions shown to customers on custom order confirmations.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <SettingsSection
+        id="payment-settings"
+        title="Payment Settings"
+        subtitle="Configure payment instructions shown to customers on custom order confirmations."
+        icon={<CreditCard className="h-4 w-4 shrink-0" aria-hidden />}
+        open={openSections.payment}
+        onToggle={() => toggleSection("payment")}
+        pills={
+          <SummaryPill>
+            {emailSummary || "No e-transfer email"}
+          </SummaryPill>
+        }
+      >
+        <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="e-transfer-email">E-transfer Email</Label>
             <p className="text-sm text-muted-foreground">
@@ -397,23 +528,24 @@ export default function SettingsForm({ initialSettings }: SettingsFormProps) {
               )}
             />
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Fixed Bottom Action Panel */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-md border-t z-30">
-        <div className="max-w-4xl mx-auto flex justify-end">
-          <Button type="submit" size="lg" disabled={isSubmitting || !isDirty}>
-            {isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving Changes...
-              </>
-            ) : (
-              "Save Changes"
-            )}
-          </Button>
         </div>
+      </SettingsSection>
+
+      <div className="mt-6 flex border-t border-primary/15 pt-4">
+        <Button
+          type="submit"
+          disabled={isSubmitting || !isDirty}
+          className="h-11 w-full rounded-xl sm:ml-auto sm:h-10 sm:w-auto"
+        >
+          {isSubmitting ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 shrink-0 animate-spin" aria-hidden />
+              Saving Changes…
+            </>
+          ) : (
+            "Save Changes"
+          )}
+        </Button>
       </div>
     </form>
   );
