@@ -2,7 +2,65 @@ import {
   addDaysToKey,
   BAKERY_TIME_ZONE,
   isValidDateKey,
+  toDateKey,
 } from "@/lib/db/capacity";
+
+const SHORT_MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+] as const;
+
+function labelFromDateKey(dateKey: string, withYear: boolean): string | null {
+  const [year, month, day] = dateKey.split("-");
+  const monthLabel = SHORT_MONTHS[Number(month) - 1];
+  const dayNum = Number(day);
+  if (!monthLabel || !year || !Number.isFinite(dayNum)) return null;
+  return withYear ? `${monthLabel} ${dayNum}, ${year}` : `${monthLabel} ${dayNum}`;
+}
+
+/**
+ * Calendar label for a stored event date. The day is the UTC date key, so the
+ * server render and the browser print the same text.
+ */
+export function formatStoredDateLabel(
+  value: Date | string,
+  options?: { withYear?: boolean }
+): string | null {
+  const key =
+    typeof value === "string" && isValidDateKey(value) ? value : toDateKey(value);
+  if (!key) return null;
+  return labelFromDateKey(key, options?.withYear ?? false);
+}
+
+/** Instant label in America/Edmonton, independent of the server or browser zone. */
+export function formatBakeryInstantLabel(
+  value: Date | string,
+  options?: { withYear?: boolean }
+): string | null {
+  const parsed = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: BAKERY_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(parsed);
+  const year = parts.find((part) => part.type === "year")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  const day = parts.find((part) => part.type === "day")?.value;
+  if (!year || !month || !day) return null;
+  return labelFromDateKey(`${year}-${month}-${day}`, options?.withYear ?? false);
+}
 
 /**
  * Midnight in America/Edmonton during MDT, stored as UTC.

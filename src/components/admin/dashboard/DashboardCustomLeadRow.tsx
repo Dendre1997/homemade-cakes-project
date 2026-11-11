@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { format } from "date-fns";
 import { CustomOrder } from "@/types";
+import { formatStoredDateLabel } from "@/lib/dates/bakeryCalendar";
 import { summarizeCustomOrderCategories } from "@/lib/customOrderCategory";
 import { ChevronRight } from "lucide-react";
 
@@ -33,7 +33,7 @@ export default function DashboardCustomLeadRow({
       </div>
       <div className="flex shrink-0 items-center gap-2 text-xs text-primary/70">
         <span>
-          {orderDate ? format(new Date(orderDate), "MMM d") : "TBD"}
+          {orderDate ? formatStoredDateLabel(orderDate) ?? "TBD" : "TBD"}
         </span>
         <ChevronRight className="h-4 w-4" aria-hidden />
       </div>

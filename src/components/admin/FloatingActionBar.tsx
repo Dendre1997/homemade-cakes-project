@@ -9,6 +9,7 @@ type FloatingActionBarProps = {
   isSaving: boolean;
   onDiscard: () => void;
   onSave?: () => void | Promise<void>;
+  className?: string;
 };
 
 export function FloatingActionBar({
@@ -16,11 +17,12 @@ export function FloatingActionBar({
   isSaving,
   onDiscard,
   onSave,
+  className,
 }: FloatingActionBarProps) {
   if (!isDirty) return null;
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-6 z-50 flex justify-center px-4">
+    <div className={cn("pointer-events-none fixed inset-x-0 bottom-6 z-30 flex justify-center px-4", className)}>
       <div
         className={cn(
           "pointer-events-auto relative isolate overflow-hidden",

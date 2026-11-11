@@ -429,10 +429,11 @@ function ItemSpecEditor({
 
       <div className="space-y-sm">
         <Label className="text-xs font-medium text-primary/55">Flavor Note (Optional)</Label>
-        <Input
+        <Textarea
+          rows={3}
           value={details.flavorNote || ""}
           onChange={(e) => updateDetails({ flavorNote: e.target.value })}
-          className="h-11 rounded-xl sm:h-10"
+          className="resize-none"
           placeholder="e.g. less sweet, specific inquiry"
         />
       </div>

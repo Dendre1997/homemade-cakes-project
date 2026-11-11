@@ -2,7 +2,10 @@
 
 import { CustomOrder } from "@/types";
 import { summarizeCustomOrderCategories } from "@/lib/customOrderCategory";
-import { format } from "date-fns";
+import {
+  formatBakeryInstantLabel,
+  formatStoredDateLabel,
+} from "@/lib/dates/bakeryCalendar";
 import { Trash2, ExternalLink } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/Button";
 import Link from "next/link";
@@ -62,7 +65,7 @@ export function CompactCustomOrderRow({ order, type }: Props) {
         </div>
         
         <div className="min-w-[120px]">
-          <p className="text-sm font-medium">{orderDate ? format(new Date(orderDate), "MMM d, yyyy") : "TBD"}</p>
+          <p className="text-sm font-medium">{orderDate ? formatStoredDateLabel(orderDate, { withYear: true }) ?? "TBD" : "TBD"}</p>
           <p className="text-xs text-muted-foreground">Event Date</p>
         </div>
 
@@ -75,7 +78,7 @@ export function CompactCustomOrderRow({ order, type }: Props) {
 
         {type === 'rejected' && order.createdAt && (
           <div className="min-w-[120px]">
-             <p className="text-sm">{format(new Date(order.createdAt), "MMM d, yyyy")}</p>
+             <p className="text-sm">{formatBakeryInstantLabel(order.createdAt, { withYear: true }) ?? "—"}</p>
              <p className="text-xs text-muted-foreground">Submitted</p>
           </div>
         )}

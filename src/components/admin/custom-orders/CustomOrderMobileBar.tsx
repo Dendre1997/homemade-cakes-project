@@ -26,7 +26,7 @@ export function CustomOrderMobileBar({
   onCopyPaymentLink,
 }: CustomOrderMobileBarProps) {
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 border-t border-primary/15 bg-background/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_20px_-4px_rgba(35,20,22,0.08)] backdrop-blur-md lg:hidden">
+    <div className="fixed inset-x-0 bottom-0 z-30 border-t border-primary/15 bg-background/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_20px_-4px_rgba(35,20,22,0.08)] backdrop-blur-md lg:hidden">
       <div className="mx-auto flex max-w-lg items-center gap-2.5">
         {isDirty && (
           <Button

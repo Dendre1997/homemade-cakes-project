@@ -1,7 +1,7 @@
 "use client";
 
 import { CustomOrder, CustomOrderItem } from "@/types";
-import { format } from "date-fns";
+import { formatStoredDateLabel } from "@/lib/dates/bakeryCalendar";
 import { 
   Calendar, Phone, Mail, Copy, CheckCircle2, 
   Trash2, AlertTriangle, Instagram, Facebook, Globe, 
@@ -141,7 +141,7 @@ export const CustomOrderCard = ({ order }: CustomOrderCardProps) => {
             <Calendar className="w-4 h-4 text-[#764a4d]" />
             <div className="flex flex-col">
               <span className="text-xs font-bold leading-none text-[#231416]">
-                {orderDate ? format(new Date(orderDate), "MMM d") : "TBD"}
+                {orderDate ? formatStoredDateLabel(orderDate) ?? "TBD" : "TBD"}
               </span>
               <span className="text-[10px] sm:text-xs font-medium text-[#764a4d]">
                 {order.timeSlot || "Anytime"}

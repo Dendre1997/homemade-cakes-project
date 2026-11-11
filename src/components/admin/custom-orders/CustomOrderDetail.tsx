@@ -419,6 +419,7 @@ export default function CustomOrderDetail({ initialOrder, shapes = [] }: CustomO
           isSaving={isSaving}
           onDiscard={restoreSavedDraft}
           onSave={handleSave}
+          className="xl:left-64"
         />
       </div>
 
