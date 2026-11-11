@@ -219,14 +219,14 @@ export const CustomOrderCard = ({ order }: CustomOrderCardProps) => {
                      <div className="flex items-start gap-2">
                         <Layers className="w-3.5 h-3.5 mt-0.5 shrink-0" />
                         <div className="flex-1 min-w-0">
-                          <OrderItemTiersDisplay
-                            tiers={item.details?.tiers}
-                            flavor={item.details?.flavor}
-                            variant="compact"
-                            className="text-xs leading-tight text-[#764a4d]"
-                            label="Tiers:"
-                          />
-                          {!item.details?.tiers?.length && (
+                          {item.details?.tiers?.length ? (
+                            <OrderItemTiersDisplay
+                              tiers={item.details.tiers}
+                              variant="compact"
+                              className="text-xs leading-tight text-[#764a4d]"
+                              label="Tiers:"
+                            />
+                          ) : (
                             <span className="text-xs leading-tight">
                               {formatCustomOrderFlavorSummary(item.details?.flavor) || "Flavor TBD"}
                             </span>
