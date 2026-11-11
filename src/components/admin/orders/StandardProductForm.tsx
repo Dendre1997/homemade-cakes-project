@@ -9,6 +9,7 @@ import { Plus } from "lucide-react";
 import { useAlert } from "@/contexts/AlertContext";
 import { AddonAdminSelector } from "@/components/admin/addons/AddonAdminSelector";
 import { SelectedAddon } from "@/types";
+import { addonsUnitCost } from "@/lib/addons/selectedAddonMath";
 import { AdminTierFlavorEditor } from "@/components/admin/shared/AdminTierFlavorEditor";
 import {
   allTierFlavorsSelected,
@@ -139,7 +140,7 @@ export const StandardProductForm = ({
             hasInscription: !!(inscription && product.inscriptionSettings?.isAvailable)
          }) + (isMultiTier ? tierUpcharge : 0);
 
-      const AddonsTotal = selectedAddons.reduce((sum, d) => sum + d.price, 0);
+      const AddonsTotal = addonsUnitCost(selectedAddons);
       const finalUnitPrice = priceOverride ? unitPrice : unitPrice + AddonsTotal + (isMultiTier ? 0 : selectedShapeSurcharge);
 
       let flavName = availableFlavors.find(f => f._id === selectedFlavorId)?.name || "Standard";

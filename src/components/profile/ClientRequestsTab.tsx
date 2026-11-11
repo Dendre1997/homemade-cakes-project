@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/Badge";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 import { Alert } from "@/components/ui/Alert";
 import { CalendarClock, MapPin, Truck, Phone, Mail, Instagram, ExternalLink, Calendar, PlusCircle, Facebook } from "lucide-react";
+import { addonQuantityMark } from "@/lib/addons/selectedAddonMath";
 import { format } from "date-fns";
 import Image from "next/image";
 
@@ -183,7 +184,7 @@ export default function ClientRequestsTab({ userId }: { userId: string }) {
                            <div className="flex flex-wrap gap-2">
                              {item.addons.map((a: any, i: number) => (
                                <span key={i} className="px-3 py-1 bg-subtleBackground/50 text-primary text-xs font-medium rounded-full border border-primary/10">
-                                 {a.name} {a.variantName && `(${a.variantName})`}
+                                 {a.name} {a.variantName && `(${a.variantName})`}{addonQuantityMark(a.quantity)}
                                </span>
                              ))}
                            </div>

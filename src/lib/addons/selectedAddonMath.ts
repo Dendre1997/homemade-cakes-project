@@ -4,12 +4,32 @@ import type { Addon, SelectedAddon } from "@/types";
  * Cost of one addon on a single cake.
  * A missing quantity is one, so older cart lines stay priced as before.
  */
+/** How many of this addon belong to one cake. A missing quantity is one. */
+export function addonCount(quantity?: number): number {
+  const raw = quantity ?? 1;
+  return Number.isFinite(raw) && raw > 0 ? raw : 1;
+}
+
+/** Shown only when the customer picked more than one. One stays unmarked. */
+export function addonQuantityMark(quantity?: number): string {
+  const count = addonCount(quantity);
+  return count > 1 ? ` × ${count}` : "";
+}
+
 export function addonUnitCost(addon: { price?: number; quantity?: number }): number {
   const price = Number(addon.price);
   const unit = Number.isFinite(price) ? price : 0;
-  const raw = addon.quantity ?? 1;
-  const quantity = Number.isFinite(raw) && raw > 0 ? raw : 1;
-  return unit * quantity;
+  return unit * addonCount(addon.quantity);
+}
+
+/** Addon cost for one cake, then multiplied by how many cakes are on the line. */
+export function addonLineCost(
+  addon: { price?: number; quantity?: number },
+  lineQuantity?: number
+): number {
+  const lines = lineQuantity ?? 1;
+  const count = Number.isFinite(lines) && lines > 0 ? lines : 1;
+  return addonUnitCost(addon) * count;
 }
 
 /** Sum of addon costs for one cake or product. Line quantity is applied by the caller. */

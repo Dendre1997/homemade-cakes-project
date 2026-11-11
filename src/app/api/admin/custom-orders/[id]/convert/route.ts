@@ -10,8 +10,27 @@ import OrderConfirmationEmail from "@/emails/OrderConfirmationEmail";
 import { render } from "@react-email/render";
 import { getAppSettings } from "@/lib/api/settings";
 import { normalizeCustomOrder } from "@/lib/normalizeCustomOrder";
-import type { CustomOrderItem } from "@/types";
+import type { CustomOrderItem, SelectedAddon } from "@/types";
 import { normalizePhoneDigits } from "@/lib/crm/normalize";
+import { addonCount } from "@/lib/addons/selectedAddonMath";
+
+/** Copy the saved addon snapshot, including quantity, onto the production order. */
+function copySelectedAddons(addons: SelectedAddon[] | undefined): SelectedAddon[] {
+  return (addons ?? []).map((addon) => {
+    const copy: SelectedAddon = {
+      addonId: String(addon.addonId),
+      name: addon.name,
+      variantName: addon.variantName,
+      price: Number(addon.price) || 0,
+      imageUrl: addon.imageUrl,
+    };
+    if (addon.variantId) copy.variantId = String(addon.variantId);
+    if (typeof addon.quantity === "number" && Number.isFinite(addon.quantity)) {
+      copy.quantity = addonCount(addon.quantity);
+    }
+    return copy;
+  });
+}
 
 /**
  * Resolves a single custom item's free-text fields to catalog ObjectIds and
@@ -117,7 +136,7 @@ async function buildOrderItemFromCustomItem(
     designInstructions: item.details?.designNotes,
     flavorNote: item.details?.flavorNote,
     categoryId: resolvedCategoryId,
-    addons: item.addons || [],
+    addons: copySelectedAddons(item.addons),
     designQuote:
       designQuote != null && !Number.isNaN(designQuote) && designQuote > 0
         ? designQuote

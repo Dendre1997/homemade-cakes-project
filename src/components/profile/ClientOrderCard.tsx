@@ -5,6 +5,7 @@ import { formatOrderItemDescription } from "@/lib/utils";
 import { OrderItemTiersDisplay } from "@/components/shared/OrderItemTiersDisplay";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { addonQuantityMark } from "@/lib/addons/selectedAddonMath";
 import { 
   Package, 
   ChefHat, 
@@ -292,7 +293,7 @@ export default function ClientOrderCard({ order, diameters = [], shapes = [] }: 
                                         <div className="mt-2 flex flex-wrap gap-1.5">
                                             {item.addons.map((addon, aIdx) => (
                                                 <Badge key={aIdx} variant="secondary" className="text-xs font-normal">
-                                                    {addon.name} {addon.variantName ? `(${addon.variantName})` : ''}
+                                                    {addon.name} {addon.variantName ? `(${addon.variantName})` : ''}{addonQuantityMark(addon.quantity)}
                                                 </Badge>
                                             ))}
                                         </div>

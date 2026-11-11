@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { Order, Diameter, CartItem, ProductWithCategory, Flavor, IShape } from "@/types";
+import { addonsUnitCost } from "@/lib/addons/selectedAddonMath";
 import { Button } from "@/components/ui/Button";
 import {
   Dialog,
@@ -245,7 +246,7 @@ const OrderDetailItems = ({
 
   const currentShapeSurcharge = availableShapes.find(s => s._id === draftShapeId)?.priceSurcharge || 0;
 
-  const currentAddonsTotal = draftAddons.reduce((sum, d) => sum + d.price, 0);
+  const currentAddonsTotal = addonsUnitCost(draftAddons);
   const currentTotalUnitCost = currentUnitCost + currentAddonsTotal + currentShapeSurcharge;
     
   const handleSaveChanges = async () => {

@@ -10,6 +10,7 @@ import { AlertTriangle, Image as ImageIcon, Trash2, Plus, Loader2 } from "lucide
 import Image from "next/image";
 import { useRef, useState, useEffect, useMemo } from "react";
 import { AddonAdminSelector } from "@/components/admin/addons/AddonAdminSelector";
+import { addonQuantityMark, addonUnitCost } from "@/lib/addons/selectedAddonMath";
 import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
 import ImagePreviewGallery from "@/components/ui/ImagePreviewGallery";
 import { AdminTierFlavorEditor } from "@/components/admin/shared/AdminTierFlavorEditor";
@@ -440,6 +441,20 @@ function ItemSpecEditor({
           selectedAddons={item.addons || []}
           onChange={(newAddons) => onItemChange(index, "addons", newAddons)}
         />
+        {(item.addons || []).some((addon) => (addon.quantity ?? 1) > 1) && (
+          <ul className="text-xs text-primary/70 space-y-1">
+            {(item.addons || [])
+              .filter((addon) => (addon.quantity ?? 1) > 1)
+              .map((addon, i) => (
+                <li key={`${addon.addonId}-${i}`}>
+                  {addon.name}
+                  {addon.variantName ? ` · ${addon.variantName}` : ""}
+                  {addonQuantityMark(addon.quantity)}
+                  {addonUnitCost(addon) > 0 ? ` · $${addonUnitCost(addon).toFixed(2)}` : ""}
+                </li>
+              ))}
+          </ul>
+        )}
       </div>
 
       <div className="space-y-sm">

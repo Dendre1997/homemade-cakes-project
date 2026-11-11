@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/Label";
 import { Textarea } from "@/components/ui/Textarea";
 import { Button, buttonVariants } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
+import { addonQuantityMark, addonUnitCost } from "@/lib/addons/selectedAddonMath";
 
 interface QuickMessageCardProps {
   order: CustomOrder;
@@ -101,10 +102,10 @@ function buildDetailedItemBlock(item: CustomOrderItem, index: number): string {
   if (addons && addons.length > 0) {
     const addonText = addons
       .map((addon) => {
-        const price = Number(addon.price) || 0;
+        const price = addonUnitCost(addon);
         return price > 0
-          ? `${addon.name} (+${formatMoney(price)})`
-          : addon.name;
+          ? `${addon.name}${addonQuantityMark(addon.quantity)} (+${formatMoney(price)})`
+          : `${addon.name}${addonQuantityMark(addon.quantity)}`;
       })
       .join(", ");
     if (addonText) {

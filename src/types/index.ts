@@ -371,7 +371,11 @@ export interface Order {
 export interface PublicOrderAddon {
   name: string;
   variantName?: string;
+  /** Unit price of the chosen variant. */
   price: number;
+  /** Addon quantity on one cake. Missing means one. */
+  quantity?: number;
+  /** How many cakes this addon is attached to. */
   itemQuantity: number;
 }
 

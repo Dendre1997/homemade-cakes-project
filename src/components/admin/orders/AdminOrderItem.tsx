@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/Button";
 import ImagePreviewGallery from "@/components/ui/ImagePreviewGallery";
 import { OrderItemTiersDisplay } from "@/components/shared/OrderItemTiersDisplay";
+import { addonQuantityMark, addonUnitCost } from "@/lib/addons/selectedAddonMath";
 
 interface AdminOrderItemProps {
   item: CartItem;
@@ -236,9 +237,9 @@ export const AdminOrderItem = ({
                                <div key={idx} className="flex justify-between items-center text-sm">
                                    <div className="flex items-center gap-2">
                                        {dec.imageUrl && <Image src={dec.imageUrl} width={20} height={20} className="rounded object-cover" alt="" />}
-                                       <span className="text-gray-800 font-medium">{dec.name} <span className="text-gray-500 font-normal">({dec.variantName})</span></span>
+                                       <span className="text-gray-800 font-medium">{dec.name} <span className="text-gray-500 font-normal">({dec.variantName}{addonQuantityMark(dec.quantity)})</span></span>
                                    </div>
-                                   <span className="font-mono text-xs text-gray-600">+${dec.price.toFixed(2)}</span>
+                                   <span className="font-mono text-xs text-gray-600">+${addonUnitCost(dec).toFixed(2)}</span>
                                </div>
                            ))}
                         </div>
@@ -428,9 +429,9 @@ export const AdminOrderItem = ({
                        <div key={idx} className="flex justify-between items-center text-sm">
                            <div className="flex items-center gap-2">
                                {dec.imageUrl && <Image src={dec.imageUrl} width={20} height={20} className="rounded object-cover" alt="" />}
-                               <span className="text-gray-800 font-medium">{dec.name} <span className="text-gray-500 font-normal">({dec.variantName})</span></span>
+                               <span className="text-gray-800 font-medium">{dec.name} <span className="text-gray-500 font-normal">({dec.variantName}{addonQuantityMark(dec.quantity)})</span></span>
                            </div>
-                           <span className="font-mono text-xs text-gray-600">+${dec.price.toFixed(2)}</span>
+                           <span className="font-mono text-xs text-gray-600">+${addonUnitCost(dec).toFixed(2)}</span>
                        </div>
                    ))}
                 </div>

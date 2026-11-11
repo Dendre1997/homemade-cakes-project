@@ -16,6 +16,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { OrderItemTiersDisplay } from "@/components/shared/OrderItemTiersDisplay";
+import { addonQuantityMark } from "@/lib/addons/selectedAddonMath";
 import Image from "next/image";
 import {
   Select,
@@ -412,6 +413,7 @@ export const OrderCard = ({
                             <div key={`${addon.addonId}-${i}`}>
                               {addon.name}
                               {addon.variantName ? ` (${addon.variantName})` : ""}
+                              {addonQuantityMark(addon.quantity)}
                             </div>
                           ))}
                         </div>

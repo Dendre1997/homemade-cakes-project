@@ -10,6 +10,7 @@ import {
 } from "@/lib/orderItemDisplay";
 import PaymentHubClient from "@/components/payment/PaymentHubClient";
 import type { PublicOrderSummary, PublicOrderAddon } from "@/types";
+import { addonsUnitCost } from "@/lib/addons/selectedAddonMath";
 
 export const metadata: Metadata = {
   title: "Complete Your Payment | D&K Creations",
@@ -181,6 +182,7 @@ function mapToPublicOrder(order: any, ctx: ScrubContext): PublicOrderSummary {
       name: a.name,
       variantName: a.variantName,
       price: Number(a.price) || 0,
+      quantity: typeof a.quantity === "number" ? a.quantity : undefined,
       itemQuantity: Number(item.quantity) || 1,
     }));
 
@@ -226,14 +228,12 @@ function mapToPublicOrder(order: any, ctx: ScrubContext): PublicOrderSummary {
       name: a.name,
       variantName: a.variantName,
       price: Number(a.price) || 0,
+      quantity: typeof a.quantity === "number" ? a.quantity : undefined,
       itemQuantity: Number(item.quantity) || 1,
     }))
   );
   const addonsCost = rawItems.reduce((acc, item) => {
-    const perItem = (item.addons || []).reduce(
-      (s: number, a: any) => s + (Number(a.price) || 0),
-      0
-    );
+    const perItem = addonsUnitCost(item.addons);
     return acc + perItem * (Number(item.quantity) || 1);
   }, 0);
 

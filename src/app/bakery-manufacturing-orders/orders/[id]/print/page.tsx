@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { useParams } from "next/navigation";
 import { format } from "date-fns";
 import { Order, Diameter, Flavor, IShape } from "@/types";
+import { addonQuantityMark } from "@/lib/addons/selectedAddonMath";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -814,6 +815,7 @@ export default function PrintOrderPage() {
                               {addon.name}:
                             </span>
                             {addon.variantName}
+                            {addonQuantityMark(addon.quantity)}
                           </span>
                         ))}
                       </div>

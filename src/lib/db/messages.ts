@@ -8,6 +8,7 @@ import {
 } from "@/lib/db/lookupMaps";
 import { normalizeCustomOrder } from "@/lib/normalizeCustomOrder";
 import { shortId } from "@/lib/ai/serialize";
+import { addonCount } from "@/lib/addons/selectedAddonMath";
 import { DEFAULT_FROM, resend } from "@/lib/email";
 import AdminMessageEmail from "@/emails/AdminMessageEmail";
 import type {
@@ -189,12 +190,16 @@ function buildCustomOrderLookupFilter(
 function mapAddons(addons: SelectedAddon[] | undefined) {
   return addons
     ?.filter((addon) => addon?.name?.trim())
-    .map((addon) => ({
-      name: addon.variantName?.trim()
+    .map((addon) => {
+      const count = addonCount(addon.quantity);
+      const name = addon.variantName?.trim()
         ? `${addon.name} — ${addon.variantName}`
-        : addon.name,
-      price: Number(addon.price) || 0,
-    }));
+        : addon.name;
+      if (count > 1) {
+        return { name, price: Number(addon.price) || 0, quantity: count };
+      }
+      return { name, price: Number(addon.price) || 0 };
+    });
 }
 
 /**

@@ -9,6 +9,7 @@ import { useAlert } from "@/contexts/AlertContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/Select";
 import { AddonAdminSelector } from "@/components/admin/addons/AddonAdminSelector";
 import { SelectedAddon } from "@/types";
+import { addonsUnitCost } from "@/lib/addons/selectedAddonMath";
 
 interface SetProductFormProps {
   product: ProductWithCategory;
@@ -94,7 +95,7 @@ export const SetProductForm = ({
 
       let calculatedPrice = selectedConfig.price;
       
-       const AddonsTotal = selectedAddons.reduce((sum, d) => sum + d.price, 0);
+       const AddonsTotal = addonsUnitCost(selectedAddons);
        const finalPrice = priceOverride ? parseFloat(priceOverride) : calculatedPrice + AddonsTotal;
 
        // Construct `items` array

@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import HybridSelector from "@/components/admin/custom-orders/HybridSelector";
 import ImageSelector from "@/components/admin/custom-orders/ImageSelector";
 import { getPublicIdFromUrl } from "@/lib/cloudinaryUtils";
+import { addonsUnitCost } from "@/lib/addons/selectedAddonMath";
 import {
   appendCloudinaryUploadPreset,
   cloudinaryUploadUrl,
@@ -790,7 +791,7 @@ export default function CustomOrderItemForm({
                      <span>Total: ${(price * quantity).toFixed(2)}</span>
                      {selectedAddons.length > 0 && (
                          <span className="text-xs font-normal text-muted-foreground">
-                             Addons total: +${selectedAddons.reduce((sum, d) => sum + d.price, 0).toFixed(2)} (Must be manually added to Fixed Price if desired)
+                             Addons total: +${addonsUnitCost(selectedAddons).toFixed(2)} (Must be manually added to Fixed Price if desired)
                          </span>
                      )}
                  </div>

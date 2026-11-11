@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
 import { useAlert } from "@/contexts/AlertContext";
 import { OrderItemTiersDisplay } from "@/components/shared/OrderItemTiersDisplay";
+import { addonQuantityMark, addonUnitCost } from "@/lib/addons/selectedAddonMath";
 import { SocialHandleAnchor } from "@/components/ui/SocialHandleAnchor";
 
 interface CustomOrderCardProps {
@@ -240,6 +241,22 @@ export const CustomOrderCard = ({ order }: CustomOrderCardProps) => {
                         </div>
                      )}
 
+                     {item.addons?.some((addon) => (addon.quantity ?? 1) > 1) && (
+                        <div className="flex flex-col gap-0.5 text-[11px] text-gray-600">
+                           {item.addons
+                             .filter((addon) => (addon.quantity ?? 1) > 1)
+                             .map((addon, i) => (
+                               <div key={`${addon.addonId}-${i}`}>
+                                 {addon.name}
+                                 {addon.variantName ? ` (${addon.variantName})` : ""}
+                                 {addonQuantityMark(addon.quantity)}
+                                 {addonUnitCost(addon) > 0
+                                   ? ` +$${addonUnitCost(addon).toFixed(2)}`
+                                   : ""}
+                               </div>
+                             ))}
+                        </div>
+                     )}
                      {item.details?.designNotes && (
                         <div className="flex items-start gap-2">
                            <Box className="w-3.5 h-3.5 mt-0.5 shrink-0" />

@@ -13,6 +13,7 @@
  */
 
 import { BAKERY_TIME_ZONE } from "@/lib/db/capacity";
+import { addonQuantityMark, addonUnitCost } from "@/lib/addons/selectedAddonMath";
 
 /** Tuple (not a widened array) so `z.enum(MESSAGE_INTENTS)` stays type-safe. */
 export const MESSAGE_INTENTS = [
@@ -27,6 +28,7 @@ export type MessageIntent = (typeof MESSAGE_INTENTS)[number];
 export interface DraftSourceAddon {
   name: string;
   price: number;
+  quantity?: number;
 }
 
 export interface DraftSourceItem {
@@ -195,11 +197,11 @@ function buildItemBlock(item: DraftSourceItem, index: number): string {
   const addons = item.addons?.filter((addon) => addon.name?.trim());
   if (addons?.length) {
     const addonText = addons
-      .map((addon) =>
-        addon.price > 0
-          ? `${addon.name} (+${formatMoney(addon.price)})`
-          : addon.name
-      )
+      .map((addon) => {
+        const price = addonUnitCost(addon);
+        const label = `${addon.name}${addonQuantityMark(addon.quantity)}`;
+        return price > 0 ? `${label} (+${formatMoney(price)})` : label;
+      })
       .join(", ");
     lines.push(`• Add-ons: ${addonText}`);
   }

@@ -6,6 +6,7 @@ import { Truck, Store } from "lucide-react";
 import HeaderLogo from "@/components/ui/HeaderLogo";
 import { OrderItemTiersDisplay } from "@/components/shared/OrderItemTiersDisplay";
 import { PublicOrderSummary } from "@/types";
+import { addonLineCost, addonQuantityMark, addonUnitCost } from "@/lib/addons/selectedAddonMath";
 
 interface OrderSummaryDisplayProps {
   data: PublicOrderSummary;
@@ -328,7 +329,10 @@ export const OrderSummaryDisplay = ({
                     className="flex items-center gap-3 text-xs text-primary/60 bg-gray-50/50 p-2 rounded-xl border border-gray-100"
                   >
                     <div className="flex-1 min-w-0">
-                      <p className="font-bold text-primary/70">{addon.name}</p>
+                      <p className="font-bold text-primary/70">
+                        {addon.name}
+                        {addonQuantityMark(addon.quantity)}
+                      </p>
                       {addon.variantName && addon.variantName.trim() !== "" && (
                         <p className="text-[10px] text-primary/45">
                           {addon.variantName}
@@ -336,7 +340,7 @@ export const OrderSummaryDisplay = ({
                       )}
                     </div>
                     <p className="font-semibold text-primary/80">
-                      {addon.price > 0 ? `+$${addon.price.toFixed(2)}` : "Free"}
+                      {addonUnitCost(addon) > 0 ? `+$${addonUnitCost(addon).toFixed(2)}` : "Free"}
                     </p>
                   </div>
                 ))}
@@ -376,11 +380,12 @@ export const OrderSummaryDisplay = ({
                     {addon.variantName &&
                       addon.variantName.trim() !== "" &&
                       ` · ${addon.variantName}`}
+                    {addonQuantityMark(addon.quantity)}
                     {addon.itemQuantity > 1 && ` (x${addon.itemQuantity})`}
                   </span>
                   <span className="font-semibold text-primary/70">
-                    {addon.price > 0
-                      ? `+$${(addon.price * addon.itemQuantity).toFixed(2)}`
+                    {addonLineCost(addon, addon.itemQuantity) > 0
+                      ? `+$${addonLineCost(addon, addon.itemQuantity).toFixed(2)}`
                       : "Free"}
                   </span>
                 </div>

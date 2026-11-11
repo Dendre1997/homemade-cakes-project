@@ -31,9 +31,13 @@ export function shortId(id: string): string {
 
 function formatAddons(addons: unknown): string[] | undefined {
   if (!Array.isArray(addons)) return undefined;
-  return addons.map((addon: Document) =>
-    addon.variantName ? `${addon.name} — ${addon.variantName}` : addon.name
-  );
+  return addons.map((addon: Document) => {
+    const label = addon.variantName
+      ? `${addon.name} — ${addon.variantName}`
+      : addon.name;
+    const quantity = Number(addon.quantity);
+    return Number.isFinite(quantity) && quantity > 1 ? `${label} × ${quantity}` : label;
+  });
 }
 
 function formatTiers(tiers: unknown, maps: LookupMaps) {

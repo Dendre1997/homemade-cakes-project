@@ -18,6 +18,7 @@ import { format } from "date-fns";
 import { SENDER_EMAIL } from "@/lib/email";
 import { EmailOrderItemFlavor } from "@/emails/EmailOrderItemFlavor";
 import { hasTierSelections } from "@/lib/orderItemDisplay";
+import { addonQuantityMark, addonUnitCost } from "@/lib/addons/selectedAddonMath";
 
 export interface OrderConfirmationEmailProps {
   order: Order;
@@ -93,22 +94,6 @@ export const OrderConfirmationEmail = ({
       return shapeMap[id] || "";
     return id;
   };
-
-  // ── addon extraction ──────────────────────────────────────────────────────
-  const allAddons = order.items.flatMap((item) =>
-    (item.addons || []).map((addon) => ({
-      ...addon,
-      itemQuantity: item.quantity,
-    })),
-  );
-
-  const addonsCost = order.items.reduce((acc, item) => {
-    const itemAddonsCost = (item.addons || []).reduce(
-      (sum, addon) => sum + addon.price,
-      0,
-    );
-    return acc + itemAddonsCost * item.quantity;
-  }, 0);
 
   return (
     <Html>
@@ -337,12 +322,13 @@ export const OrderConfirmationEmail = ({
                                   addon.variantName.trim() !== ""
                                     ? ` · ${addon.variantName}`
                                     : ""}
+                                  {addonQuantityMark(addon.quantity)}
                                 </Text>
                               </Column>
                               <Column align="right">
                                 <Text style={styles.addonPrice}>
-                                  {addon.price > 0
-                                    ? `+$${addon.price.toFixed(2)}`
+                                  {addonUnitCost(addon) > 0
+                                    ? `+$${addonUnitCost(addon).toFixed(2)}`
                                     : "Free"}
                                 </Text>
                               </Column>
