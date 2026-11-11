@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { SelectedAddon, CakeTierSelection } from "@/types";
+import { SelectedAddon, CakeTierSelection, SetLineSelection } from "@/types";
 
 export interface CartItem {
   id: string;
@@ -18,7 +18,8 @@ export interface CartItem {
   inscription?: string;
   originalPrice?: number;
   discountName?: string;
-  selectedConfig?: {
+  selectedConfig?: SetLineSelection & {
+    quantityConfigId?: string;
     items?: { flavorId: string; count: number }[];
     cake?: {
       flavorId: string;

@@ -177,6 +177,12 @@ const CartPage = () => {
                                     <p className="font-semibold text-xs text-muted-foreground uppercase tracking-wider mb-1">
                                        Set Configuration
                                     </p>
+                                    {item.selectedConfig.setName && (
+                                      <p className="mb-1">
+                                        <span className="font-medium">Set:</span> {item.selectedConfig.setName}
+                                        {item.selectedConfig.pieceCount ? ` · ${item.selectedConfig.pieceCount} pieces` : ""}
+                                      </p>
+                                    )}
 
                                     {/* If it is a COMBO (Has Cake) */}
                                     {item.selectedConfig.cake && comboCakeFlavor && (

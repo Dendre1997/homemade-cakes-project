@@ -15,6 +15,7 @@ import {
 } from "@/types";
 import Image from "next/image";
 import { SetBoxIcon } from "@/components/ui/SetBoxIcon";
+import { defaultSetBoxPrice } from "@/lib/sets/setLinePrice";
 import {
   DndContext,
   closestCenter,
@@ -256,10 +257,7 @@ const ProductForm = ({
       
       // FIX: Decouple Bento Price from Total Price for Combo Sets
       if (existingProduct.productType === 'set' && existingProduct.comboConfig?.hasCake) {
-          const boxConfig = existingProduct.availableQuantityConfigs?.[0];
-          if (boxConfig) {
-             displayPrice = displayPrice - Number(boxConfig.price);
-          }
+          displayPrice = displayPrice - defaultSetBoxPrice(existingProduct);
       }
 
       setStructureBasePrice(

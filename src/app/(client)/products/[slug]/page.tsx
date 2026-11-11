@@ -33,7 +33,13 @@ import { Switch } from "@/components/ui/Switch";
 import { Label } from "@/components/ui/Label";
 import Image from "next/image";
 import { addonsUnitCost } from "@/lib/addons/selectedAddonMath";
-import { setLinePrice } from "@/lib/sets/setLinePrice";
+import { setLinePrice, usesCatalogSets } from "@/lib/sets/setLinePrice";
+import SetSelector, { type SetOption } from "@/components/ui/SetSelector";
+
+/** The most treat flavors a set line takes when the product still sells built-in boxes. */
+const BUILT_IN_BOX_FLAVOR_LIMIT = 3;
+
+const flavorWord = (count: number) => (count === 1 ? "flavor" : "flavors");
 
 // Translator Page Pattern
 const SingleProductPage = () => {
@@ -229,7 +235,12 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
           }
           
           // Initialize Set Quantity Logic
-          if (product.productType === 'set' && product.availableQuantityConfigs && product.availableQuantityConfigs.length > 0) {
+          if (product.productType === 'set' && usesCatalogSets(product)) {
+             const firstSet = product.availableSetConfigs!.find((config) =>
+               product.availableSets?.some((set) => String(set._id) === String(config.setId))
+             );
+             setSelectedQtyConfigId(firstSet ? String(firstSet.setId) : null);
+          } else if (product.productType === 'set' && product.availableQuantityConfigs && product.availableQuantityConfigs.length > 0) {
              const firstConfig = product.availableQuantityConfigs[0];
              setSelectedQtyConfigId(firstConfig._id || firstConfig.label);
           }
@@ -449,6 +460,38 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
       })
     : null;
   const selectedQtyConfig = setPrice?.box ?? null;
+
+  const hasCatalogSets = isSet && usesCatalogSets(product);
+  const setOptions = useMemo((): SetOption[] => {
+    if (!hasCatalogSets) return [];
+    return (product.availableSetConfigs ?? []).flatMap((config) => {
+      const set = product.availableSets?.find((s) => String(s._id) === String(config.setId));
+      if (!set) return [];
+      const unitPrice = setLinePrice(product, config.setId, {
+        match: "idOrLabel",
+        missingBox: "none",
+        rounding: "none",
+      });
+      return [{ set, price: unitPrice?.price ?? 0 }];
+    });
+  }, [hasCatalogSets, product]);
+  const selectedSet =
+    setOptions.find((option) => String(option.set._id) === selectedQtyConfigId)?.set ?? null;
+  const setFlavorLimit = hasCatalogSets
+    ? selectedSet?.maxFlavors ?? 1
+    : BUILT_IN_BOX_FLAVOR_LIMIT;
+
+  const handleSelectSet = (setId: string) => {
+    setSelectedQtyConfigId(setId);
+    const set = setOptions.find((option) => String(option.set._id) === setId)?.set;
+    if (set && selectedSetFlavorIds.length > set.maxFlavors) {
+      setSelectedSetFlavorIds((prev) => prev.slice(0, set.maxFlavors));
+      showAlert(
+        `${set.name} takes up to ${set.maxFlavors} ${flavorWord(set.maxFlavors)}, so we kept your first ${set.maxFlavors}.`,
+        "info"
+      );
+    }
+  };
     
   // --- Calculate Prices ---
   let calculatedPrice = 0;
@@ -534,7 +577,7 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
         if (prev.includes(id)) {
             return prev.filter(fid => fid !== id);
         }
-        if (prev.length >= 3) return prev; // Max 3
+        if (prev.length >= setFlavorLimit) return prev;
         return [...prev, id];
      });
   };
@@ -594,7 +637,14 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
           addons: selectedAddons,
           selectedConfig: {
              items,
-             quantityConfigId: selectedQtyConfigId,
+             ...(selectedSet
+               ? {
+                   setId: String(selectedSet._id),
+                   setName: selectedSet.name,
+                   pieceCount: selectedSet.pieceCount,
+                   quantityConfigId: selectedSet.name,
+                 }
+               : { quantityConfigId: selectedQtyConfigId ?? undefined }),
              ...(isCombo && {
                  cake: {
                      flavorId: comboSelection.flavorId,
@@ -938,20 +988,32 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
                         onToggle={() => toggleAccordion("set-flavors")}
                       >
                         <p className="text-sm text-gray-500 mb-4">
-                          Choose up to 3 flavors for your box.
+                          Choose up to {setFlavorLimit} {flavorWord(setFlavorLimit)} for your box.
                         </p>
                         <FlavorSelector
                           mode="multiple"
                           flavors={product.availableFlavors}
                           selectedIds={selectedSetFlavorIds}
                           onToggleId={handleToggleSetFlavor}
-                          maxSelection={3}
+                          maxSelection={setFlavorLimit}
                           hidePrice={true}
                         />
                       </CollapsibleSection>
 
                       {/* 2. Box Size */}
-                      {product.availableQuantityConfigs && (
+                      {hasCatalogSets ? (
+                        <CollapsibleSection
+                          title="2. Choose your set"
+                          isOpen={activeAccordion === "quantity"}
+                          onToggle={() => toggleAccordion("quantity")}
+                        >
+                          <SetSelector
+                            options={setOptions}
+                            selectedId={selectedQtyConfigId}
+                            onSelect={handleSelectSet}
+                          />
+                        </CollapsibleSection>
+                      ) : product.availableQuantityConfigs && (
                         <CollapsibleSection
                           title="2. Choose Box Size"
                           isOpen={activeAccordion === "quantity"}
@@ -1019,20 +1081,31 @@ const SingleProductContent = ({ product }: { product: ProductWithCategory }) => 
                           Pick your flavors
                         </h3>
                         <p className="text-sm text-gray-500 mb-4">
-                          Choose up to 3 flavors for your box.
+                          Choose up to {setFlavorLimit} {flavorWord(setFlavorLimit)} for your box.
                         </p>
                         <FlavorSelector
                           mode="multiple"
                           flavors={product.availableFlavors}
                           selectedIds={selectedSetFlavorIds}
                           onToggleId={handleToggleSetFlavor}
-                          maxSelection={3}
+                          maxSelection={setFlavorLimit}
                           hidePrice={true}
                         />
                       </div>
 
                       {/* 2. Box Size */}
-                      {product.availableQuantityConfigs && (
+                      {hasCatalogSets ? (
+                        <div className="border-t border-border pt-4 mt-4">
+                          <h3 className="font-heading text-h3 text-primary mb-2">
+                            Choose your set
+                          </h3>
+                          <SetSelector
+                            options={setOptions}
+                            selectedId={selectedQtyConfigId}
+                            onSelect={handleSelectSet}
+                          />
+                        </div>
+                      ) : product.availableQuantityConfigs && (
                         <div className="border-t border-border pt-4 mt-4">
                           <h3 className="font-heading text-h3 text-primary mb-2">
                             Choose Box Size

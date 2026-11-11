@@ -2,7 +2,7 @@ import { Db, ObjectId } from "mongodb";
 import { CartItem, Discount, Product, Flavor, Addon, IShape } from "@/types";
 import { parseCartItemId, OBJECT_ID_RE } from "@/lib/cartItemId";
 import { addonsUnitCost, normalizeSelectedAddons } from "@/lib/addons/selectedAddonMath";
-import { setLinePrice } from "@/lib/sets/setLinePrice";
+import { setLineIdentifier, setLinePrice } from "@/lib/sets/setLinePrice";
 
 interface PriceResult {
   subtotal: number;
@@ -151,7 +151,7 @@ export async function calculateOrderPricing(
     // --- SCENARIO A: SETS & COMBOS ---
     if (dbProduct.productType === 'set') {
         const cakeFlavorId = item.selectedConfig?.cake?.flavorId;
-        const { price } = setLinePrice(dbProduct, item.selectedConfig?.quantityConfigId, {
+        const { price } = setLinePrice(dbProduct, setLineIdentifier(item.selectedConfig), {
           match: "labelThenId",
           missingBox: "defaultBoxElseBase",
           rounding: "cents",

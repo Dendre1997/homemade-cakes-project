@@ -574,7 +574,9 @@ const CheckoutClientPage = ({ isDeliveryEnabled }: CheckoutClientPageProps) => {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({})); 
         throw new Error(
-          errorData.message || "Failed to submit order for confirmation."
+          (response.status === 400 && errorData.error) ||
+            errorData.message ||
+            "Failed to submit order for confirmation."
         );
       }
 
@@ -646,8 +648,14 @@ const CheckoutClientPage = ({ isDeliveryEnabled }: CheckoutClientPageProps) => {
         body: JSON.stringify(orderData),
       });
 
-      if (!response.ok)
-        throw new Error("Something went wrong placing the order.");
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          response.status === 400 && errorData.error
+            ? errorData.error
+            : "Something went wrong placing the order."
+        );
+      }
 
       const result = await response.json();
       clearCart();

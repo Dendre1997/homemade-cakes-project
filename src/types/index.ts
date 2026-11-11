@@ -256,6 +256,13 @@ export interface SeasonalEvent {
   isActive: boolean;
 }
 
+/** Catalog set chosen for a line item, with a snapshot of its name and piece count. */
+export interface SetLineSelection {
+  setId?: string;
+  setName?: string;
+  pieceCount?: number;
+}
+
 export interface CartItem {
   id: string;
   productId?: string;
@@ -277,7 +284,7 @@ export interface CartItem {
   isCombo?: boolean;
   
   // NEW FIELD
-  selectedConfig?: {
+  selectedConfig?: SetLineSelection & {
     setCategoryId?: string;
     quantityConfigId?: string;
     cake?: {
@@ -483,7 +490,7 @@ export interface OrderItem {
   isCustom?: boolean;
   
   // NEW FIELD (Synced with CartItem)
-  selectedConfig?: {
+  selectedConfig?: SetLineSelection & {
     quantityConfigId?: string;
     cake?: {
       flavorId: string;

@@ -1,6 +1,7 @@
 /**
- * The single price rule for one unit of a set product line (simple set or combo),
- * priced from the boxes embedded on the product.
+ * The single price rule for one unit of a set product line (simple set or combo).
+ * A product with assigned catalog sets is priced from those sets, matched by set id;
+ * any other product is priced from the boxes embedded on it.
  *
  * Each caller must keep its own box matching, missing-box fallback, and rounding:
  * cart lines, open carts, and stored orders already depend on those exact numbers.
@@ -15,7 +16,35 @@ export interface SetPriceBox {
 export interface SetPriceProduct {
   structureBasePrice?: unknown;
   availableQuantityConfigs?: SetPriceBox[];
+  availableSetConfigs?: { setId?: unknown; price?: unknown }[];
   comboConfig?: { hasCake?: boolean } | null;
+}
+
+export function usesCatalogSets(product: SetPriceProduct): boolean {
+  return (product.availableSetConfigs?.length ?? 0) > 0;
+}
+
+/** The priced choices of a set product: its catalog sets when it has any, else its built-in boxes. */
+function setPriceBoxes(product: SetPriceProduct): SetPriceBox[] | undefined {
+  if (usesCatalogSets(product)) {
+    return product.availableSetConfigs!.map((config) => ({
+      _id: config.setId,
+      price: config.price,
+    }));
+  }
+  return product.availableQuantityConfigs;
+}
+
+/** Price of the first set or box, which the stored combo base price already includes. */
+export function defaultSetBoxPrice(product: SetPriceProduct): number {
+  return Number(setPriceBoxes(product)?.[0]?.price) || 0;
+}
+
+/** What a cart line or order item names as its set: the catalog set id, else the box label. */
+export function setLineIdentifier(
+  selectedConfig: { setId?: string; quantityConfigId?: string } | null | undefined
+): string | undefined {
+  return selectedConfig?.setId ?? selectedConfig?.quantityConfigId;
 }
 
 /**
@@ -73,10 +102,15 @@ function toAmount(value: unknown, rounding: SetPriceRounding): number {
 function findSetBox(
   boxes: SetPriceBox[] | undefined,
   identifier: unknown,
-  match: SetBoxMatch
+  match: SetBoxMatch,
+  catalog: boolean
 ): SetPriceBox | undefined {
   if (!boxes) return undefined;
   const wanted = identifier == null ? undefined : String(identifier);
+
+  if (catalog) {
+    return wanted ? boxes.find((box) => String(box._id) === wanted) : undefined;
+  }
 
   if (match === "idOrLabel") {
     return boxes.find((box) => (box._id || box.label) === identifier);
@@ -107,12 +141,12 @@ export function setLinePrice(
   options: SetLinePriceOptions
 ): SetLinePriceResult | null {
   const { rounding } = options;
-  const boxes = product.availableQuantityConfigs;
+  const boxes = setPriceBoxes(product);
   const base = toAmount(product.structureBasePrice, rounding);
   const defaultBox = toAmount(boxes?.[0]?.price, rounding);
   const isCombo = !!product.comboConfig?.hasCake;
 
-  const box = findSetBox(boxes, boxIdentifier, options.match);
+  const box = findSetBox(boxes, boxIdentifier, options.match, usesCatalogSets(product));
 
   let price: number;
   if (!box && options.missingBox === "none") return null;

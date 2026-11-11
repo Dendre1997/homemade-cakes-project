@@ -1,5 +1,5 @@
 import { ProductWithCategory, Flavor, Diameter, CartItem, Product } from "@/types";
-import { setLinePrice } from "@/lib/sets/setLinePrice";
+import { setLineIdentifier, setLinePrice } from "@/lib/sets/setLinePrice";
 
 interface PriceCalculationParams {
   product: ProductWithCategory;
@@ -75,7 +75,7 @@ export const resolveItemPrice = (item: CartItem, products: Product[], flavors: F
 
     if (product.productType === 'set') {
         const cakeFlavorId = item.selectedConfig?.cake?.flavorId;
-        const { price } = setLinePrice(product, item.selectedConfig?.quantityConfigId, {
+        const { price } = setLinePrice(product, setLineIdentifier(item.selectedConfig), {
             match: "label",
             missingBox: "defaultBox",
             rounding: "none",

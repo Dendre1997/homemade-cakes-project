@@ -7,6 +7,7 @@ import { Product } from '@/types';
 import { ObjectId } from 'mongodb';
 import { generateSlug } from '../../../../lib/utils';
 import { normalizeProductSetConfigs } from '@/lib/validation/productSetConfigs';
+import { defaultSetBoxPrice } from '@/lib/sets/setLinePrice';
 
 // GET
 export async function GET(request: NextRequest) {
@@ -88,25 +89,7 @@ export async function POST(request: NextRequest) {
       defaultAddons
     } = body;
 
-    // RULE: Auto-set Base Price for Sets
-    let finalPrice = Number(structureBasePrice) || 0;
-
-    if (productType === 'set') {
-        const firstBoxPrice = (availableQuantityConfigs && availableQuantityConfigs.length > 0)
-          ? Number(availableQuantityConfigs[0].price) || 0
-          : 0;
-
-        if (comboConfig && comboConfig.hasCake) {
-             // Combo Set: Base Price = Input (Cake) + Box Price
-             finalPrice = finalPrice + firstBoxPrice;
-        } else {
-             // Simple Set: Base Price = Box Price
-             finalPrice = firstBoxPrice;
-        }
-    }
-    structureBasePrice = finalPrice;
-
-    if (!name || typeof structureBasePrice !== 'number' ||  !categoryId) {
+    if (!name || !categoryId) {
       return NextResponse.json(
         { error: 'Name and a valid base price are required' },
         { status: 400 }
@@ -124,6 +107,25 @@ export async function POST(request: NextRequest) {
     if (!setConfigs.ok) {
       return NextResponse.json({ error: setConfigs.error }, { status: 400 });
     }
+
+    // RULE: Auto-set Base Price for Sets
+    let finalPrice = Number(structureBasePrice) || 0;
+
+    if (productType === 'set') {
+        const firstBoxPrice = defaultSetBoxPrice({
+          availableQuantityConfigs,
+          availableSetConfigs: setConfigs.data,
+        });
+
+        if (comboConfig && comboConfig.hasCake) {
+             // Combo Set: Base Price = Input (Cake) + first set or box price
+             finalPrice = finalPrice + firstBoxPrice;
+        } else {
+             // Simple Set: Base Price = first set or box price
+             finalPrice = firstBoxPrice;
+        }
+    }
+    structureBasePrice = finalPrice;
     
     // Process Combo Config IDs if present
     const processedComboConfig = comboConfig ? {

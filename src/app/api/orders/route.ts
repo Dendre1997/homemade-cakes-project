@@ -14,7 +14,8 @@ import PendingOrderAdminEmail  from "@/emails/PendingOrderAdminEmail";
 import { calculateOrderPricing } from "@/lib/pricing";
 import { normalizeCartItemAddons } from "@/lib/addons/selectedAddon";
 import { addonsUnitCost } from "@/lib/addons/selectedAddonMath";
-import { setLinePrice, type SetPriceProduct } from "@/lib/sets/setLinePrice";
+import { setLineIdentifier, setLinePrice, type SetPriceProduct } from "@/lib/sets/setLinePrice";
+import { checkSetLines } from "@/lib/sets/setLineValidation";
 import { getAppSettings } from "@/lib/api/settings";
 import { normalizePhoneDigits } from "@/lib/crm/normalize";
 
@@ -39,7 +40,8 @@ async function orderSetUnitPrice(
     cakeFlavorPrice = flavor?.price;
   }
 
-  const { price, box } = setLinePrice(product as SetPriceProduct, item.selectedConfig?.quantityConfigId, {
+  const identifier = setLineIdentifier(item.selectedConfig);
+  const { price, box } = setLinePrice(product as SetPriceProduct, identifier, {
     match: "label",
     missingBox: "basePrice",
     rounding: "cents",
@@ -47,7 +49,7 @@ async function orderSetUnitPrice(
   });
   if (!box) {
     console.warn(
-      `[WARNING] Set box '${item.selectedConfig?.quantityConfigId ?? ""}' not found on product ${product._id}. Using base price.`
+      `[WARNING] Set box '${identifier ?? ""}' not found on product ${product._id}. Using base price.`
     );
   }
 
@@ -116,7 +118,12 @@ export async function POST(request: NextRequest) {
          }
       }
 
-      const catalogItems = await normalizeCartItemAddons(db, items);
+      const setLines = await checkSetLines(db, items);
+      if (!setLines.ok) {
+        return NextResponse.json({ error: setLines.error }, { status: 400 });
+      }
+
+      const catalogItems = await normalizeCartItemAddons(db, setLines.items);
       const pricingResult = await calculateOrderPricing(db, catalogItems, promoCode);
       
       // Map items with updated pricing + Penny Drop fix (rowTotal)
@@ -329,7 +336,12 @@ export async function POST(request: NextRequest) {
          }
       }
 
-      const catalogItems = await normalizeCartItemAddons(db, items);
+      const setLines = await checkSetLines(db, items);
+      if (!setLines.ok) {
+        return NextResponse.json({ error: setLines.error }, { status: 400 });
+      }
+
+      const catalogItems = await normalizeCartItemAddons(db, setLines.items);
       const pricingResult = await calculateOrderPricing(db, catalogItems, promoCode);
 
       // Map items with updated pricing + Penny Drop fix (rowTotal)

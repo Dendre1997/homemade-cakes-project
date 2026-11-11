@@ -203,6 +203,12 @@ const OrderSummary = () => {
                            
                            {/* 1. Box Size (If we can map quantityConfigId to a label, or just show generic text) */}
                            <p className="font-semibold text-[10px] bg-primary/5 inline-block px-1 rounded text-primary">Set Configuration</p>
+                           {item.selectedConfig.setName && (
+                             <p className="font-medium">
+                               {item.selectedConfig.setName}
+                               {item.selectedConfig.pieceCount ? ` · ${item.selectedConfig.pieceCount} pieces` : ""}
+                             </p>
+                           )}
     
                            {/* 2. Bento Details (For Combos) */}
                            {item.selectedConfig.cake && (

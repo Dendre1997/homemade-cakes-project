@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Order, Diameter, CartItem, ProductWithCategory, Flavor, IShape } from "@/types";
 import { addonsUnitCost } from "@/lib/addons/selectedAddonMath";
-import { setLinePrice } from "@/lib/sets/setLinePrice";
+import { setLineIdentifier, setLinePrice } from "@/lib/sets/setLinePrice";
 import { Button } from "@/components/ui/Button";
 import {
   Dialog,
@@ -183,7 +183,7 @@ const OrderDetailItems = ({
 
   const currentUnitCost = draftProduct
     ? (draftProduct.productType === 'set' && draftSelectedConfig)
-        ? setLinePrice(draftProduct, draftSelectedConfig.quantityConfigId, {
+        ? setLinePrice(draftProduct, setLineIdentifier(draftSelectedConfig), {
             match: "label",
             missingBox: "zeroBox",
             rounding: "none",

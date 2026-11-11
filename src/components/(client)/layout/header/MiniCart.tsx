@@ -112,6 +112,14 @@ export const MiniCart = ({ isOpen, onClose, returnFocusRef }: MiniCartProps) => 
                     <p className="font-body font-bold text-primary">
                       {lastItemAdded.name}
                     </p>
+                    {lastItemAdded.selectedConfig?.setName && (
+                      <p className="font-body text-small text-primary/80">
+                        {lastItemAdded.selectedConfig.setName}
+                        {lastItemAdded.selectedConfig.pieceCount
+                          ? ` · ${lastItemAdded.selectedConfig.pieceCount} pieces`
+                          : ""}
+                      </p>
+                    )}
                     <OrderItemTiersDisplay
                       tiers={lastItemAdded.tiers}
                       flavor={lastItemAdded.flavor}

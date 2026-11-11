@@ -8,6 +8,7 @@ import cloudinary from "@/lib/cloudinary";
 import { getPublicIdFromUrl } from "@/lib/cloudinaryUtils";
 import { generateSlug, isValidObjectId } from '../../../../../lib/utils';
 import { normalizeProductSetConfigs } from '@/lib/validation/productSetConfigs';
+import { defaultSetBoxPrice } from '@/lib/sets/setLinePrice';
 import { AVAILABLE_SETS_LOOKUP } from '@/lib/db/productSetLookup';
 interface Context {
     params: Promise<{ id: string }>
@@ -129,30 +130,9 @@ export async function PUT(
       }
     }
 
-    // RULE: Auto-set Base Price for Sets
-    // Determine Effective State
     const effectiveProductType = body.productType || existingProduct.productType;
     const effectiveComboConfig = body.comboConfig !== undefined ? body.comboConfig : existingProduct.comboConfig;
     const effectiveQtyConfigs = body.availableQuantityConfigs !== undefined ? body.availableQuantityConfigs : existingProduct.availableQuantityConfigs;
-    
-    // Only recalculate if it's a Set
-    if (effectiveProductType === 'set') {
-         
-         if (body.structureBasePrice !== undefined) {
-             let userInputPrice = Number(body.structureBasePrice) || 0;
-             const firstBoxPrice = (effectiveQtyConfigs && effectiveQtyConfigs.length > 0) 
-                ? Number(effectiveQtyConfigs[0].price) || 0 
-                : 0;
-             
-             if (effectiveComboConfig && effectiveComboConfig.hasCake) {
-                 // Combo: Input + Box
-                 body.structureBasePrice = userInputPrice + firstBoxPrice;
-             } else {
-                 // Simple: Box only
-                 body.structureBasePrice = firstBoxPrice;
-             }
-         }
-    }
 
     if (body.availableSetConfigs !== undefined || body.productType !== undefined || body.categoryId) {
       const keepsStoredSets = body.availableSetConfigs === undefined;
@@ -170,6 +150,23 @@ export async function PUT(
         return NextResponse.json({ error: setConfigs.error }, { status: 400 });
       }
       body.availableSetConfigs = setConfigs.data;
+    }
+
+    // RULE: Auto-set Base Price for Sets
+    if (effectiveProductType === 'set' && body.structureBasePrice !== undefined) {
+         const userInputPrice = Number(body.structureBasePrice) || 0;
+         const firstBoxPrice = defaultSetBoxPrice({
+           availableQuantityConfigs: effectiveQtyConfigs,
+           availableSetConfigs: body.availableSetConfigs ?? existingProduct.availableSetConfigs,
+         });
+
+         if (effectiveComboConfig && effectiveComboConfig.hasCake) {
+             // Combo: Input + first set or box
+             body.structureBasePrice = userInputPrice + firstBoxPrice;
+         } else {
+             // Simple: first set or box only
+             body.structureBasePrice = firstBoxPrice;
+         }
     }
 
     if (body.categoryId) body.categoryId = new ObjectId(String(body.categoryId));

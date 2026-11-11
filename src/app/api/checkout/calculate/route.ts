@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import clientPromise from "@/lib/db";
 import { calculateOrderPricing } from "@/lib/pricing";
+import { checkSetLines } from "@/lib/sets/setLineValidation";
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,6 +18,11 @@ export async function POST(request: NextRequest) {
 
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
+
+    const setLines = await checkSetLines(db, items);
+    if (!setLines.ok) {
+      return NextResponse.json({ error: setLines.error }, { status: 400 });
+    }
 
     // Use the robust server-side logic from pricing.ts
     const { subtotal, discountTotal, finalTotal, appliedCode, itemBreakdown } =
