@@ -10,6 +10,7 @@ import {
   collageImageUrlsFromSets,
   partitionCustomOrderCategories,
 } from "@/lib/customOrderCategoryDisplay";
+import { clearSetLineDesign } from "@/lib/sets/customOrderDesign";
 
 interface CategoryDoc {
   _id: string;
@@ -189,6 +190,9 @@ export default function Step2Category({
     setValue(ip("details.setId"), undefined);
     setValue(ip("details.diameterId"), undefined);
     setValue(ip("details.tiers"), undefined);
+    if (cat.categoryType === "set") {
+      clearSetLineDesign(setValue, itemIndex);
+    }
   };
 
   return (

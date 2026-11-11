@@ -6,6 +6,7 @@ import { normalizePhoneDigits } from "@/lib/crm/normalize";
 import { normalizeCartItemAddons } from "@/lib/addons/selectedAddon";
 import { calculateCustomOrderTotal } from "@/lib/pricing/customOrderPricing";
 import { applyCustomOrderCatalogSets } from "@/lib/sets/customOrderSets";
+import { nonSetLineMissingDesign } from "@/lib/sets/customOrderDesign";
 
 export async function GET(req: Request) {
   try {
@@ -61,6 +62,15 @@ export async function POST(req: Request) {
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
     const collection = db.collection("custom_orders");
+
+    const catalogCategories = await db
+      .collection("categories")
+      .find({}, { projection: { name: 1, categoryType: 1 } })
+      .toArray();
+    const designError = nonSetLineMissingDesign(data.items, catalogCategories);
+    if (designError) {
+      return NextResponse.json({ error: designError }, { status: 400 });
+    }
 
     const catalogItems = await normalizeCartItemAddons(db, data.items);
     const withSets = await applyCustomOrderCatalogSets(db, catalogItems);

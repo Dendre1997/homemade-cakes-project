@@ -25,6 +25,7 @@ import Step5Contact from "@/components/custom-order/Step5Contact";
 import Step6Success from "@/components/custom-order/Step6Success";
 import StepCartSummary from "@/components/custom-order/StepCartSummary";
 import { findCategoryForCustomOrderItem } from "@/lib/customOrderCategory";
+import { clearSetLineDesign } from "@/lib/sets/customOrderDesign";
 
 /**
  * Step map for the multi-item ("Custom Order Cart") wizard.
@@ -73,6 +74,50 @@ function makeEmptyItem() {
     approximatePrice: 0,
     priceBreakdown: undefined,
   };
+}
+
+function itemIsSetCategory(
+  item: { categoryId?: string; category?: string } | undefined,
+  categories: Parameters<typeof findCategoryForCustomOrderItem>[1]
+) {
+  return (
+    findCategoryForCustomOrderItem(
+      { categoryId: item?.categoryId, category: item?.category },
+      categories
+    )?.categoryType === "set"
+  );
+}
+
+/** Cake and combo lines still need a photo and design notes. Returns the first missing field. */
+function missingDesignField(
+  methods: {
+    getValues: (name: any) => unknown;
+    setError: (name: any, error: { type: string; message: string }) => void;
+  },
+  index: number
+): string | null {
+  const imagePath = `items.${index}.referenceImages`;
+  const notesPath = `items.${index}.details.designNotes`;
+  const images = methods.getValues(imagePath);
+  const notes = String(methods.getValues(notesPath) ?? "").trim();
+  const imageList = Array.isArray(images) ? images : [];
+  let firstMissing: string | null = null;
+
+  if (imageList.length < 1) {
+    methods.setError(imagePath, {
+      type: "manual",
+      message: "You must select or upload at least one reference image",
+    });
+    firstMissing = imagePath;
+  }
+  if (!notes) {
+    methods.setError(notesPath, {
+      type: "manual",
+      message: "Please provide overall design notes",
+    });
+    firstMissing ??= notesPath;
+  }
+  return firstMissing;
 }
 
 /** Returns the RHF field paths to validate for a given step + active item. */
@@ -261,43 +306,80 @@ function CustomOrderContent() {
       : true;
 
     if (isValid) {
-      if (currentStep === 0 && hasInspiration) {
+      const catalog = await ensureCategories();
+      const activeItem = methods.getValues(`items.${activeItemIndex}`);
+      const activeIsSet = itemIsSetCategory(activeItem, catalog);
+
+      if (currentStep === 3) {
+        const missing = missingDesignField(methods, activeItemIndex);
+        if (missing) {
+          focusNamedField(missing);
+          return;
+        }
+      }
+
+      if (currentStep === 2 && activeIsSet) {
+        clearSetLineDesign(methods.setValue, activeItemIndex);
+        setCurrentStep(CART_STEP);
+      } else if (currentStep === 0 && hasInspiration) {
         setCurrentStep(2);
       } else {
         setCurrentStep((prev) => Math.min(prev + 1, STEPS.length - 1));
       }
       window.scrollTo({ top: 0, behavior: "smooth" });
     } else {
-      const currentErrors = methods.formState.errors;
-
-      requestAnimationFrame(() => {
-        for (const fieldPath of fieldsToValidate) {
-          const err = fieldPath
-            .split(".")
-            .reduce((obj: any, key: string) => obj?.[key], currentErrors);
-          if (!err) continue;
-
-          const wrapper = document.querySelector<HTMLElement>(
-            `[data-field-name="${fieldPath}"]`
-          );
-          if (wrapper) {
-            wrapper.scrollIntoView({ behavior: "smooth", block: "center" });
-          }
-
-          try {
-            setFocus(fieldPath as any, { shouldSelect: false });
-          } catch {
-          }
-
-          break; // stop at first error
-        }
-      });
+      revealFirstStepError(fieldsToValidate);
     }
   };
 
+  const focusNamedField = (fieldPath: string) => {
+    requestAnimationFrame(() => {
+      document
+        .querySelector<HTMLElement>(`[data-field-name="${fieldPath}"]`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+      try {
+        setFocus(fieldPath as any, { shouldSelect: false });
+      } catch {
+      }
+    });
+  };
+
+  const revealFirstStepError = (fieldsToValidate: string[]) => {
+    const currentErrors = methods.formState.errors;
+
+    for (const fieldPath of fieldsToValidate) {
+      const err = fieldPath
+        .split(".")
+        .reduce((obj: any, key: string) => obj?.[key], currentErrors);
+      if (!err) continue;
+      focusNamedField(fieldPath);
+      break;
+    }
+  };
+
+  const ensureCategories = async () => {
+    if (categories.length > 0) return categories;
+    try {
+      const res = await fetch("/api/categories");
+      if (!res.ok) return categories;
+      const next = await res.json();
+      if (Array.isArray(next) && next.length > 0) {
+        setCategories(next);
+        return next;
+      }
+    } catch (error) {
+      console.error("Error fetching categories for the set check:", error);
+    }
+    return categories;
+  };
+
   const handleBack = () => {
-    // From Details (step 2) with an inspiration, jump back to Date (step 0), skipping Category
-    if (currentStep === 2 && hasInspiration) {
+    const activeItem = methods.getValues(`items.${activeItemIndex}`);
+    const activeIsSet = itemIsSetCategory(activeItem, categories);
+
+    if (currentStep === CART_STEP && activeIsSet) {
+      setCurrentStep(2);
+    } else if (currentStep === 2 && hasInspiration) {
       setCurrentStep(0);
     } else {
       setCurrentStep((prev) => Math.max(prev - 1, 0));
@@ -509,7 +591,7 @@ function CustomOrderContent() {
                 </div>
               )}
 
-              {/* Cart step keeps a Back button to return to the last item's Design */}
+              {/* Cart step keeps a Back button. A set line returns to details; a cake or combo returns to design. */}
               {currentStep === CART_STEP && (
                 <div className="mt-8 pt-6 border-t border-primary/10 flex justify-start">
                   <Button

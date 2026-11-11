@@ -1193,7 +1193,7 @@ export default function Step3SizeFlavor({ onNext, onFlavorInfoClick, itemIndex }
         )}
 
         <FlavorNoteSection
-          isVisible={isFlavorSelected}
+          isVisible={isFlavorSelected && activeCategoryObj?.categoryType !== "set"}
           isMultiTier={isStandard && standardTiersCount > 1}
           itemIndex={itemIndex}
         />
@@ -1364,6 +1364,8 @@ function FlavorNoteSection({
 
   return (
     <div
+      inert={!isVisible}
+      aria-hidden={!isVisible}
       className={cn(
         "grid transition-all duration-300 ease-in-out overflow-hidden",
         isVisible

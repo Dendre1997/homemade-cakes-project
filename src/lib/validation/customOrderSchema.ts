@@ -124,7 +124,7 @@ export const customOrderItemSchema = z.object({
     flavor: z.string().min(1, "Please select a flavor"),
     flavorNote: z.string().optional(),
     textOnCake: z.string().optional(),
-    designNotes: z.string().min(1, "Please provide overall design notes").max(1000, "Notes are too long"),
+    designNotes: z.string().max(1000, "Notes are too long").optional(),
     shape: z.string().optional(),
     diameterId: z.string().optional(),
     tiers: z.array(cakeTierSelectionSchema).optional(),
@@ -133,8 +133,9 @@ export const customOrderItemSchema = z.object({
   }),
   referenceImages: z
     .array(z.string().url("Invalid image URL"))
-    .min(1, "You must select or upload at least one reference image")
-    .max(3, "You can upload a maximum of 3 images"),
+    .max(3, "You can upload a maximum of 3 images")
+    .optional()
+    .default([]),
   addons: z.array(addonSchema).optional(),
   priceBreakdown: priceBreakdownSchema.optional(),
   approximatePrice: z.number().optional(),
