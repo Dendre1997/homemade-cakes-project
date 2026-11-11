@@ -2,6 +2,8 @@
 
 import { useMemo, useRef, useState } from "react";
 import { FloatingActionBar } from "@/components/admin/FloatingActionBar";
+import { OrderDetailShell } from "@/components/admin/orders/OrderDetailShell";
+import { CustomOrderMobileBar } from "./CustomOrderMobileBar";
 import type { DeepPartial } from "ai";
 import { useRouter } from "next/navigation";
 import { CustomOrder, IShape } from "@/types";
@@ -308,89 +310,112 @@ export default function CustomOrderDetail({ initialOrder, shapes = [] }: CustomO
     );
   };
 
+  const restoreSavedDraft = () => {
+    const saved = savedDraftRef.current;
+    setOrder(structuredClone(saved.order));
+    setExpectedMethod(saved.expectedMethod);
+  };
+
   const canSuggestQuote = order.status === "pending_review";
 
   return (
-    <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-in fade-in duration-500">
-      <CustomOrderDetailHeader
-        id={order._id}
-        status={order.status}
-        agreedPrice={agreedPriceTotal}
-        onPriceChange={(price) => {
-          // With a single item the header stays an editable shortcut; with
-          // multiple items pricing happens per-item in the specs form.
-          if (items.length === 1) handleItemChange(0, "agreedPrice", price);
-        }}
-        readOnlyPrice={items.length !== 1}
-        isSaving={isSaving}
-        isConverting={isConverting}
-        onConvert={handleConvertClick}
-        isConverted={order.status === "converted"}
-        onCopyPaymentLink={handleCopyPaymentLink}
-      />
-
-      <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-8">
-          {canSuggestQuote && (
-            <QuotePropositionCard
-              customOrderId={order._id}
-              items={items}
-              onApply={handleApplyQuoteSuggestion}
+    <>
+      <OrderDetailShell
+        mobileAsideFirst
+        asideStickyClassName="lg:top-44"
+        header={
+          <CustomOrderDetailHeader
+            id={order._id}
+            status={order.status}
+            agreedPrice={agreedPriceTotal}
+            onPriceChange={(price) => {
+              // With a single item the header stays an editable shortcut; with
+              // multiple items pricing happens per-item in the specs form.
+              if (items.length === 1) handleItemChange(0, "agreedPrice", price);
+            }}
+            readOnlyPrice={items.length !== 1}
+            isSaving={isSaving}
+            isConverting={isConverting}
+            onConvert={handleConvertClick}
+            isConverted={order.status === "converted"}
+            onCopyPaymentLink={handleCopyPaymentLink}
+          />
+        }
+        main={
+          <>
+            {canSuggestQuote && (
+              <QuotePropositionCard
+                customOrderId={order._id}
+                items={items}
+                onApply={handleApplyQuoteSuggestion}
+              />
+            )}
+            <CustomOrderSpecsForm
+              order={order}
+              shapes={shapes}
+              onItemChange={handleItemChange}
+              onOrderChange={handleFieldChange}
+              onItemImageUpload={handleItemImageUpload}
+              isUploading={isUploading}
+              agreedPriceTotal={agreedPriceTotal}
             />
-          )}
-          <CustomOrderSpecsForm
-            order={order}
-            shapes={shapes}
-            onItemChange={handleItemChange}
-            onOrderChange={handleFieldChange}
-            onItemImageUpload={handleItemImageUpload}
-            isUploading={isUploading}
-            agreedPriceTotal={agreedPriceTotal}
+          </>
+        }
+        aside={
+          <>
+            <CustomOrderContactForm
+              contact={order.contact}
+              onChange={handleFieldChange}
+            />
+            <QuickMessageCard order={order} convertedInfo={convertedInfo} />
+            <div className="rounded-large border border-border/40 bg-card-background p-lg shadow-md">
+              <h2 className="mb-4 border-b border-border/40 pb-4 font-heading text-h4 text-primary">
+                Payment Preference
+              </h2>
+              <p className="text-sm font-medium text-primary">
+                {order.paymentPreference === "cash"
+                  ? "Cash at Pickup"
+                  : order.paymentPreference === "e-transfer"
+                    ? "E-Transfer"
+                    : "Not specified"}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {order.paymentPreference === "cash"
+                  ? "Customer will pay the full amount in cash at pickup."
+                  : order.paymentPreference === "e-transfer"
+                    ? "Customer will pay the full amount via e-transfer the day before pickup."
+                    : "Customer did not select a payment method (legacy request)."}
+              </p>
+            </div>
+            <CustomOrderLogisticsForm
+              order={order}
+              onChange={handleFieldChange}
+            />
+          </>
+        }
+        notes={null}
+        mobileBar={
+          <CustomOrderMobileBar
+            isDirty={isDirty}
+            isSaving={isSaving}
+            isConverting={isConverting}
+            isConverted={order.status === "converted"}
+            onSave={() => void handleSave()}
+            onDiscard={restoreSavedDraft}
+            onConvert={handleConvertClick}
+            onCopyPaymentLink={handleCopyPaymentLink}
           />
-        </div>
-
-        <div className="space-y-8">
-          <CustomOrderContactForm
-            contact={order.contact}
-            onChange={handleFieldChange}
-          />
-          <QuickMessageCard order={order} convertedInfo={convertedInfo} />
-          <div className="bg-card-background p-lg rounded-large shadow-md border border-border/40">
-            <h2 className="font-heading text-h4 text-primary border-b border-border/40 pb-4 mb-4">
-              Payment Preference
-            </h2>
-            <p className="text-sm text-primary font-medium">
-              {order.paymentPreference === "cash"
-                ? "Cash at Pickup"
-                : order.paymentPreference === "e-transfer"
-                  ? "E-Transfer"
-                  : "Not specified"}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              {order.paymentPreference === "cash"
-                ? "Customer will pay the full amount in cash at pickup."
-                : order.paymentPreference === "e-transfer"
-                  ? "Customer will pay the full amount via e-transfer the day before pickup."
-                  : "Customer did not select a payment method (legacy request)."}
-            </p>
-          </div>
-          <CustomOrderLogisticsForm
-            order={order}
-            onChange={handleFieldChange}
-          />
-        </div>
-      </div>
-
-      <FloatingActionBar
-        isDirty={isDirty}
-        isSaving={isSaving}
-        onDiscard={() => {
-          const saved = savedDraftRef.current;
-          setOrder(structuredClone(saved.order));
-          setExpectedMethod(saved.expectedMethod);
-        }}
-        onSave={handleSave}
+        }
       />
+
+      <div className="hidden lg:contents">
+        <FloatingActionBar
+          isDirty={isDirty}
+          isSaving={isSaving}
+          onDiscard={restoreSavedDraft}
+          onSave={handleSave}
+        />
+      </div>
 
       <ConfirmationModal
         isOpen={isConvertModalOpen}
@@ -434,6 +459,6 @@ export default function CustomOrderDetail({ initialOrder, shapes = [] }: CustomO
           instructions.
         </p>
       </ConfirmationModal>
-    </div>
+    </>
   );
 }

@@ -33,85 +33,85 @@ export const CustomOrderDetailHeader = ({
   onCopyPaymentLink,
 }: CustomOrderDetailHeaderProps) => {
 
+  const agreedTotal = (
+    <div className="flex h-12 w-full min-w-0 items-center justify-between gap-2 rounded-md border border-accent/20 bg-accent/5 px-3 sm:w-56">
+      <span className="text-xs font-semibold text-muted-foreground">Agreed Total</span>
+      <span className="text-lg font-bold tabular-nums text-accent">
+        ${(agreedPrice ?? 0).toFixed(2)}
+      </span>
+    </div>
+  );
+
   return (
-    <div className="flex flex-col gap-6 mb-8">
-      <div className="space-y-1">
-        <Link
-          href="/bakery-manufacturing-orders/custom-orders"
-          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors mb-2"
+    <header className="sticky top-0 z-30 mb-2 border-b border-primary/10 bg-background/80 pb-4 pt-1 backdrop-blur-xl backdrop-saturate-150">
+      <Link
+        href="/bakery-manufacturing-orders/custom-orders"
+        className="mb-3 inline-flex items-center gap-2 text-sm text-primary/65 transition-colors hover:text-primary"
+      >
+        <ArrowLeft className="h-4 w-4" aria-hidden />
+        Back to all requests
+      </Link>
+
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
+        <h1 className="font-heading text-2xl font-bold tracking-tight text-primary text-balance sm:text-3xl">
+          Request #{id.slice(-6).toUpperCase()}
+        </h1>
+        <Badge
+          variant="outline"
+          className={`px-3 py-1 text-[10px] font-bold uppercase tracking-widest
+            ${status === "new" ? "border-blue-200 bg-blue-50 text-blue-700" :
+              status === "pending_review" ? "border-orange-200 bg-orange-50 text-orange-700" :
+              status === "negotiating" ? "border-yellow-200 bg-yellow-50 text-yellow-700" :
+              isConverted ? "border-green-200 bg-green-50 text-green-700" :
+              status === "rejected" ? "border-red-200 bg-red-50 text-red-700" : ""}
+          `}
         >
-          <ArrowLeft className="w-4 h-4" />
-          Back to all requests
-        </Link>
-        <div className="flex items-center gap-3">
-          <h1 className="text-3xl font-bold tracking-tight text-primary">
-            Request #{id.slice(-6).toUpperCase()}
-          </h1>
-          <Badge 
-            variant="outline" 
-            className={`uppercase px-3 py-1 text-[10px] font-bold tracking-widest
-              ${status === 'new' ? 'bg-blue-50 text-blue-700 border-blue-200' : 
-                status === 'pending_review' ? 'bg-orange-50 text-orange-700 border-orange-200' :
-                status === 'negotiating' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
-                isConverted ? 'bg-green-50 text-green-700 border-green-200' :
-                status === 'rejected' ? 'bg-red-50 text-red-700 border-red-200' : ''}
-            `}
-          >
-            {status.replace(/_/g, " ")}
-          </Badge>
+          {status.replace(/_/g, " ")}
+        </Badge>
+      </div>
+
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+        {isConverted || readOnlyPrice ? (
+          agreedTotal
+        ) : (
+          <div className="relative w-full shrink-0 sm:w-44">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-muted-foreground">$ Agreed Price</span>
+            <Input
+              type="number"
+              placeholder="0.00"
+              value={agreedPrice ?? ""}
+              onChange={(e) => onPriceChange(e.target.value === "" ? null : Number(e.target.value))}
+              className="h-12 border-accent/20 bg-accent/5 pl-28 text-right text-lg font-bold text-accent focus:ring-accent/20"
+            />
+          </div>
+        )}
+
+        <div className="hidden lg:flex">
+          {isConverted ? (
+            <Button
+              onClick={onCopyPaymentLink}
+              className="min-w-[180px] gap-2 text-white shadow-md"
+            >
+              <Copy className="h-4 w-4" aria-hidden />
+              Copy Payment Link
+            </Button>
+          ) : (
+            <Button
+              onClick={onConvert}
+              disabled={isConverting || isSaving || isConverted}
+              variant="secondary"
+              className="h-12 border-border bg-white font-bold shadow-sm hover:bg-subtleBackground sm:min-w-[140px]"
+            >
+              {isConverting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+              ) : (
+                <Zap className="mr-2 h-4 w-4 text-accent" aria-hidden />
+              )}
+              Convert to Order
+            </Button>
+          )}
         </div>
       </div>
-
-      <div className="flex flex-wrap items-center gap-4 py-4 border-y border-border/40 shrink-0">
-        {isConverted ? (
-          <Button
-            onClick={onCopyPaymentLink}
-            className="shadow-md min-w-[180px] gap-2 text-white"
-          >
-            <Copy className="w-4 h-4" />
-            Copy Payment Link
-          </Button>
-        ) : (
-          <>
-            {readOnlyPrice ? (
-              <div className="relative shrink-0 w-full sm:w-56 h-12 flex items-center justify-between gap-2 rounded-md border border-accent/20 bg-accent/5 px-3">
-                <span className="text-muted-foreground font-semibold text-xs">Agreed Total</span>
-                <span className="font-bold text-lg text-accent">
-                  ${(agreedPrice ?? 0).toFixed(2)}
-                </span>
-              </div>
-            ) : (
-              <div className="relative shrink-0 w-full sm:w-44">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-semibold text-xs">$ Agreed Price</span>
-                <Input 
-                  type="number" 
-                  placeholder="0.00" 
-                  value={agreedPrice ?? ""}
-                  onChange={(e) => onPriceChange(e.target.value === "" ? null : Number(e.target.value))}
-                  className="text-right font-bold text-lg h-12 pl-28 border-accent/20 bg-accent/5 focus:ring-accent/20 text-accent"
-                />
-              </div>
-            )}
-
-            <div className="flex flex-col sm:flex-row flex-1 gap-3">
-              <Button
-                onClick={onConvert}
-                disabled={isConverting || isSaving || isConverted}
-                variant="secondary"
-                className="shadow-sm flex-1 sm:flex-none sm:min-w-[140px] h-12 bg-white border-border hover:bg-subtleBackground font-bold"
-              >
-                {isConverting ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Zap className="w-4 h-4 mr-2 text-accent" />
-                )}
-                Convert to Order
-              </Button>
-
-            </div>
-          </>
-        )}
-      </div>
-    </div>
+    </header>
   );
 };
