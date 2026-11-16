@@ -223,21 +223,31 @@ function CustomOrderContent() {
   }, []);
 
   useEffect(() => {
-    if (currentStep === 2 && categories.length === 0 && flavors.length === 0) {
-      const fetchFlavorsAndCategories = async () => {
-        try {
-          const [catRes, flavRes] = await Promise.all([
-            fetch("/api/categories"),
-            fetch("/api/flavors")
-          ]);
-          if (catRes.ok) setCategories(await catRes.json());
-          if (flavRes.ok) setFlavors(await flavRes.json());
-        } catch (error) {
-          console.error("Error fetching flavors/categories for carousel:", error);
+    if (currentStep !== 2) return;
+    if (flavors.length > 0 && categories.length > 0) return;
+
+    let cancelled = false;
+    const fetchFlavorsAndCategories = async () => {
+      try {
+        if (flavors.length === 0) {
+          const flavRes = await fetch("/api/flavors");
+          if (!cancelled && flavRes.ok) setFlavors(await flavRes.json());
         }
-      };
-      fetchFlavorsAndCategories();
-    }
+        if (categories.length === 0) {
+          const catRes = await fetch("/api/categories");
+          if (!cancelled && catRes.ok) {
+            const next = await catRes.json();
+            if (Array.isArray(next)) setCategories(next);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching flavors/categories for carousel:", error);
+      }
+    };
+    void fetchFlavorsAndCategories();
+    return () => {
+      cancelled = true;
+    };
   }, [currentStep, categories.length, flavors.length]);
 
   const methods = useForm<CustomOrderRequestData>({
